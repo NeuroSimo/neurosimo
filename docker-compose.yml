@@ -1,0 +1,283 @@
+version: '3.9'
+
+services:
+  busylight_manager:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/utility/busylight_manager/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+    # The container needs to be privileged to access the USB device.
+    #
+    # Note: Just mapping the device /dev/hidraw4 inside the container does not work properly.
+    privileged: true
+
+  front:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - './front/src:/app/src'
+      - './front/public:/app/public'
+    network_mode: host
+
+  eeg_bridge:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/bridges/eeg_bridge/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  eeg_gatherer:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/eeg/eeg_gatherer/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  eeg_monitor:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/eeg/eeg_monitor/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    privileged: true
+    network_mode: host
+
+  eeg_recorder:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/eeg/eeg_recorder/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+
+  eeg_simulator:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/eeg/eeg_simulator/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # this option is needed for the container to achieve the same performance as without docker. Optionally, also
+    # privileged: true can be used
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  experiment_performer:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/experiment/experiment_performer/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  # XXX: See docker-compose.gpu.yml for configuration that includes GPU support.
+  decider:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/pipeline/decider/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  mep_analyzer:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/mep/mep_analyzer/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+
+  pedal_listener:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/utility/pedal_listener/Dockerfile
+    # The container needs to be privileged so that /dev devices (namely, the USB pedal) are created.
+    privileged: true
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+
+  preprocessor:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/pipeline/preprocessor/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  rosbridge:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/bridges/rosbridge/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+
+  presenter:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/pipeline/presenter/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+      # Mount PulseAudio configuration
+      - '~/.config/pulse:/root/.config/pulse'
+    environment:
+      # Needed for X11 forwarding.
+      - DISPLAY
+      # Set PulseAudio server address
+      - PULSE_SERVER=localhost
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+    devices:
+      # Provide access to sound devices
+      - "/dev/snd:/dev/snd"
+
+  project_manager:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/project/project_manager/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  session_manager:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/system/session_manager/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  stimulation_allower:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/system/stimulation_allower/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  targeting:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/targeting/targeting/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  trial_logger:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/experiment/trial_logger/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  trial_performer:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/experiment/trial_performer/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  trial_validator:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/experiment/trial_validator/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  trigger_timer:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/pipeline/trigger_timer/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      # XXX: This is a workaround to allow access to LabJack over reconnects. Most likely the correct
+      #   solution would be to modify LabJack installation scripts so that they could be successfully
+      #   run in Docker container. This workaround potentially increases security risks by exposing
+      #   the host's devices to the container.
+      - "/dev:/dev"
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  voltage_setter:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/mtms_device/voltage_setter/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  waveforms:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/targeting/waveforms/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+
+  waveform_approximator:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/targeting/waveform_approximator/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      # Mount the whole MATLAB installation into the container; this is needed for the container
+      # to be able to find MATLAB license (located in /usr/local/MATLAB/[version]/licenses/).
+      #
+      # A better solution would be to mount only the license file, but the MATLAB version is defined
+      # site-specific .env file (e.g., sites/Aalto/.env), which is not easily available for
+      # docker-compose.yml, but only for Dockerfile.
+      - '/usr/local/MATLAB:/usr/local/MATLAB'
+    network_mode: host

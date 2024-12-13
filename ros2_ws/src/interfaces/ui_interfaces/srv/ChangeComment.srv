@@ -1,0 +1,6 @@
+# ROS service for changing a target comment.
+
+string name
+string new_comment
+---
+bool success

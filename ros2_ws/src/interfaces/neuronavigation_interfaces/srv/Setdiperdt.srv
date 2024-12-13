@@ -1,0 +1,7 @@
+# Request: Paths from InVesalius
+#
+# Response: SetdIperdt
+
+float32[] set_di_per_dt
+---
+bool success

@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Usage examples:
+# ./log-mtms-device-bridge --from "YYYY-MM-DD HH:MM:SS" --to "YYYY-MM-DD HH:MM:SS"
+# ./log-mtms-device-bridge --last-hour
+# ./log-mtms-device-bridge --save output.log
+
+FROM=""
+TO=""
+FOLLOW=true          # Default to follow mode
+SAVE_TO=""
+TIME_FILTERS=false   # Indicator for specific time filters
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --from) FROM=$2; FOLLOW=false; TIME_FILTERS=true; shift 2;;
+        --to) TO=$2; FOLLOW=false; TIME_FILTERS=true; shift 2;;
+        --last-hour) FROM="1 hour ago"; FOLLOW=false; TIME_FILTERS=true; shift;;
+        --last-day) FROM="1 day ago"; FOLLOW=false; TIME_FILTERS=true; shift;;
+        --last-minute) FROM="1 minute ago"; FOLLOW=false; TIME_FILTERS=true; shift;;
+        --save) SAVE_TO=$2; shift 2;;
+        --follow) FOLLOW=true; shift;;
+        *)
+            shift;;
+    esac
+done
+
+# Check if the save file exists and prompt for overwrite if necessary
+if [ ! -z "$SAVE_TO" ] && [ -f "$SAVE_TO" ]; then
+    read -p "$SAVE_TO exists. Overwrite? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Operation cancelled."
+        exit 1
+    fi
+fi
+
+CMD="journalctl -u mtms-device-bridge"
+[ ! -z "$FROM" ] && CMD="$CMD --since \"$FROM\""
+[ ! -z "$TO" ] && CMD="$CMD --until \"$TO\""
+[ "$FOLLOW" = true ] && CMD="$CMD -f"
+[ ! -z "$CONTAINER_NAME" ] && CMD="$CMD | grep \"mtms-$CONTAINER_NAME\""
+[ ! -z "$SAVE_TO" ] && CMD="$CMD > $SAVE_TO"
+
+eval $CMD

@@ -1,0 +1,4 @@
+uint16[] voltages
+---
+bool success
+---

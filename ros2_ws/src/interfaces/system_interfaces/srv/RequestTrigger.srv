@@ -1,0 +1,4 @@
+# Used for external request of a trigger to the mTMS device, cf. RequestTimedTrigger.srv,
+# which is used for trigger requests with a specific time stamp using LabJack.
+---
+bool success

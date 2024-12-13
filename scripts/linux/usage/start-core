@@ -1,0 +1,34 @@
+#!/bin/bash
+
+cd $MTMS_ROOT
+
+# Set SITE_ENV_FILE to point to .env of the site
+export SITE_ENV_FILE=$MTMS_ROOT/sites/$SITE/.env
+
+# Source the environment variables from SITE_ENV_FILE
+set -a
+source $SITE_ENV_FILE
+set +a
+
+# Check X server readiness
+for i in {1..30}; do
+  if xhost >& /dev/null; then
+    echo "X server is ready."
+    break
+  else
+    echo "Waiting for X server to become ready..."
+    sleep 1
+  fi
+done
+
+# Allow docker to connect to the X server
+xhost +local:docker
+
+# Start containers
+if [ "$USE_GPU" = "true" ]; then
+  # XXX: Unfortunately, another overriding docker-compose yaml file is needed to
+  #   specify the GPU device to be used by the container.
+  docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up
+else
+  docker-compose up
+fi

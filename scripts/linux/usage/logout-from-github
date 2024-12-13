@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "protocol=https
+host=github.com" | git-credential-manager erase
+
+echo "Successfully logged out from GitHub."
+echo ""

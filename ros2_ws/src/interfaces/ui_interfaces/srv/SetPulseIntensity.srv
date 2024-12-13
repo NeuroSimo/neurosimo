@@ -1,0 +1,7 @@
+# ROS service for changing a target comment.
+
+string name
+uint32 pulse_index
+float64 new_intensity
+---
+bool success

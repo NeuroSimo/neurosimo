@@ -1,0 +1,5 @@
+# ROS service for setting the target.
+
+string name
+---
+bool success

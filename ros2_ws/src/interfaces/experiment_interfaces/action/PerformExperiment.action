@@ -1,0 +1,11 @@
+Experiment experiment
+---
+bool success
+TrialResult[] trial_results
+---
+ExperimentState experiment_state
+
+Trial trial
+uint16 attempt_number
+uint16 trial_number
+uint16 total_trials

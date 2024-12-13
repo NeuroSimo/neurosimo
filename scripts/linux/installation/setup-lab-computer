@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Ensure the script is run as root
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run the script as root or use sudo."
+    exit 1
+fi
+
+# Get the site from the first argument
+SITE="$1"
+
+if [ -z "$SITE" ]; then
+    echo "Error: Site is undefined. Please provide it as an argument to the script."
+    echo ""
+    exit 1
+fi
+
+# Install Docker and ROS
+source install-docker
+source install-ros
+
+# Setup systemd
+source setup-systemd
+
+# Setup sysctl
+source setup-sysctl
+
+# Install Cyclone DDS for ROS
+apt install -y ros-iron-rmw-cyclonedds-cpp
+
+# Tools for troubleshooting
+apt install -y net-tools wireshark
+
+# Tools for customizing GNOME (not required)
+apt install wmctrl
+
+# Configure Kuando Busylight (not required)
+#
+# From: https://github.com/JnyJny/busylight
+#
+sudo apt install python3-pip
+
+pip install busylight-for-humans
+
+busylight udev-rules -o 99-busylights.rules
+mv 99-busylights.rules /etc/udev/rules.d
+udevadm control -R
+
+# Set up the cron job to clean ROS logs
+CRON_JOB="0 0 * * * find ~/.ros/log -type f -mtime +7 -exec rm {} \;"
+
+# Check if the cron job is already in the crontab
+(crontab -l | grep -F "$CRON_JOB") > /dev/null
+
+# If the cron job is not found, add it
+if [ $? -ne 0 ]; then
+    echo "Adding cron job to clean ROS logs..."
+    (crontab -l ; echo "$CRON_JOB") | crontab -
+else
+    echo "Cron job is already present."
+fi
+
+# Set up PulseAudio over TCP (used by stimulus presenter)
+
+echo "load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;172.17.0.0/16 auth-anonymous=1" >> /etc/pulse/default.pa
+
+## Enabling the user to run the log script without sudo
+
+# Get the path to the script
+SCRIPT_PATH="/home/mtms/mtms/scripts/linux/usage/log"
+
+# Append the required line to a new file in sudoers.d
+echo "mtms ALL=(ALL) NOPASSWD: $SCRIPT_PATH" | sudo tee /etc/sudoers.d/container_logs > /dev/null
+
+# Set the correct permissions
+chmod 0440 /etc/sudoers.d/container_logs
+
+
+## Enabling the user to restart the containers without sudo
+echo "mtms ALL=(ALL) NOPASSWD: /bin/systemctl restart mtms-core-containers" | sudo tee /etc/sudoers.d/restart_mtms_core > /dev/null
+
+# Set the correct permissions
+chmod 0440 /etc/sudoers.d/container_logs
+
+# Create projects directory
+mkdir /home/mtms/projects
+
+# XXX: These wouldn't be needed if this script was not run as sudo.
+chown mtms /home/mtms/projects
+chgrp mtms /home/mtms/projects

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+read -p "Enter your name: " name
+read -p "Enter your email: " email
+
+# Validate email using a regex
+if [[ ! "${email}" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]
+then
+    echo "Invalid email address. Please try again."
+    exit 1
+fi
+
+# Configure Git with the provided information
+git config --global user.name "${name}"
+git config --global user.email "${email}"
+
+echo ""
+echo "Git has been successfully configured with the following details:"
+echo "Name: ${name}"
+echo "Email: ${email}"

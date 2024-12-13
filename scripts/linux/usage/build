@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+# Set the disk space threshold (in GB)
+DISK_SPACE_THRESHOLD=20
+
+# Function to check disk space and clean up Docker images if necessary
+check_disk_space_and_clean() {
+    local free_space=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
+    if [ "$free_space" -lt $DISK_SPACE_THRESHOLD ]; then
+        echo "${BOLD}${UNDERLINE}Warning:${RESET} Less than ${DISK_SPACE_THRESHOLD}GB of free space on root partition."
+        read -p "Do you want to clean up old Docker images? [Y/n] " response
+        response=${response:-Y}  # Default to Yes
+        if [[ $response =~ ^[Yy]$ ]]; then
+            echo "Cleaning up Docker images..."
+
+            # Remove all images except the latest mtms_* images
+            docker images --format '{{.Repository}}:{{.Tag}}' | grep 'mtms_' | sort | uniq -c | sort -rn | awk '$1 > 1 {print $2}' | xargs -I {} docker rmi {}
+
+            # Remove dangling images
+            docker image prune -f
+
+            # Remove all other non-mtms images
+            docker images --format '{{.Repository}}:{{.Tag}}' | grep -v 'mtms_' | xargs docker rmi
+
+            # Remove builder images older than 2 weeks
+            docker builder prune -f --filter "until=336h"
+
+            echo "Cleanup completed."
+
+            # Show reclaimed space
+            echo "Current disk space:"
+            df -h /
+        else
+            echo "Skipping image cleanup."
+        fi
+    fi
+}
+
+# If a parameter is provided, use it as the container name.
+CONTAINER_NAME=$1
+
+# Check disk space and clean up before proceeding
+check_disk_space_and_clean
+
+# Rebuild the specified core container or all containers if none is specified.
+echo "${BOLD}Building containers...${RESET}"
+
+if [ -z "$CONTAINER_NAME" ]; then
+    docker-compose -f $MTMS_ROOT/docker-compose.yml build
+else
+    docker-compose -f $MTMS_ROOT/docker-compose.yml build $CONTAINER_NAME
+fi
+
+# Check the exit status of the last command (docker-compose build).
+if [ $? -ne 0 ]; then
+    echo "Build failed. Not restarting the containers."
+    exit 1
+fi
+
+# Restart core containers.
+echo "${BOLD}Restarting...${RESET}"
+
+sudo systemctl restart mtms-core-containers
+
+echo "${BOLD}Done.${RESET}"

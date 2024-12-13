@@ -1,0 +1,7 @@
+# Allow or disallow trigger out.
+#
+# Response: Boolean indicating if the service call was successful.
+
+bool allow_trigger_out
+---
+bool success

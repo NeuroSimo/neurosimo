@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+echo ""
+echo "Building the ROS workspace:"
+
+# Build interfaces
+echo "  • ${BOLD}Building interfaces...${RESET}"
+
+cd $MTMS_ROOT/ros2_ws
+colcon build --base-paths src/interfaces
+
+# Build mTMS device bridge
+echo "  • ${BOLD}Building mTMS device bridge...${RESET}"
+
+cd $MTMS_ROOT/ros2_ws
+colcon build --packages-up-to mtms_device_bridge

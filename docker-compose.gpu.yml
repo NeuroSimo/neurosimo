@@ -1,0 +1,11 @@
+version: '3.9'
+
+# XXX: GPU support must be added separately to the services that need it to make it configurable
+#   via environment variables (see start-core script for the branching logic).
+services:
+  decider:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]

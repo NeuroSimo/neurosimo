@@ -1,0 +1,14 @@
+#!/bin/bash
+
+cd $MTMS_ROOT
+
+# Set SITE_ENV_FILE to point to .env of the site
+export SITE_ENV_FILE=$MTMS_ROOT/sites/$SITE/.env
+
+# Source the environment variables from SITE_ENV_FILE
+set -a
+source $SITE_ENV_FILE
+set +a
+
+# Stop the containers defined in docker-compose.yml
+docker-compose -f docker-compose.yml down --remove-orphans

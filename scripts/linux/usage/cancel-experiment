@@ -1,0 +1,6 @@
+#!/bin/bash
+
+source /opt/ros/iron/setup.bash
+source $MTMS_ROOT/ros2_ws/install/local_setup.bash
+
+ros2 service call /experiment/cancel experiment_interfaces/CancelExperiment

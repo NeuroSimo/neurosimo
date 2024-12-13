@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Run the MATLAB commands non-interactively
+matlab -nodisplay -nosplash -nodesktop -r " \
+pyenv('Version', '/opt/python3.9.5/bin/python3.9'); \
+ros2genmsg('/home/mtms/mtms/ros2_ws/src/interfaces', 'CreateShareableFile', true, 'BuildConfiguration', 'fasterruns'); \
+exit;"
+
+# Check if the .zip file exists and then move it
+if [ -f "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen.zip" ]; then
+    mv "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen.zip" "$MTMS_ROOT/api/matlab/"
+else
+    echo "matlab_msg_gen.zip does not exist."
+fi
+
+# Delete the matlab_msg_gen directory
+if [ -d "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen" ]; then
+    rm -rf "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen"
+else
+    echo "matlab_msg_gen directory does not exist."
+fi
+
+# Register messages in MATLAB
+matlab -nodisplay -nosplash -nodesktop -r " \
+ros2RegisterMessages('/home/mtms/mtms/api/matlab'); \
+exit;"
+
+# Delete the unneeded interfaces directory, generated when running ros2RegisterMessages
+rm -rf $MTMS_ROOT/api/matlab/*interfaces
+
+# Commit the changes to the repository
+cd $MTMS_ROOT
+git commit api/matlab/matlab_msg_gen.zip -m "UPD: ROS interfaces in MATLAB API"

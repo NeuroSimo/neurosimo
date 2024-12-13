@@ -1,0 +1,28 @@
+trial:
+  stimuli:
+    - target:
+        displacement_x: -5
+        displacement_y: -15
+        rotation_angle: 30
+      intensity: 10
+      triggers:
+        - enabled: true
+          delay: 0
+        - enabled: true
+          delay: 0
+  stimulus_times_since_trial_start: [0]
+  config:
+    analyze_mep: true
+    mep_config:
+      emg_channel: 0
+      time_window:
+        start: 0.01
+        end: 0.05
+      preactivation_check:
+        enabled: false
+        time_window:
+          start: -0.05
+          end: -0.02
+        voltage_range_limit: 100.0
+earliest_trial_time: 10.0
+wait_for_trigger: false

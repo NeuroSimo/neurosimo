@@ -1,0 +1,9 @@
+# Channel-specific errors
+
+bool overvoltage_error
+bool emergency_discharge_backup_power_error
+bool safety_bus_error
+bool powersupply_error
+bool safety_bus_startup_error
+bool acceptable_voltage_not_reached_startup_error
+bool maximum_safe_voltage_exceeded_startup_error

@@ -1,0 +1,7 @@
+node_modules
+build
+Dockerfile
+.dockerignore
+
+# We're using Yarn, so avoid copying npm-related files into the container
+package-lock.json

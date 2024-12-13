@@ -1,0 +1,4 @@
+bool enabled
+
+eeg_interfaces/TimeWindow time_window
+float64 voltage_range_limit

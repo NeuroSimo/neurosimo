@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+echo "${BOLD}Building containers...${RESET}"
+
+docker-compose -f $MTMS_ROOT/docker-compose.yml build
+
+# Check the exit status of the last command (docker-compose build).
+if [ $? -ne 0 ]; then
+    echo "Build failed. Not restarting the containers."
+    exit 1
+fi
+
+# Restart core containers.
+echo "${BOLD}Restarting containers...${RESET}"
+
+sudo systemctl restart mtms-core-containers
+
+echo ""
+echo "Building the ROS workspace:"
+
+# Build interfaces
+echo "  • ${BOLD}Building interfaces...${RESET}"
+
+cd $MTMS_ROOT/ros2_ws
+colcon build --base-paths src/interfaces
+
+# Build mTMS device bridge
+echo "  • ${BOLD}Building mTMS device bridge...${RESET}"
+
+cd $MTMS_ROOT/ros2_ws
+colcon build --packages-up-to mtms_device_bridge
+
+# Build the MATLAB interfaces.
+echo "  • ${BOLD}Building the MATLAB interfaces...${RESET}"
+matlab-build
+
+# Register the MATLAB interfaces.
+echo "  • ${BOLD}Registering the MATLAB interfaces...${RESET}"
+matlab-register
+
+echo ""
+echo "${BOLD}Done.${RESET}"
+echo ""
+echo "${BOLD}Reboot the computer to apply the changes to mTMS device bridge.${RESET}"
+echo ""

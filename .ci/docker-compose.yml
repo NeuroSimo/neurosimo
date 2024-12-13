@@ -1,0 +1,43 @@
+version: '3.5'
+
+services:
+  front_test:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: front/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - rosbridge_test
+      - planner_test
+      - pulse_sequence_controller_test
+
+  rosbridge_test:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/bridges/rosbridge/Dockerfile
+    ports:
+      - "9090:9090"
+
+  planner_test:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/ui/planner/Dockerfile
+
+  pulse_sequence_controller_test:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/ui/pulse_sequence_controller/Dockerfile
+
+networks:
+  cinetwork:
+    name: cinetwork
+    driver: bridge

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>trial_validator</name>
+  <version>0.0.1</version>
+  <description>Trial validator</description>
+  <maintainer email="connect2brain@aalto.fi">Connect2Brain</maintainer>
+  <license>TODO</license>
+
+  <depend>rclpy</depend>
+
+  <depend>mep_interfaces</depend>
+  <depend>mtms_device_interfaces</depend>
+  <depend>experiment_interfaces</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

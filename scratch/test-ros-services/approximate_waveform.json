@@ -1,0 +1,28 @@
+{
+    "target_waveform":
+    {
+        "pieces": [
+            {
+                "waveform_phase": {
+                    "value": 3
+                },
+                "duration_in_ticks": 2400
+            },
+            {
+                "waveform_phase": {
+                    "value": 2
+                },
+                "duration_in_ticks": 1280
+            },
+            {
+                "waveform_phase": {
+                    "value": 1
+                },
+                "duration_in_ticks": 1480
+            }
+        ]
+    },
+    "actual_voltage": 1499,
+    "target_voltage": 400,
+    "coil_number": 1
+}

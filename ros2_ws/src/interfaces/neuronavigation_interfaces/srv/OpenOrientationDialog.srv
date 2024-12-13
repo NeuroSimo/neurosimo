@@ -1,0 +1,7 @@
+# Request: target id
+#
+# Response:
+
+uint16 target_id
+---
+bool success

@@ -1,0 +1,4 @@
+targeting_interfaces/ElectricTarget[] targets
+bool is_ordered
+---
+bool success

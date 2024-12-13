@@ -1,0 +1,248 @@
+{
+    "targets":
+    [
+        {
+            "displacement_x": 5,
+            "displacement_y": 5,
+            "rotation_angle": 90,
+            "intensity": 20
+        },
+        {
+            "displacement_x": 5,
+            "displacement_y": 0,
+            "rotation_angle": 0,
+            "intensity": 10
+        }
+    ],
+    "target_waveforms":
+    [
+        {
+            "waveforms": [
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1480
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1480
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1564
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1564
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1776
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "waveforms": [
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1480
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1480
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1564
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1564
+                        }
+                    ]
+                },
+                {
+                    "pieces": [
+                        {
+                            "waveform_phase": {
+                                "value": 1
+                            },
+                            "duration_in_ticks": 2400
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 2
+                            },
+                            "duration_in_ticks": 1200
+                        },
+                        {
+                            "waveform_phase": {
+                                "value": 3
+                            },
+                            "duration_in_ticks": 1776
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

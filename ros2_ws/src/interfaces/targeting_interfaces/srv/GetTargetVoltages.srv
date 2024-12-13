@@ -1,0 +1,7 @@
+# ROS service for getting channel voltages.
+
+ElectricTarget target
+---
+bool success
+float64[] voltages
+bool[] reversed_polarities

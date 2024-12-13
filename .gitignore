@@ -1,0 +1,37 @@
+ros2_ws/build
+ros2_ws/install
+ros2_ws/log
+build/
+log/
+install/
+
+__pycache__
+cmake-build-debug
+cmake-build-release
+front/cypress/videos
+front/cypress/screenshots
+ros2_ws/src/install/
+ros2_ws/src/log/
+ros2_ws/src/build/
+ros2_ws/src/bridges/rosbridge/build
+ros2_ws/src/bridges/rosbridge/log
+ros2_ws/src/bridges/rosbridge/install
+
+# ROS bags used to store data from, e.g., sessions.
+data/bags/
+
+# Generated when building ROS messages for MATLAB API by running ros2genmsg (see documentation
+# in api/matlab/README.md); can be left outside version control.
+matlab_msg_gen/
+
+# The config for neuronavigation is stored in .config directory.
+.config/
+
+# Not used by the project but potentially by individual developers.
+.idea
+.vscode
+venv
+.venv
+
+# MacOS temporary file
+.DS_Store

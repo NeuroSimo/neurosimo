@@ -1,0 +1,8 @@
+# Request: Actual coordinates from InVesalius
+#
+# Response: Efield vectors
+
+PoseUsingEulerAngles coordinate
+float32[] transducer_rotation
+---
+ElectricField efield_data

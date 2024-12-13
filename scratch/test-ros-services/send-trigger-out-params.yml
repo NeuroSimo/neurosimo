@@ -1,0 +1,9 @@
+port: 1
+duration_us: 1000
+event_info:
+  id: 1234
+  execution_condition:
+    value: 0
+  execution_time: 10.0
+  decision_time: 5.0
+  delay: 0.0

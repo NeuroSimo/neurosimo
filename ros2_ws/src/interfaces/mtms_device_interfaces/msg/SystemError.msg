@@ -1,0 +1,17 @@
+# System-wide errors
+
+bool heartbeat_error
+bool latched_fault_error
+bool powersupply_error
+bool safety_bus_error
+bool coil_error
+bool emergency_button_error
+bool door_error
+bool charger_overvoltage_error
+bool charger_overtemperature_error
+bool monitored_voltage_over_maximum_error
+bool patient_safety_error
+bool device_safety_error
+bool charger_powerup_error
+bool opto_error
+bool charger_power_enabled_twice_error

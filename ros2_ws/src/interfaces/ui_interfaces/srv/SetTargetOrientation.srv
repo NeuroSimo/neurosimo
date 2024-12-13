@@ -1,0 +1,6 @@
+# ROS service for changing a target comment.
+
+uint16 target_id
+neuronavigation_interfaces/EulerAngles orientation
+---
+bool success

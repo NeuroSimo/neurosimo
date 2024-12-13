@@ -1,0 +1,22 @@
+[Unit]
+Description=mTMS core containers
+After=docker.service
+Requires=docker.service
+
+[Service]
+User=mtms
+
+Environment=MTMS_ROOT=/home/mtms/mtms
+Environment=SITE=Tubingen
+Environment=CYCLONEDDS_URI=/home/mtms/mtms/config/cyclonedds.xml
+Environment=DISPLAY=:1
+
+LimitRTPRIO=99
+LimitMEMLOCK=10000000000
+
+ExecStart=/home/mtms/mtms/scripts/linux/usage/start-core
+ExecStop=/home/mtms/mtms/scripts/linux/usage/stop-core
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

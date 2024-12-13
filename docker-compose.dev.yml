@@ -1,0 +1,80 @@
+version: '2'
+
+services:
+  bag_exporter:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/utility/bag_exporter/Dockerfile
+    environment:
+      - PROJECT_NAME
+      - BAG_ANALYSIS_BAG_NAME
+      - BAG_ANALYSIS_TIMESTAMP
+      - BAG_ANALYSIS_TOPIC
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  bag_recorder:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/utility/bag_recorder/Dockerfile
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  eeg_batcher:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/eeg/eeg_batcher/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    privileged: true
+    network_mode: host
+
+  mtms_device_bridge:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/bridges/mtms_device_bridge/Dockerfile
+    # The container needs to be privileged to access FPGA.
+    privileged: true
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+
+  mtms_simulator:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/simulators/mtms_simulator/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host
+
+  planner:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/ui/planner/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      - './ros2_ws/src/ui/planner:/app/ros2_ws/src/ui/planner/'
+    network_mode: host
+
+  pulse_sequence_controller:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/ui/pulse_sequence_controller/Dockerfile
+    env_file:
+      - ${SITE_ENV_FILE}
+    volumes:
+      - './ros2_ws/src/ui/pulse_sequence_controller:/app/ros2_ws/src/ui/pulse_sequence_controller/'
+    network_mode: host
+
+  trigger_controller:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/utility/trigger_controller/Dockerfile
+    # The container needs to be privileged so that /dev devices (namely, the trigger USB device) are created.
+    privileged: true
+    env_file:
+      - ${SITE_ENV_FILE}
+    network_mode: host

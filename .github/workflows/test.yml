@@ -1,0 +1,53 @@
+name: CI
+on:
+  pull_request:
+
+jobs:
+  test:
+    name: Run test suite
+    runs-on: ubuntu-20.04
+    env:
+      COMPOSE_FILE: .ci/docker-compose.yml
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+          submodules: recursive
+
+      - name: Build Docker images
+        run: docker-compose build
+
+      - name: Start containers
+        run: docker-compose up -d
+
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v4
+        with:
+          working-directory: front
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: front/cypress/screenshots
+
+      - name: Upload videos
+        uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: cypress-videos
+          path: front/cypress/videos
+
+      - name: Create Docker compose logs
+        run: docker-compose logs > docker-compose.log
+        if: failure()
+
+      - name: Upload Docker compose logs
+        uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: docker-logs
+          path: docker-compose.log

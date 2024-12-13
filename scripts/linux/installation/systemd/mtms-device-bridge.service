@@ -1,0 +1,23 @@
+[Unit]
+Description=mTMS device bridge service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mtms
+
+Environment=MTMS_ROOT=/home/mtms/mtms
+Environment=SITE=Tubingen
+Environment=CYCLONEDDS_URI=/home/mtms/mtms/config/cyclonedds.xml
+
+LimitRTPRIO=99
+LimitMEMLOCK=10000000000
+
+Type=simple
+User=mtms
+ExecStart=/home/mtms/mtms/scripts/linux/usage/start-mtms-device-bridge
+ExecStop=/home/mtms/mtms/scripts/linux/usage/stop-mtms-device-bridge
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,5 @@
+docutils<0.19
+sphinx<7,>=5
+sphinx-rtd-theme
+myst-parser
+sphinxcontrib-matlabdomain

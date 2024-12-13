@@ -1,0 +1,68 @@
+version: '3.5'
+
+services:
+  front_test:
+    build: ./front/
+    entrypoint: ["yarn", "test"]
+    networks:
+      - testnetwork
+    ports:
+      - "3001:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - './front:/app'
+      - '/app/node_modules'
+  cypress:
+    image: cypress/included:10.1.0
+    entrypoint: cypress open --env BASE_URL=front_test:3000 --project .
+    working_dir: /app
+    networks:
+      - testnetwork
+    environment:
+      - CYPRESS_FRONT_URL=front_test:3000
+      - DISPLAY
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - './front:/app'
+  cypress_headless:
+    image: cypress/included:10.1.0
+    entrypoint: cypress run --env BASE_URL=front_test:3000 --project .
+    working_dir: /app
+    networks:
+      - testnetwork
+    environment:
+      - DISPLAY
+      - CYPRESS_FRONT_URL=front_test:3000
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - './front:/app'
+  rosbridge_test:
+    networks:
+      - testnetwork
+    build:
+      context: .
+      dockerfile: ros2_ws/src/bridges/rosbridge/Dockerfile
+  planner_test:
+    networks:
+      - testnetwork
+    volumes:
+      - './ros2_ws/src/interfaces/ui_interfaces:/app/ros2_ws/src/interfaces/ui_interfaces/'
+      - './ros2_ws/src/ui/planner:/app/ros2_ws/src/ui/planner/'
+    build:
+      context: .
+      dockerfile: ros2_ws/src/ui/planner/Dockerfile
+  pulse_sequence_controller_test:
+    networks:
+      - testnetwork
+    build:
+      context: .
+      dockerfile: ros2_ws/src/ui/pulse_sequence_controller/Dockerfile
+    volumes:
+      - './ros2_ws/src/interfaces/ui_interfaces:/app/ros2_ws/src/interfaces/ui_interfaces/'
+      - './ros2_ws/src/ui/pulse_sequence_controller:/app/ros2_ws/src/ui/pulse_sequence_controller/'
+
+networks:
+  testnetwork:
+    name: testnetwork
+    driver: bridge

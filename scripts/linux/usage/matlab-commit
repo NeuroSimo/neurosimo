@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Commit the changes in ROS interfaces to the repository
+cd $MTMS_ROOT
+git commit api/matlab/matlab_msg_gen.zip -m "UPD: ROS interfaces in MATLAB API"

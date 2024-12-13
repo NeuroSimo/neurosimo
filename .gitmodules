@@ -1,0 +1,3 @@
+[submodule "ros2_ws/src/bridges/rosbridge/rosbridge_suite"]
+	path = ros2_ws/src/bridges/rosbridge/rosbridge_suite
+	url = https://github.com/RobotWebTools/rosbridge_suite

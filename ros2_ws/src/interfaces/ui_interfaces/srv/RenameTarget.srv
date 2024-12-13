@@ -1,0 +1,6 @@
+# ROS service for renaming a target.
+
+string name
+string new_name
+---
+bool success

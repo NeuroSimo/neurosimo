@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Register messages in MATLAB
+matlab -nodisplay -nosplash -nodesktop -r " \
+ros2RegisterMessages('/home/mtms/mtms/api/matlab'); \
+exit;"
+
+# Delete the unneeded interfaces directory, generated when running ros2RegisterMessages
+rm -rf $MTMS_ROOT/api/matlab/*interfaces

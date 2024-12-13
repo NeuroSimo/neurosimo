@@ -1,0 +1,138 @@
+version: '3.5'
+
+# Includes a service for every service listed in docker-compose.yml and docker-compose.project.yml
+#   in repository root; we do not want to include development-level services (defined in docker-compose.dev.yml) in tests.
+services:
+  ## Core services (docker-compose.yml):
+  front:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: front/Dockerfile
+
+  eeg_bridge:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/bridges/eeg_bridge/Dockerfile
+
+  eeg_gatherer:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/eeg/eeg_gatherer/Dockerfile
+
+  experiment_performer:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/experiment/experiment_performer/Dockerfile
+
+  mep_analyzer:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/mep/mep_analyzer/Dockerfile
+
+  pedal_listener:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/utility/pedal_listener/Dockerfile
+
+  rosbridge:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/bridges/rosbridge/Dockerfile
+
+  stimulus_allower:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/system/stimulation_allower/Dockerfile
+
+  targeting:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/targeting/targeting/Dockerfile
+
+  trial_performer:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/experiment/trial_performer/Dockerfile
+
+  trial_validator:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/experiment/trial_validator/Dockerfile
+
+  voltage_setter:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/mtms_device/voltage_setter/Dockerfile
+
+  waveforms:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/targeting/waveforms/Dockerfile
+
+  ## Project-specific services (docker-compose.project.yml):
+  bag_exporter:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/utility/bag_exporter/Dockerfile
+
+  bag_recorder:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/utility/bag_recorder/Dockerfile
+
+  # Only include EEG processor here, as EEG preprocessor and stimulus presenter use the same Dockerfile as EEG processor.
+  eeg_processor:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/eeg/eeg_processor/Dockerfile
+
+  eeg_simulator:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/eeg/eeg_simulator/Dockerfile
+
+  trial_logger:
+    networks:
+      - cinetwork
+    build:
+      context: ..
+      dockerfile: ros2_ws/src/experiment/trial_logger/Dockerfile
+
+networks:
+  cinetwork:
+    name: cinetwork
+    driver: bridge

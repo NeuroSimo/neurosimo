@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+RESET=$(tput sgr0)
+
+SCRIPTS_DIR="$(dirname "$(readlink -f "$0")")"
+
+echo ""
+echo "Available scripts:"
+
+for script in "$SCRIPTS_DIR"/*; do
+    script_name=$(basename "$script")
+    echo "  ${BOLD}${script_name}${RESET}"
+done
+
+echo ""

@@ -1,0 +1,60 @@
+metadata:
+  experiment_name: 'test experiment'
+  subject_name: 'test subject'
+trials:
+  - stimuli:
+    - target:
+        displacement_x: -5
+        displacement_y: -15
+        rotation_angle: 30
+      intensity: 60
+      triggers:
+        - enabled: true
+          delay: 0
+        - enabled: true
+          delay: 0
+    stimulus_times_since_trial_start: [0]
+    config:
+      analyze_mep: true
+      mep_config:
+        emg_channel: 0
+        time_window:
+          start: 0.01
+          end: 0.05
+        preactivation_check:
+          enabled: false
+          time_window:
+            start: -0.05
+            end: -0.02
+          voltage_range_limit: 100.0
+  - stimuli:
+    - target:
+        displacement_x: -5
+        displacement_y: -15
+        rotation_angle: 30
+      intensity: 5
+      triggers:
+        - enabled: true
+          delay: 0
+        - enabled: true
+          delay: 0
+    stimulus_times_since_trial_start: [0]
+    config:
+      analyze_mep: true
+      mep_config:
+        emg_channel: 0
+        time_window:
+          start: 0.01
+          end: 0.05
+        preactivation_check:
+          enabled: false
+          time_window:
+            start: -0.05
+            end: -0.02
+          voltage_range_limit: 100.0
+intertrial_interval:
+  min: 3.0
+  max: 4.0
+  tolerance: 0.0
+wait_for_trigger: false
+randomize_trials: true

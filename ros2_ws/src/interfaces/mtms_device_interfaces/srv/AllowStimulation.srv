@@ -1,0 +1,7 @@
+# Allow or disallow stimulation.
+#
+# Response: Boolean indicating if the service call was successful.
+
+bool allow_stimulation
+---
+bool success

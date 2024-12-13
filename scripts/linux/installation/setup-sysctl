@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Ensure the script is run as root
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run the script as root or use sudo."
+    exit 1
+fi
+
+# Copy sysctl configuration for network buffer size
+cp sysctl/10-net-buffer-size.conf /etc/sysctl.d

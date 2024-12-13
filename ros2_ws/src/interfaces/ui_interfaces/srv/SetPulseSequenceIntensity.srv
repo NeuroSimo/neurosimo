@@ -1,0 +1,6 @@
+# ROS service for changing a target comment.
+
+string name
+float64 new_intensity
+---
+bool success

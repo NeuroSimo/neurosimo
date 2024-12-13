@@ -1,0 +1,12 @@
+stimulus:
+  target:
+    displacement_x: 2
+    displacement_y: 3
+    rotation_angle: 45
+  intensity: 10
+  triggers:
+    - enabled: true
+      delay: 0.001
+    - enabled: true
+      delay: 0
+time: 10.0

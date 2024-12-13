@@ -1,0 +1,8 @@
+# Request: Paths from InVesalius
+#
+# Response: SetCoil
+
+string coil_model_path
+bool coil_set
+---
+bool success

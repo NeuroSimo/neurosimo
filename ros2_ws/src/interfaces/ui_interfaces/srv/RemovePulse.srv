@@ -1,0 +1,6 @@
+# ROS service for removing a target.
+
+string name
+uint16 pulse_index
+---
+bool success

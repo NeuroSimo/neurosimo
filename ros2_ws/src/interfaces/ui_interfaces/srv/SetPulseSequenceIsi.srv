@@ -1,0 +1,6 @@
+# ROS service for changing a target comment.
+
+string name
+uint32 new_isi
+---
+bool success

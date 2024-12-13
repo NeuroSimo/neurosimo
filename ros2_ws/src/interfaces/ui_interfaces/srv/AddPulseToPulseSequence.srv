@@ -1,0 +1,6 @@
+# ROS service for adding a new target.
+
+Pulse pulse
+string name
+---
+bool success

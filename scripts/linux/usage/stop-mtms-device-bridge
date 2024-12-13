@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Store the process ID of mTMS device bridge.
+PID_MTMS_DEVICE_BRIDGE=$(pgrep -f "start-mtms-device-bridge")
+
+# Send SIGINT to mTMS device bridge.
+kill -s SIGINT -- -$PID_MTMS_DEVICE_BRIDGE

@@ -1,0 +1,5 @@
+# ROS service for adding a new target.
+
+Pulse[] pulses
+---
+bool success

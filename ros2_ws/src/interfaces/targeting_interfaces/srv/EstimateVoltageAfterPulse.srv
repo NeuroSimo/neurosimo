@@ -1,0 +1,8 @@
+# ROS service for estimating the capacitor voltage after giving a pulse using the given waveform.
+
+uint16 voltage_before
+event_interfaces/Waveform waveform
+uint8 coil_number
+---
+bool success
+uint16 voltage_after

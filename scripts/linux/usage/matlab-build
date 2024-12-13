@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Build the ROS2 workspace and generate the MATLAB message files.
+#
+# This script is intended to be run on the mTMS computer when ROS2 messages have been added or modified.
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+# Run the MATLAB commands non-interactively
+matlab -nodisplay -nosplash -nodesktop -r " \
+pyenv('Version', '/opt/python3.9.5/bin/python3.9'); \
+ros2genmsg('/home/mtms/mtms/ros2_ws/src/interfaces', 'CreateShareableFile', true, 'BuildConfiguration', 'fasterruns'); \
+exit;"
+
+# Check if the .zip file exists and then move it
+if [ -f "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen.zip" ]; then
+    mv "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen.zip" "$MTMS_ROOT/api/matlab/"
+else
+    echo "matlab_msg_gen.zip does not exist."
+fi
+
+# Delete the matlab_msg_gen directory
+if [ -d "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen" ]; then
+    rm -rf "$MTMS_ROOT/ros2_ws/src/interfaces/matlab_msg_gen"
+else
+    echo "matlab_msg_gen directory does not exist."
+fi
+
+echo "Done."
+echo ""
+echo "• To register the MATLAB message files with MATLAB, run the following command:"
+echo ""
+echo "${BOLD}matlab-register${RESET}"
+echo ""
+echo "• To commit the built MATLAB message files, run the following command:"
+echo ""
+echo "${BOLD}matlab-commit${RESET}"
+echo ""

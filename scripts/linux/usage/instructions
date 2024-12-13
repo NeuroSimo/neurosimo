@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+echo "${BOLD}${UNDERLINE}Instructions for using the mTMS system${RESET}"
+echo ""
+echo "• List existing projects: ${BOLD}list${RESET}"
+echo "• Create a new project:   ${BOLD}create [project-name]${RESET}"
+echo ""
+echo "${BOLD}${UNDERLINE}Troubleshooting${RESET}"
+echo ""
+echo "• Record UDP packets:     ${BOLD}record${RESET}"
+echo ""

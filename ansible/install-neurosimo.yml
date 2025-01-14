@@ -1,0 +1,269 @@
+---
+- name: Setup an environment for NeuroSimo
+  hosts: localhost
+  connection: local
+  become: yes
+
+  vars:
+    # The user that runs the playbook.
+    target_user: "{{ lookup('env', 'USER') }}"
+    target_home: "/home/{{ target_user }}"
+
+    # The repository root.
+    repo_root: "{{ playbook_dir | dirname }}"
+
+    # Location of user projects.
+    projects_root: "{{ target_home }}/projects"
+
+    # ROS distro
+    ros_distro: "iron"
+
+    # Whether to use GPU or not
+    use_gpu: true
+
+  tasks:
+    ########################################################################
+    # Update apt cache
+    ########################################################################
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600  # in seconds
+
+    ########################################################################
+    # Install extra packages (net-tools, Wireshark, etc.)
+    ########################################################################
+    - name: Install other tools, e.g., for troubleshooting
+      apt:
+        name:
+          - net-tools
+          - wireshark
+          - wmctrl
+          - python3-pip
+          - nodejs  # Required by log script
+        state: present
+
+    - name: Install kernel tools
+      apt:
+        name:
+          - linux-tools-generic
+          - linux-cloud-tools-generic
+        state: present
+        update_cache: yes
+      become: yes
+
+    ########################################################################
+    # Copy systemd service files & enable
+    ########################################################################
+    - name: Copy NeuroSimo service
+      template:
+        src: files/neurosimo.service.j2
+        dest: /etc/systemd/system/neurosimo.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy set-cpupower.service
+      copy:
+        src: files/set-cpupower.service
+        dest: /etc/systemd/system/set-cpupower.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable NeuroSimo service
+      systemd:
+        name: neurosimo.service
+        enabled: yes
+
+    - name: Enable set-cpupower.service
+      systemd:
+        name: set-cpupower.service
+        enabled: yes
+
+    - name: Restart NeuroSimo service
+      systemd:
+        name: neurosimo.service
+        state: restarted
+
+    - name: Restart set-cpupower.service
+      systemd:
+        name: set-cpupower.service
+        state: restarted
+
+    ########################################################################
+    # Copy sysctl configuration
+    ########################################################################
+    - name: Copy 10-net-buffer-size.conf
+      copy:
+        src: files/10-net-buffer-size.conf
+        dest: /etc/sysctl.d/10-net-buffer-size.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload sysctl
+      shell: sysctl --system
+
+    ########################################################################
+    # Configure a cron job to clean old ROS logs
+    ########################################################################
+    - name: Ensure cron job to clean old ROS logs
+      cron:
+        name: "Clean ROS logs older than 7 days"
+        minute: "0"
+        hour: "0"
+        user: "{{ target_user }}"
+        job: "find {{ target_home }}/.ros/log -type f -mtime +7 -exec rm {} \\;"
+
+    ########################################################################
+    # Configure PulseAudio over TCP
+    ########################################################################
+    - name: Append module-native-protocol-tcp to /etc/pulse/default.pa
+      lineinfile:
+        path: /etc/pulse/default.pa
+        line: "load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;172.17.0.0/16 auth-anonymous=1"
+        state: present
+
+    ########################################################################
+    # Give the user passwordless sudo for specific commands
+    ########################################################################
+    - name: Allow user to restart NeuroSimo without sudo password
+      lineinfile:
+        path: /etc/sudoers.d/restart_containers
+        line: "{{ target_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart neurosimo"
+        create: yes
+        mode: '0440'
+
+    - name: Allow user to run the log script without sudo password
+      lineinfile:
+        path: /etc/sudoers.d/log_script
+        line: "{{ target_user }} ALL=(ALL) NOPASSWD: {{ repo_root }}/scripts/log"
+        create: yes
+        mode: '0440'
+
+    ########################################################################
+    # Create a projects directory for the user
+    ########################################################################
+    - name: Create projects directory
+      file:
+        path: "{{ projects_root }}"
+        state: directory
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0755'
+
+    ########################################################################
+    # Update .bash_env and .bashrc
+    ########################################################################
+    - name: Ensure .bash_env exists
+      file:
+        path: "{{ target_home }}/.bash_env"
+        state: touch
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: "0644"
+
+    - name: Ensure script directory is in PATH in .bash_env
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: "export PATH=$PATH:{{ repo_root }}/scripts/"
+        state: present
+
+    - name: Ensure NEUROSIMO_ROOT is exported
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: "export NEUROSIMO_ROOT={{ repo_root }}"
+        state: present
+
+    - name: Ensure PROJECTS_ROOT is exported
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: "export PROJECTS_ROOT={{ projects_root }}"
+        state: present
+
+    - name: Ensure RMW_IMPLEMENTATION is set to CycloneDDS
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp"
+        state: present
+
+    - name: Ensure CycloneDDS config is set
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: 'export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/src/shared_packages/resources/cyclonedds.xml'
+        state: present
+
+    - name: Ensure ROS is sourced
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: "source /opt/ros/{{ ros_distro }}/setup.bash"
+        state: present
+
+    - name: Ensure instructions script is sourced
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: "source {{ repo_root }}/scripts/instructions"
+        state: present
+
+    - name: Ensure .bash_env is sourced in .bashrc
+      lineinfile:
+        dest: "{{ target_home }}/.bashrc"
+        line: "source {{ target_home }}/.bash_env"
+        state: present
+        insertafter: EOF
+
+    ########################################################################
+    # Install NVIDIA Container Toolkit
+    ########################################################################
+    - name: Add NVIDIA GPG key
+      ansible.builtin.shell:
+        cmd: |
+          curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+          gpg --batch --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Add NVIDIA Container Toolkit repository
+      ansible.builtin.shell:
+        cmd: |
+          curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+          sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+          tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install NVIDIA Container Toolkit
+      ansible.builtin.apt:
+        name: nvidia-container-toolkit
+        state: present
+
+    - name: Configure Docker to use NVIDIA runtime
+      ansible.builtin.command:
+        cmd: nvidia-ctk runtime configure --runtime=docker
+
+    - name: Restart Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
+    ########################################################################
+    # Set up the environment
+    ########################################################################
+    - name: Check if .env exists
+      stat:
+        path: "{{ repo_root }}/.env"
+      register: env_file_status
+
+    - name: Copy .env.example to .env if .env does not exist
+      copy:
+        src: files/.env.example
+        dest: "{{ repo_root }}/.env"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0644'
+      when: not env_file_status.stat.exists

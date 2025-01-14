@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+# Restart core containers.
+echo "${BOLD}Restarting...${RESET}"
+
+sudo systemctl restart neurosimo
+
+echo "${BOLD}Done.${RESET}"

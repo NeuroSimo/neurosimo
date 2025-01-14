@@ -1,0 +1,13 @@
+# Used in the real-time pipeline for timed trigger using LabJack.
+TimedTrigger timed_trigger
+
+# System time when the sample was taken.
+builtin_interfaces/Time system_time_for_sample
+
+float64 preprocessor_latency
+float64 decider_latency
+
+# The time of the sample based on which the stimulation decision was made.
+float64 decision_time
+---
+bool success

@@ -1,0 +1,15 @@
+node_modules
+build
+.git
+.gitignore
+Dockerfile
+.dockerignore
+
+# We're using Yarn, so avoid copying npm-related files into the container
+package-lock.json
+
+yarn.lock
+.env
+.env.local
+cypress/videos
+cypress/screenshots

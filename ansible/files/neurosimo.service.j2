@@ -1,0 +1,36 @@
+[Unit]
+Description=neurosimo
+After=docker.service
+Requires=docker.service
+
+[Service]
+User={{ target_user }}
+
+Environment=PROJECTS_ROOT={{ projects_root }}
+Environment=RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+Environment=CYCLONEDDS_URI={{ repo_root }}/ros2_ws/src/shared_packages/resources/cyclonedds.xml
+Environment=DISPLAY=:1
+
+LimitRTPRIO=99
+LimitMEMLOCK=10000000000
+
+WorkingDirectory={{ repo_root }}
+
+# Check X server readiness and allow Docker to connect
+ExecStartPre=/bin/bash -c 'for i in {1..30}; do if xhost >& /dev/null; then break; else sleep 1; fi; done'
+ExecStartPre=/usr/bin/xhost +local:docker
+
+# Start containers
+{% if use_gpu %}
+ExecStart=docker-compose --profile gpu up
+{% else %}
+ExecStart=docker-compose --profile non-gpu up
+{% endif %}
+
+# Stop containers
+ExecStop=docker-compose -f docker-compose.yml down --remove-orphans
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

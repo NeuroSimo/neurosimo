@@ -1,0 +1,86 @@
+---
+- name: Install ROS 2 Iron on Ubuntu
+  hosts: localhost
+  become: yes
+  connection: local
+  vars:
+    ros_distro: iron
+    ros_key_url: "https://raw.githubusercontent.com/ros/rosdistro/master/ros.key"
+    ros_keyring: "/usr/share/keyrings/ros-archive-keyring.gpg"
+    ros_repo: "http://packages.ros.org/ros2/ubuntu"
+    ros_repo_file: "/etc/apt/sources.list.d/ros2.list"
+
+  tasks:
+    ########################################################################
+    # Update apt cache and enable universe repository
+    ########################################################################
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install software-properties-common
+      apt:
+        name: software-properties-common
+        state: present
+
+    - name: Add Universe repository
+      apt_repository:
+        repo: "deb http://archive.ubuntu.com/ubuntu/ {{ ansible_lsb.codename }} universe"
+        state: present
+
+    - name: Update apt cache after adding universe
+      apt:
+        update_cache: yes
+
+    ########################################################################
+    # Install prerequisites for ROS 2
+    ########################################################################
+
+    - name: Install prerequisites for ROS 2
+      apt:
+        name:
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+
+    ########################################################################
+    # Add ROS 2 GPG key and repository
+    ########################################################################
+
+    - name: Add ROS 2 GPG key
+      ansible.builtin.get_url:
+        url: "{{ ros_key_url }}"
+        dest: "{{ ros_keyring }}"
+        mode: '0644'
+
+    - name: Add ROS 2 apt repository
+      shell: |
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+      args:
+        executable: /bin/bash
+
+    - name: Update apt cache after adding ROS 2 repository
+      apt:
+        update_cache: yes
+
+    ########################################################################
+    # Install ROS base and build tools
+    ########################################################################
+
+    - name: Install ROS 2 base package
+      apt:
+        name: "ros-{{ ros_distro }}-ros-base"
+        state: present
+
+    - name: Install colcon build tools
+      apt:
+        name: python3-colcon-common-extensions
+        state: present
+
+    - name: Install Cyclone DDS for ROS
+      apt:
+        name: "ros-{{ ros_distro }}-rmw-cyclonedds-cpp"
+        state: present

@@ -1,0 +1,62 @@
+#!/usr/bin/env node
+/*
+ * replace all UTC dates to local datetime with timezone offset through pipe
+ * usage: docker-compose logs --timestamps container_name | docker-compose-logs-localtime
+ *
+ * Credits:
+ *
+ * docker-logs-localtime,
+ * thank you anton-x-t,
+ * https://gist.github.com/anton-x-t/859a69d0426ed1e4040660f57229c76c
+ *
+ * MDN Date, getMilliseconds(),
+ * thank you MDN,
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_components_and_time_zones
+ *
+ * How to ISO 8601 format a Date with Timezone Offset in JavaScript?,
+ * thank you Steven Moseley,
+ * https://stackoverflow.com/a/17415677
+ *
+ * ISO 8601 - Wikipedia,
+ * thank you Wikipedia Contributors,
+ * https://en.wikipedia.org/wiki/ISO_8601
+ *
+ * docker-logs-localtime,
+ * thank you popstas,
+ * https://gist.github.com/popstas/ffcf282492fd78389d1df2ab7f31052a
+ *
+ * docker-logs-localtime,
+ * thank you HuangYingNing,
+ * https://github.com/HuangYingNing/docker-logs-localtime
+ */
+
+function toIsoString(date) {
+  var tzo = -date.getTimezoneOffset(),
+      dif = tzo >= 0 ? '+' : '-',
+      pad = function(num) {
+          return (num < 10 ? '0' : '') + num;
+      };
+
+  return date.getFullYear() +
+      '-' + pad(date.getMonth() + 1) +
+      '-' + pad(date.getDate()) +
+      'T' + pad(date.getHours()) +
+      ':' + pad(date.getMinutes()) +
+      ':' + pad(date.getSeconds()) +
+      '.' + (date.getMilliseconds() / 1000).toFixed(3).slice(2, 5) +
+      dif + pad(Math.floor(Math.abs(tzo) / 60)) +
+      ':' + pad(Math.abs(tzo) % 60);
+}
+
+process.stdin.resume();
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', function(data) {
+  const match = data.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z/g);
+  if (match) {
+    match.forEach(dateUtc => {
+      const dateLocal = toIsoString(new Date(dateUtc));
+      data = data.replace(dateUtc, dateLocal);
+    });
+  }
+  process.stdout.write(data);
+});

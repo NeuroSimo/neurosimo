@@ -1,0 +1,77 @@
+#!/bin/bash
+
+set -e
+
+# Check if Ansible is installed
+if ! command -v ansible-playbook &> /dev/null; then
+    echo "Ansible is not installed. Installing Ansible..."
+    sudo apt update && sudo apt install -y software-properties-common
+    sudo add-apt-repository --yes --update ppa:ansible/ansible
+    sudo apt install -y ansible
+fi
+
+# Prompt for sudo password once
+read -s -p "Enter sudo password: " SUDO_PASS
+echo ""
+
+# Run the Docker installation playbook
+ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-docker.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+
+# Run the Docker installation playbook
+ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-ros.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+
+# Run the NeuroSimo setup playbook
+ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+
+# Function to check if the kernel is preempt_rt
+is_preempt_rt() {
+    # Option 1: Check kernel version string
+    if uname -r | grep -q "preempt_rt"; then
+        return 0
+    fi
+
+    # Option 2: Check kernel config (requires access to /boot/config-$(uname -r))
+    if [ -f "/boot/config-$(uname -r)" ] && grep -q "^CONFIG_PREEMPT_RT_FULL=y" "/boot/config-$(uname -r)"; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Function to check if the kernel is preempt_rt
+is_preempt_rt() {
+    # Option 1: Check kernel version string for "preempt_rt"
+    if uname -r | grep -q "preempt_rt"; then
+        return 0
+    fi
+
+    # Option 2: Check kernel config for CONFIG_PREEMPT_RT_FULL=y
+    KERNEL_CONFIG="/boot/config-$(uname -r)"
+    if [ -f "$KERNEL_CONFIG" ] && grep -q "^CONFIG_PREEMPT_RT_FULL=y" "$KERNEL_CONFIG"; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Check if preempt_rt kernel is installed
+if is_preempt_rt; then
+    echo "Preempt-RT kernel detected."
+
+    # Prompt user for NVIDIA driver installation
+    read -p "Do you want to install NVIDIA drivers for Preempt-RT kernel? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo ""
+        echo "Please ensure that you are running this script in a text console (not a graphical terminal)."
+        echo "Press Ctrl+Alt+F3 to switch to a text console if necessary."
+        echo ""
+        read -p "Press Enter to continue..."
+        echo ""
+
+        ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml --ask-become-pass
+    fi
+fi
+
+echo "Installation complete."
+echo ""

@@ -1,0 +1,82 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+# Check that submodules are initialized and non-empty.
+SHARED_PACKAGES_DIR="$NEUROSIMO_ROOT/ros2_ws/src/shared_packages"
+ROSBRIDGE_DIR="$NEUROSIMO_ROOT/ros2_ws/src/shared_packages/rosbridge/rosbridge_suite"
+
+check_dir_non_empty() {
+    if [ ! -d "$1" ] || [ -z "$(ls -A "$1")" ]; then
+        echo "${BOLD}${UNDERLINE}Error:${RESET} $1 not found or is empty. Run 'git submodule update --init --recursive' to initialize submodules."
+        exit 1
+    fi
+}
+
+check_dir_non_empty "$SHARED_PACKAGES_DIR"
+check_dir_non_empty "$ROSBRIDGE_DIR"
+
+# Set the disk space threshold (in GB)
+DISK_SPACE_THRESHOLD=20
+
+# Function to check disk space and clean up Docker images if necessary
+check_disk_space_and_clean() {
+    local free_space=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
+    if [ "$free_space" -lt $DISK_SPACE_THRESHOLD ]; then
+        echo "${BOLD}${UNDERLINE}Warning:${RESET} Less than ${DISK_SPACE_THRESHOLD}GB of free space on root partition."
+        read -p "Do you want to clean up old Docker images? [y/N] " response
+        response=${response:-N}  # Default to No
+        if [[ $response =~ ^[Yy]$ ]]; then
+            echo "Cleaning up Docker images..."
+
+            # Remove unused build cache layers
+            docker builder prune -a -f
+
+            # Remove dangling images
+            docker image prune -f
+
+            # Remove unused containers and volumes
+            docker container prune -f
+            docker volume prune -f
+
+            echo "Cleanup completed."
+
+            # Show reclaimed space
+            echo "Current disk space:"
+            df -h /
+        else
+            echo "Skipping image cleanup."
+        fi
+    fi
+}
+
+# If a parameter is provided, use it as the container name.
+CONTAINER_NAME=$1
+
+# Check disk space and clean up before proceeding
+check_disk_space_and_clean
+
+# Rebuild the specified core container or all containers if none is specified.
+echo "${BOLD}Building containers...${RESET}"
+
+if [ -z "$CONTAINER_NAME" ]; then
+    docker-compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build
+else
+    docker-compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build $CONTAINER_NAME
+fi
+
+# Check the exit status of the last command (docker-compose build).
+if [ $? -ne 0 ]; then
+    echo "Build failed. Not restarting the containers."
+    exit 1
+fi
+
+# Restart containers.
+echo "${BOLD}Restarting...${RESET}"
+
+sudo systemctl restart neurosimo
+
+echo "${BOLD}Done.${RESET}"

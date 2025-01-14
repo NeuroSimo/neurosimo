@@ -1,0 +1,93 @@
+---
+- name: Setup NVIDIA Drivers
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: yes
+
+  vars:
+    nvidia_driver_version: "560.35.03"
+    nvidia_driver_url: "https://us.download.nvidia.com/XFree86/Linux-x86_64/{{ nvidia_driver_version }}/NVIDIA-Linux-x86_64-{{ nvidia_driver_version }}.run"
+    download_dir: "/tmp/nvidia-drivers"
+    installer_file: "NVIDIA-Linux-x86_64-{{ nvidia_driver_version }}.run"
+
+  tasks:
+    - name: Install dependencies for building NVIDIA driver
+      apt:
+        name:
+          - build-essential
+          - dkms
+          - linux-headers-{{ ansible_kernel }}
+          - libglvnd-dev
+        state: present
+        update_cache: yes
+
+    - name: Ensure download directory exists
+      ansible.builtin.file:
+        path: "{{ download_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download NVIDIA driver installer
+      ansible.builtin.get_url:
+        url: "{{ nvidia_driver_url }}"
+        dest: "{{ download_dir }}/{{ installer_file }}"
+        mode: '0755'
+      register: download_result
+
+    - name: Fail if NVIDIA driver download failed
+      ansible.builtin.fail:
+        msg: "Failed to download NVIDIA driver installer."
+      when: download_result.failed
+
+    - name: Purge automatically installed NVIDIA drivers
+      ansible.builtin.apt:
+        name: "nvidia*"
+        state: absent
+        purge: yes
+      register: purge_result
+
+    - name: Disable Nouveau drivers by blacklisting
+      ansible.builtin.lineinfile:
+        path: /etc/modprobe.d/blacklist.conf
+        line: "blacklist nouveau"
+        create: yes
+        state: present
+
+    - name: Disable Nouveau kernel module options
+      ansible.builtin.lineinfile:
+        path: /etc/modprobe.d/nouveau-kms.conf
+        line: "options nouveau modeset=0"
+        create: yes
+        state: present
+
+    - name: Update initramfs to apply changes
+      ansible.builtin.command:
+        cmd: update-initramfs -u
+      register: initramfs_update
+
+    - name: Stop display manager (gdm)
+      ansible.builtin.systemd:
+        name: gdm
+        state: stopped
+      ignore_errors: true
+
+    - name: Unload Nouveau kernel module
+      ansible.builtin.command:
+        cmd: modprobe -r nouveau
+      ignore_errors: yes
+
+    - name: Run NVIDIA driver installer
+      ansible.builtin.shell:
+        cmd: |
+          IGNORE_PREEMPT_RT_PRESENCE=1 ./{{ installer_file }} --silent --no-drm
+      args:
+        chdir: "{{ download_dir }}"
+      register: nvidia_install
+      failed_when: nvidia_install.rc != 0
+
+    - name: Start display manager (gdm)
+      ansible.builtin.systemd:
+        name: gdm
+        state: started
+      ignore_errors: true

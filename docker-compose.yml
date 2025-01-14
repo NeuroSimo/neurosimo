@@ -1,0 +1,199 @@
+services:
+  eeg_bridge:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_bridge/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  eeg_monitor:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_monitor/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    privileged: true
+    network_mode: host
+
+  eeg_recorder:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_recorder/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    network_mode: host
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+
+  eeg_simulator:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_simulator/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    privileged: true
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  # Non-GPU version of decider
+  decider_non_gpu:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/pipeline/decider/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - USE_GPU=false
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    volumes:
+      - "$PROJECTS_ROOT:/app/projects"
+    privileged: true
+    network_mode: host
+    profiles:
+      - non-gpu
+
+  # GPU-enabled version of decider
+  decider:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/pipeline/decider/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - USE_GPU=true
+      - NVIDIA_VISIBLE_DEVICES=all
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    volumes:
+      - "$PROJECTS_ROOT:/app/projects"
+    privileged: true
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - gpu
+
+  preprocessor:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/pipeline/preprocessor/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  presenter:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/pipeline/presenter/Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+      # Mount PulseAudio configuration
+      - '~/.config/pulse:/root/.config/pulse'
+    environment:
+      # Needed for X11 forwarding.
+      - DISPLAY
+      # Set PulseAudio server address
+      - PULSE_SERVER=localhost
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+    devices:
+      # Provide access to sound devices
+      - "/dev/snd:/dev/snd"
+
+  project_manager:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/system/project_manager/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  session_manager:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/system/session_manager/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  trigger_timer:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/pipeline/trigger_timer/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    volumes:
+      # XXX: This is a workaround to allow access to LabJack devices over reconnects. The correct
+      #   solution would likely involve modifying the LabJack installation scripts to work properly
+      #   within a Docker container. This workaround increases security risks by exposing all host
+      #   devices to the container. Note that "privileged: true" should theoretically provide the
+      #   same access, but in practice, it does not seem to suffice.
+      - "/dev:/dev"
+    # The container needs to be privileged to set real-time priority.
+    privileged: true
+    network_mode: host
+
+  # Frontend-related services
+  front:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_ROSBRIDGE_URL=ws://localhost:9090
+      - PORT=3000
+    volumes:
+      - './front/src:/app/src'
+      - './front/public:/app/public'
+    network_mode: host
+
+  rosbridge:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/shared_packages/rosbridge/Dockerfile
+      args:
+        INTERFACES_PATH: ros2_ws/src/neurosimo_packages/interfaces
+    env_file:
+      - .env
+    environment:
+      - ROSBRIDGE_PORT=9090
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    network_mode: host

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+echo "${BOLD}${UNDERLINE}Instructions for using NeuroSimo:${RESET}"
+echo ""
+echo "• List existing projects: ${BOLD}list-projects${RESET}"
+echo "• Create a new project:   ${BOLD}create-project [project-name]${RESET}"
+echo ""

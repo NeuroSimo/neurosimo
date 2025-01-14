@@ -1,0 +1,29 @@
+# Environment files
+.env
+
+# Directories created by the ROS2 build system, depending on which directory the build is run from.
+ros2_ws/src/install/
+ros2_ws/src/log/
+ros2_ws/src/build/
+ros2_ws/build
+ros2_ws/install
+ros2_ws/log
+build/
+log/
+install/
+
+__pycache__
+cmake-build-debug
+cmake-build-release
+
+# ROS bags used to store data from sessions.
+data/bags/
+
+# Not used by the project but potentially by individual developers.
+.idea
+.vscode
+venv
+.venv
+
+# MacOS temporary file
+.DS_Store

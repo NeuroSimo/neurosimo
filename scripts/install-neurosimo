@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Run the Ansible playbook
+ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml --ask-become-pass
+
+# Check that the playbook ran successfully
+if [ $? -ne 0 ]; then
+    echo "Error: Ansible playbook failed."
+    exit 1
+fi
+
+# Check if the user wants to install NVIDIA drivers
+read -p "Do you want to install NVIDIA drivers? [y/N] " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Please ensure that you are running this script in a text console (not a graphical terminal)."
+    echo "Press Ctrl+Alt+F3 to switch to a text console."
+    echo ""
+    read -p "Press Enter to continue..."
+    echo ""
+    echo "Installing NVIDIA drivers..."
+    ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers.yml --ask-become-pass
+    if [ $? -ne 0 ]; then
+        echo "Error: Ansible playbook failed."
+        exit 1
+    fi
+fi
+
+echo "Installation complete."
+echo ""

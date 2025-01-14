@@ -1,0 +1,33 @@
+# TODO: Contains Docker services under development. Not for production use.
+version: '2'
+
+services:
+  bag_exporter:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/utils/bag_exporter/Dockerfile
+    environment:
+      - PROJECT_NAME
+      - BAG_ANALYSIS_BAG_NAME
+      - BAG_ANALYSIS_TIMESTAMP
+      - BAG_ANALYSIS_TOPIC
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  bag_recorder:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/utils/bag_recorder/Dockerfile
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  eeg_batcher:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_batcher/Dockerfile
+    env_file:
+      - ${ENV_FILE}
+    privileged: true
+    network_mode: host

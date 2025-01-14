@@ -254,41 +254,56 @@
     ########################################################################
     # 11. Update .bashrc with environment variables / ROS sourcing
     ########################################################################
-    - name: Ensure script directory is in PATH
+    - name: Ensure .bash_env exists
+      file:
+        path: "{{ target_home }}/.bash_env"
+        state: touch
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: "0644"
+
+    - name: Ensure script directory is in PATH in .bash_env
       lineinfile:
-        dest: "{{ target_home }}/.bashrc"
+        dest: "{{ target_home }}/.bash_env"
         line: "export PATH=$PATH:{{ repo_root }}/scripts/"
         state: present
 
     - name: Ensure NEUROSIMO_ROOT is exported
       lineinfile:
-        dest: "{{ target_home }}/.bashrc"
+        dest: "{{ target_home }}/.bash_env"
         line: "export NEUROSIMO_ROOT={{ repo_root }}"
         state: present
 
     - name: Ensure PROJECTS_ROOT is exported
       lineinfile:
-        dest: "{{ target_home }}/.bashrc"
+        dest: "{{ target_home }}/.bash_env"
         line: "export PROJECTS_ROOT={{ projects_root }}"
         state: present
 
     - name: Ensure RMW_IMPLEMENTATION is set to CycloneDDS
       lineinfile:
-        dest: "{{ target_home }}/.bashrc"
+        dest: "{{ target_home }}/.bash_env"
         line: "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp"
         state: present
 
     - name: Ensure CycloneDDS config is set
       lineinfile:
-        dest: "{{ target_home }}/.bashrc"
+        dest: "{{ target_home }}/.bash_env"
         line: 'export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/src/shared_packages/resources/cyclonedds.xml'
         state: present
 
     - name: Ensure ROS is sourced
       lineinfile:
-        dest: "{{ target_home }}/.bashrc"
+        dest: "{{ target_home }}/.bash_env"
         line: "source /opt/ros/{{ ros_distro }}/setup.bash"
         state: present
+
+    - name: Ensure .bash_env is sourced in .bashrc
+      lineinfile:
+        dest: "{{ target_home }}/.bashrc"
+        line: "source {{ target_home }}/.bash_env"
+        state: present
+        insertafter: EOF
 
     ########################################################################
     # 12. Install NVIDIA Container Toolkit
@@ -298,8 +313,6 @@
         cmd: |
           curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
           gpg --batch --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-      args:
-        warn: false
 
     - name: Add NVIDIA Container Toolkit repository
       ansible.builtin.shell:
@@ -307,8 +320,6 @@
           curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
           sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
           tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-      args:
-        warn: false
 
     - name: Update apt cache
       ansible.builtin.apt:
@@ -327,3 +338,20 @@
       ansible.builtin.service:
         name: docker
         state: restarted
+
+    ########################################################################
+    # 13. Set up the environment
+    ########################################################################
+    - name: Check if .env exists
+      stat:
+        path: "{{ repo_root }}/.env"
+      register: env_file_status
+
+    - name: Copy .env.example to .env if .env does not exist
+      copy:
+        src: files/.env.example
+        dest: "{{ repo_root }}/.env"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0644'
+      when: not env_file_status.stat.exists

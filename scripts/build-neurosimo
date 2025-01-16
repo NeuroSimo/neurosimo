@@ -60,7 +60,7 @@ echo "${BOLD}Building containers...${RESET}"
 if [ -z "$CONTAINER_NAME" ]; then
     docker-compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build
 else
-    docker-compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build $CONTAINER_NAME
+    docker compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build $CONTAINER_NAME
 fi
 
 # Check the exit status of the last command (docker-compose build).

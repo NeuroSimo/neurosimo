@@ -7,7 +7,7 @@ if [ "$USE_GPU" = "true" ]; then
 
     success=$?
     if [ $success -ne 0 ]; then
-        echo "CUDA test failed, GPU not available."
+        echo "CUDA test failed, GPU not available, exiting..."
         exit 1
     fi
 fi

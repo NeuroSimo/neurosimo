@@ -63,12 +63,6 @@
         state: present
         update_cache: yes
 
-    - name: Download docker-compose (standalone) binary
-      get_url:
-        url: https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-linux-x86_64
-        dest: /usr/local/bin/docker-compose
-        mode: "0755"
-
     - name: Add user to docker group
       user:
         name: "{{ target_user }}"

@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   eeg_bridge:
     build:
@@ -7,6 +5,8 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_bridge/Dockerfile
     env_file:
       - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     # The container needs to be privileged to set real-time priority.
     privileged: true
     network_mode: host
@@ -17,6 +17,8 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_monitor/Dockerfile
     env_file:
       - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     privileged: true
     network_mode: host
 
@@ -26,6 +28,8 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_recorder/Dockerfile
     env_file:
       - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     network_mode: host
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
@@ -36,16 +40,15 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_simulator/Dockerfile
     env_file:
       - .env
-    # This option is needed for the container to achieve the same performance as without Docker.
-    # Optionally, also "privileged: true" could be used.
-    security_opt:
-      - seccomp:unconfined
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    privileged: true
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
 
   # Non-GPU version of decider
-  decider:
+  decider_non_gpu:
     build:
       context: .
       dockerfile: ros2_ws/src/neurosimo_packages/pipeline/decider/Dockerfile
@@ -53,6 +56,7 @@ services:
       - .env
     environment:
       - USE_GPU=false
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
     privileged: true
@@ -61,7 +65,7 @@ services:
       - non-gpu
 
   # GPU-enabled version of decider
-  decider_gpu:
+  decider:
     build:
       context: .
       dockerfile: ros2_ws/src/neurosimo_packages/pipeline/decider/Dockerfile
@@ -70,6 +74,7 @@ services:
     environment:
       - USE_GPU=true
       - NVIDIA_VISIBLE_DEVICES=all
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
     privileged: true
@@ -78,7 +83,9 @@ services:
       resources:
         reservations:
           devices:
-            - capabilities: [gpu]
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     profiles:
       - gpu
 
@@ -88,6 +95,8 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/pipeline/preprocessor/Dockerfile
     env_file:
       - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
     # The container needs to be privileged to set real-time priority.
@@ -109,6 +118,7 @@ services:
       - DISPLAY
       # Set PulseAudio server address
       - PULSE_SERVER=localhost
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     # The container needs to be privileged to set real-time priority.
     privileged: true
     network_mode: host
@@ -122,6 +132,8 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/system/project_manager/Dockerfile
     env_file:
       - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
@@ -132,6 +144,8 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/system/session_manager/Dockerfile
     env_file:
       - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     # The container needs to be privileged to set real-time priority.
     privileged: true
     network_mode: host
@@ -142,6 +156,8 @@ services:
       dockerfile: ros2_ws/src/neurosimo_packages/pipeline/trigger_timer/Dockerfile
     env_file:
       - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     volumes:
       # XXX: This is a workaround to allow access to LabJack devices over reconnects. The correct
       #   solution would likely involve modifying the LabJack installation scripts to work properly
@@ -179,4 +195,5 @@ services:
       - .env
     environment:
       - ROSBRIDGE_PORT=9090
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     network_mode: host

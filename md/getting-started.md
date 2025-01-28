@@ -164,7 +164,7 @@ For instance, if the TMS device does not deliver pulses, first check if the deci
 is making decisions by running:
 
 ```
-log decider
+log neurosimo-decider
 ```
 
 If it looks like there is a bug in the software, take a screenshot of the log messages

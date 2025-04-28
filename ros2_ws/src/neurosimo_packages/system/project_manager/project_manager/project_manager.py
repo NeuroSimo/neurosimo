@@ -42,7 +42,8 @@ class ProjectManagerNode(Node):
 
         # Set active project initially to the first project on the list.
         projects = self.list_projects()
-        self.set_active_project(projects[0])
+        if projects:
+            self.set_active_project(projects[0])
 
     def set_active_project(self, active_project):
         self.active_project = active_project

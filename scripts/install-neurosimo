@@ -73,5 +73,9 @@ if is_preempt_rt; then
     fi
 fi
 
+# Create 'example' project
+echo "Creating 'example' project..."
+./scripts/create-project example
+
 echo "Installation complete."
 echo ""

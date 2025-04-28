@@ -406,6 +406,62 @@ bool DeciderWrapper::is_process_on_trigger_enabled() const {
   return this->process_on_trigger;
 }
 
+bool DeciderWrapper::parseSensoryStimulusDict(
+  const py::dict& py_sensory_stimulus,
+  pipeline_interfaces::msg::SensoryStimulus& out_msg)
+{
+  static const std::vector<std::pair<std::string, std::type_info const&>> required = {
+    {"time",     typeid(py::float_)},
+    {"state",    typeid(py::int_)},
+    {"parameter",typeid(py::int_)},
+    {"duration", typeid(py::float_)}
+  };
+
+  // 1) Check presence
+  for (auto const& [field, _] : required) {
+    if (!py_sensory_stimulus.contains(field)) {
+      RCLCPP_ERROR(*logger_ptr, "sensory_stimulus missing field '%s'", field.c_str());
+      state = WrapperState::ERROR;
+      return false;
+    }
+  }
+
+  // 2) Type‐check & cast
+  try {
+    // time
+    if (!py::isinstance<py::float_>(py_sensory_stimulus["time"])) {
+      throw std::runtime_error("'time' is not float");
+    }
+    out_msg.time = py_sensory_stimulus["time"].cast<double>();
+
+    // state
+    if (!py::isinstance<py::int_>(py_sensory_stimulus["state"])) {
+      throw std::runtime_error("'state' is not int");
+    }
+    out_msg.state = py_sensory_stimulus["state"].cast<uint16_t>();
+
+    // parameter
+    if (!py::isinstance<py::int_>(py_sensory_stimulus["parameter"])) {
+      throw std::runtime_error("'parameter' is not int");
+    }
+    out_msg.parameter = py_sensory_stimulus["parameter"].cast<uint16_t>();
+
+    // duration
+    if (!py::isinstance<py::float_>(py_sensory_stimulus["duration"])) {
+      throw std::runtime_error("'duration' is not float");
+    }
+    out_msg.duration = py_sensory_stimulus["duration"].cast<double>();
+
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(*logger_ptr, "Error parsing sensory_stimulus: %s", e.what());
+    state = WrapperState::ERROR;
+    return false;
+  }
+
+  // If we get here, everything succeeded
+  return true;
+}
+
 /* TODO: Use struct for the return value. */
 std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, bool> DeciderWrapper::process(
     pipeline_interfaces::msg::SensoryStimulus& output_sensory_stimulus,
@@ -575,82 +631,14 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   }
 
   if (dict_result.contains("sensory_stimulus")) {
-    py::dict py_sensory_stimulus = dict_result["sensory_stimulus"].cast<py::dict>();
-
-    /* Checks for each field in the sensory_stimulus dictionary */
-    if (!py_sensory_stimulus.contains("time")) {
-      RCLCPP_ERROR(*logger_ptr, "sensory_stimulus does not contain the field: time.");
-      state = WrapperState::ERROR;
+    auto py_sensory_stimulus = dict_result["sensory_stimulus"].cast<py::dict>();
+    if (parseSensoryStimulusDict(py_sensory_stimulus, output_sensory_stimulus)) {
+      request_sensory_stimulus = true;
+    } else {
       success = false;
-
       return {success, trial, timed_trigger, request_sensory_stimulus};
     }
-
-    if (!py_sensory_stimulus.contains("state")) {
-      RCLCPP_ERROR(*logger_ptr, "sensory_stimulus does not contain the field: state.");
-      state = WrapperState::ERROR;
-      success = false;
-
-      return {success, trial, timed_trigger, request_sensory_stimulus};
-    }
-
-    if (!py_sensory_stimulus.contains("parameter")) {
-      RCLCPP_ERROR(*logger_ptr, "sensory_stimulus does not contain the field: parameter.");
-      state = WrapperState::ERROR;
-      success = false;
-
-      return {success, trial, timed_trigger, request_sensory_stimulus};
-    }
-
-    if (!py_sensory_stimulus.contains("duration")) {
-      RCLCPP_ERROR(*logger_ptr, "sensory_stimulus does not contain the field: duration.");
-      state = WrapperState::ERROR;
-      success = false;
-
-      return {success, trial, timed_trigger, request_sensory_stimulus};
-    }
-
-    if (!py::isinstance<py::float_>(py_sensory_stimulus["time"])) {
-      RCLCPP_ERROR(*logger_ptr, "'time' field of 'sensory_stimulus' dictionary should be of type float.");
-      state = WrapperState::ERROR;
-      success = false;
-
-      return {success, trial, timed_trigger, request_sensory_stimulus};
-    }
-
-    if (!py::isinstance<py::int_>(py_sensory_stimulus["state"])) {
-      RCLCPP_ERROR(*logger_ptr, "'state' field of 'sensory_stimulus' dictionary should be of type int.");
-      state = WrapperState::ERROR;
-      success = false;
-
-      return {success, trial, timed_trigger, request_sensory_stimulus};
-    }
-
-    if (!py::isinstance<py::int_>(py_sensory_stimulus["parameter"])) {
-      RCLCPP_ERROR(*logger_ptr, "'parameter' field of 'sensory_stimulus' dictionary should be of type int.");
-      state = WrapperState::ERROR;
-      success = false;
-
-      return {success, trial, timed_trigger, request_sensory_stimulus};
-    }
-
-    if (!py::isinstance<py::float_>(py_sensory_stimulus["duration"])) {
-      RCLCPP_ERROR(*logger_ptr, "'duration' field of 'sensory_stimulus' dictionary should be of type float.");
-      state = WrapperState::ERROR;
-      success = false;
-
-      return {success, trial, timed_trigger, request_sensory_stimulus};
-    }
-
-    /* Convert each field from the dictionary to the ROS message. */
-    output_sensory_stimulus.time = py_sensory_stimulus["time"].cast<double_t>();
-    output_sensory_stimulus.state = py_sensory_stimulus["state"].cast<uint16_t>();
-    output_sensory_stimulus.parameter = py_sensory_stimulus["parameter"].cast<uint16_t>();
-    output_sensory_stimulus.duration = py_sensory_stimulus["duration"].cast<double_t>();
-
-    request_sensory_stimulus = true;
   }
-
   return {success, trial, timed_trigger, request_sensory_stimulus};
 }
 

@@ -56,6 +56,10 @@ public:
 
   std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> get_targets();
 
+  bool parseSensoryStimulusDict(
+    const py::dict& py_sensory_stimulus,
+    pipeline_interfaces::msg::SensoryStimulus& out_msg);
+  
   std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, bool> process(
     pipeline_interfaces::msg::SensoryStimulus& output_sensory_stimulus,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,

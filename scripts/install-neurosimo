@@ -77,5 +77,9 @@ fi
 echo "Creating 'example' project..."
 ./scripts/create-project example
 
+# Build ROS workspace
+echo "Building ROS interfaces..."
+./scripts/build-ros-interfaces
+
 echo "Installation complete."
 echo ""

@@ -2,6 +2,7 @@
 #define EEG_PROCESSOR_PRESENTER_H
 
 #include <cmath>
+#include <queue>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -19,6 +20,15 @@
 
 const std::string UNSET_STRING = "";
 
+struct StimulusCompare {
+  bool operator()(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>& a,
+                  const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>& b) const
+  {
+    // return true if a should come *after* b in the queue (i.e. a.time > b.time)
+    return a->time > b->time;
+  }
+};
+
 class PresenterWrapper;
 
 class EegPresenter : public rclcpp::Node {
@@ -27,6 +37,7 @@ public:
   ~EegPresenter();
 
 private:
+  void reset_sensory_stimuli();
   void initialize_presenter_module();
   void unset_presenter_module();
 
@@ -79,7 +90,9 @@ private:
 
   std::vector<std::string> modules;
 
-  std::queue<std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>> sensory_stimuli;
+  std::priority_queue<
+    std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>,
+    std::vector<std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>>, StimulusCompare> sensory_stimuli;
 
   std::unique_ptr<PresenterWrapper> presenter_wrapper;
 

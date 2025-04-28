@@ -115,8 +115,16 @@ EegPresenter::~EegPresenter() {
   close(inotify_descriptor);
 }
 
+void EegPresenter::reset_sensory_stimuli() {
+  while (!this->sensory_stimuli.empty()) {
+    this->sensory_stimuli.pop();
+  }
+}
+
 /* Functions to re-initialize the presenter state. */
 void EegPresenter::initialize_presenter_module() {
+  reset_sensory_stimuli();
+
   if (!this->enabled ||
       this->working_directory == UNSET_STRING ||
       this->module_name == UNSET_STRING) {
@@ -327,7 +335,7 @@ void EegPresenter::update_time(double_t time) {
     return;
   }
 
-  auto stimulus = this->sensory_stimuli.front();
+  auto stimulus = this->sensory_stimuli.top();
   double_t stimulus_time = stimulus->time;
 
   /* If the next stimulus is in the future, return early. */

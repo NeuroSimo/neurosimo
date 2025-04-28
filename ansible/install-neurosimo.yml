@@ -204,6 +204,12 @@
         line: "source /opt/ros/{{ ros_distro }}/setup.bash"
         state: present
 
+    - name: Ensure workspace is sourced
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: "source {{ repo_root }}/ros2_ws/install/setup.bash"
+        state: present
+
     - name: Ensure instructions script is sourced
       lineinfile:
         dest: "{{ target_home }}/.bash_env"

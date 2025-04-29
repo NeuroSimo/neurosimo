@@ -17,6 +17,8 @@ class PresenterWrapper {
 public:
   PresenterWrapper(rclcpp::Logger& logger);
 
+  void setup_custom_print();
+
   void initialize_module(
       const std::string& directory,
       const std::string& module_name);
@@ -44,7 +46,7 @@ private:
   std::unique_ptr<py::module> presenter_module;
   std::unique_ptr<py::object> presenter_instance;
 
-  std::unique_ptr<py::scoped_interpreter> guard;
+  std::unique_ptr<py::scoped_interpreter> interpreter;
 };
 
 #endif

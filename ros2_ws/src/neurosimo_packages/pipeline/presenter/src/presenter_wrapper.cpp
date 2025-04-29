@@ -10,7 +10,37 @@ namespace py = pybind11;
 PresenterWrapper::PresenterWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
   _is_initialized = false;
-  guard = std::make_unique<py::scoped_interpreter>();
+
+  /* Initialize the Python interpreter. */
+  interpreter = std::make_unique<py::scoped_interpreter>();
+  setup_custom_print();
+}
+
+void PresenterWrapper::setup_custom_print() {
+    py::exec(R"(
+import builtins
+import cpp_bindings
+
+def custom_print(*args, sep=' ', end='\n', file=None, flush=False):
+    output = sep.join(map(str, args))
+    cpp_bindings.log(output)
+    if file is not None:
+        file.write(output + end)
+        if flush:
+            file.flush()
+
+def print_throttle(*args, period=1.0, sep=' ', end='\n', file=None, flush=False):
+    assert period > 0.0, 'The period must be greater than zero.'
+    output = sep.join(map(str, args))
+    cpp_bindings.log_throttle(output, period)
+    if file is not None:
+        file.write(output + end)
+        if flush:
+            file.flush()
+
+builtins.print = custom_print
+builtins.print_throttle = print_throttle
+    )", py::globals());
 }
 
 void PresenterWrapper::initialize_module(

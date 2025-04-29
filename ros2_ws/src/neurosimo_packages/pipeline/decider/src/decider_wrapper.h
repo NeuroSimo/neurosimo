@@ -50,7 +50,8 @@ public:
       const std::string& module_name,
       const size_t eeg_data_size,
       const size_t emg_data_size,
-      const uint16_t sampling_frequency);
+      const uint16_t sampling_frequency,
+      std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
 
   void reset_module_state();
 

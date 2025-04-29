@@ -321,13 +321,16 @@ void EegDecider::initialize_module() {
 
   RCLCPP_INFO(this->get_logger(), "");
 
+  std::vector<pipeline_interfaces::msg::SensoryStimulus> initial_sensory_stimuli;
+
   this->decider_wrapper->initialize_module(
     PROJECTS_DIRECTORY,
     this->working_directory,
     this->module_name,
     this->num_of_eeg_channels,
     this->num_of_emg_channels,
-    this->sampling_frequency);
+    this->sampling_frequency,
+    initial_sensory_stimuli);
 
   if (this->decider_wrapper->get_state() != WrapperState::READY) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load.");
@@ -343,6 +346,11 @@ void EegDecider::initialize_module() {
   RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->num_of_eeg_channels, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->num_of_emg_channels, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
+
+  /* Send the initial sensory stimuli to the presenter. */
+  for (auto& sensory_stimulus : initial_sensory_stimuli) {
+    this->sensory_stimulus_publisher->publish(sensory_stimulus);
+  }
 }
 
 /* Note: This method is only relevant in the mTMS context. */

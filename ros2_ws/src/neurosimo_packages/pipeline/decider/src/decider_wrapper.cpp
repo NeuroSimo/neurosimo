@@ -148,7 +148,8 @@ void DeciderWrapper::initialize_module(
     const std::string& module_name,
     const size_t eeg_data_size,
     const size_t emg_data_size,
-    const uint16_t sampling_frequency) {
+    const uint16_t sampling_frequency,
+    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli) {
 
   this->sampling_frequency = sampling_frequency;
 
@@ -229,6 +230,19 @@ void DeciderWrapper::initialize_module(
       return;
     }
 
+    /* Extract sensory_stimuli. */
+    for (auto item : config["sensory_stimuli"].cast<py::list>()) {
+      py::dict ss = item.cast<py::dict>();
+      pipeline_interfaces::msg::SensoryStimulus msg;
+      if (parseSensoryStimulusDict(ss, msg)) {
+        sensory_stimuli.push_back(msg);
+      } else {
+        RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
+        state = WrapperState::ERROR;
+        return;
+      }
+    }
+    
     /* Extract processing_interval_in_samples. */
     if (config.contains("processing_interval_in_samples")) {
       this->processing_interval_in_samples = config["processing_interval_in_samples"].cast<uint16_t>();

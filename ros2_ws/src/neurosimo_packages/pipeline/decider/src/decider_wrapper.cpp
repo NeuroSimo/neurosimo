@@ -153,9 +153,8 @@ void DeciderWrapper::initialize_module(
 
   this->sampling_frequency = sampling_frequency;
 
-  /* Reset module-specific objects. */
-  decider_instance = nullptr;
-  decider_module = nullptr;
+  /* Reset the module state. */
+  reset_module_state();
 
   /* Set up the Python environment. */
   py::module sys_module = py::module::import("sys");
@@ -320,9 +319,12 @@ void DeciderWrapper::reset_module_state() {
   py_eeg_data.reset();
   py_emg_data.reset();
 
-  state = WrapperState::UNINITIALIZED;
+  // Reset the event queue
+  while (!event_queue.empty()) {
+    event_queue.pop();
+  }
 
-  RCLCPP_INFO(*logger_ptr, "Decider reset.");
+  state = WrapperState::UNINITIALIZED;
 }
 
 std::pair <double_t, uint16_t> DeciderWrapper::get_next_event() const {

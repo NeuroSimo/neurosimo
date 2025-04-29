@@ -433,7 +433,7 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
   };
 
   // 1) Check presence
-  for (auto const& field : required) {
+  for (const auto& field : required) {
     if (!py_sensory_stimulus.contains(field)) {
       RCLCPP_ERROR(*logger_ptr,
         "sensory_stimulus missing field '%s'", field.c_str());
@@ -442,49 +442,57 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
     }
   }
 
-  // 2) Type‐check & cast
+  // 2) Type‐check & cast with per-field error reporting
   try {
-    // time → double
-    if (!py::isinstance<py::float_>(py_sensory_stimulus["time"])) {
-      throw std::runtime_error("'time' is not float");
-    }
     out_msg.time = py_sensory_stimulus["time"].cast<double>();
-
-    // type → std::string
-    if (!py::isinstance<py::str>(py_sensory_stimulus["type"])) {
-      throw std::runtime_error("'type' is not string");
-    }
-    out_msg.type = py_sensory_stimulus["type"].cast<std::string>();
-
-    // parameters → py::dict
-    if (!py::isinstance<py::dict>(py_sensory_stimulus["parameters"])) {
-      throw std::runtime_error("'parameters' is not dict");
-    }
-    py::dict params = py_sensory_stimulus["parameters"].cast<py::dict>();
-
-    // 3) Iterate and fill diagnostic_msgs::msg::KeyValue[]
-    out_msg.parameters.clear();
-    for (auto item : params) {
-      // key must be str
-      if (!py::isinstance<py::str>(item.first)) {
-        throw std::runtime_error("parameter key is not string");
-      }
-      std::string key = item.first.cast<std::string>();
-
-      // value → serialize to string
-      std::string val = py::str(item.second);
-
-      diagnostic_msgs::msg::KeyValue kv;
-      kv.key = std::move(key);
-      kv.value = std::move(val);
-      out_msg.parameters.push_back(std::move(kv));
-    }
-
-  } catch (const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr,
-      "Error parsing sensory_stimulus: %s", e.what());
+  } catch (const py::cast_error& e) {
+    RCLCPP_ERROR(*logger_ptr, "'time' must be a float or int: %s", e.what());
     state = WrapperState::ERROR;
     return false;
+  }
+
+  try {
+    out_msg.type = py_sensory_stimulus["type"].cast<std::string>();
+  } catch (const py::cast_error& e) {
+    RCLCPP_ERROR(*logger_ptr, "'type' must be a string: %s", e.what());
+    state = WrapperState::ERROR;
+    return false;
+  }
+
+  py::dict params;
+  try {
+    params = py_sensory_stimulus["parameters"].cast<py::dict>();
+  } catch (const py::cast_error& e) {
+    RCLCPP_ERROR(*logger_ptr, "'parameters' must be a dictionary: %s", e.what());
+    state = WrapperState::ERROR;
+    return false;
+  }
+
+  // 3) Iterate and fill diagnostic_msgs::msg::KeyValue[]
+  out_msg.parameters.clear();
+  for (const auto& item : params) {
+    std::string key;
+    try {
+      key = item.first.cast<std::string>();
+    } catch (const py::cast_error& e) {
+      RCLCPP_ERROR(*logger_ptr, "parameter key is not a string: %s", e.what());
+      state = WrapperState::ERROR;
+      return false;
+    }
+
+    std::string val;
+    try {
+      val = py::str(item.second);  // Serializes any Python value
+    } catch (const std::exception& e) {
+      RCLCPP_ERROR(*logger_ptr, "parameter value could not be serialized to string: %s", e.what());
+      state = WrapperState::ERROR;
+      return false;
+    }
+
+    diagnostic_msgs::msg::KeyValue kv;
+    kv.key = std::move(key);
+    kv.value = std::move(val);
+    out_msg.parameters.push_back(std::move(kv));
   }
 
   return true;

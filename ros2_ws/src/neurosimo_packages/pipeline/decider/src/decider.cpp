@@ -188,9 +188,14 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     10);
 
   /* Publisher for sensory stimulus. */
+
+  // Messages can be sent in bursts so keep all messages in the queue.
+  auto qos_keep_all = rclcpp::QoS(rclcpp::KeepAll())
+  .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+
   this->sensory_stimulus_publisher = this->create_publisher<pipeline_interfaces::msg::SensoryStimulus>(
     "/pipeline/sensory_stimulus",
-    10);
+    qos_keep_all);
 
   /* Action client for performing mTMS trials, only if mTMS device is available. */
   if (this->mtms_device_enabled) {

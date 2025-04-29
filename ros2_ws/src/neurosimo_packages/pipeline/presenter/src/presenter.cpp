@@ -49,9 +49,14 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     subscription_options);
 
   /* Subscriber for sensory stimuli. */
+
+  // Messages can be sent in bursts so keep all messages in the queue.
+  auto qos_keep_all = rclcpp::QoS(rclcpp::KeepAll())
+  .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+
   this->sensory_stimulus_subscriber = create_subscription<pipeline_interfaces::msg::SensoryStimulus>(
     SENSORY_STIMULUS_TOPIC,
-    10,
+    qos_keep_all,
     std::bind(&EegPresenter::handle_sensory_stimulus, this, _1));
 
   RCLCPP_INFO(this->get_logger(), "Listening to sensory stimuli on topic %s.", SENSORY_STIMULUS_TOPIC.c_str());
@@ -346,13 +351,14 @@ void EegPresenter::update_time(double_t time) {
   this->sensory_stimuli.pop();
 
   // Log the stimulus information
-  RCLCPP_INFO(this->get_logger(), "\nPresenting stimulus at t = %.4f\n", stimulus_time);
-  RCLCPP_INFO(this->get_logger(), "Type: %s\n", stimulus->type.c_str());
+  RCLCPP_INFO(this->get_logger(), "Presenting stimulus:");
+  RCLCPP_INFO(this->get_logger(), "  - Time: %.3f\n", stimulus_time);
+  RCLCPP_INFO(this->get_logger(), "  - Type: %s\n", stimulus->type.c_str());
 
   if (!stimulus->parameters.empty()) {
-    RCLCPP_INFO(this->get_logger(), "Parameters:");
+    RCLCPP_INFO(this->get_logger(), "  - Parameters:");
     for (const auto &kv : stimulus->parameters) {
-      RCLCPP_INFO(this->get_logger(), "  - %s: %s", kv.key.c_str(), kv.value.c_str());
+      RCLCPP_INFO(this->get_logger(), "    - %s: %s", kv.key.c_str(), kv.value.c_str());
     }
     RCLCPP_INFO(this->get_logger(), "");  // blank line
   }
@@ -367,47 +373,38 @@ void EegPresenter::update_time(double_t time) {
 
 
 void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg) {
-  auto start = std::chrono::high_resolution_clock::now();
-
-  RCLCPP_INFO_THROTTLE(this->get_logger(),
-                       *this->get_clock(),
-                       1000,
-                       "Received sensory stimulus on topic %s with timestamp %.4f.",
-                       SENSORY_STIMULUS_TOPIC.c_str(),
-                       msg->time);
+  RCLCPP_INFO(this->get_logger(), "Received sensory stimulus (type: %s, time: %.3f)", msg->type.c_str(), msg->time);
 
   if (!this->enabled) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
-                         "Presenter not enabled");
+                         "Presenter not enabled, ignoring stimulus.");
     return;
   }
   if (this->module_name == UNSET_STRING) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
-                         "Presenter enabled but not selected");
+                         "Presenter enabled but not selected, ignoring stimulus.");
     return;
   }
   if (!this->presenter_wrapper->is_initialized()) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
-                         "Presenter enabled and selected but not initialized");
+                         "Presenter enabled and selected but not initialized, ignoring stimulus.");
     return;
   }
   if (this->presenter_wrapper->error_occurred()) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
-                         "An error occurred in presenter module, please re-initialize.");
+                         "An error occurred in presenter module, please re-initialize. Ignoring stimulus.");
     return;
   }
 
   this->sensory_stimuli.push(msg);
-
-  RCLCPP_INFO(this->get_logger(), "Added sensory stimulus to queue");
 }
 
 

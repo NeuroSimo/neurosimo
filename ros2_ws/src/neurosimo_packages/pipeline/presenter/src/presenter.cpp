@@ -330,7 +330,7 @@ void EegPresenter::update_presenter_list() {
 }
 
 void EegPresenter::update_time(double_t time) {
-  /* If the queue is empty, return early. */
+  // Return early if no stimuli are queued
   if (this->sensory_stimuli.empty()) {
     return;
   }
@@ -338,33 +338,33 @@ void EegPresenter::update_time(double_t time) {
   auto stimulus = this->sensory_stimuli.top();
   double_t stimulus_time = stimulus->time;
 
-  /* If the next stimulus is in the future, return early. */
+  // If the stimulus time is in the future, return early
   if (time <= stimulus_time) {
     return;
   }
 
-  /* Remove the stimulus from the queue. */
   this->sensory_stimuli.pop();
 
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "Presenting stimulus with timestamp %.4f.", stimulus_time);
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "Parameters:");
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - State: %d", stimulus->state);
-  RCLCPP_INFO(this->get_logger(), "  - Parameter: %d", stimulus->parameter);
-  RCLCPP_INFO(this->get_logger(), "  - Duration (s): %.1f", stimulus->duration);
-  RCLCPP_INFO(this->get_logger(), " ");
+  // Log the stimulus information
+  RCLCPP_INFO(this->get_logger(), "\nPresenting stimulus at t = %.4f\n", stimulus_time);
+  RCLCPP_INFO(this->get_logger(), "Type: %s\n", stimulus->type.c_str());
 
-  auto success = this->presenter_wrapper->process(*stimulus);
+  if (!stimulus->parameters.empty()) {
+    RCLCPP_INFO(this->get_logger(), "Parameters:");
+    for (const auto &kv : stimulus->parameters) {
+      RCLCPP_INFO(this->get_logger(), "  - %s: %s", kv.key.c_str(), kv.value.c_str());
+    }
+    RCLCPP_INFO(this->get_logger(), "");  // blank line
+  }
 
-  RCLCPP_INFO(this->get_logger(), " ");
+  // Process the stimulus using the presenter wrapper
+  bool success = this->presenter_wrapper->process(*stimulus);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");
-    return;
   }
 }
+
 
 void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg) {
   auto start = std::chrono::high_resolution_clock::now();

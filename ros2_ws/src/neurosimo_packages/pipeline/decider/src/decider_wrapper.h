@@ -12,6 +12,8 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include <diagnostic_msgs/msg/key_value.hpp>
+
 #include "eeg_msgs/msg/sample.hpp"
 #include "eeg_msgs/msg/preprocessed_sample.hpp"
 
@@ -57,7 +59,7 @@ public:
 
   std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> get_targets();
 
-  bool parseSensoryStimulusDict(
+  bool parse_sensory_stimulus_dict(
     const py::dict& py_sensory_stimulus,
     pipeline_interfaces::msg::SensoryStimulus& out_msg);
   

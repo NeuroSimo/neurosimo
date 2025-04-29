@@ -73,35 +73,62 @@ bool PresenterWrapper::error_occurred() const {
 }
 
 bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
-  auto state = msg.state;
-  auto parameter = msg.parameter;
-  auto duration = msg.duration;
+  // Extract fields
+  std::string type = msg.type;
 
-  /* Call the Python function. */
+  // Build a py::dict for parameters, parsing numbers when possible
+  py::dict py_params;
+  for (const auto &kv : msg.parameters) {
+    const std::string &valstr = kv.value;
+    py::object pyval;
+
+    try {
+      if (valstr.find_first_of(".eE") == std::string::npos) {
+        int i = std::stoi(valstr);
+        pyval = py::int_(i);
+      } else {
+        double d = std::stod(valstr);
+        pyval = py::float_(d);
+      }
+    }
+    catch (...) {
+      pyval = py::str(valstr);
+    }
+
+    py_params[py::str(kv.key)] = pyval;
+  }
+
+  // Call Python: process(type, parameters_dict)
   py::object py_result;
   try {
-    py_result = presenter_instance->attr("process")(state, parameter, duration);
-
-  } catch(const py::error_already_set& e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
+    py_result = presenter_instance
+                  ->attr("process")(type, py_params);
+  }
+  catch (const py::error_already_set &e) {
+    RCLCPP_ERROR(*logger_ptr,
+      "Python error in presenter.process: %s", e.what());
     this->_error_occurred = true;
     return false;
-
-  } catch(const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
+  }
+  catch (const std::exception &e) {
+    RCLCPP_ERROR(*logger_ptr,
+      "C++ exception in presenter.process: %s", e.what());
     this->_error_occurred = true;
     return false;
   }
 
-  /* Validate the return value of the Python function call. */
+  // Validate return type
   if (!py::isinstance<py::bool_>(py_result)) {
-    RCLCPP_ERROR(*logger_ptr, "Python module should return a boolean.");
+    // convert the Python type object to a C++ string
+    std::string got_type = py::str(py_result.get_type());
+    RCLCPP_ERROR(*logger_ptr,
+      "presenter.process must return a bool, got %s",
+      got_type.c_str());
     this->_error_occurred = true;
     return false;
   }
 
-  bool result = py_result.cast<bool>();
-  return result;
+  return py_result.cast<bool>();
 }
 
 rclcpp::Logger* PresenterWrapper::logger_ptr = nullptr;

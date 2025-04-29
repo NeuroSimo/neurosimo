@@ -230,16 +230,22 @@ void DeciderWrapper::initialize_module(
     }
 
     /* Extract sensory_stimuli. */
-    for (auto item : config["sensory_stimuli"].cast<py::list>()) {
-      py::dict ss = item.cast<py::dict>();
-      pipeline_interfaces::msg::SensoryStimulus msg;
-      if (parse_sensory_stimulus_dict(ss, msg)) {
-        sensory_stimuli.push_back(msg);
-      } else {
-        RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
-        state = WrapperState::ERROR;
-        return;
+    if (config.contains("sensory_stimuli")) {
+      for (auto item : config["sensory_stimuli"].cast<py::list>()) {
+        py::dict ss = item.cast<py::dict>();
+        pipeline_interfaces::msg::SensoryStimulus msg;
+        if (parse_sensory_stimulus_dict(ss, msg)) {
+          sensory_stimuli.push_back(msg);
+        } else {
+          RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
+          state = WrapperState::ERROR;
+          return;
+        }
       }
+    } else {
+      RCLCPP_ERROR(*logger_ptr, "'sensory_stimuli' key not found in configuration dictionary.");
+      state = WrapperState::ERROR;
+      return;
     }
     
     /* Extract processing_interval_in_samples. */

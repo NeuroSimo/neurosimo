@@ -1,6 +1,4 @@
 float64 time
 
-uint16 state
-uint16 parameter
-
-float64 duration
+string type
+diagnostic_msgs/KeyValue[] parameters

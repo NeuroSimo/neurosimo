@@ -7,6 +7,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -30,6 +31,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SensoryStimulus.msg"
 
   "srv/RequestTimedTrigger.srv"
+
+  DEPENDENCIES
+    diagnostic_msgs
+    std_msgs
 )
 
 ament_package()

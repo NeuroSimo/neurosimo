@@ -234,7 +234,7 @@ void DeciderWrapper::initialize_module(
     for (auto item : config["sensory_stimuli"].cast<py::list>()) {
       py::dict ss = item.cast<py::dict>();
       pipeline_interfaces::msg::SensoryStimulus msg;
-      if (parseSensoryStimulusDict(ss, msg)) {
+      if (parse_sensory_stimulus_dict(ss, msg)) {
         sensory_stimuli.push_back(msg);
       } else {
         RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
@@ -420,21 +420,21 @@ bool DeciderWrapper::is_process_on_trigger_enabled() const {
   return this->process_on_trigger;
 }
 
-bool DeciderWrapper::parseSensoryStimulusDict(
+bool DeciderWrapper::parse_sensory_stimulus_dict(
   const py::dict& py_sensory_stimulus,
-  pipeline_interfaces::msg::SensoryStimulus& out_msg)
-{
-  static const std::vector<std::pair<std::string, std::type_info const&>> required = {
-    {"time",     typeid(py::float_)},
-    {"state",    typeid(py::int_)},
-    {"parameter",typeid(py::int_)},
-    {"duration", typeid(py::float_)}
+  pipeline_interfaces::msg::SensoryStimulus& out_msg) {
+
+  static const std::vector<std::string> required = {
+    "time",
+    "type",
+    "parameters"
   };
 
   // 1) Check presence
-  for (auto const& [field, _] : required) {
+  for (auto const& field : required) {
     if (!py_sensory_stimulus.contains(field)) {
-      RCLCPP_ERROR(*logger_ptr, "sensory_stimulus missing field '%s'", field.c_str());
+      RCLCPP_ERROR(*logger_ptr,
+        "sensory_stimulus missing field '%s'", field.c_str());
       state = WrapperState::ERROR;
       return false;
     }
@@ -442,37 +442,49 @@ bool DeciderWrapper::parseSensoryStimulusDict(
 
   // 2) Type‐check & cast
   try {
-    // time
+    // time → double
     if (!py::isinstance<py::float_>(py_sensory_stimulus["time"])) {
       throw std::runtime_error("'time' is not float");
     }
     out_msg.time = py_sensory_stimulus["time"].cast<double>();
 
-    // state
-    if (!py::isinstance<py::int_>(py_sensory_stimulus["state"])) {
-      throw std::runtime_error("'state' is not int");
+    // type → std::string
+    if (!py::isinstance<py::str>(py_sensory_stimulus["type"])) {
+      throw std::runtime_error("'type' is not string");
     }
-    out_msg.state = py_sensory_stimulus["state"].cast<uint16_t>();
+    out_msg.type = py_sensory_stimulus["type"].cast<std::string>();
 
-    // parameter
-    if (!py::isinstance<py::int_>(py_sensory_stimulus["parameter"])) {
-      throw std::runtime_error("'parameter' is not int");
+    // parameters → py::dict
+    if (!py::isinstance<py::dict>(py_sensory_stimulus["parameters"])) {
+      throw std::runtime_error("'parameters' is not dict");
     }
-    out_msg.parameter = py_sensory_stimulus["parameter"].cast<uint16_t>();
+    py::dict params = py_sensory_stimulus["parameters"].cast<py::dict>();
 
-    // duration
-    if (!py::isinstance<py::float_>(py_sensory_stimulus["duration"])) {
-      throw std::runtime_error("'duration' is not float");
+    // 3) Iterate and fill diagnostic_msgs::msg::KeyValue[]
+    out_msg.parameters.clear();
+    for (auto item : params) {
+      // key must be str
+      if (!py::isinstance<py::str>(item.first)) {
+        throw std::runtime_error("parameter key is not string");
+      }
+      std::string key = item.first.cast<std::string>();
+
+      // value → serialize to string
+      std::string val = py::str(item.second);
+
+      diagnostic_msgs::msg::KeyValue kv;
+      kv.key = std::move(key);
+      kv.value = std::move(val);
+      out_msg.parameters.push_back(std::move(kv));
     }
-    out_msg.duration = py_sensory_stimulus["duration"].cast<double>();
 
   } catch (const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "Error parsing sensory_stimulus: %s", e.what());
+    RCLCPP_ERROR(*logger_ptr,
+      "Error parsing sensory_stimulus: %s", e.what());
     state = WrapperState::ERROR;
     return false;
   }
 
-  // If we get here, everything succeeded
   return true;
 }
 
@@ -646,7 +658,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
 
   if (dict_result.contains("sensory_stimulus")) {
     auto py_sensory_stimulus = dict_result["sensory_stimulus"].cast<py::dict>();
-    if (parseSensoryStimulusDict(py_sensory_stimulus, output_sensory_stimulus)) {
+    if (parse_sensory_stimulus_dict(py_sensory_stimulus, output_sensory_stimulus)) {
       request_sensory_stimulus = true;
     } else {
       success = false;

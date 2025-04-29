@@ -174,10 +174,15 @@ void EegSimulator::publish_healthcheck() {
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
     healthcheck.status_message = "Streaming...";
     healthcheck.actionable_message = "End the session to stop streaming.";
-  } else if (this->is_loading) {
+  } else if (this->eeg_simulator_state == EegSimulatorState::LOADING) {
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
     healthcheck.status_message = "Loading...";
     healthcheck.actionable_message = "Wait until loading is finished.";
+  } else if (this->eeg_simulator_state == EegSimulatorState::ERROR_LOADING) {
+    // Healthcheck status is set to READY, as it is not a critical error.
+    healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
+    healthcheck.status_message = this->error_message;
+    healthcheck.actionable_message = "An error occurred while reading a file. Please check the logs.";
   } else {
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
     healthcheck.status_message = "Ready";
@@ -413,6 +418,9 @@ bool EegSimulator::set_dataset(std::string json_filename) {
 
   RCLCPP_INFO(this->get_logger(), "Dataset selected: %s", json_filename.c_str());
 
+  /* Reset the simulator state. */
+  this->eeg_simulator_state = EegSimulatorState::READY;
+
   /* If playback is set to true, re-initialize streaming. */
   if (this->playback) {
     initialize_streaming();
@@ -426,7 +434,6 @@ void EegSimulator::handle_set_dataset(
       std::shared_ptr<project_interfaces::srv::SetDataset::Response> response) {
 
   bool success = set_dataset(request->filename);
-
   response->success = success;
 }
 
@@ -499,27 +506,41 @@ void EegSimulator::initialize_streaming() {
   }
 
   if (this->current_data_file_path != data_file_path) {
-    this->is_loading = true;
+    this->eeg_simulator_state = EegSimulatorState::LOADING;
 
     dataset_buffer.clear();
     std::string line;
+    uint32_t line_number = 0;
     while (std::getline(data_file, line)) {
+      line_number++;
       std::stringstream ss(line);
       std::string number;
       std::vector<double_t> data;
       while (std::getline(ss, number, ',')) {
-        data.push_back(std::stod(number));
+        double_t value;
+        try {
+          value = std::stod(number);
+        } catch (const std::invalid_argument& e) {
+          RCLCPP_ERROR(this->get_logger(), "Error converting string to double on line %d", line_number);
+          RCLCPP_ERROR(this->get_logger(), "Line contents: %s", line.c_str());
+
+          this->eeg_simulator_state = EegSimulatorState::ERROR_LOADING;
+          this->error_message = "Error on line " + std::to_string(line_number);
+          data_file.close();
+          this->set_playback(false);
+
+          return;
+        }
+        data.push_back(value);
       }
       dataset_buffer.push_back(data);
     }
-
-    this->is_loading = false;
   }
   current_sample_index = 0;
 
   this->current_data_file_path = data_file_path;
 
-  RCLCPP_INFO(this->get_logger(), "Finished reading data.");
+  RCLCPP_INFO(this->get_logger(), "Finished loading data.");
 
   data_file.close();
 
@@ -546,6 +567,7 @@ void EegSimulator::initialize_streaming() {
       this->send_events = true;
     }
   }
+  this->eeg_simulator_state = EegSimulatorState::READY;
 }
 
 void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
@@ -581,10 +603,9 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   }
 
   /* Return if the simulator is still loading the dataset. */
-  if (this->is_loading) {
+  if (this->eeg_simulator_state == EegSimulatorState::LOADING) {
     return;
   }
-
   this->is_streaming = true;
 
   bool stop = false;

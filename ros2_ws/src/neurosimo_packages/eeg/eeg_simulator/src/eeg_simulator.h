@@ -26,6 +26,14 @@
 #include "system_interfaces/msg/session_state.hpp"
 
 
+enum class EegSimulatorState {
+  READY,
+  LOADING,
+  ERROR_LOADING
+  // TODO: Maybe add STREAMING here. Unsure if it is somewhat orthogonal to READY/LOADING or not,
+  //   hence keep it separate for now.
+};
+
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
 
@@ -73,6 +81,8 @@ private:
 
   project_interfaces::msg::Dataset dataset;
 
+  EegSimulatorState eeg_simulator_state = EegSimulatorState::READY;
+
   bool eeg_bridge_available = false;
 
   bool playback = false;
@@ -84,7 +94,7 @@ private:
   bool events_left = false;
 
   bool is_streaming = false;
-  bool is_loading = false;
+  std::string error_message = UNSET_STRING;
 
   double_t latest_session_time;
   double_t time_offset;

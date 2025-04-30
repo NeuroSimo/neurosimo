@@ -36,11 +36,9 @@ class ProjectManagerNode(Node):
         self.logger = self.get_logger()
         self.callback_group = ReentrantCallbackGroup()
 
-        self.active_project = None
-
-        # Initialize state
-        self.state_lock = threading.Lock()
-        self.state = {}
+        # The project state is properly initialized later in the constructor.
+        self.project_state = None
+        self.project_state_lock = threading.Lock()
 
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
@@ -109,24 +107,61 @@ class ProjectManagerNode(Node):
         self.create_subscription(Bool, "/eeg_simulator/loop", self.loop_callback, 10)
         self.create_subscription(Bool, "/eeg_recorder/record_data", self.record_data_callback, 10)
 
-        # Initialize active project to first in list
-        projects = self.list_projects()
-        if projects:
-            self.set_active_project(projects[0])
+        # Initialize state
+        self.global_state = self.load_global_state()
+
+        if self.global_state is None:
+            self.logger.info("Global state not found, creating new one.")
+            self.global_state = self.initialize_global_state()
+            self.save_global_state(self.global_state)
+
+        # Set active project
+        active_project = self.global_state['active_project']
+        self.set_active_project(active_project)
 
     # State management
 
-    def state_file_path(self):
-        return os.path.join(self.PROJECTS_ROOT, self.active_project, "state.json")
-
-    def load_state(self):
+    def load_state(self, path):
         try:
-            with open(self.state_file_path(), 'r') as f:
+            with open(path, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
             return None
 
-    def initialize_state(self):
+    def save_state(self, path, state):
+        tmp = path + ".tmp"
+        with open(tmp, 'w') as f:
+            json.dump(state, f, indent=2)
+        os.replace(tmp, path)
+
+    # Global state
+
+    def load_global_state(self):
+        path = os.path.join(self.PROJECTS_ROOT, "global_state.json")
+        state = self.load_state(path)
+        return state
+
+    def save_global_state(self, state):
+        path = os.path.join(self.PROJECTS_ROOT, "global_state.json")
+        self.save_state(path, state)
+
+    def initialize_global_state(self):
+        return {
+            "active_project": 'example',
+        }
+
+    # Project state
+
+    def load_project_state(self):
+        path = os.path.join(self.PROJECTS_ROOT, self.active_project, "state.json")
+        state = self.load_state(path)
+        return state
+
+    def save_project_state(self, state):
+        path = os.path.join(self.PROJECTS_ROOT, self.active_project, "state.json")
+        self.save_state(path, state)
+
+    def initialize_project_state(self):
         return {
             "decider": {
                 "module": 'example',
@@ -150,14 +185,7 @@ class ProjectManagerNode(Node):
             }
         }
 
-    def save_state(self, state):
-        path = self.state_file_path()
-        tmp = path + ".tmp"
-        with open(tmp, 'w') as f:
-            json.dump(state, f, indent=2)
-        os.replace(tmp, path)
-    
-    def validate_state(self, state):
+    def validate_project_state(self, state):
         required_keys = ["decider", "preprocessor", "presenter", "simulator", "recorder"]
         for key in required_keys:
             if key not in state:
@@ -204,27 +232,27 @@ class ProjectManagerNode(Node):
         self.active_project_publisher.publish(msg)
 
         # Load or initialize state
-        with self.state_lock:
-            self.state = self.load_state()
-            if self.state is None:
-                self.state = self.initialize_state()
-                self.save_state(self.state)
+        with self.project_state_lock:
+            self.project_state = self.load_project_state()
+            if self.project_state is None:
+                self.project_state = self.initialize_project_state()
+                self.save_project_state(self.project_state)
 
         # Validate state
-        if not self.validate_state(self.state):
+        if not self.validate_project_state(self.project_state):
             self.logger.error("Reinitializing state.")
-            self.state = self.initialize_state()
-            self.save_state(self.state)
+            self.project_state = self.initialize_project_state()
+            self.save_project_state(self.project_state)
 
         self.logger.info(f"Active project set to: {self.active_project}")
 
         # Set the state for the decider, preprocessor, and presenter
-        decider_module = self.state["decider"]["module"]
-        decider_enabled = self.state["decider"]["enabled"]
-        preprocessor_module = self.state["preprocessor"]["module"]
-        preprocessor_enabled = self.state["preprocessor"]["enabled"]
-        presenter_module = self.state["presenter"]["module"]
-        presenter_enabled = self.state["presenter"]["enabled"]
+        decider_module = self.project_state["decider"]["module"]
+        decider_enabled = self.project_state["decider"]["enabled"]
+        preprocessor_module = self.project_state["preprocessor"]["module"]
+        preprocessor_enabled = self.project_state["preprocessor"]["enabled"]
+        presenter_module = self.project_state["presenter"]["module"]
+        presenter_enabled = self.project_state["presenter"]["enabled"]
 
         # XXX: If the pipeline stage is enabled, first set the module and then enable it
         # so that the module is set before the enabling the stage. Reverse the order
@@ -252,10 +280,10 @@ class ProjectManagerNode(Node):
             self.set_presenter_module(presenter_module)
 
         # Set the state for the simulator
-        dataset_filename = self.state["simulator"]["dataset_filename"]
-        playback = self.state["simulator"]["playback"]
-        loop = self.state["simulator"]["loop"]
-        record_data = self.state["recorder"]["record_data"]
+        dataset_filename = self.project_state["simulator"]["dataset_filename"]
+        playback = self.project_state["simulator"]["playback"]
+        loop = self.project_state["simulator"]["loop"]
+        record_data = self.project_state["recorder"]["record_data"]
 
         self.set_dataset(dataset_filename)
         self.set_playback(playback)
@@ -295,6 +323,11 @@ class ProjectManagerNode(Node):
         else:
             response.success = False
             self.logger.error(f"Project does not exist: {project}")
+
+        # Store the active project in the global state
+        self.global_state["active_project"] = project
+        self.save_global_state(self.global_state)
+
         return response
     
     # Service calls
@@ -432,60 +465,80 @@ class ProjectManagerNode(Node):
     # Subscriber callbacks
 
     def decider_module_callback(self, msg: String):
-        with self.state_lock:
-            self.state["decider"]["module"] = msg.data
-            self.save_state(self.state)
+        if self.project_state is None:
+            return
+        with self.project_state_lock:
+            self.project_state["decider"]["module"] = msg.data
+            self.save_project_state(self.project_state)
 
     def decider_enabled_callback(self, msg: Bool):
+        if self.project_state is None:
+            return
         flag = msg.data
-        with self.state_lock:
-            self.state["decider"]["enabled"] = flag
-            self.save_state(self.state)
+        with self.project_state_lock:
+            self.project_state["decider"]["enabled"] = flag
+            self.save_project_state(self.project_state)
 
     def preprocessor_module_callback(self, msg: String):
-        with self.state_lock:
-            self.state["preprocessor"]["module"] = msg.data
-            self.save_state(self.state)
+        if self.project_state is None:
+            return
+        with self.project_state_lock:
+            self.project_state["preprocessor"]["module"] = msg.data
+            self.save_project_state(self.project_state)
 
     def preprocessor_enabled_callback(self, msg: Bool):
+        if self.project_state is None:
+            return
         flag = msg.data
-        with self.state_lock:
-            self.state["preprocessor"]["enabled"] = flag
-            self.save_state(self.state)
+        with self.project_state_lock:
+            self.project_state["preprocessor"]["enabled"] = flag
+            self.save_project_state(self.project_state)
 
     def presenter_module_callback(self, msg: String):
-        with self.state_lock:
-            self.state["presenter"]["module"] = msg.data
-            self.save_state(self.state)
+        if self.project_state is None:
+            return
+        with self.project_state_lock:
+            self.project_state["presenter"]["module"] = msg.data
+            self.save_project_state(self.project_state)
 
     def presenter_enabled_callback(self, msg: Bool):
+        if self.project_state is None:
+            return
         flag = msg.data
-        with self.state_lock:
-            self.state["presenter"]["enabled"] = flag
-            self.save_state(self.state)
+        with self.project_state_lock:
+            self.project_state["presenter"]["enabled"] = flag
+            self.save_project_state(self.project_state)
 
     def dataset_callback(self, msg: String):
-        with self.state_lock:
-            self.state["simulator"]["dataset_filename"] = msg.data
-            self.save_state(self.state)
+        if self.project_state is None:
+            return
+        with self.project_state_lock:
+            self.project_state["simulator"]["dataset_filename"] = msg.data
+            self.save_project_state(self.project_state)
 
     def playback_callback(self, msg: Bool):
+        if self.project_state is None:
+            return
         flag = msg.data
-        with self.state_lock:
-            self.state["simulator"]["playback"] = flag
-            self.save_state(self.state)
+        with self.project_state_lock:
+            self.project_state["simulator"]["playback"] = flag
+            self.save_project_state(self.project_state)
 
     def loop_callback(self, msg: Bool):
+        if self.project_state is None:
+            return
         flag = msg.data
-        with self.state_lock:
-            self.state["simulator"]["loop"] = flag
-            self.save_state(self.state)
+        with self.project_state_lock:
+            self.project_state["simulator"]["loop"] = flag
+            self.save_project_state(self.project_state)
     
     def record_data_callback(self, msg: Bool):
+        if self.project_state is None:
+            return
         flag = msg.data
-        with self.state_lock:
-            self.state["recorder"]["record_data"] = flag
-            self.save_state(self.state)
+        with self.project_state_lock:
+            self.project_state["recorder"]["record_data"] = flag
+            self.save_project_state(self.project_state)
 
 
 def main(args=None):

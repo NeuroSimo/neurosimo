@@ -85,6 +85,34 @@ export const setLoopRos = (loop: boolean, callback: () => void) => {
   )
 }
 
+/* Set start time service */
+const setStartTimeService = new ROSLIB.Service({
+  ros: ros,
+  name: '/eeg_simulator/start_time/set',
+  serviceType: 'project_interfaces/SetStartTime',
+})
+
+export const setStartTimeRos = (startTime: number, callback: () => void) => {
+  const request = new ROSLIB.ServiceRequest({
+    start_time: startTime,
+  }) as any
+
+  setStartTimeService.callService(
+    request,
+    (response) => {
+      if (!response.success) {
+        console.log('ERROR: Failed to set start time: success field was false.')
+      } else {
+        callback()
+      }
+    },
+    (error) => {
+      console.log('ERROR: Failed to set start time, error:')
+      console.log(error)
+    }
+  )
+}
+
 /* Set record data service */
 const setRecordDataService = new ROSLIB.Service({
   ros: ros,

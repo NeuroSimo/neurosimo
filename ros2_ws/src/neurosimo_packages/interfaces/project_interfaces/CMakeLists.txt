@@ -42,6 +42,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetDataset.srv"
   "srv/SetPlayback.srv"
   "srv/SetLoop.srv"
+  "srv/SetStartTime.srv"
   "srv/SetRecordData.srv"
 )
 

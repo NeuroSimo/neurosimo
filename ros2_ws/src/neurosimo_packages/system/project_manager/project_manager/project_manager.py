@@ -15,10 +15,11 @@ from project_interfaces.srv import (
     SetDataset,
     SetPlayback,
     SetLoop,
+    SetStartTime,
     SetRecordData,
 )
 
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float64
 
 import rclpy
 from rclpy.node import Node
@@ -55,6 +56,7 @@ class ProjectManagerNode(Node):
         self.set_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
         self.set_playback_service = self.create_client(SetPlayback, "/eeg_simulator/playback/set", callback_group=self.callback_group)
         self.set_loop_service = self.create_client(SetLoop, "/eeg_simulator/loop/set", callback_group=self.callback_group)
+        self.set_start_time_service = self.create_client(SetStartTime, "/eeg_simulator/start_time/set", callback_group=self.callback_group)
         self.record_data_service = self.create_client(SetRecordData, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
 
         # Wait for services to be available
@@ -85,6 +87,9 @@ class ProjectManagerNode(Node):
         while not self.set_loop_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set loop service not available, waiting...")
 
+        while not self.set_start_time_service.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Set start time service not available, waiting...")
+
         while not self.record_data_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set record data service not available, waiting...")
 
@@ -105,6 +110,7 @@ class ProjectManagerNode(Node):
         self.create_subscription(String, "/eeg_simulator/dataset", self.dataset_callback, 10)
         self.create_subscription(Bool, "/eeg_simulator/playback", self.playback_callback, 10)
         self.create_subscription(Bool, "/eeg_simulator/loop", self.loop_callback, 10)
+        self.create_subscription(Float64, "/eeg_simulator/start_time", self.start_time_callback, 10)
         self.create_subscription(Bool, "/eeg_recorder/record_data", self.record_data_callback, 10)
 
         # Initialize state
@@ -178,7 +184,8 @@ class ProjectManagerNode(Node):
             "simulator": {
                 "dataset_filename": 'random_data_1_khz.json',
                 "playback": False,
-                "loop": False
+                "loop": False,
+                "start_time": 0.0
             },
             "recorder": {
                 "record_data": False
@@ -212,7 +219,7 @@ class ProjectManagerNode(Node):
             self.logger.error("State file is missing required keys in presenter.")
             return False
     
-        if not all(key in state["simulator"] for key in ["dataset_filename", "playback", "loop"]):
+        if not all(key in state["simulator"] for key in ["dataset_filename", "playback", "loop", "start_time"]):
             self.logger.error("State file is missing required keys in simulator.")
             return False
     
@@ -283,11 +290,13 @@ class ProjectManagerNode(Node):
         dataset_filename = self.project_state["simulator"]["dataset_filename"]
         playback = self.project_state["simulator"]["playback"]
         loop = self.project_state["simulator"]["loop"]
+        start_time = self.project_state["simulator"]["start_time"]
         record_data = self.project_state["recorder"]["record_data"]
 
         self.set_dataset(dataset_filename)
         self.set_playback(playback)
         self.set_loop(loop)
+        self.set_start_time(start_time)
         self.set_record_data(record_data)
 
         self.logger.info(f"State loaded for project: {self.active_project}")
@@ -448,6 +457,19 @@ class ProjectManagerNode(Node):
                 self.logger.error(f"Failed to set loop to {loop}.")
         
         future.add_done_callback(callback)
+
+    def set_start_time(self, start_time):
+        request = SetStartTime.Request()
+        request.start_time = start_time
+
+        future = self.set_start_time_service.call_async(request)
+
+        def callback(future):
+            result = future.result()
+            if result is None or not result.success:
+                self.logger.error(f"Failed to set start time to {start_time}.")
+        
+        future.add_done_callback(callback)
     
     def set_record_data(self, record_data):
         request = SetRecordData.Request()
@@ -530,6 +552,13 @@ class ProjectManagerNode(Node):
         flag = msg.data
         with self.project_state_lock:
             self.project_state["simulator"]["loop"] = flag
+            self.save_project_state(self.project_state)
+
+    def start_time_callback(self, msg: Float64):
+        if self.project_state is None:
+            return
+        with self.project_state_lock:
+            self.project_state["simulator"]["start_time"] = msg.data
             self.save_project_state(self.project_state)
     
     def record_data_callback(self, msg: Bool):

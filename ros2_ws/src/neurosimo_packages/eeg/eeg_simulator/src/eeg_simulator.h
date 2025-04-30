@@ -12,12 +12,14 @@
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 #include "project_interfaces/msg/dataset.hpp"
 #include "project_interfaces/msg/dataset_list.hpp"
 #include "project_interfaces/srv/set_dataset.hpp"
 #include "project_interfaces/srv/set_playback.hpp"
 #include "project_interfaces/srv/set_loop.hpp"
+#include "project_interfaces/srv/set_start_time.hpp"
 
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
@@ -65,6 +67,10 @@ private:
       const std::shared_ptr<project_interfaces::srv::SetLoop::Request> request,
       std::shared_ptr<project_interfaces::srv::SetLoop::Response> response);
 
+  void handle_set_start_time(
+      const std::shared_ptr<project_interfaces::srv::SetStartTime::Request> request,
+      std::shared_ptr<project_interfaces::srv::SetStartTime::Response> response);
+
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
 
   void initialize_streaming();
@@ -87,6 +93,7 @@ private:
 
   bool playback = false;
   bool loop = false;
+  double_t start_time = 0.0;
 
   bool send_events = false;
 
@@ -142,6 +149,9 @@ private:
 
   rclcpp::Service<project_interfaces::srv::SetLoop>::SharedPtr set_loop_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr loop_publisher;
+
+  rclcpp::Service<project_interfaces::srv::SetStartTime>::SharedPtr start_time_service;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr start_time_publisher;
 
   rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr eeg_publisher;
   rclcpp::Publisher<eeg_msgs::msg::EegInfo>::SharedPtr eeg_info_publisher;

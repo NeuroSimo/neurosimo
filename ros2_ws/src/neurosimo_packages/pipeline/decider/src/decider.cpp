@@ -186,7 +186,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->timing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::TimingLatency>(
     "/pipeline/timing/latency",
     10);
-
+  
   /* Publisher for sensory stimulus. */
 
   // Messages can be sent in bursts so keep all messages in the queue.
@@ -601,8 +601,31 @@ void EegDecider::unset_decider_module() {
   set_decider_enabled(false);
 }
 
-bool EegDecider::set_decider_module(const std::string module) {
-  this->module_name = module;
+std::string EegDecider::get_module_name_with_fallback(const std::string module_name) {
+  if (std::find(this->modules.begin(), this->modules.end(), module_name) != this->modules.end()) {
+    return module_name;
+  }
+  if (std::find(this->modules.begin(), this->modules.end(), DEFAULT_DECIDER_NAME) != this->modules.end()) {
+    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to default", module_name.c_str());
+    return DEFAULT_DECIDER_NAME;
+  }
+  if (!this->modules.empty()) {
+    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to first module on the list: %s", module_name.c_str(), this->modules[0].c_str());
+    return this->modules[0];
+  }
+  RCLCPP_WARN(this->get_logger(), "No deciders found in project: %s%s%s.", bold_on.c_str(), this->active_project.c_str(), bold_off.c_str());
+  return UNSET_STRING;
+}
+
+bool EegDecider::set_decider_module(const std::string module_name) {
+  this->module_name = get_module_name_with_fallback(module_name);
+
+  if (this->module_name == UNSET_STRING) {
+    RCLCPP_ERROR(this->get_logger(), "No decider module set.");
+    this->unset_decider_module();
+
+    return false;
+  }
 
   RCLCPP_INFO(this->get_logger(), "Decider set to: %s%s%s.", bold_on.c_str(), this->module_name.c_str(), bold_off.c_str());
 
@@ -632,18 +655,6 @@ void EegDecider::handle_set_active_project(const std::shared_ptr<std_msgs::msg::
 
   this->is_working_directory_set = change_working_directory(PROJECTS_DIRECTORY + "/" + this->active_project + "/decider");
   update_decider_list();
-
-  if (this->modules.size() > 0) {
-    /* Set decider module to the default if available, otherwise use the first listed module. */
-    if (std::find(this->modules.begin(), this->modules.end(), DEFAULT_DECIDER_NAME) != this->modules.end()) {
-      this->set_decider_module(DEFAULT_DECIDER_NAME);
-    } else {
-      this->set_decider_module(this->modules[0]);
-    }
-  } else {
-    RCLCPP_WARN(this->get_logger(), "No deciders found in project: %s%s%s.", bold_on.c_str(), this->active_project.c_str(), bold_off.c_str());
-    this->unset_decider_module();
-  }
 
   update_inotify_watch();
 }

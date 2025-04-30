@@ -104,6 +104,7 @@ private:
       const std::shared_ptr<project_interfaces::srv::SetDeciderEnabled::Request> request,
       std::shared_ptr<project_interfaces::srv::SetDeciderEnabled::Response> response);
 
+  std::string get_module_name_with_fallback(const std::string module_name);
   bool set_decider_module(const std::string module);
   void handle_set_decider_module(
       const std::shared_ptr<project_interfaces::srv::SetDeciderModule::Request> request,

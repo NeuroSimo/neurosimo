@@ -18,7 +18,7 @@ const StatisticsPanelTitle = styled.div`
 
 const StatisticsPanel = styled(StyledPanel)`
   width: 300px;
-  height: 366px;
+  height: 406px;
   position: fixed;
   top: 718px;
   right: 393px;

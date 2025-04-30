@@ -94,6 +94,13 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     rmw_qos_profile_services_default,
     callback_group);
 
+  /* Service for start time. */
+  this->start_time_service = this->create_service<project_interfaces::srv::SetStartTime>(
+    "/eeg_simulator/start_time/set",
+    std::bind(&EegSimulator::handle_set_start_time, this, std::placeholders::_1, std::placeholders::_2),
+    rmw_qos_profile_services_default,
+    callback_group);
+
   /* Publisher for dataset. */
   this->dataset_publisher = this->create_publisher<std_msgs::msg::String>(
     "/eeg_simulator/dataset",
@@ -107,6 +114,11 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   /* Publisher for loop. */
   this->loop_publisher = this->create_publisher<std_msgs::msg::Bool>(
     "/eeg_simulator/loop",
+    qos_persist_latest);
+
+  /* Publisher for start time. */
+  this->start_time_publisher = this->create_publisher<std_msgs::msg::Float64>(
+    "/eeg_simulator/start_time",
     qos_persist_latest);
 
   /* QOS for session */
@@ -480,7 +492,7 @@ void EegSimulator::handle_set_loop(
       const std::shared_ptr<project_interfaces::srv::SetLoop::Request> request,
       std::shared_ptr<project_interfaces::srv::SetLoop::Response> response) {
 
-  this->loop= request->loop;
+  this->loop = request->loop;
 
   RCLCPP_INFO(this->get_logger(), "Loop %s.", this->loop ? "enabled" : "disabled");
 
@@ -489,6 +501,23 @@ void EegSimulator::handle_set_loop(
   msg.data = this->loop;
 
   this->loop_publisher->publish(msg);
+
+  response->success = true;
+}
+
+void EegSimulator::handle_set_start_time(
+      const std::shared_ptr<project_interfaces::srv::SetStartTime::Request> request,
+      std::shared_ptr<project_interfaces::srv::SetStartTime::Response> response) {
+
+  this->start_time = request->start_time;
+
+  RCLCPP_INFO(this->get_logger(), "Start time set to: %.1f", this->start_time);
+
+  /* Update ROS state variable. */
+  auto msg = std_msgs::msg::Float64();
+  msg.data = this->start_time;
+
+  this->start_time_publisher->publish(msg);
 
   response->success = true;
 }
@@ -502,7 +531,7 @@ void EegSimulator::initialize_streaming() {
   this->total_channels = this->num_of_eeg_channels + this->num_of_emg_channels;
   this->sampling_period = 1.0 / this->sampling_frequency;
 
-  this->dataset_time = 0.0;
+  this->dataset_time = this->start_time;
   this->time_offset = latest_session_time;
 
   /* Open and read data file. */

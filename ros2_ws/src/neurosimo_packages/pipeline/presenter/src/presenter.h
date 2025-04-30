@@ -18,6 +18,9 @@
 #include "project_interfaces/srv/set_presenter_module.hpp"
 #include "project_interfaces/srv/set_presenter_enabled.hpp"
 
+const std::string bold_on = "\033[1m";
+const std::string bold_off = "\033[0m";
+
 const std::string UNSET_STRING = "";
 
 struct StimulusCompare {
@@ -43,7 +46,9 @@ private:
 
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
 
-  void set_presenter_module(const std::string module);
+  std::string get_module_name_with_fallback(const std::string module_name);
+  bool set_presenter_module(const std::string module_name);
+
   void handle_set_presenter_module(
       const std::shared_ptr<project_interfaces::srv::SetPresenterModule::Request> request,
       std::shared_ptr<project_interfaces::srv::SetPresenterModule::Response> response);

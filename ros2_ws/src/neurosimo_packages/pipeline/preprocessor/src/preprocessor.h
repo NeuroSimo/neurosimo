@@ -63,7 +63,8 @@ private:
       const std::shared_ptr<project_interfaces::srv::SetPreprocessorEnabled::Request> request,
       std::shared_ptr<project_interfaces::srv::SetPreprocessorEnabled::Response> response);
 
-  bool set_preprocessor_module(const std::string module);
+  std::string get_module_name_with_fallback(const std::string module_name);
+  bool set_preprocessor_module(const std::string module_name);
   void handle_set_preprocessor_module(
       const std::shared_ptr<project_interfaces::srv::SetPreprocessorModule::Request> request,
       std::shared_ptr<project_interfaces::srv::SetPreprocessorModule::Response> response);

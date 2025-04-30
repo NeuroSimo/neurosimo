@@ -198,8 +198,31 @@ void EegPresenter::unset_presenter_module() {
   this->presenter_wrapper->reset_module_state();
 }
 
-void EegPresenter::set_presenter_module(const std::string module) {
-  this->module_name = module;
+std::string EegPresenter::get_module_name_with_fallback(const std::string module_name) {
+  if (std::find(this->modules.begin(), this->modules.end(), module_name) != this->modules.end()) {
+    return module_name;
+  }
+  if (std::find(this->modules.begin(), this->modules.end(), DEFAULT_PRESENTER_NAME) != this->modules.end()) {
+    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to default", module_name.c_str());
+    return DEFAULT_PRESENTER_NAME;
+  }
+  if (!this->modules.empty()) {
+    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to first module on the list: %s", module_name.c_str(), this->modules[0].c_str());
+    return this->modules[0];
+  }
+  RCLCPP_WARN(this->get_logger(), "No presenters found in project: %s%s%s.", bold_on.c_str(), this->active_project.c_str(), bold_off.c_str());
+  return UNSET_STRING;
+}
+
+bool EegPresenter::set_presenter_module(const std::string module_name) {
+  this->module_name = get_module_name_with_fallback(module_name);
+
+  if (this->module_name == UNSET_STRING) {
+    RCLCPP_ERROR(this->get_logger(), "No presenter module set.");
+    this->unset_presenter_module();
+
+    return false;
+  }
 
   RCLCPP_INFO(this->get_logger(), "Presenter set to: %s.", this->module_name.c_str());
 
@@ -211,14 +234,15 @@ void EegPresenter::set_presenter_module(const std::string module) {
 
   /* Initialize the wrapper to use the changed presenter module. */
   initialize_presenter_module();
+
+  return true;
 }
 
 void EegPresenter::handle_set_presenter_module(
       const std::shared_ptr<project_interfaces::srv::SetPresenterModule::Request> request,
       std::shared_ptr<project_interfaces::srv::SetPresenterModule::Response> response) {
 
-  set_presenter_module(request->module);
-  response->success = true;
+  response->success = set_presenter_module(request->module);
 }
 
 void EegPresenter::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
@@ -228,18 +252,6 @@ void EegPresenter::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 
   this->is_working_directory_set = change_working_directory(PROJECTS_DIRECTORY + "/" + this->active_project + "/presenter");
   update_presenter_list();
-
-  if (this->modules.size() > 0) {
-    /* Set presenter module to the default if available, otherwise use the first listed module. */
-    if (std::find(this->modules.begin(), this->modules.end(), DEFAULT_PRESENTER_NAME) != this->modules.end()) {
-      this->set_presenter_module(DEFAULT_PRESENTER_NAME);
-    } else {
-      this->set_presenter_module(this->modules[0]);
-    }
-  } else {
-    RCLCPP_WARN(this->get_logger(), "No presenters found in project: %s.", this->active_project.c_str());
-    this->unset_presenter_module();
-  }
 
   update_inotify_watch();
 }

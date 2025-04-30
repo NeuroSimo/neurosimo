@@ -375,6 +375,10 @@ std::vector<std::string> EegPreprocessor::list_python_modules_in_working_directo
       modules.push_back(entry.path().stem().string());
     }
   }
+
+  /* Sort modules */
+  std::sort(modules.begin(), modules.end());
+
   return modules;
 }
 

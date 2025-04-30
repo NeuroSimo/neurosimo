@@ -286,6 +286,10 @@ std::vector<std::string> EegPresenter::list_python_modules_in_working_directory(
       modules.push_back(entry.path().stem().string());
     }
   }
+
+  /* Sort modules */
+  std::sort(modules.begin(), modules.end());
+
   return modules;
 }
 

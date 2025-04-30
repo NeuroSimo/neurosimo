@@ -96,6 +96,8 @@ private:
   bool is_streaming = false;
   std::string error_message = UNSET_STRING;
 
+  std::mutex dataset_mutex;
+
   double_t latest_session_time;
   double_t time_offset;
 

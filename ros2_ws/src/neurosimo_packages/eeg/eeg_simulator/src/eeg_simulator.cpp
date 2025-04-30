@@ -394,19 +394,34 @@ void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 
   RCLCPP_INFO(this->get_logger(), "Active project set to: %s", this->active_project.c_str());
 
-  update_dataset_list();
-
-  /* When the project changes, first set the default dataset. */
-  [[maybe_unused]] bool success = set_dataset(this->default_dataset_json);
+  /* Use a lock here to ensure that dataset is not reset by set_dataset while the list is still
+     being updated. This can happen when the project manager first sets a new project using pub-sub
+     and then immediately after that sets a new dataset with a service call. However, this is just
+     a workaround for now - a more robust but architecturally more complex solution would be to
+     ensure that the project manager does not set a new dataset until the list is updated,
+     e.g., by acknowledging that the project has been reset. (The current solution with a lock
+     still does not guarantee a correct order between setting the project and the dataset.) */
+  {
+    std::lock_guard<std::mutex> lock(dataset_mutex);
+    update_dataset_list();
+  }
 
   update_inotify_watch();
 }
 
 bool EegSimulator::set_dataset(std::string json_filename) {
+  /* See comment above for why a lock is used here. */
+  std::lock_guard<std::mutex> lock(dataset_mutex);
+
   if (dataset_map.find(json_filename) == dataset_map.end()) {
     RCLCPP_ERROR(this->get_logger(), "Dataset not found: %s.", json_filename.c_str());
+    RCLCPP_ERROR(this->get_logger(), "Available datasets:");
+    for (const auto& dataset : dataset_map) {
+      RCLCPP_ERROR(this->get_logger(), "  • %s", dataset.first.c_str());
+    }
     return false;
   }
+
   /* Update ROS state variable. */
   auto msg = std_msgs::msg::String();
   msg.data = json_filename;
@@ -433,8 +448,7 @@ void EegSimulator::handle_set_dataset(
       const std::shared_ptr<project_interfaces::srv::SetDataset::Request> request,
       std::shared_ptr<project_interfaces::srv::SetDataset::Response> response) {
 
-  bool success = set_dataset(request->filename);
-  response->success = success;
+  response->success = set_dataset(request->filename);
 }
 
 void EegSimulator::set_playback(bool playback) {

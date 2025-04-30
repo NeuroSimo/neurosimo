@@ -12,6 +12,10 @@ from project_interfaces.srv import (
     SetPreprocessorEnabled,
     SetPresenterModule,
     SetPresenterEnabled,
+    SetDataset,
+    SetPlayback,
+    SetLoop,
+    SetRecordData,
 )
 
 from std_msgs.msg import String, Bool
@@ -50,6 +54,11 @@ class ProjectManagerNode(Node):
         self.presenter_module_client = self.create_client(SetPresenterModule, "/pipeline/presenter/module/set", callback_group=self.callback_group)
         self.presenter_enabled_client = self.create_client(SetPresenterEnabled, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
 
+        self.set_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
+        self.set_playback_service = self.create_client(SetPlayback, "/eeg_simulator/playback/set", callback_group=self.callback_group)
+        self.set_loop_service = self.create_client(SetLoop, "/eeg_simulator/loop/set", callback_group=self.callback_group)
+        self.record_data_service = self.create_client(SetRecordData, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
+
         # Wait for services to be available
         while not self.preprocessor_module_client.wait_for_service(timeout_sec=2.0):
             self.logger.error("Preprocessor module service not available, waiting...")
@@ -69,6 +78,18 @@ class ProjectManagerNode(Node):
         while not self.decider_enabled_client.wait_for_service(timeout_sec=2.0):
             self.logger.error("Decider enabled service not available, waiting...")
 
+        while not self.set_dataset_service.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Set dataset service not available, waiting...")
+
+        while not self.set_playback_service.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Set playback service not available, waiting...")
+        
+        while not self.set_loop_service.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Set loop service not available, waiting...")
+
+        while not self.record_data_service.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Set record data service not available, waiting...")
+
         # Publisher
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -82,6 +103,11 @@ class ProjectManagerNode(Node):
         self.create_subscription(Bool, "/pipeline/preprocessor/enabled", self.preprocessor_enabled_callback, 10)
         self.create_subscription(String, "/pipeline/presenter/module", self.presenter_module_callback, 10)
         self.create_subscription(Bool, "/pipeline/presenter/enabled", self.presenter_enabled_callback, 10)
+
+        self.create_subscription(String, "/eeg_simulator/dataset", self.dataset_callback, 10)
+        self.create_subscription(Bool, "/eeg_simulator/playback", self.playback_callback, 10)
+        self.create_subscription(Bool, "/eeg_simulator/loop", self.loop_callback, 10)
+        self.create_subscription(Bool, "/eeg_recorder/record_data", self.record_data_callback, 10)
 
         # Initialize active project to first in list
         projects = self.list_projects()
@@ -113,6 +139,14 @@ class ProjectManagerNode(Node):
             "presenter": {
                 "module": 'example',
                 "enabled": False
+            },
+            "simulator": {
+                "dataset_filename": 'random_data_1_khz.json',
+                "playback": False,
+                "loop": False
+            },
+            "recorder": {
+                "record_data": False
             }
         }
 
@@ -122,6 +156,43 @@ class ProjectManagerNode(Node):
         with open(tmp, 'w') as f:
             json.dump(state, f, indent=2)
         os.replace(tmp, path)
+    
+    def validate_state(self, state):
+        required_keys = ["decider", "preprocessor", "presenter", "simulator", "recorder"]
+        for key in required_keys:
+            if key not in state:
+                self.logger.error(f"State file is missing required key: {key}")
+                return False
+
+        if not isinstance(state["decider"], dict) or not isinstance(state["preprocessor"], dict) or not isinstance(state["presenter"], dict):
+            self.logger.error("State file has invalid structure for decider, preprocessor, or presenter.")
+            return False
+    
+        if not isinstance(state["simulator"], dict) or not isinstance(state["recorder"], dict):
+            self.logger.error("State file has invalid structure for simulator or recorder.")
+            return False
+    
+        if not all(key in state["decider"] for key in ["module", "enabled"]):
+            self.logger.error("State file is missing required keys in decider.")
+            return False
+    
+        if not all(key in state["preprocessor"] for key in ["module", "enabled"]):
+            self.logger.error("State file is missing required keys in preprocessor.")
+            return False
+    
+        if not all(key in state["presenter"] for key in ["module", "enabled"]):
+            self.logger.error("State file is missing required keys in presenter.")
+            return False
+    
+        if not all(key in state["simulator"] for key in ["dataset_filename", "playback", "loop"]):
+            self.logger.error("State file is missing required keys in simulator.")
+            return False
+    
+        if not all(key in state["recorder"] for key in ["record_data"]):
+            self.logger.error("State file is missing required keys in recorder.")
+            return False
+
+        return True
 
     # Project selection
 
@@ -138,6 +209,12 @@ class ProjectManagerNode(Node):
             if self.state is None:
                 self.state = self.initialize_state()
                 self.save_state(self.state)
+
+        # Validate state
+        if not self.validate_state(self.state):
+            self.logger.error("Reinitializing state.")
+            self.state = self.initialize_state()
+            self.save_state(self.state)
 
         self.logger.info(f"Active project set to: {self.active_project}")
 
@@ -173,6 +250,17 @@ class ProjectManagerNode(Node):
         else:
             self.set_presenter_enabled(presenter_enabled)
             self.set_presenter_module(presenter_module)
+
+        # Set the state for the simulator
+        dataset_filename = self.state["simulator"]["dataset_filename"]
+        playback = self.state["simulator"]["playback"]
+        loop = self.state["simulator"]["loop"]
+        record_data = self.state["recorder"]["record_data"]
+
+        self.set_dataset(dataset_filename)
+        self.set_playback(playback)
+        self.set_loop(loop)
+        self.set_record_data(record_data)
 
         self.logger.info(f"State loaded for project: {self.active_project}")
 
@@ -225,10 +313,6 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_decider_enabled(self, enabled):
-        if not self.decider_enabled_client.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Decider enabled service not available!")
-            return
-
         request = SetDeciderEnabled.Request()
         request.enabled = enabled
 
@@ -242,10 +326,6 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_preprocessor_module(self, module_name):
-        if not self.preprocessor_module_client.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Preprocessor module service not available!")
-            return
-
         request = SetPreprocessorModule.Request()
         request.module = module_name
 
@@ -259,10 +339,6 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
     
     def set_preprocessor_enabled(self, enabled):
-        if not self.preprocessor_enabled_client.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Preprocessor enabled service not available!")
-            return
-
         request = SetPreprocessorEnabled.Request()
         request.enabled = enabled
 
@@ -276,10 +352,6 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_presenter_module(self, module_name):
-        if not self.presenter_module_client.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Presenter module service not available!")
-            return
-
         request = SetPresenterModule.Request()
         request.module = module_name
 
@@ -293,10 +365,6 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_presenter_enabled(self, enabled):
-        if not self.presenter_enabled_client.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Presenter enabled service not available!")
-            return
-
         request = SetPresenterEnabled.Request()
         request.enabled = enabled
 
@@ -307,6 +375,58 @@ class ProjectManagerNode(Node):
             if result is None or not result.success:
                 self.logger.error(f"Failed to set presenter enabled to {enabled}.")
 
+        future.add_done_callback(callback)
+
+    def set_dataset(self, dataset_filename):
+        request = SetDataset.Request()
+        request.filename = dataset_filename
+
+        future = self.set_dataset_service.call_async(request)
+
+        def callback(future):
+            result = future.result()
+            if result is None or not result.success:
+                self.logger.error(f"Failed to set dataset to {dataset_filename}.")
+        
+        future.add_done_callback(callback)
+    
+    def set_playback(self, playback):
+        request = SetPlayback.Request()
+        request.playback = playback
+
+        future = self.set_playback_service.call_async(request)
+
+        def callback(future):
+            result = future.result()
+            if result is None or not result.success:
+                self.logger.error(f"Failed to set playback to {playback}.")
+        
+        future.add_done_callback(callback)
+    
+    def set_loop(self, loop):
+        request = SetLoop.Request()
+        request.loop = loop
+
+        future = self.set_loop_service.call_async(request)
+
+        def callback(future):
+            result = future.result()
+            if result is None or not result.success:
+                self.logger.error(f"Failed to set loop to {loop}.")
+        
+        future.add_done_callback(callback)
+    
+    def set_record_data(self, record_data):
+        request = SetRecordData.Request()
+        request.record_data = record_data
+
+        future = self.record_data_service.call_async(request)
+
+        def callback(future):
+            result = future.result()
+            if result is None or not result.success:
+                self.logger.error(f"Failed to set record data to {record_data}.")
+        
         future.add_done_callback(callback)
 
     # Subscriber callbacks
@@ -342,6 +462,29 @@ class ProjectManagerNode(Node):
         flag = msg.data
         with self.state_lock:
             self.state["presenter"]["enabled"] = flag
+            self.save_state(self.state)
+
+    def dataset_callback(self, msg: String):
+        with self.state_lock:
+            self.state["simulator"]["dataset_filename"] = msg.data
+            self.save_state(self.state)
+
+    def playback_callback(self, msg: Bool):
+        flag = msg.data
+        with self.state_lock:
+            self.state["simulator"]["playback"] = flag
+            self.save_state(self.state)
+
+    def loop_callback(self, msg: Bool):
+        flag = msg.data
+        with self.state_lock:
+            self.state["simulator"]["loop"] = flag
+            self.save_state(self.state)
+    
+    def record_data_callback(self, msg: Bool):
+        flag = msg.data
+        with self.state_lock:
+            self.state["recorder"]["record_data"] = flag
             self.save_state(self.state)
 
 

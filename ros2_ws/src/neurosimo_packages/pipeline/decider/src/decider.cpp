@@ -920,8 +920,6 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     return;
   }
 
-  check_dropped_samples(sample_time);
-
   /* Assert that module name is set - we shouldn't otherwise allow to enable the decider. */
   assert(this->module_name != UNSET_STRING);
 
@@ -947,6 +945,8 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     }
     return;
   }
+
+  check_dropped_samples(sample_time);
 
   /* If the sample includes a trigger, handle it acoordingly. */
   if (msg->is_trigger) {

@@ -532,7 +532,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     double_t sample_time,
     bool ready_for_trial,
     bool is_trigger,
-    bool is_event,
+    bool has_event,
     uint16_t event_type) {
 
   bool success = true;
@@ -571,7 +571,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   /* Call the Python function. */
   py::object py_result;
   try {
-    py_result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, is_event, event_type);
+    py_result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, has_event, event_type);
 
   } catch(const py::error_already_set& e) {
     RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());

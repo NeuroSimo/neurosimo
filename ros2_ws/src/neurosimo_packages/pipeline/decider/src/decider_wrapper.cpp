@@ -533,7 +533,10 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     bool ready_for_trial,
     bool is_trigger,
     bool has_event,
-    uint16_t event_type) {
+    uint16_t event_type,
+    std::priority_queue<std::pair<double, uint16_t>,
+                       std::vector<std::pair<double, uint16_t>>,
+                       std::greater<std::pair<double, uint16_t>>>& event_queue) {
 
   bool success = true;
   std::shared_ptr<mtms_trial_interfaces::msg::Trial> trial = nullptr;
@@ -605,11 +608,11 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   py::dict dict_result = py_result.cast<py::dict>();
 
   /* Validate that only allowed keys are present */
-  std::vector<std::string> allowed_keys = {"trial", "timed_trigger", "sensory_stimuli"};
+  std::vector<std::string> allowed_keys = {"trial", "timed_trigger", "sensory_stimuli", "events"};
   for (const auto& item : dict_result) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'trial', 'timed_trigger', and 'sensory_stimuli' are allowed.", key.c_str());
+      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'trial', 'timed_trigger', 'sensory_stimuli', and 'events' are allowed.", key.c_str());
       state = WrapperState::ERROR;
       success = false;
 
@@ -719,6 +722,26 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       return {success, trial, timed_trigger};
     }
   }
+
+  if (dict_result.contains("events")) {
+    if (!py::isinstance<py::list>(dict_result["events"])) {
+      RCLCPP_ERROR(*logger_ptr, "events must be a list.");
+      state = WrapperState::ERROR;
+      success = false;
+      return {success, trial, timed_trigger};
+    }
+
+    py::list events = dict_result["events"].cast<py::list>();
+    for (const auto& event : events) {
+      py::dict event_dict = event.cast<py::dict>();
+
+      uint16_t event_type = event_dict["type"].cast<uint16_t>();
+      double event_time = event_dict["time"].cast<double>();
+
+      event_queue.push(std::make_pair(event_time, event_type));
+    }
+  }
+
   return {success, trial, timed_trigger};
 }
 

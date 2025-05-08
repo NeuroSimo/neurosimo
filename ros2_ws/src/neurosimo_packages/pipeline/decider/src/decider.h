@@ -200,7 +200,7 @@ private:
   double_t previous_time = UNSET_PREVIOUS_TIME;
 
   RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>> sample_buffer;
-  pipeline_interfaces::msg::SensoryStimulus sensory_stimulus;
+  std::vector<pipeline_interfaces::msg::SensoryStimulus> sensory_stimuli;
 
   std::unique_ptr<DeciderWrapper> decider_wrapper;
 

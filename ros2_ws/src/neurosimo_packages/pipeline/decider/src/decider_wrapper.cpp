@@ -231,16 +231,16 @@ void DeciderWrapper::initialize_module(
 
     /* Extract sensory_stimuli. */
     if (config.contains("sensory_stimuli")) {
-      for (auto item : config["sensory_stimuli"].cast<py::list>()) {
-        py::dict ss = item.cast<py::dict>();
-        pipeline_interfaces::msg::SensoryStimulus msg;
-        if (parse_sensory_stimulus_dict(ss, msg)) {
-          sensory_stimuli.push_back(msg);
-        } else {
-          RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
-          state = WrapperState::ERROR;
-          return;
-        }
+      if (!py::isinstance<py::list>(config["sensory_stimuli"])) {
+        RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
+        state = WrapperState::ERROR;
+        return;
+      }
+
+      py::list py_sensory_stimuli = config["sensory_stimuli"].cast<py::list>();
+      if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
+        state = WrapperState::ERROR;
+        return;
       }
     } else {
       RCLCPP_ERROR(*logger_ptr, "'sensory_stimuli' key not found in configuration dictionary.");
@@ -504,9 +504,34 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
   return true;
 }
 
+bool DeciderWrapper::process_sensory_stimuli_list(
+    const py::list& py_sensory_stimuli,
+    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli) {
+  
+  if (py_sensory_stimuli.size() > 0) {
+    for (const auto& py_sensory_stimulus : py_sensory_stimuli) {
+      if (!py::isinstance<py::dict>(py_sensory_stimulus)) {
+        RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list of dictionaries.");
+        state = WrapperState::ERROR;
+        return false;
+      }
+      py::dict py_sensory_stimulus_dict = py_sensory_stimulus.cast<py::dict>();
+      pipeline_interfaces::msg::SensoryStimulus msg;
+      if (parse_sensory_stimulus_dict(py_sensory_stimulus_dict, msg)) {
+        sensory_stimuli.push_back(msg);
+      } else {
+        RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
+        state = WrapperState::ERROR;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 /* TODO: Use struct for the return value. */
-std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, bool> DeciderWrapper::process(
-    pipeline_interfaces::msg::SensoryStimulus& output_sensory_stimulus,
+std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>> DeciderWrapper::process(
+    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
     double_t sample_time,
     bool ready_for_trial,
@@ -517,8 +542,6 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   bool success = true;
   std::shared_ptr<mtms_trial_interfaces::msg::Trial> trial = nullptr;
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
-
-  bool request_sensory_stimulus = false;
 
   /* TODO: The logic below, as well as the difference in semantics between "sample time" and "current time", needs to
      be documented somewhere more thoroughly. */
@@ -559,19 +582,19 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     state = WrapperState::ERROR;
     success = false;
 
-    return {success, trial, timed_trigger, request_sensory_stimulus};
+    return {success, trial, timed_trigger};
 
   } catch(const std::exception& e) {
     RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
     state = WrapperState::ERROR;
     success = false;
 
-    return {success, trial, timed_trigger, request_sensory_stimulus};
+    return {success, trial, timed_trigger};
   }
 
   /* If the return value is None, return early but mark it as successful. */
   if (result.is_none()) {
-    return {success, trial, timed_trigger, request_sensory_stimulus};
+    return {success, trial, timed_trigger};
   }
 
   /* If the return value is not None, ensure that it is a dictionary. */
@@ -580,7 +603,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     state = WrapperState::ERROR;
     success = false;
 
-    return {success, trial, timed_trigger, request_sensory_stimulus};
+    return {success, trial, timed_trigger};
   }
 
   py::dict dict_result = result.cast<py::dict>();
@@ -597,7 +620,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       state = WrapperState::ERROR;
       success = false;
 
-      return {success, trial, timed_trigger, request_sensory_stimulus};
+      return {success, trial, timed_trigger};
     }
 
     py::list py_targets = py_trial["targets"].cast<py::list>();
@@ -629,7 +652,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       state = WrapperState::ERROR;
       success = false;
 
-      return {success, trial, timed_trigger, request_sensory_stimulus};
+      return {success, trial, timed_trigger};
     }
 
     py::list py_pulse_times = py_trial["pulse_times"].cast<py::list>();
@@ -647,7 +670,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       state = WrapperState::ERROR;
       success = false;
 
-      return {success, trial, timed_trigger, request_sensory_stimulus};
+      return {success, trial, timed_trigger};
     }
 
     py::list py_triggers = py_trial["triggers"].cast<py::list>();
@@ -672,16 +695,22 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     timed_trigger->time = dict_result["timed_trigger"].cast<double_t>();
   }
 
-  if (dict_result.contains("sensory_stimulus")) {
-    auto py_sensory_stimulus = dict_result["sensory_stimulus"].cast<py::dict>();
-    if (parse_sensory_stimulus_dict(py_sensory_stimulus, output_sensory_stimulus)) {
-      request_sensory_stimulus = true;
-    } else {
+  if (dict_result.contains("sensory_stimuli")) {
+    if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
+      RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
+      state = WrapperState::ERROR;
       success = false;
-      return {success, trial, timed_trigger, request_sensory_stimulus};
+      return {success, trial, timed_trigger};
+    }
+
+    py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
+    if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
+      state = WrapperState::ERROR;
+      success = false;
+      return {success, trial, timed_trigger};
     }
   }
-  return {success, trial, timed_trigger, request_sensory_stimulus};
+  return {success, trial, timed_trigger};
 }
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;

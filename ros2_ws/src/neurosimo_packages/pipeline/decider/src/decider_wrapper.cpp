@@ -210,6 +210,17 @@ void DeciderWrapper::initialize_module(
   if (py::hasattr(*decider_instance, "get_configuration")) {
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
 
+    /* Validate that only allowed keys are present */
+    std::vector<std::string> allowed_keys = {"sample_window", "sensory_stimuli", "processing_interval_in_samples", "process_on_trigger", "events"};
+    for (const auto& item : config) {
+      std::string key = py::str(item.first).cast<std::string>();
+      if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
+        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'sensory_stimuli', 'processing_interval_in_samples', 'process_on_trigger', and 'events' are allowed.", key.c_str());
+        state = WrapperState::ERROR;
+        return;
+      }
+    }
+
     /* Extract sample_window. */
     if (config.contains("sample_window")) {
       py::list sample_window = config["sample_window"].cast<py::list>();
@@ -573,9 +584,9 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   });
 
   /* Call the Python function. */
-  py::object result;
+  py::object py_result;
   try {
-    result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, is_event, event_type);
+    py_result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, is_event, event_type);
 
   } catch(const py::error_already_set& e) {
     RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
@@ -593,12 +604,12 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   }
 
   /* If the return value is None, return early but mark it as successful. */
-  if (result.is_none()) {
+  if (py_result.is_none()) {
     return {success, trial, timed_trigger};
   }
 
   /* If the return value is not None, ensure that it is a dictionary. */
-  if (!py::isinstance<py::dict>(result)) {
+  if (!py::isinstance<py::dict>(py_result)) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary.");
     state = WrapperState::ERROR;
     success = false;
@@ -606,7 +617,20 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     return {success, trial, timed_trigger};
   }
 
-  py::dict dict_result = result.cast<py::dict>();
+  py::dict dict_result = py_result.cast<py::dict>();
+
+  /* Validate that only allowed keys are present */
+  std::vector<std::string> allowed_keys = {"trial", "timed_trigger", "sensory_stimuli"};
+  for (const auto& item : dict_result) {
+    std::string key = py::str(item.first).cast<std::string>();
+    if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
+      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'trial', 'timed_trigger', and 'sensory_stimuli' are allowed.", key.c_str());
+      state = WrapperState::ERROR;
+      success = false;
+
+      return {success, trial, timed_trigger};
+    }
+  }
 
   if (dict_result.contains("trial")) {
     /* If there is a trial in the dictionary, extract it and return early. */

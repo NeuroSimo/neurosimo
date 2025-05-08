@@ -362,11 +362,31 @@ void EegDecider::initialize_module() {
   this->sensory_stimuli.clear();
 }
 
-std::pair<double, uint16_t> EegDecider::get_next_event() const {
+std::tuple<bool, double, uint16_t> EegDecider::consume_next_event(double_t current_time) {
   if (this->event_queue.empty()) {
-    return std::make_pair(std::numeric_limits<double>::infinity(), 0);
+    return std::make_tuple(false, 0.0, 0);
   }
-  return this->event_queue.top();
+
+  double_t event_time;
+  uint16_t event_type;
+
+  /* Pop events until the event time is within the tolerance. */
+  while (true) {
+    auto event = this->event_queue.top();
+    event_time = event.first;
+    event_type = event.second;
+
+    if (event_time - this->TOLERANCE_S >= current_time - this->sampling_period) {
+      break;
+    }
+    this->event_queue.pop();
+  }
+
+  /* If the event time is too far in the future, return false. */
+  if (event_time > current_time + this->TOLERANCE_S) {
+    return std::make_tuple(false, 0.0, 0);
+  }
+  return std::make_tuple(true, event_time, event_type);
 }
 
 void EegDecider::pop_event() {
@@ -982,40 +1002,26 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     return;
   }
 
-  /* Infer the current sample should trigger an event. */
-  bool is_event = false;
-  uint16_t event_type = 0;
-
-  auto [next_event_time, next_event_type] = get_next_event();
-
-  /* Discard events that we are past by at least one sampling period. */
-  while (sample_time - this->sampling_period >= next_event_time - this->TOLERANCE_S) {
-    RCLCPP_INFO(this->get_logger(), "Current time (%.3f s) is past event at %.3f (s), discarding event.", sample_time, next_event_time);
-
-    this->pop_event();
-    std::tie(next_event_time, next_event_type) = get_next_event();
+  /* Check if any decider-defined events occur at the current sample. */
+  auto [has_event, event_time, event_type] = consume_next_event(sample_time);
+  if (has_event) {
+    RCLCPP_INFO(this->get_logger(), "Received decider-defined event at time %.4f (s), event type: %d", sample_time, event_type);
   }
 
-  /* If decider module defines events and we are past the event time, the current sample should trigger an event
-     (and override the is_event flag from the message). */
-  if (sample_time >= next_event_time - this->TOLERANCE_S) {
-    is_event = true;
-    event_type = next_event_type;
+  /* Fallback: check if the sample includes an external event. */
+  if (msg->is_event) {
+    RCLCPP_INFO(this->get_logger(), "Received external event at time %.4f (s), event type: %d", sample_time, msg->event_type);
 
-    RCLCPP_INFO(this->get_logger(), "Decider-defined event (time: %.4f s, type: %d) occurred at time %.4f (s)", next_event_time, next_event_type, sample_time);
-
-    this->pop_event();
-
-  } else {
-    /* Otherwise, use the is_event flag from the message. */
-    is_event = msg->is_event;
-    event_type = msg->event_type;
-
-    if (is_event) {
-      RCLCPP_INFO(this->get_logger(), "Received event at time %.4f (s), event type: %d", sample_time, event_type);
+    if (!has_event) {
+      has_event = true;
+      event_time = sample_time;
+      event_type = msg->event_type;
+    } else {
+      RCLCPP_WARN(this->get_logger(), "Received both decider-defined and external event at time %.4f (s), using decider-defined event.", sample_time);
     }
   }
 
+  /* Check if the sample should be processed. */
   bool process_current_sample = false;
 
   /* If process on trigger is enabled, process if the sample includes a trigger. */
@@ -1033,8 +1039,8 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     }
   }
 
-  /* Always processing if the sample is considered an event. */
-  if (is_event) {
+  /* Always process if the sample includes an event. */
+  if (has_event) {
     process_current_sample = true;
   }
 
@@ -1060,7 +1066,7 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     sample_time,
     ready_for_trial,
     is_trigger,
-    is_event,
+    has_event,
     event_type);
 
   /* Log and return early if the Python call failed. */

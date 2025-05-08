@@ -72,7 +72,7 @@ public:
     double_t sample_time,
     bool ready_for_trial,
     bool is_trigger,
-    bool is_event,
+    bool has_event,
     uint16_t event_type);
 
   WrapperState get_state() const;

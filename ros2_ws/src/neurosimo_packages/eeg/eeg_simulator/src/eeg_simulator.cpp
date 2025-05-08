@@ -587,27 +587,50 @@ void EegSimulator::initialize_streaming() {
 
   data_file.close();
 
-  /* Open event file. */
-
+  /* Open and read event file. */
   std::string event_filename = this->dataset.event_filename;
   std::string event_file_path = data_directory + event_filename;
 
-  this->send_events = false;
+  this->events.clear();
+  this->current_event_index = 0;
+
   if (!event_filename.empty()) {
-    if (event_file.is_open()) {
-        event_file.close();
-    }
-    event_file.open(event_file_path, std::ios::in);
+    std::ifstream event_file(event_file_path, std::ios::in);
 
     if (!event_file.is_open()) {
       RCLCPP_ERROR(this->get_logger(), "Error opening event file: %s", event_file_path.c_str());
     } else {
       RCLCPP_INFO(this->get_logger(), "Reading events from file: %s", event_file_path.c_str());
 
-      /* Read the next event time from the file already here so the session handler loop doesn't have to worry about it. */
-      read_next_event();
+      std::string line;
+      while (std::getline(event_file, line)) {
+        try {
+          /* Split the line at the comma. */
+          size_t comma_pos = line.find(',');
+          if (comma_pos == std::string::npos) {
+            throw std::invalid_argument("Missing comma in event file.");
+          }
 
-      this->send_events = true;
+          /* Extract and convert the first and second columns. */
+          double_t event_time = std::stod(line.substr(0, comma_pos));
+          uint16_t event_type = std::stoi(line.substr(comma_pos + 1));
+
+          events.push_back({event_time, event_type});
+
+        } catch (const std::invalid_argument& e) {
+          RCLCPP_ERROR(this->get_logger(), "Invalid data in event file: %s", e.what());
+        } catch (const std::out_of_range& e) {
+          RCLCPP_ERROR(this->get_logger(), "Number out of range in event file: %s", e.what());
+        }
+      }
+
+      event_file.close();
+
+      if (!events.empty()) {
+        RCLCPP_INFO(this->get_logger(), "Read %zu events from file.", events.size());
+      } else {
+        RCLCPP_WARN(this->get_logger(), "No valid events found in file.");
+      }
     }
   }
   this->eeg_simulator_state = EegSimulatorState::READY;
@@ -660,14 +683,9 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   while (dataset_time + time_offset <= current_time && !stop) {
     std::tie(stop, looped, sample_time) = publish_sample(current_time);
 
-    if (looped) {
-      /* If dataset looped, reset the event file. */
-      if (this->send_events) {
-        event_file.clear();
-        event_file.seekg(0, std::ios::beg);
-
-        read_next_event();
-      }
+    if (looped && !events.empty()) {
+      /* If dataset looped, reset the event index. */
+      this->current_event_index = 0;
     }
 
     /* TODO: The problem with current design is that it publishes the next sample too early; the dataset time is updated only
@@ -694,6 +712,7 @@ std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_t
       RCLCPP_INFO(this->get_logger(), "Reached the end of data, looping back to beginning.");
 
       current_sample_index = 0;
+      current_event_index = 0;  // Reset event index when looping
 
       /* If the dataset looped, update the time offset. */
       time_offset = time_offset + latest_sample_time + sampling_period;
@@ -731,11 +750,12 @@ std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_t
 
   msg.time = time;
 
-  if (this->send_events && this->events_left) {
-    msg.is_event = next_event_time <= sample_time;
+  if (!events.empty() && current_event_index < events.size()) {
+    const Event& next_event = events[current_event_index];
+    msg.is_event = next_event.time <= sample_time;
     if (msg.is_event) {
-      msg.event_type = next_event_type;
-      read_next_event();
+      msg.event_type = next_event.type;
+      current_event_index++;
 
       RCLCPP_INFO(this->get_logger(), "Published event of type %d with timestamp %.4f s.", msg.event_type, time);
     }
@@ -752,38 +772,6 @@ std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_t
                        "Still streaming at %.1f s.", time);
 
   return {false, looped, sample_time};
-}
-
-void EegSimulator::read_next_event() {
-  events_left = false;
-  std::string line;
-
-  if (!std::getline(event_file, line)) {
-    if (event_file.eof()) {
-      RCLCPP_INFO(this->get_logger(), "Reached the end of event file.");
-      return;
-    }
-  }
-
-  try {
-    /* Split the line at the comma. */
-    size_t comma_pos = line.find(',');
-    if (comma_pos == std::string::npos) {
-      throw std::invalid_argument("Missing comma in event file.");
-    }
-
-    /* Extract and convert the first and second columns. */
-    next_event_time = std::stod(line.substr(0, comma_pos));
-    next_event_type = std::stoi(line.substr(comma_pos + 1)); // Assuming event type is an integer
-
-    events_left = true;
-
-  } catch (const std::invalid_argument& e) {
-    RCLCPP_ERROR(this->get_logger(), "Invalid data in event file: %s", e.what());
-
-  } catch (const std::out_of_range& e) {
-    RCLCPP_ERROR(this->get_logger(), "Number out of range in event file: %s", e.what());
-  }
 }
 
 /* Inotify functions */

@@ -123,7 +123,7 @@ private:
 
   void log_trial(const mtms_trial_interfaces::msg::Trial& trial, size_t num_of_remaining_trials);
 
-  std::pair<double, uint16_t> get_next_event() const;
+  std::tuple<bool, double, uint16_t> consume_next_event(double_t current_time);
   void pop_event();
 
   /* File-system related functions */

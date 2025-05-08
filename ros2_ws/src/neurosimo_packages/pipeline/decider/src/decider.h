@@ -7,6 +7,7 @@
 
 #include <deque>
 #include <cmath>
+#include <queue>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -122,6 +123,9 @@ private:
 
   void log_trial(const mtms_trial_interfaces::msg::Trial& trial, size_t num_of_remaining_trials);
 
+  std::pair<double, uint16_t> get_next_event() const;
+  void pop_event();
+
   /* File-system related functions */
   bool change_working_directory(const std::string path);
   std::vector<std::string> list_python_modules_in_working_directory();
@@ -230,6 +234,11 @@ private:
   int inotify_descriptor;
   std::vector<int> watch_descriptors;
   char inotify_buffer[1024];
+
+  /* Event queue for storing events from the Python module. */
+  std::priority_queue<std::pair<double, uint16_t>,
+                      std::vector<std::pair<double, uint16_t>>,
+                      std::greater<std::pair<double, uint16_t>>> event_queue;
 
   /* When determining if samples have been dropped by comparing the timestamps of two consecutive
      samples, allow some tolerance to account for finite precision of floating point numbers. */

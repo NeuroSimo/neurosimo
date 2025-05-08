@@ -149,7 +149,10 @@ void DeciderWrapper::initialize_module(
     const size_t eeg_data_size,
     const size_t emg_data_size,
     const uint16_t sampling_frequency,
-    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli) {
+    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    std::priority_queue<std::pair<double, uint16_t>,
+                       std::vector<std::pair<double, uint16_t>>,
+                       std::greater<std::pair<double, uint16_t>>>& event_queue) {
 
   this->sampling_frequency = sampling_frequency;
 
@@ -336,25 +339,7 @@ void DeciderWrapper::reset_module_state() {
   py_eeg_data.reset();
   py_emg_data.reset();
 
-  // Reset the event queue
-  while (!event_queue.empty()) {
-    event_queue.pop();
-  }
-
   state = WrapperState::UNINITIALIZED;
-}
-
-std::pair <double_t, uint16_t> DeciderWrapper::get_next_event() const {
-  if (event_queue.empty()) {
-    return std::make_pair(std::numeric_limits<double_t>::infinity(), 0);
-  }
-  return event_queue.top();
-}
-
-void DeciderWrapper::pop_event() {
-  if (!event_queue.empty()) {
-    event_queue.pop();
-  }
 }
 
 DeciderWrapper::~DeciderWrapper() {

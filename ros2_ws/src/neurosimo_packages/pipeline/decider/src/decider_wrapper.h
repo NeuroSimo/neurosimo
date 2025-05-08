@@ -53,7 +53,10 @@ public:
       const size_t eeg_data_size,
       const size_t emg_data_size,
       const uint16_t sampling_frequency,
-      std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
+      std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+      std::priority_queue<std::pair<double, uint16_t>,
+                         std::vector<std::pair<double, uint16_t>>,
+                         std::greater<std::pair<double, uint16_t>>>& event_queue);
 
   void reset_module_state();
 
@@ -80,9 +83,6 @@ public:
   bool is_processing_interval_enabled() const;
   bool is_process_on_trigger_enabled() const;
 
-  std::pair<double, uint16_t> get_next_event() const;
-  void pop_event();
-
   void setup_custom_print();
 
   /* log and log_throttle are exposed to Python, defined in cpp_bindings.cpp. */
@@ -104,10 +104,6 @@ private:
   std::unique_ptr<py::array_t<bool>> py_valid;
   std::unique_ptr<py::array_t<double>> py_eeg_data;
   std::unique_ptr<py::array_t<double>> py_emg_data;
-
-  std::priority_queue<std::pair<double, uint16_t>,
-                      std::vector<std::pair<double, uint16_t>>,
-                      std::greater<std::pair<double, uint16_t>>> event_queue;
 
   std::unordered_map<std::string, std::chrono::steady_clock::time_point> last_log_time;
 

@@ -325,6 +325,11 @@ void EegDecider::initialize_module() {
 
   RCLCPP_INFO(this->get_logger(), "");
 
+  /* Clear the event queue before initializing. */
+  while (!this->event_queue.empty()) {
+    this->event_queue.pop();
+  }
+
   this->decider_wrapper->initialize_module(
     PROJECTS_DIRECTORY,
     this->working_directory,
@@ -332,7 +337,8 @@ void EegDecider::initialize_module() {
     this->num_of_eeg_channels,
     this->num_of_emg_channels,
     this->sampling_frequency,
-    this->sensory_stimuli);
+    this->sensory_stimuli,
+    this->event_queue);
 
   if (this->decider_wrapper->get_state() != WrapperState::READY) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load.");
@@ -354,6 +360,19 @@ void EegDecider::initialize_module() {
     this->sensory_stimulus_publisher->publish(sensory_stimulus);
   }
   this->sensory_stimuli.clear();
+}
+
+std::pair<double, uint16_t> EegDecider::get_next_event() const {
+  if (this->event_queue.empty()) {
+    return std::make_pair(std::numeric_limits<double>::infinity(), 0);
+  }
+  return this->event_queue.top();
+}
+
+void EegDecider::pop_event() {
+  if (!this->event_queue.empty()) {
+    this->event_queue.pop();
+  }
 }
 
 /* Note: This method is only relevant in the mTMS context. */
@@ -963,21 +982,21 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     return;
   }
 
-  /* Infer whether the sample is an event. */
+  /* Infer the current sample should trigger an event. */
   bool is_event = false;
   uint16_t event_type = 0;
 
-  auto [next_event_time, next_event_type] = this->decider_wrapper->get_next_event();
+  auto [next_event_time, next_event_type] = get_next_event();
 
-  /* Skip events that we are past by at least one sampling period. */
+  /* Discard events that we are past by at least one sampling period. */
   while (sample_time - this->sampling_period >= next_event_time - this->TOLERANCE_S) {
-    RCLCPP_INFO(this->get_logger(), "Current time (%.3f s) is past event at %.3f (s), skipping...", sample_time, next_event_time);
+    RCLCPP_INFO(this->get_logger(), "Current time (%.3f s) is past event at %.3f (s), discarding event.", sample_time, next_event_time);
 
-    this->decider_wrapper->pop_event();
-    std::tie(next_event_time, next_event_type) = this->decider_wrapper->get_next_event();
+    this->pop_event();
+    std::tie(next_event_time, next_event_type) = get_next_event();
   }
 
-  /* If decider module defines events and we are past the event time, consider the current sample an event
+  /* If decider module defines events and we are past the event time, the current sample should trigger an event
      (and override the is_event flag from the message). */
   if (sample_time >= next_event_time - this->TOLERANCE_S) {
     is_event = true;
@@ -985,7 +1004,7 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
 
     RCLCPP_INFO(this->get_logger(), "Decider-defined event (time: %.4f s, type: %d) occurred at time %.4f (s)", next_event_time, next_event_type, sample_time);
 
-    this->decider_wrapper->pop_event();
+    this->pop_event();
 
   } else {
     /* Otherwise, use the is_event flag from the message. */

@@ -95,8 +95,6 @@ private:
   bool loop = false;
   double_t start_time = 0.0;
 
-  bool send_events = false;
-
   bool session_started = false;
   bool events_left = false;
 
@@ -122,10 +120,16 @@ private:
   uint8_t total_channels;
 
   std::ifstream data_file;
-  std::ifstream event_file;
 
   std::vector<std::vector<double_t>> dataset_buffer;
   size_t current_sample_index = 0;
+
+  struct Event {
+    double_t time;
+    uint16_t type;
+  };
+  std::vector<Event> events;
+  size_t current_event_index = 0;
 
   std::string active_project;
   std::string data_directory;

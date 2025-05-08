@@ -1067,7 +1067,8 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     ready_for_trial,
     is_trigger,
     has_event,
-    event_type);
+    event_type,
+    this->event_queue);
 
   /* Log and return early if the Python call failed. */
   if (!success) {

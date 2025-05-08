@@ -218,7 +218,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->decider_wrapper = std::make_unique<DeciderWrapper>(logger);
 
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>();
-  this->sensory_stimulus = pipeline_interfaces::msg::SensoryStimulus();
 
   /* Initialize inotify. */
   this->inotify_descriptor = inotify_init();
@@ -326,8 +325,6 @@ void EegDecider::initialize_module() {
 
   RCLCPP_INFO(this->get_logger(), "");
 
-  std::vector<pipeline_interfaces::msg::SensoryStimulus> initial_sensory_stimuli;
-
   this->decider_wrapper->initialize_module(
     PROJECTS_DIRECTORY,
     this->working_directory,
@@ -335,7 +332,7 @@ void EegDecider::initialize_module() {
     this->num_of_eeg_channels,
     this->num_of_emg_channels,
     this->sampling_frequency,
-    initial_sensory_stimuli);
+    this->sensory_stimuli);
 
   if (this->decider_wrapper->get_state() != WrapperState::READY) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load.");
@@ -353,9 +350,10 @@ void EegDecider::initialize_module() {
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Send the initial sensory stimuli to the presenter. */
-  for (auto& sensory_stimulus : initial_sensory_stimuli) {
+  for (auto& sensory_stimulus : this->sensory_stimuli) {
     this->sensory_stimulus_publisher->publish(sensory_stimulus);
   }
+  this->sensory_stimuli.clear();
 }
 
 /* Note: This method is only relevant in the mTMS context. */
@@ -1037,8 +1035,8 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
                          has_minimum_intertrial_interval_passed;
 
   /* Process the sample. */
-  auto [success, trial, timed_trigger, request_sensory_stimulus] = this->decider_wrapper->process(
-    this->sensory_stimulus,
+  auto [success, trial, timed_trigger] = this->decider_wrapper->process(
+    this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
     ready_for_trial,
@@ -1150,11 +1148,15 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     this->previous_stimulation_time = trigger_time;
   }
 
-  /* Request sensory stimulus if requested. */
-  if (request_sensory_stimulus) {
-    RCLCPP_INFO(this->get_logger(), "Requesting sensory stimulus at time %.3f (s).", sample_time);
+  /* Publish sensory stimuli if the vector is not empty. */
+  if (!this->sensory_stimuli.empty()) {
+    auto sensory_stimulus_count = this->sensory_stimuli.size();
+    RCLCPP_INFO(this->get_logger(), "Requesting %zu sensory stimuli at time %.3f (s).", sensory_stimulus_count, sample_time);
 
-    this->sensory_stimulus_publisher->publish(this->sensory_stimulus);
+    for (const auto& sensory_stimulus : this->sensory_stimuli) {
+      this->sensory_stimulus_publisher->publish(sensory_stimulus);
+    }
+    this->sensory_stimuli.clear();
   }
 }
 

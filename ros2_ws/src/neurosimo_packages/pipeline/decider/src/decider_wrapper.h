@@ -63,8 +63,8 @@ public:
     const py::dict& py_sensory_stimulus,
     pipeline_interfaces::msg::SensoryStimulus& out_msg);
   
-  std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, bool> process(
-    pipeline_interfaces::msg::SensoryStimulus& output_sensory_stimulus,
+  std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>> process(
+    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
     double_t sample_time,
     bool ready_for_trial,
@@ -122,6 +122,10 @@ private:
   std::size_t buffer_size = 0;
   std::size_t eeg_data_size;
   std::size_t emg_data_size;
+
+  bool process_sensory_stimuli_list(
+    const py::list& py_sensory_stimuli,
+    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
 };
 
 #endif

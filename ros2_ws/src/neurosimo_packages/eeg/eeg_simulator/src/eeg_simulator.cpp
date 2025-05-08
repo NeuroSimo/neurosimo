@@ -628,6 +628,8 @@ void EegSimulator::initialize_streaming() {
 
       if (!events.empty()) {
         RCLCPP_INFO(this->get_logger(), "Read %zu events from file.", events.size());
+        const Event& first_event = events[0];
+        RCLCPP_INFO(this->get_logger(), "First event (type %d) due at %.4f s.", first_event.type, first_event.time);
       } else {
         RCLCPP_WARN(this->get_logger(), "No valid events found in file.");
       }
@@ -758,6 +760,14 @@ std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_t
       current_event_index++;
 
       RCLCPP_INFO(this->get_logger(), "Published event of type %d with timestamp %.4f s.", msg.event_type, time);
+
+      /* Print information about the next event if there is one */
+      if (current_event_index < events.size()) {
+        const Event& next = events[current_event_index];
+        RCLCPP_INFO(this->get_logger(), "Next event (type %d) due at %.4f s.", next.type, next.time);
+      } else {
+        RCLCPP_INFO(this->get_logger(), "No more events in this dataset.");
+      }
     }
   }
 

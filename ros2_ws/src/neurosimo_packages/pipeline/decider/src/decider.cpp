@@ -701,10 +701,30 @@ void EegDecider::handle_set_active_project(const std::shared_ptr<std_msgs::msg::
 bool EegDecider::change_working_directory(const std::string path) {
   this->working_directory = path;
 
-  /* Check that the directory exists. */
-  if (!std::filesystem::exists(this->working_directory) || !std::filesystem::is_directory(this->working_directory)) {
+  /* Check that the directory exists and follow symlinks. */
+  std::error_code ec;
+  if (!std::filesystem::exists(this->working_directory, ec) || 
+      !std::filesystem::is_directory(this->working_directory, ec)) {
     RCLCPP_ERROR(this->get_logger(), "Directory does not exist: %s.", path.c_str());
+    if (ec) {
+      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
+    }
     return false;
+  }
+
+  /* If it's a symlink, resolve it and check the target. */
+  if (std::filesystem::is_symlink(this->working_directory, ec)) {
+    auto resolved_path = std::filesystem::canonical(this->working_directory, ec);
+    if (ec) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to resolve symlink %s: %s", path.c_str(), ec.message().c_str());
+      return false;
+    }
+    RCLCPP_INFO(this->get_logger(), "Resolved symlink %s to %s", path.c_str(), resolved_path.c_str());
+    
+    if (!std::filesystem::is_directory(resolved_path, ec)) {
+      RCLCPP_ERROR(this->get_logger(), "Symlink target is not a directory: %s -> %s", path.c_str(), resolved_path.c_str());
+      return false;
+    }
   }
 
   /* Change the working directory to the project directory. */
@@ -738,15 +758,39 @@ void EegDecider::update_inotify_watch() {
   for (int wd : watch_descriptors) {
     inotify_rm_watch(inotify_descriptor, wd);
   }
+  watch_descriptors.clear();
 
   /* Collect working directory and its subdirectories. */
   std::vector<std::filesystem::path> directories;
+  
+  /* Check if working directory exists and is accessible. */
+  std::error_code ec;
+  if (!std::filesystem::exists(this->working_directory, ec) || 
+      !std::filesystem::is_directory(this->working_directory, ec)) {
+    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", this->working_directory.c_str());
+    if (ec) {
+      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
+    }
+    return;
+  }
+
   directories.push_back(std::filesystem::path(this->working_directory));
 
-  for (const auto& entry : std::filesystem::recursive_directory_iterator(this->working_directory)) {
-    if (std::filesystem::is_directory(entry)) {
-      directories.push_back(entry.path());
+  /* Use error code version to handle symlinks and permission issues gracefully. */
+  try {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(this->working_directory, ec)) {
+      if (ec) {
+        RCLCPP_WARN(this->get_logger(), "Error iterating directory %s: %s", this->working_directory.c_str(), ec.message().c_str());
+        break;
+      }
+      
+      std::error_code entry_ec;
+      if (std::filesystem::is_directory(entry, entry_ec) && !entry_ec) {
+        directories.push_back(entry.path());
+      }
     }
+  } catch (const std::filesystem::filesystem_error& e) {
+    RCLCPP_WARN(this->get_logger(), "Filesystem error while iterating %s: %s", this->working_directory.c_str(), e.what());
   }
 
   /* Add watches for all collected directories. */

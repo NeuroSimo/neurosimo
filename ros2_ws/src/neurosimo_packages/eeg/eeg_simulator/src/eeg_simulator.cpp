@@ -509,13 +509,13 @@ void EegSimulator::handle_set_start_time(
       const std::shared_ptr<project_interfaces::srv::SetStartTime::Request> request,
       std::shared_ptr<project_interfaces::srv::SetStartTime::Response> response) {
 
-  this->start_time = request->start_time;
+  this->play_dataset_from = request->start_time;
 
-  RCLCPP_INFO(this->get_logger(), "Start time set to: %.1f", this->start_time);
+  RCLCPP_INFO(this->get_logger(), "Start time set to: %.1f", this->play_dataset_from);
 
   /* Update ROS state variable. */
   auto msg = std_msgs::msg::Float64();
-  msg.data = this->start_time;
+  msg.data = this->play_dataset_from;
 
   this->start_time_publisher->publish(msg);
 
@@ -530,9 +530,6 @@ void EegSimulator::initialize_streaming() {
   /* Initialize variables. */
   this->total_channels = this->num_of_eeg_channels + this->num_of_emg_channels;
   this->sampling_period = 1.0 / this->sampling_frequency;
-
-  this->dataset_time = this->start_time;
-  this->time_offset = latest_session_time;
 
   /* Open and read data file. */
   std::string data_filename = this->dataset.data_filename;
@@ -639,9 +636,7 @@ void EegSimulator::initialize_streaming() {
 }
 
 void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
-  auto current_time = msg->time;
-
-  this->latest_session_time = current_time;
+  this->session_time = msg->time;
 
   /* Return if session is not ongoing. */
   if (msg->state.value != system_interfaces::msg::SessionState::STARTED) {
@@ -656,12 +651,10 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
     return;
   }
 
-  /* If this is the first time the session is started, set the time offset. */
+  /* Check if the session is started for the first time. */
   if (!this->session_started) {
     RCLCPP_INFO(this->get_logger(), "Session started, starting streaming.");
-
     this->session_started = true;
-    time_offset = current_time;
   }
 
   /* Return if the simulator is not set to playback dataset. */
@@ -676,33 +669,142 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   }
   this->is_streaming = true;
 
-  bool stop = false;
-  bool looped;
-  double_t sample_time;
+  /* Calculate the target time up to which we should publish samples */
+  double_t target_time = this->play_dataset_from + this->session_time;
 
-  /* Loop until the dataset time adjusted by the offset reaches the current time OR
-     streaming needs to stop (e.g., the dataset is finished or there is an error). */
-  while (dataset_time + time_offset <= current_time && !stop) {
-    std::tie(stop, looped, sample_time) = publish_sample(current_time);
+  /* Publish samples until target time */
+  double_t last_published_time = this->publish_until(this->current_sample_index, target_time);
+  
+  if (last_published_time > 0.0) {
+    this->latest_sample_time = last_published_time;
+    
+    /* Update current_sample_index based on the last published sample */
+    for (size_t i = 0; i < dataset_buffer.size(); ++i) {
+      if (std::abs(dataset_buffer[i].front() - this->latest_sample_time) < 1e-6) {
+        this->current_sample_index = (i + 1) % dataset_buffer.size();
+        break;
+      }
+    }
+  }
+}
 
-    if (looped && !events.empty()) {
-      /* If dataset looped, reset the event index. */
-      this->current_event_index = 0;
+/* Publish a single sample at the given index. Returns the sample time. */
+double_t EegSimulator::publish_single_sample(size_t sample_index) {
+  if (sample_index >= dataset_buffer.size()) {
+    RCLCPP_ERROR(this->get_logger(), "Sample index %zu out of bounds (max: %zu)", sample_index, dataset_buffer.size() - 1);
+    return 0.0;
+  }
+
+  const std::vector<double_t>& data = dataset_buffer[sample_index];
+  double_t sample_time = data.front();
+
+  if (total_channels > static_cast<int>(data.size() - 1)) {
+    RCLCPP_ERROR(this->get_logger(), "Total # of EEG and EMG channels (%d) exceeds # of channels in data (%zu)", total_channels, data.size() - 1);
+    return 0.0;
+  }
+
+  double_t time = sample_time + time_offset;
+
+  /* Create the sample message. */
+  eeg_msgs::msg::Sample msg;
+
+  /* Note: + 1 below is to skip the time column. */
+  msg.eeg_data.insert(msg.eeg_data.end(), data.begin() + 1, data.begin() + 1 + num_of_eeg_channels);
+  msg.emg_data.insert(msg.emg_data.end(), data.begin() + 1 + num_of_eeg_channels, data.end());
+
+  msg.metadata.sampling_frequency = this->sampling_frequency;
+  msg.metadata.num_of_eeg_channels = this->num_of_eeg_channels;
+  msg.metadata.num_of_emg_channels = this->num_of_emg_channels;
+  msg.metadata.is_simulation = true;
+  msg.metadata.system_time = this->get_clock()->now();
+
+  msg.time = time;
+
+  if (!events.empty() && current_event_index < events.size()) {
+    const Event& next_event = events[current_event_index];
+    msg.is_event = next_event.time <= sample_time;
+    if (msg.is_event) {
+      msg.event_type = next_event.type;
+      current_event_index++;
+
+      RCLCPP_INFO(this->get_logger(), "Published event of type %d with timestamp %.4f s.", msg.event_type, time);
+
+      /* Print information about the next event if there is one */
+      if (current_event_index < events.size()) {
+        const Event& next = events[current_event_index];
+        RCLCPP_INFO(this->get_logger(), "Next event (type %d) due at %.4f s.", next.type, next.time);
+      } else {
+        RCLCPP_INFO(this->get_logger(), "No more events in this dataset.");
+      }
+    }
+  }
+
+  eeg_publisher->publish(msg);
+
+  RCLCPP_INFO_THROTTLE(this->get_logger(),
+                       *this->get_clock(),
+                       2000,
+                       "Published sample at %.1f s.", time);
+
+  return sample_time;
+}
+
+/* Publish samples from start_index until (but not including) the first sample that is after until_time.
+   Returns the time of the last sample published. */
+double_t EegSimulator::publish_until(size_t start_index, double_t until_time) {
+  if (dataset_buffer.empty()) {
+    RCLCPP_ERROR(this->get_logger(), "No data available to publish");
+    return 0.0;
+  }
+
+  double_t last_sample_time = 0.0;
+  size_t current_index = start_index;
+  bool has_published_any = false;
+  size_t samples_published = 0;
+  
+  while (true) {
+    const std::vector<double_t>& data = dataset_buffer[current_index];
+    double_t sample_time = data.front();
+    double_t adjusted_time = sample_time + time_offset;
+
+    // If we've reached a sample after until_time, stop
+    if (adjusted_time > until_time) {
+      break;
     }
 
-    /* TODO: The problem with current design is that it publishes the next sample too early; the dataset time is updated only
-         after the sample is published. Doing this properly would require a "look-ahead" mechanism, where the time to publish
-         next sample would be peeked in advance.
-
-         On the other hand, because events and samples are sent asynchronously, being a bit ahead in time ensures that both
-         the event and the corresponding sample have arrived to the subscriber before the session reaches that time. */
-    dataset_time = sample_time;
+    // Publish this sample
+    last_sample_time = publish_single_sample(current_index);
+    has_published_any = true;
+    samples_published++;
+    
+    // Move to next sample
+    current_index = (current_index + 1) % dataset_buffer.size();
+    
+    // If we've wrapped around and are using loop mode, update time offset
+    if (current_index == 0 && loop && samples_published > 0) {
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset, looping back to beginning.");
+      time_offset = time_offset + dataset_buffer.back().front() + sampling_period;
+      
+      // Reset event index when looping
+      if (!events.empty()) {
+        this->current_event_index = 0;
+      }
+    }
+    
+    // Safety check: prevent infinite loops if not in loop mode
+    if (!loop && current_index == start_index && samples_published > 0) {
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset without loop mode.");
+      break;
+    }
+    
+    // Prevent infinite loops in case of edge cases
+    if (samples_published > dataset_buffer.size() * 2) {
+      RCLCPP_WARN(this->get_logger(), "Published too many samples, breaking to prevent infinite loop.");
+      break;
+    }
   }
 
-  /* If dataset is finished OR there is an error, automatically disable playback. */
-  if (stop) {
-    this->set_playback(false);
-  }
+  return has_published_any ? last_sample_time : 0.0;
 }
 
 std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_time) {

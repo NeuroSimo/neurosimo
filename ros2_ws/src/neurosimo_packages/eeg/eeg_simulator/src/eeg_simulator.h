@@ -75,6 +75,13 @@ private:
 
   void initialize_streaming();
 
+  /* Publish a single sample at the given index. Returns the sample time. */
+  double_t publish_single_sample(size_t sample_index);
+
+  /* Publish samples from start_index until (but not including) the first sample that is after until_time.
+     Returns the time of the last sample published. */
+  double_t publish_until(size_t start_index, double_t until_time);
+
   std::tuple<bool, bool, double_t> publish_sample(double_t current_time);
 
   void read_next_event();
@@ -93,7 +100,7 @@ private:
 
   bool playback = false;
   bool loop = false;
-  double_t start_time = 0.0;
+  double_t play_dataset_from = 0.0;
 
   bool session_started = false;
   bool events_left = false;
@@ -103,16 +110,12 @@ private:
 
   std::mutex dataset_mutex;
 
-  double_t latest_session_time;
-  double_t time_offset;
+  double_t session_time;
 
-  double_t dataset_time;
   double_t sampling_period;
 
   double_t next_event_time;
   uint16_t next_event_type;
-
-  double_t latest_sample_time;
 
   uint16_t sampling_frequency;
   uint8_t num_of_eeg_channels;
@@ -123,6 +126,9 @@ private:
 
   std::vector<std::vector<double_t>> dataset_buffer;
   size_t current_sample_index = 0;
+  
+  double_t latest_sample_time = 0.0;
+  double_t time_offset = 0.0;
 
   struct Event {
     double_t time;

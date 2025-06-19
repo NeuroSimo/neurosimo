@@ -261,10 +261,30 @@ void EegPresenter::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 bool EegPresenter::change_working_directory(const std::string path) {
   this->working_directory = path;
 
-  /* Check that the directory exists. */
-  if (!std::filesystem::exists(this->working_directory) || !std::filesystem::is_directory(this->working_directory)) {
+  /* Check that the directory exists and follow symlinks. */
+  std::error_code ec;
+  if (!std::filesystem::exists(this->working_directory, ec) || 
+      !std::filesystem::is_directory(this->working_directory, ec)) {
     RCLCPP_ERROR(this->get_logger(), "Directory does not exist: %s.", path.c_str());
+    if (ec) {
+      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
+    }
     return false;
+  }
+
+  /* If it's a symlink, resolve it and check the target. */
+  if (std::filesystem::is_symlink(this->working_directory, ec)) {
+    auto resolved_path = std::filesystem::canonical(this->working_directory, ec);
+    if (ec) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to resolve symlink %s: %s", path.c_str(), ec.message().c_str());
+      return false;
+    }
+    RCLCPP_INFO(this->get_logger(), "Resolved symlink %s to %s", path.c_str(), resolved_path.c_str());
+    
+    if (!std::filesystem::is_directory(resolved_path, ec)) {
+      RCLCPP_ERROR(this->get_logger(), "Symlink target is not a directory: %s -> %s", path.c_str(), resolved_path.c_str());
+      return false;
+    }
   }
 
   /* Change the working directory to the project directory. */
@@ -296,6 +316,17 @@ std::vector<std::string> EegPresenter::list_python_modules_in_working_directory(
 void EegPresenter::update_inotify_watch() {
   /* Remove the old watch. */
   inotify_rm_watch(inotify_descriptor, watch_descriptor);
+
+  /* Check if working directory exists and is accessible. */
+  std::error_code ec;
+  if (!std::filesystem::exists(this->working_directory, ec) || 
+      !std::filesystem::is_directory(this->working_directory, ec)) {
+    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", this->working_directory.c_str());
+    if (ec) {
+      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
+    }
+    return;
+  }
 
   /* Add a new watch. */
   watch_descriptor = inotify_add_watch(inotify_descriptor, this->working_directory.c_str(), IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);

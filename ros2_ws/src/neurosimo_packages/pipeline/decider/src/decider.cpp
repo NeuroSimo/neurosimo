@@ -362,13 +362,13 @@ void EegDecider::initialize_module() {
   this->sensory_stimuli.clear();
 }
 
-std::tuple<bool, double, uint16_t> EegDecider::consume_next_event(double_t current_time) {
+std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t current_time) {
   if (this->event_queue.empty()) {
-    return std::make_tuple(false, 0.0, 0);
+    return std::make_tuple(false, 0.0, "");
   }
 
   double_t event_time;
-  uint16_t event_type;
+  std::string event_type;
 
   /* Pop events until the event time is within the tolerance. */
   while (true) {
@@ -384,7 +384,7 @@ std::tuple<bool, double, uint16_t> EegDecider::consume_next_event(double_t curre
 
   /* If the event time is too far in the future, return false. */
   if (event_time > current_time + this->TOLERANCE_S) {
-    return std::make_tuple(false, 0.0, 0);
+    return std::make_tuple(false, 0.0, "");
   }
   return std::make_tuple(true, event_time, event_type);
 }
@@ -1049,12 +1049,12 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   /* Check if any decider-defined events occur at the current sample. */
   auto [has_event, event_time, event_type] = consume_next_event(sample_time);
   if (has_event) {
-    RCLCPP_INFO(this->get_logger(), "Received decider-defined event at time %.4f (s), event type: %d", sample_time, event_type);
+    RCLCPP_INFO(this->get_logger(), "Received decider-defined event at time %.4f (s), event type: %s", sample_time, event_type.c_str());
   }
 
   /* Fallback: check if the sample includes an external event. */
   if (msg->is_event) {
-    RCLCPP_INFO(this->get_logger(), "Received external event at time %.4f (s), event type: %d", sample_time, msg->event_type);
+    RCLCPP_INFO(this->get_logger(), "Received external event at time %.4f (s), event type: %s", sample_time, msg->event_type.c_str());
 
     if (!has_event) {
       has_event = true;

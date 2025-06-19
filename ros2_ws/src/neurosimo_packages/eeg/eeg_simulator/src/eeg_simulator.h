@@ -115,7 +115,7 @@ private:
   double_t sampling_period;
 
   double_t next_event_time;
-  uint16_t next_event_type;
+  std::string next_event_type;
 
   uint16_t sampling_frequency;
   uint8_t num_of_eeg_channels;
@@ -132,7 +132,7 @@ private:
 
   struct Event {
     double_t time;
-    uint16_t type;
+    std::string type;
   };
   std::vector<Event> events;
   size_t current_event_index = 0;

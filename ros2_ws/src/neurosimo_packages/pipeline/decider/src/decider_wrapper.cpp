@@ -150,9 +150,9 @@ void DeciderWrapper::initialize_module(
     const size_t emg_data_size,
     const uint16_t sampling_frequency,
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    std::priority_queue<std::pair<double, uint16_t>,
-                       std::vector<std::pair<double, uint16_t>>,
-                       std::greater<std::pair<double, uint16_t>>>& event_queue) {
+    std::priority_queue<std::pair<double, std::string>,
+                       std::vector<std::pair<double, std::string>>,
+                       std::greater<std::pair<double, std::string>>>& event_queue) {
 
   this->sampling_frequency = sampling_frequency;
 
@@ -286,7 +286,7 @@ void DeciderWrapper::initialize_module(
       for (const auto& event : events) {
         py::dict event_dict = event.cast<py::dict>();
 
-        uint16_t event_type = event_dict["type"].cast<uint16_t>();
+        std::string event_type = event_dict["type"].cast<std::string>();
         double event_time = event_dict["time"].cast<double>();
 
         event_queue.push(std::make_pair(event_time, event_type));
@@ -533,10 +533,10 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     bool ready_for_trial,
     bool is_trigger,
     bool has_event,
-    uint16_t event_type,
-    std::priority_queue<std::pair<double, uint16_t>,
-                       std::vector<std::pair<double, uint16_t>>,
-                       std::greater<std::pair<double, uint16_t>>>& event_queue) {
+    std::string event_type,
+    std::priority_queue<std::pair<double, std::string>,
+                       std::vector<std::pair<double, std::string>>,
+                       std::greater<std::pair<double, std::string>>>& event_queue) {
 
   bool success = true;
   std::shared_ptr<mtms_trial_interfaces::msg::Trial> trial = nullptr;
@@ -735,7 +735,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     for (const auto& event : events) {
       py::dict event_dict = event.cast<py::dict>();
 
-      uint16_t event_type = event_dict["type"].cast<uint16_t>();
+      std::string event_type = event_dict["type"].cast<std::string>();
       double event_time = event_dict["time"].cast<double>();
 
       event_queue.push(std::make_pair(event_time, event_type));

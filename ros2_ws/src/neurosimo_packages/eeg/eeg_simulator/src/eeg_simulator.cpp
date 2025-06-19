@@ -610,7 +610,11 @@ void EegSimulator::initialize_streaming() {
 
           /* Extract and convert the first and second columns. */
           double_t event_time = std::stod(line.substr(0, comma_pos));
-          uint16_t event_type = std::stoi(line.substr(comma_pos + 1));
+          std::string event_type = line.substr(comma_pos + 1);
+          
+          /* Trim whitespace from event_type */
+          event_type.erase(event_type.find_last_not_of(" \t\r\n") + 1);
+          event_type.erase(0, event_type.find_first_not_of(" \t\r\n"));
 
           events.push_back({event_time, event_type});
 
@@ -626,7 +630,7 @@ void EegSimulator::initialize_streaming() {
       if (!events.empty()) {
         RCLCPP_INFO(this->get_logger(), "Read %zu events from file.", events.size());
         const Event& first_event = events[0];
-        RCLCPP_INFO(this->get_logger(), "First event (type %d) due at %.4f s.", first_event.type, first_event.time);
+        RCLCPP_INFO(this->get_logger(), "First event (type '%s') due at %.4f s.", first_event.type.c_str(), first_event.time);
       } else {
         RCLCPP_WARN(this->get_logger(), "No valid events found in file.");
       }
@@ -727,12 +731,12 @@ double_t EegSimulator::publish_single_sample(size_t sample_index) {
       msg.event_type = next_event.type;
       current_event_index++;
 
-      RCLCPP_INFO(this->get_logger(), "Published event of type %d with timestamp %.4f s.", msg.event_type, time);
+      RCLCPP_INFO(this->get_logger(), "Published event of type %s with timestamp %.4f s.", msg.event_type.c_str(), time);
 
       /* Print information about the next event if there is one */
       if (current_event_index < events.size()) {
         const Event& next = events[current_event_index];
-        RCLCPP_INFO(this->get_logger(), "Next event (type %d) due at %.4f s.", next.type, next.time);
+        RCLCPP_INFO(this->get_logger(), "Next event (type '%s') due at %.4f s.", next.type.c_str(), next.time);
       } else {
         RCLCPP_INFO(this->get_logger(), "No more events in this dataset.");
       }
@@ -861,12 +865,12 @@ std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_t
       msg.event_type = next_event.type;
       current_event_index++;
 
-      RCLCPP_INFO(this->get_logger(), "Published event of type %d with timestamp %.4f s.", msg.event_type, time);
+      RCLCPP_INFO(this->get_logger(), "Published event of type '%s' with timestamp %.4f s.", msg.event_type.c_str(), time);
 
       /* Print information about the next event if there is one */
       if (current_event_index < events.size()) {
         const Event& next = events[current_event_index];
-        RCLCPP_INFO(this->get_logger(), "Next event (type %d) due at %.4f s.", next.type, next.time);
+        RCLCPP_INFO(this->get_logger(), "Next event (type '%s') due at %.4f s.", next.type.c_str(), next.time);
       } else {
         RCLCPP_INFO(this->get_logger(), "No more events in this dataset.");
       }

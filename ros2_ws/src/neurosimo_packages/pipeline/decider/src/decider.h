@@ -123,7 +123,7 @@ private:
 
   void log_trial(const mtms_trial_interfaces::msg::Trial& trial, size_t num_of_remaining_trials);
 
-  std::tuple<bool, double, uint16_t> consume_next_event(double_t current_time);
+  std::tuple<bool, double, std::string> consume_next_event(double_t current_time);
   void pop_event();
 
   /* File-system related functions */
@@ -236,9 +236,9 @@ private:
   char inotify_buffer[1024];
 
   /* Event queue for storing events from the Python module. */
-  std::priority_queue<std::pair<double, uint16_t>,
-                      std::vector<std::pair<double, uint16_t>>,
-                      std::greater<std::pair<double, uint16_t>>> event_queue;
+  std::priority_queue<std::pair<double, std::string>,
+                      std::vector<std::pair<double, std::string>>,
+                      std::greater<std::pair<double, std::string>>> event_queue;
 
   /* When determining if samples have been dropped by comparing the timestamps of two consecutive
      samples, allow some tolerance to account for finite precision of floating point numbers. */

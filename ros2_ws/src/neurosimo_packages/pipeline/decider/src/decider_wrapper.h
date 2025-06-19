@@ -54,9 +54,9 @@ public:
       const size_t emg_data_size,
       const uint16_t sampling_frequency,
       std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-      std::priority_queue<std::pair<double, uint16_t>,
-                         std::vector<std::pair<double, uint16_t>>,
-                         std::greater<std::pair<double, uint16_t>>>& event_queue);
+      std::priority_queue<std::pair<double, std::string>,
+                         std::vector<std::pair<double, std::string>>,
+                         std::greater<std::pair<double, std::string>>>& event_queue);
 
   void reset_module_state();
 
@@ -73,10 +73,10 @@ public:
     bool ready_for_trial,
     bool is_trigger,
     bool has_event,
-    uint16_t event_type,
-    std::priority_queue<std::pair<double, uint16_t>,
-                       std::vector<std::pair<double, uint16_t>>,
-                       std::greater<std::pair<double, uint16_t>>>& event_queue);
+    std::string event_type,
+    std::priority_queue<std::pair<double, std::string>,
+                       std::vector<std::pair<double, std::string>>,
+                       std::greater<std::pair<double, std::string>>>& event_queue);
 
   WrapperState get_state() const;
   std::vector<std::string> get_internal_imports() const;

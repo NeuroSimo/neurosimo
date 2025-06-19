@@ -58,18 +58,18 @@ if __name__ == "__main__":
 
     event_filename = None
     if not args.no_events:
-        events = np.array([
-            [1.0, 1],
-            [2.0, 2],
-            [5.0, 1],
-        ])
+        # Define events with string-based event types
+        events = [
+            [1.0, "prepulse"],
+            [2.0, "postpulse"],
+            [5.0, "prepulse"],
+        ]
         event_filename = args.output_filename + "_events.csv" if not args.no_events else None
-        save_to_csv(
-            output_directory=args.output_directory,
-            filename=event_filename,
-            data=events,
-            fmt=['%.5f', '%d'],
-        )
+
+        output_path = os.path.join(args.output_directory, event_filename)
+        with open(output_path, 'w') as f:
+            for event in events:
+                f.write(f"{event[0]:.5f},{event[1]}\n")
 
     save_to_json(
         output_directory=args.output_directory,

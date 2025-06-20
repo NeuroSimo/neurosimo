@@ -676,10 +676,15 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
 
   /* Calculate the target time up to which we should publish samples */
   double_t target_time = this->play_dataset_from + this->session_time;
+  
+  /* Limit how far ahead we publish to maintain real-time performance */
+  double_t current_dataset_time = this->latest_sample_time + this->time_offset;
+  double_t max_ahead_time = current_dataset_time + (50.0 / this->sampling_frequency); // Max 50 samples ahead
+  double_t limited_target_time = std::min(target_time, max_ahead_time);
 
-  /* Publish samples until target time */
+  /* Publish samples until limited target time */
   auto publish_start = std::chrono::high_resolution_clock::now();
-  auto [last_published_time, next_index] = this->publish_until(this->current_sample_index, target_time);
+  auto [last_published_time, next_index] = this->publish_until(this->current_sample_index, limited_target_time);
   auto publish_end = std::chrono::high_resolution_clock::now();
   
   if (last_published_time > 0.0) {
@@ -692,8 +697,9 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   auto publish_duration = std::chrono::duration_cast<std::chrono::microseconds>(publish_end - publish_start);
   
   RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, 
-    "Session handler: total=%.3fms, publish_until=%.3fms, target_time=%.3fs", 
-    total_duration.count() / 1000.0, publish_duration.count() / 1000.0, target_time);
+    "Session handler: total=%.3fms, publish_until=%.3fms, target=%.3fs, limited=%.3fs, behind=%.3fs", 
+    total_duration.count() / 1000.0, publish_duration.count() / 1000.0, target_time, 
+    limited_target_time, target_time - limited_target_time);
 }
 
 /* Publish a single sample at the given index. Returns the sample time. */

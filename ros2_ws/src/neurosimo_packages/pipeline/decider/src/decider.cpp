@@ -1,5 +1,7 @@
 #include <chrono>
 #include <filesystem>
+#include <signal.h>
+#include <execinfo.h>
 
 #include <sys/inotify.h>
 #include <fcntl.h>
@@ -26,6 +28,20 @@ const std::string DEFAULT_DECIDER_NAME = "example";
 
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
+
+/* Signal handler for crash debugging */
+void crash_handler(int sig) {
+  void *array[10];
+  size_t size;
+
+  // Get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // Print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
 
 /* XXX: Needs to match the values in session_bridge.cpp. */
 const milliseconds SESSION_PUBLISHING_INTERVAL = 20ms;
@@ -1280,6 +1296,11 @@ void EegDecider::log_trial(const mtms_trial_interfaces::msg::Trial& trial, size_
 }
 
 int main(int argc, char *argv[]) {
+  // Install signal handlers for crash debugging
+  signal(SIGSEGV, crash_handler);
+  signal(SIGABRT, crash_handler);
+  signal(SIGFPE, crash_handler);
+  
   rclcpp::init(argc, argv);
 
   auto logger = rclcpp::get_logger("decider");

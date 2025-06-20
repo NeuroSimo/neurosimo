@@ -677,18 +677,11 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   double_t target_time = this->play_dataset_from + this->session_time;
 
   /* Publish samples until target time */
-  double_t last_published_time = this->publish_until(this->current_sample_index, target_time);
+  auto [last_published_time, next_index] = this->publish_until(this->current_sample_index, target_time);
   
   if (last_published_time > 0.0) {
     this->latest_sample_time = last_published_time;
-    
-    /* Update current_sample_index based on the last published sample */
-    for (size_t i = 0; i < dataset_buffer.size(); ++i) {
-      if (std::abs(dataset_buffer[i].front() - this->latest_sample_time) < 1e-6) {
-        this->current_sample_index = (i + 1) % dataset_buffer.size();
-        break;
-      }
-    }
+    this->current_sample_index = next_index;
   }
 }
 
@@ -754,11 +747,11 @@ double_t EegSimulator::publish_single_sample(size_t sample_index) {
 }
 
 /* Publish samples from start_index until (but not including) the first sample that is after until_time.
-   Returns the time of the last sample published. */
-double_t EegSimulator::publish_until(size_t start_index, double_t until_time) {
+   Returns a tuple of (last_sample_time, next_index). */
+std::tuple<double_t, size_t> EegSimulator::publish_until(size_t start_index, double_t until_time) {
   if (dataset_buffer.empty()) {
     RCLCPP_ERROR(this->get_logger(), "No data available to publish");
-    return 0.0;
+    return std::make_tuple(0.0, start_index);
   }
 
   double_t last_sample_time = 0.0;
@@ -808,7 +801,7 @@ double_t EegSimulator::publish_until(size_t start_index, double_t until_time) {
     }
   }
 
-  return has_published_any ? last_sample_time : 0.0;
+  return std::make_tuple(has_published_any ? last_sample_time : 0.0, current_index);
 }
 
 std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_time) {

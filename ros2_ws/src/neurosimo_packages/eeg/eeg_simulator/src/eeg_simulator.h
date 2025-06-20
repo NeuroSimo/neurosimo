@@ -79,8 +79,8 @@ private:
   double_t publish_single_sample(size_t sample_index);
 
   /* Publish samples from start_index until (but not including) the first sample that is after until_time.
-     Returns the time of the last sample published. */
-  double_t publish_until(size_t start_index, double_t until_time);
+     Returns a tuple of (last_sample_time, next_index). */
+  std::tuple<double_t, size_t> publish_until(size_t start_index, double_t until_time);
 
   std::tuple<bool, bool, double_t> publish_sample(double_t current_time);
 

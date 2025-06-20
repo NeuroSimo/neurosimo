@@ -8,6 +8,7 @@
 #include <deque>
 #include <cmath>
 #include <queue>
+#include <mutex>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -239,6 +240,7 @@ private:
   std::priority_queue<std::pair<double, std::string>,
                       std::vector<std::pair<double, std::string>>,
                       std::greater<std::pair<double, std::string>>> event_queue;
+  std::mutex event_queue_mutex;
 
   /* When determining if samples have been dropped by comparing the timestamps of two consecutive
      samples, allow some tolerance to account for finite precision of floating point numbers. */

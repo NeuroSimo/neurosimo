@@ -354,7 +354,8 @@ void EegDecider::initialize_module() {
     this->num_of_emg_channels,
     this->sampling_frequency,
     this->sensory_stimuli,
-    this->event_queue);
+    this->event_queue,
+    this->event_queue_mutex);
 
   if (this->decider_wrapper->get_state() != WrapperState::READY) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load.");
@@ -379,6 +380,8 @@ void EegDecider::initialize_module() {
 }
 
 std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t current_time) {
+  std::lock_guard<std::mutex> lock(this->event_queue_mutex);
+  
   if (this->event_queue.empty()) {
     return std::make_tuple(false, 0.0, "");
   }
@@ -387,7 +390,7 @@ std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t cu
   std::string event_type;
 
   /* Pop events until the event time is within the tolerance. */
-  while (true) {
+  while (!this->event_queue.empty()) {
     auto event = this->event_queue.top();
     event_time = event.first;
     event_type = event.second;
@@ -398,6 +401,11 @@ std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t cu
     this->event_queue.pop();
   }
 
+  /* Check if we popped all events */
+  if (this->event_queue.empty()) {
+    return std::make_tuple(false, 0.0, "");
+  }
+
   /* If the event time is too far in the future, return false. */
   if (event_time > current_time + this->TOLERANCE_S) {
     return std::make_tuple(false, 0.0, "");
@@ -406,6 +414,7 @@ std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t cu
 }
 
 void EegDecider::pop_event() {
+  std::lock_guard<std::mutex> lock(this->event_queue_mutex);
   if (!this->event_queue.empty()) {
     this->event_queue.pop();
   }
@@ -1128,7 +1137,8 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     is_trigger,
     has_event,
     event_type,
-    this->event_queue);
+    this->event_queue,
+    this->event_queue_mutex);
 
   /* Log and return early if the Python call failed. */
   if (!success) {

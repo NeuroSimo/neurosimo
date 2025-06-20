@@ -152,7 +152,8 @@ void DeciderWrapper::initialize_module(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<std::pair<double, std::string>,
                        std::vector<std::pair<double, std::string>>,
-                       std::greater<std::pair<double, std::string>>>& event_queue) {
+                       std::greater<std::pair<double, std::string>>>& event_queue,
+    std::mutex& event_queue_mutex) {
 
   this->sampling_frequency = sampling_frequency;
 
@@ -283,13 +284,16 @@ void DeciderWrapper::initialize_module(
     /* Extract events. */
     if (config.contains("events")) {
       py::list events = config["events"].cast<py::list>();
-      for (const auto& event : events) {
-        py::dict event_dict = event.cast<py::dict>();
+      {
+        std::lock_guard<std::mutex> lock(event_queue_mutex);
+        for (const auto& event : events) {
+          py::dict event_dict = event.cast<py::dict>();
 
-        std::string event_type = event_dict["type"].cast<std::string>();
-        double event_time = event_dict["time"].cast<double>();
+          std::string event_type = event_dict["type"].cast<std::string>();
+          double event_time = event_dict["time"].cast<double>();
 
-        event_queue.push(std::make_pair(event_time, event_type));
+          event_queue.push(std::make_pair(event_time, event_type));
+        }
       }
     } else {
       RCLCPP_ERROR(*logger_ptr, "'events' key not found in configuration dictionary.");
@@ -536,7 +540,8 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     std::string event_type,
     std::priority_queue<std::pair<double, std::string>,
                        std::vector<std::pair<double, std::string>>,
-                       std::greater<std::pair<double, std::string>>>& event_queue) {
+                       std::greater<std::pair<double, std::string>>>& event_queue,
+    std::mutex& event_queue_mutex) {
 
   bool success = true;
   std::shared_ptr<mtms_trial_interfaces::msg::Trial> trial = nullptr;
@@ -732,13 +737,16 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     }
 
     py::list events = dict_result["events"].cast<py::list>();
-    for (const auto& event : events) {
-      py::dict event_dict = event.cast<py::dict>();
+    {
+      std::lock_guard<std::mutex> lock(event_queue_mutex);
+      for (const auto& event : events) {
+        py::dict event_dict = event.cast<py::dict>();
 
-      std::string event_type = event_dict["type"].cast<std::string>();
-      double event_time = event_dict["time"].cast<double>();
+        std::string event_type = event_dict["type"].cast<std::string>();
+        double event_time = event_dict["time"].cast<double>();
 
-      event_queue.push(std::make_pair(event_time, event_type));
+        event_queue.push(std::make_pair(event_time, event_type));
+      }
     }
   }
 

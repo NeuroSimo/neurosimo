@@ -640,6 +640,7 @@ void EegSimulator::initialize_streaming() {
 }
 
 void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
+  auto start_time = std::chrono::high_resolution_clock::now();
   this->session_time = msg->time;
 
   /* Return if session is not ongoing. */
@@ -677,16 +678,28 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   double_t target_time = this->play_dataset_from + this->session_time;
 
   /* Publish samples until target time */
+  auto publish_start = std::chrono::high_resolution_clock::now();
   auto [last_published_time, next_index] = this->publish_until(this->current_sample_index, target_time);
+  auto publish_end = std::chrono::high_resolution_clock::now();
   
   if (last_published_time > 0.0) {
     this->latest_sample_time = last_published_time;
     this->current_sample_index = next_index;
   }
+  
+  auto total_end = std::chrono::high_resolution_clock::now();
+  auto total_duration = std::chrono::duration_cast<std::chrono::microseconds>(total_end - start_time);
+  auto publish_duration = std::chrono::duration_cast<std::chrono::microseconds>(publish_end - publish_start);
+  
+  RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, 
+    "Session handler: total=%.3fms, publish_until=%.3fms, target_time=%.3fs", 
+    total_duration.count() / 1000.0, publish_duration.count() / 1000.0, target_time);
 }
 
 /* Publish a single sample at the given index. Returns the sample time. */
 double_t EegSimulator::publish_single_sample(size_t sample_index) {
+  auto start_time = std::chrono::high_resolution_clock::now();
+  
   if (sample_index >= dataset_buffer.size()) {
     RCLCPP_ERROR(this->get_logger(), "Sample index %zu out of bounds (max: %zu)", sample_index, dataset_buffer.size() - 1);
     return 0.0;
@@ -738,10 +751,13 @@ double_t EegSimulator::publish_single_sample(size_t sample_index) {
 
   eeg_publisher->publish(msg);
 
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+
   RCLCPP_INFO_THROTTLE(this->get_logger(),
                        *this->get_clock(),
                        2000,
-                       "Published sample at %.1f s.", time);
+                       "Published sample at %.1f s (%.1fμs)", time, duration.count());
 
   return sample_time;
 }
@@ -749,6 +765,8 @@ double_t EegSimulator::publish_single_sample(size_t sample_index) {
 /* Publish samples from start_index until (but not including) the first sample that is after until_time.
    Returns a tuple of (last_sample_time, next_index). */
 std::tuple<double_t, size_t> EegSimulator::publish_until(size_t start_index, double_t until_time) {
+  auto start_time = std::chrono::high_resolution_clock::now();
+  
   if (dataset_buffer.empty()) {
     RCLCPP_ERROR(this->get_logger(), "No data available to publish");
     return std::make_tuple(0.0, start_index);
@@ -801,6 +819,16 @@ std::tuple<double_t, size_t> EegSimulator::publish_until(size_t start_index, dou
     }
   }
 
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+  
+  if (samples_published > 0) {
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+      "publish_until: published %zu samples in %.3fms (%.1f samples/ms)", 
+      samples_published, duration.count() / 1000.0, 
+      samples_published / (duration.count() / 1000.0));
+  }
+  
   return std::make_tuple(has_published_any ? last_sample_time : 0.0, current_index);
 }
 

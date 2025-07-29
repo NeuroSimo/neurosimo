@@ -28,7 +28,7 @@
     - name: Update apt cache
       apt:
         update_cache: yes
-        cache_valid_time: 3600  # in seconds
+        cache_valid_time: 3600 # in seconds
 
     ########################################################################
     # Install extra packages (net-tools, Wireshark, etc.)
@@ -40,7 +40,7 @@
           - wireshark
           - wmctrl
           - python3-pip
-          - nodejs  # Required by log script
+          - nodejs # Required by log script
         state: present
 
     - name: Install kernel tools
@@ -48,6 +48,8 @@
         name:
           - linux-tools-generic
           - linux-cloud-tools-generic
+          - linux-tools-realtime
+          - linux-cloud-tools-realtime
         state: present
         update_cache: yes
       become: yes
@@ -61,7 +63,7 @@
         dest: /etc/systemd/system/neurosimo.service
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Copy set-cpupower.service
       copy:
@@ -69,7 +71,7 @@
         dest: /etc/systemd/system/set-cpupower.service
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Reload systemd daemon
       systemd:
@@ -104,7 +106,7 @@
         dest: /etc/sysctl.d/10-net-buffer-size.conf
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Reload sysctl
       shell: sysctl --system
@@ -137,14 +139,14 @@
         path: /etc/sudoers.d/restart_containers
         line: "{{ target_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart neurosimo"
         create: yes
-        mode: '0440'
+        mode: "0440"
 
     - name: Allow user to run the log script without sudo password
       lineinfile:
         path: /etc/sudoers.d/log_script
         line: "{{ target_user }} ALL=(ALL) NOPASSWD: {{ repo_root }}/scripts/log"
         create: yes
-        mode: '0440'
+        mode: "0440"
 
     ########################################################################
     # Create a projects directory for the user
@@ -155,7 +157,7 @@
         state: directory
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
-        mode: '0755'
+        mode: "0755"
 
     ########################################################################
     # Update .bash_env and .bashrc
@@ -195,7 +197,7 @@
     - name: Ensure CycloneDDS config is set
       lineinfile:
         dest: "{{ target_home }}/.bash_env"
-        line: 'export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/src/shared_packages/resources/cyclonedds.xml'
+        line: "export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/src/shared_packages/resources/cyclonedds.xml"
         state: present
 
     - name: Ensure ROS is sourced
@@ -271,5 +273,5 @@
         dest: "{{ repo_root }}/.env"
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
-        mode: '0644'
+        mode: "0644"
       when: not env_file_status.stat.exists

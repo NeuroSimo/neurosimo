@@ -75,6 +75,11 @@ fi
 
 # Create 'example' project
 echo "Creating 'example' project..."
+
+# Source the updated environment
+source ~/.bash_env
+
+# Create the project
 ./scripts/create-project example
 
 # Build ROS workspace

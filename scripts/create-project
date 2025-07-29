@@ -4,6 +4,19 @@
 BOLD=$(tput bold)
 RESET=$(tput sgr0)
 
+# Check for required environment variables
+if [ -z "$PROJECTS_ROOT" ]; then
+    echo "Error: PROJECTS_ROOT environment variable is not set."
+    echo "Please ensure you have run the installation script and sourced ~/.bash_env"
+    exit 1
+fi
+
+if [ -z "$NEUROSIMO_ROOT" ]; then
+    echo "Error: NEUROSIMO_ROOT environment variable is not set."
+    echo "Please ensure you have run the installation script and sourced ~/.bash_env"
+    exit 1
+fi
+
 # Get the project name from the first argument
 PROJECT_NAME="$1"
 

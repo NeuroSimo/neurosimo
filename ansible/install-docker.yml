@@ -2,7 +2,7 @@
 - name: Install Docker and Docker Compose
   hosts: all
   connection: local
-  become: yes  # Ensure all tasks run with sudo privileges
+  become: yes # Ensure all tasks run with sudo privileges
   vars:
     docker_gpg_key_url: "https://download.docker.com/linux/ubuntu/gpg"
     docker_repo: "https://download.docker.com/linux/ubuntu"
@@ -10,10 +10,9 @@
     docker_keyring: "/usr/share/keyrings/docker-archive-keyring.gpg"
     docker_compose_version: "v2.5.0"
     docker_compose_binary: "/usr/local/bin/docker-compose"
-    target_user: "mtms"  # Change this to your desired username
+    target_user: "{{ lookup('env', 'USER') }}" # Use current user's name
 
   tasks:
-
     - name: Update APT package cache
       apt:
         update_cache: yes
@@ -34,14 +33,14 @@
       file:
         path: "{{ docker_keyring | dirname }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
       tags: setup_keyring
 
     - name: Download Docker GPG key
       get_url:
         url: "{{ docker_gpg_key_url }}"
         dest: "/tmp/docker.gpg"
-        mode: '0644'
+        mode: "0644"
       tags: add_gpg_key
 
     - name: Convert Docker GPG key to keyring format
@@ -82,12 +81,12 @@
       get_url:
         url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-{{ ansible_architecture }}"
         dest: "{{ docker_compose_binary }}"
-        mode: '0755'
+        mode: "0755"
 
     - name: Ensure Docker Compose is executable
       file:
         path: "{{ docker_compose_binary }}"
-        mode: '0755'
+        mode: "0755"
         state: file
       tags: set_permissions
 

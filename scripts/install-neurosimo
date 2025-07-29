@@ -91,5 +91,5 @@ fi
 echo "Building ROS interfaces..."
 ./scripts/build-ros-interfaces
 
-echo "Installation complete."
+echo "Installation complete. Please reboot the system before proceeding."
 echo ""

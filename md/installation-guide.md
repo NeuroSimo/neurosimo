@@ -15,6 +15,7 @@ Ubuntu can be installed in various ways, but the following steps present one opt
 real-time kernel support on a computer with an empty SSD drive.
 
 1. Boot Setup
+
    - Boot from Ubuntu 22.04.3 LTS installation media
    - Select "Try or Install Ubuntu"
    - If encountering Nouveau driver issues:
@@ -26,6 +27,7 @@ real-time kernel support on a computer with an empty SSD drive.
      ```
 
 2. Installation Configuration
+
    - Select "Minimal installation"
    - Enable:
      - Download updates while installing
@@ -33,7 +35,9 @@ real-time kernel support on a computer with an empty SSD drive.
    - Select "Something else" for installation type
 
 3. Partition Setup
+
    - Create root partition:
+
      - Size: 120000 MB
      - Type: Primary
      - Location: Beginning
@@ -57,6 +61,7 @@ real-time kernel support on a computer with an empty SSD drive.
 Ubuntu Pro can be configured to enable real-time kernel support. The following steps provide a guide for setting up Ubuntu Pro on a new computer.
 
 1. Install Ubuntu Pro
+
    - Complete initial Ubuntu Pro setup
    - Create personal Ubuntu Pro account
 
@@ -64,6 +69,7 @@ Ubuntu Pro can be configured to enable real-time kernel support. The following s
    ```bash
    sudo pro enable realtime-kernel
    ```
+
 ## Software installation
 
 After installing Ubuntu, clone the NeuroSimo repository to the home directory:
@@ -82,6 +88,8 @@ scripts/install-neurosimo
 
 The script will run the Ansible playbooks to install the necessary software packages and dependencies for NeuroSimo.
 
+After the installation is complete, reboot the computer.
+
 After that, build the NeuroSimo project:
 
 ```bash
@@ -91,13 +99,15 @@ scripts/build-neurosimo
 Modify `.env` file in the repository root to set the environment, including the EEG and
 TMS device settings.
 
-Finally, reboot the computer.
+Finally, reboot the computer once more.
 
 After reboot, NeuroSimo should be installed and ready to use via the web interface at
 [http://localhost:3000](http://localhost:3000).
 
 ## Web UI setup
+
 To create a desktop link to the NeuroSimo panel:
-   - Open Chrome and navigate to [http://localhost:3000](http://localhost:3000).
-   - Click "Install NeuroSimo panel"
-   - Enable launching for desktop shortcut
+
+- Open Chrome and navigate to [http://localhost:3000](http://localhost:3000).
+- Click "Install NeuroSimo panel"
+- Enable launching for desktop shortcut

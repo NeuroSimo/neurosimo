@@ -79,8 +79,13 @@ echo "Creating 'example' project..."
 # Source the updated environment
 source ~/.bash_env
 
-# Create the project
-./scripts/create-project example
+# Check if example project exists
+if [ -d "$PROJECTS_ROOT/example" ]; then
+    echo "Warning: Example project already exists, skipping creation"
+else
+    echo "Creating 'example' project..."
+    ./scripts/create-project example
+fi
 
 # Build ROS workspace
 echo "Building ROS interfaces..."

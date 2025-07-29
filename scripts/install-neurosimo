@@ -25,29 +25,19 @@ ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-
 
 # Function to check if the kernel is preempt_rt
 is_preempt_rt() {
-    # Option 1: Check kernel version string
-    if uname -r | grep -q "preempt_rt"; then
+    # Option 1: Check kernel version string for various RT indicators
+    if uname -r | grep -qi "preempt_rt\|realtime"; then
         return 0
     fi
 
-    # Option 2: Check kernel config (requires access to /boot/config-$(uname -r))
-    if [ -f "/boot/config-$(uname -r)" ] && grep -q "^CONFIG_PREEMPT_RT_FULL=y" "/boot/config-$(uname -r)"; then
+    # Option 2: Check uname -a for PREEMPT_RT
+    if uname -a | grep -q "PREEMPT_RT"; then
         return 0
     fi
 
-    return 1
-}
-
-# Function to check if the kernel is preempt_rt
-is_preempt_rt() {
-    # Option 1: Check kernel version string for "preempt_rt"
-    if uname -r | grep -q "preempt_rt"; then
-        return 0
-    fi
-
-    # Option 2: Check kernel config for CONFIG_PREEMPT_RT_FULL=y
+    # Option 3: Check kernel config for RT configs
     KERNEL_CONFIG="/boot/config-$(uname -r)"
-    if [ -f "$KERNEL_CONFIG" ] && grep -q "^CONFIG_PREEMPT_RT_FULL=y" "$KERNEL_CONFIG"; then
+    if [ -f "$KERNEL_CONFIG" ] && (grep -q "^CONFIG_PREEMPT_RT=y\|^CONFIG_PREEMPT_RT_FULL=y" "$KERNEL_CONFIG"); then
         return 0
     fi
 

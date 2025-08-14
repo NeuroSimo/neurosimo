@@ -99,7 +99,30 @@ class Decider:
 
            If an empty list or not provided, the pipeline will not trigger processing based on events.
 
-        - 'sensory_stimuli': A list of dictionaries defining sensory stimuli to be sent to the presenter.
+        - 'sensory_stimuli': A list of dictionaries defining sensory stimuli to be sent to the presenter. Used for
+           static, pre-defined stimuli, as opposed to dynamic stimuli defined in the process method.
+
+           Each sensory stimulus dictionary must contain the following keys:
+           - 'time': A float indicating when the stimulus should be presented (in seconds, relative to session start).
+           - 'type': A string indicating the type of stimulus (e.g., "visual", "auditory", "tactile").
+           - 'parameters': A dictionary containing stimulus-specific parameters.
+           
+           Example:
+           [
+               {
+                   'time': 5.0,
+                   'type': 'visual',
+                   'parameters': {
+                       'color': 'red',
+                       'size': 100,
+                       'duration': 0.5,
+                       'position_x': 0,
+                       'position_y': 0
+                   }
+               }
+           ]
+           
+           The parameters dictionary can contain any key-value pairs. Parameter values can be strings or numbers.
         """
         return {
             'processing_interval_in_samples': self.sampling_frequency,  # Process once per second
@@ -183,4 +206,27 @@ class Decider:
             # using LabJack T4. This is useful for triggering commercial TMS devices or other
             # devices that require a trigger signal, and when the mTMS device is not available.
             'timed_trigger': current_time + 0.005,
+            
+            # The decider can also return sensory stimuli to be sent to the presenter.
+            # This allows dynamic stimulus generation based on real-time EEG/EMG data, as opposed to
+            # static stimuli defined in the get_configuration method.
+            #
+            # Each stimulus must have 'time', 'type', and 'parameters' fields. The 'type' field can be any string,
+            # and will be passed to the presenter's process method as the first argument.
+            # The 'parameters' field can contain any key-value pairs. Parameter values can be
+            # strings or numbers.
+            #
+            # An example of a sensory stimulus:
+            #
+            # 'sensory_stimuli': [
+            #     {
+            #         'time': current_time + 1.0,  # Present stimulus 1 second from now
+            #         'type': 'visual_cue',
+            #         'parameters': {
+            #             'color': 'blue',
+            #             'intensity': 0.8,
+            #             'duration': 0.2
+            #         }
+            #     }
+            # ]
         }

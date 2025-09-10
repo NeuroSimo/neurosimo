@@ -63,16 +63,24 @@
           - nodejs # Required by log script
         state: present
 
+    ########################################################################
+    # Kernel tools
+    #
+    # Install extra kernel tools for monitoring/troubleshooting.
+    # RT variants (linux-*-realtime) are not always available, so
+    # ignore errors if apt can't find them.
+    ########################################################################
     - name: Install kernel tools
       apt:
-        name:
-          - linux-tools-generic
-          - linux-cloud-tools-generic
-          - linux-tools-realtime
-          - linux-cloud-tools-realtime
+        name: "{{ item }}"
         state: present
         update_cache: yes
-      become: yes
+      loop:
+        - linux-tools-generic
+        - linux-cloud-tools-generic
+        - linux-tools-realtime
+        - linux-cloud-tools-realtime
+      ignore_errors: yes
 
     ########################################################################
     # Copy systemd service files & enable

@@ -80,7 +80,7 @@
     - name: Run NVIDIA driver installer
       ansible.builtin.shell:
         cmd: |
-          IGNORE_PREEMPT_RT_PRESENCE=1 ./{{ installer_file }} --silent --no-drm
+          IGNORE_PREEMPT_RT_PRESENCE=1 ./{{ installer_file }} --silent --dkms --no-drm
       args:
         chdir: "{{ download_dir }}"
       register: nvidia_install

@@ -23,6 +23,26 @@
 
   tasks:
     ########################################################################
+    # Prerequisites
+    #
+    # ROS2 repository key expires regularly. If not refreshed, apt update
+    # fails with an EXPKEYSIG error. Ensure the current key and repo config
+    # are always present.
+    #
+    ########################################################################
+    - name: Ensure ROS2 apt key is up to date
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
+        dest: /usr/share/keyrings/ros-archive-keyring.gpg
+        mode: '0644'
+
+    - name: Ensure ROS2 apt source is configured
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_lsb.codename }} main"
+        state: present
+        filename: ros2-latest
+
+    ########################################################################
     # Update apt cache
     ########################################################################
     - name: Update apt cache

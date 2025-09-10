@@ -59,8 +59,10 @@ if is_preempt_rt; then
         read -p "Press Enter to continue..."
         echo ""
 
-        ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml --ask-become-pass
+        ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml --extra-vars "ansible_become_password=$SUDO_PASS"
     fi
+else
+    echo "Warning: Preempt-RT kernel not detected. Please install a Preempt-RT kernel for real-time capabilities."
 fi
 
 # Create 'example' project

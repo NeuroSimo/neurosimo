@@ -224,3 +224,112 @@ def get_configuration(self):
 4. **Handle edge cases** gracefully (empty buffers, invalid data)
 5. **Log important events** for debugging and analysis
 6. **Keep processing efficient** to maintain real-time performance
+
+## mTMS Device Usage
+
+The mTMS (multi-locus TMS) device requires special configuration and is only compatible with specific deciders. Use `mtms_decider_template.py` when working with the mTMS device.
+
+### Prerequisites
+
+- NeuroSimo must be running concurrently with the mTMS device software (see https://github.com/connect2brain/mtms)
+- mTMS device must be enabled in the environment configuration file (.env)
+- To perform trials more frequently than every 2 seconds, reduce `MINIMUM_INTERTRIAL_INTERVAL` in the environment config and restart the pipeline
+
+### Target Configuration
+
+mTMS targets are defined as lists of dictionaries. Each target dictionary contains:
+
+- `displacement_x` (float): X-coordinate in millimeters (-15 to 15)
+- `displacement_y` (float): Y-coordinate in millimeters (-15 to 15)
+- `rotation_angle` (float): Rotation angle in degrees (0 to 359)
+- `intensity` (float): Intensity in V/m
+- `algorithm` (str): Algorithm for computing capacitor voltages
+  - `'least_squares'`: Use least squares algorithm
+  - `'genetic'`: Use genetic algorithm
+
+**Target Types:**
+- **Single pulse**: List with one dictionary
+- **Paired pulse**: List with two dictionaries
+
+**Example targets:**
+```python
+SINGLE_PULSE = [
+    {
+        'displacement_x': 0,
+        'displacement_y': 0,
+        'rotation_angle': 0,
+        'intensity': 25,
+        'algorithm': 'least_squares',
+    }
+]
+
+PAIRED_PULSE = [
+    {
+        'displacement_x': 0,
+        'displacement_y': 0,
+        'rotation_angle': 0,
+        'intensity': 30,
+        'algorithm': 'least_squares',
+    },
+    {
+        'displacement_x': 0,
+        'displacement_y': 0,
+        'rotation_angle': 0,
+        'intensity': 20,
+        'algorithm': 'least_squares',
+    }
+]
+```
+
+### mTMS Triggers
+
+The mTMS device supports up to two output triggers that can coincide with TMS pulses. Each trigger is configured with:
+
+- `enabled` (bool): Whether the trigger is enabled
+- `delay` (float): Delay in seconds before trigger activation
+  - `0.0`: Trigger coincides with pulse
+  - Positive: Trigger after pulse
+  - Negative: Trigger before pulse
+
+**Example:**
+```python
+TRIGGERS = [
+    {'enabled': True, 'delay': 0.0},      # Trigger 1: coincides with pulse
+    {'enabled': True, 'delay': -0.01}     # Trigger 2: 10ms before pulse
+]
+```
+
+### mTMS Trial Return Format
+
+When using mTMS, the `process` method should return a dictionary with a `'trial'` key:
+
+```python
+return {
+    'trial': {
+        'targets': targets,           # List of target dictionaries
+        'pulse_times': pulse_times,   # List of pulse times in seconds
+        'triggers': TRIGGERS,         # Trigger configuration
+    }
+}
+```
+
+### Target Precomputation
+
+For real-time operation, the mTMS pipeline precomputes capacitor voltages for all targets. Define all experimental targets in `self.targets` during initialization:
+
+```python
+self.targets = [
+    LOW_INTENSITY_TARGET,
+    HIGH_INTENSITY_TARGET,  
+    PAIRED_PULSE_TARGET,
+]
+```
+
+Missing targets will be computed on-the-fly, introducing 10-20 second delays.
+
+### Minimum Pulse Delay
+
+Set `MINIMUM_DELAY_BEFORE_PULSE` based on your pipeline's processing latency:
+- Start with 50ms (`0.050`) for basic processing
+- Increase for complex algorithms or slower hardware
+- Account for EEG device filtering, preprocessing, and decision-making time

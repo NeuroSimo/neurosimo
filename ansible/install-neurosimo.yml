@@ -249,6 +249,18 @@
         line: "source {{ repo_root }}/scripts/instructions"
         state: present
 
+    - name: Ensure .env is sourced in .bash_env
+      lineinfile:
+        dest: "{{ target_home }}/.bash_env"
+        line: |
+          if [ -f {{ repo_root }}/.env ]; then
+              set -a
+              source {{ repo_root }}/.env
+              set +a
+          fi
+        state: present
+        insertafter: EOF
+
     - name: Ensure .bash_env is sourced in .bashrc
       lineinfile:
         dest: "{{ target_home }}/.bashrc"

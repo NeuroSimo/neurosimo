@@ -1,0 +1,58 @@
+---
+- name: Install NVIDIA Container Toolkit
+  hosts: localhost
+  connection: local
+  become: yes
+
+  vars:
+    # The user that runs the playbook.
+    target_user: "{{ lookup('env', 'USER') }}"
+
+  tasks:
+    ########################################################################
+    # Update apt cache
+    ########################################################################
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600 # in seconds
+
+    ########################################################################
+    # Install NVIDIA Container Toolkit
+    ########################################################################
+    - name: Download NVIDIA GPG key
+      ansible.builtin.get_url:
+        url: https://nvidia.github.io/libnvidia-container/gpgkey
+        dest: /usr/share/keyrings/nvidia-container-toolkit-keyring.asc
+        mode: '0644'
+
+    - name: Convert NVIDIA GPG key to keyring format
+      ansible.builtin.command:
+        cmd: gpg --batch --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg /usr/share/keyrings/nvidia-container-toolkit-keyring.asc
+      args:
+        creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Download NVIDIA Container Toolkit apt source list
+      ansible.builtin.get_url:
+        url: https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
+        dest: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+        mode: '0644'
+
+    - name: Ensure signed-by is set for NVIDIA Container Toolkit apt source
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+        regexp: '^deb https://'
+        replace: 'deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://'
+
+    - name: Update apt cache after adding NVIDIA repository
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install NVIDIA Container Toolkit
+      ansible.builtin.apt:
+        name: nvidia-container-toolkit
+        state: present
+
+    - name: Configure Docker to use NVIDIA runtime
+      ansible.builtin.command:
+        cmd: nvidia-ctk runtime configure --runtime=docker

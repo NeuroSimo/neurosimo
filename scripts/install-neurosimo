@@ -44,7 +44,7 @@ is_preempt_rt() {
     return 1
 }
 
-# Check if preempt_rt kernel is installed
+# Check if preempt_rt kernel is installed, and if so, prompt user for NVIDIA driver installation
 if is_preempt_rt; then
     echo "Preempt-RT kernel detected."
 
@@ -56,6 +56,8 @@ if is_preempt_rt; then
         echo "Please ensure that you are running this script in a text console (not a graphical terminal)."
         echo "Press Ctrl+Alt+F3 to switch to a text console if necessary."
         echo ""
+        echo "Note: you may need to switch back to the text console (Ctrl+Alt+F3) during the installation process if the display goes blank."
+        echo ""
         read -p "Press Enter to continue..."
         echo ""
 
@@ -64,6 +66,9 @@ if is_preempt_rt; then
 else
     echo "Warning: Preempt-RT kernel not detected. Please install a Preempt-RT kernel for real-time capabilities."
 fi
+
+# Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
+ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml --extra-vars "ansible_become_password=$SUDO_PASS"
 
 # Create 'example' project
 echo "Creating 'example' project..."

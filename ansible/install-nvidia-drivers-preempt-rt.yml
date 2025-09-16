@@ -91,13 +91,3 @@
         name: gdm
         state: started
       ignore_errors: true
-
-    - name: Reconfigure NVIDIA Container Toolkit after driver install
-      ansible.builtin.command:
-        cmd: nvidia-ctk runtime configure --runtime=docker
-      notify: Restart Docker
-
-    - name: Restart Docker
-      ansible.builtin.service:
-        name: docker
-        state: restarted

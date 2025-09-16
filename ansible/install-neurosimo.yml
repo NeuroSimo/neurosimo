@@ -70,20 +70,29 @@
     # RT variants (linux-*-realtime) are not always available, so
     # only install if they are.
     ########################################################################
-    - name: Gather available packages
-      package_facts:
-        manager: apt
+    - name: Gather kernel tool candidates
+      set_fact:
+        kernel_tool_candidates:
+          - linux-tools-generic
+          - linux-cloud-tools-generic
+          - linux-tools-realtime
+          - linux-cloud-tools-realtime
+          - "linux-tools-{{ ansible_kernel }}"
+          - "linux-cloud-tools-{{ ansible_kernel }}"
 
-    - name: Install kernel tools
+    - name: Check which kernel tool packages are available
+      command: "apt-cache show {{ item }}"
+      register: pkg_info
+      changed_when: false
+      failed_when: false
+      loop: "{{ kernel_tool_candidates }}"
+
+    - name: Install available kernel tool packages
       apt:
-        name: "{{ item }}"
+        name: "{{ item.item }}"
         state: present
-      loop:
-        - linux-tools-generic
-        - linux-cloud-tools-generic
-        - linux-tools-realtime
-        - linux-cloud-tools-realtime
-      when: item in ansible_facts.packages
+      loop: "{{ pkg_info.results }}"
+      when: item.rc == 0
 
     ########################################################################
     # Copy systemd service files & enable

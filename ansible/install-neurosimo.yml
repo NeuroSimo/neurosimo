@@ -280,18 +280,29 @@
     ########################################################################
     # Install NVIDIA Container Toolkit
     ########################################################################
-    - name: Add NVIDIA GPG key
-      ansible.builtin.shell:
-        cmd: |
-          curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-          gpg --batch --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    - name: Download NVIDIA GPG key
+      ansible.builtin.get_url:
+        url: https://nvidia.github.io/libnvidia-container/gpgkey
+        dest: /usr/share/keyrings/nvidia-container-toolkit-keyring.asc
+        mode: '0644'
 
-    - name: Add NVIDIA Container Toolkit repository
-      ansible.builtin.shell:
-        cmd: |
-          curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-          sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-          tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    - name: Convert NVIDIA GPG key to keyring format
+      ansible.builtin.command:
+        cmd: gpg --batch --yes --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg /usr/share/keyrings/nvidia-container-toolkit-keyring.asc
+      args:
+        creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Download NVIDIA Container Toolkit apt source list
+      ansible.builtin.get_url:
+        url: https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
+        dest: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+        mode: '0644'
+
+    - name: Ensure signed-by is set for NVIDIA Container Toolkit apt source
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+        regexp: '^deb https://'
+        replace: 'deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://'
 
     - name: Update apt cache
       ansible.builtin.apt:

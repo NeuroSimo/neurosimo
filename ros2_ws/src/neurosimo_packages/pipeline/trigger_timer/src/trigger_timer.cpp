@@ -201,7 +201,11 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> m
 
     RCLCPP_INFO(logger, "Triggering at time: %.4f (current time: %.4f, error: %.4f)",
                 scheduled_time, this->current_latency_corrected_time, error);
-    trigger_labjack(tms_trigger_fio);
+    bool success = trigger_labjack(tms_trigger_fio);
+    if (!success) {
+      RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
+      continue;
+    }
 
     trigger_queue.pop();
 
@@ -217,7 +221,11 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> m
 
   /* Trigger latency measurement event at specific intervals. */
   if (current_time - latest_latency_measurement_time >= latency_measurement_interval) {
-    trigger_labjack(latency_measurement_trigger_fio);
+    bool success = trigger_labjack(latency_measurement_trigger_fio);
+    if (!success) {
+      RCLCPP_ERROR(logger, "Failed to trigger latency measurement trigger.");
+      return;
+    }
     latest_latency_measurement_time = current_time;
   }
 }
@@ -226,16 +234,10 @@ void TriggerTimer::handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response) {
 
-  if (labjack_handle == -1) {
-    RCLCPP_WARN(logger, "LabJack is not connected. Not scheduling a trigger.");
-    response->success = false;
-    return;
-  }
-
   double_t trigger_time = request->timed_trigger.time;
 
-  /* Check if requested trigger time is less than current time - tolerance. */
-  bool feasible = trigger_time > this->current_latency_corrected_time - this->triggering_tolerance;
+  /* Trigger is feasible if LabJack is connected and requested trigger time is less than current time - tolerance. */
+  bool feasible = labjack_handle != -1 && trigger_time > this->current_latency_corrected_time - this->triggering_tolerance;
 
   /* Create and publish decision info. */
   auto msg = pipeline_interfaces::msg::DecisionInfo();
@@ -245,7 +247,7 @@ void TriggerTimer::handle_request_timed_trigger(
   msg.decider_latency = request->decider_latency;
   msg.preprocessor_latency = request->preprocessor_latency;
 
-  /* In case of a positive stimulation decision, the total latency can only be added Trigger Timer -
+  /* In case of a positive stimulation decision, the total latency can only be calculated by Trigger Timer -
      it cannot be calculated by Decider due to the additional component (Trigger Timer) on the pathway. */
   rclcpp::Time now = this->get_clock()->now();
   rclcpp::Time sample_time_rcl(request->system_time_for_sample);
@@ -256,14 +258,18 @@ void TriggerTimer::handle_request_timed_trigger(
 
   /* If not within acceptable range, log and return. */
   if (!feasible) {
-    RCLCPP_WARN(logger,
-      "Requested trigger time %.4f (s) is too late (current time: %.4f s, tolerance: %.1f ms). Not scheduling.",
-      trigger_time, this->current_latency_corrected_time, 1000 * this->triggering_tolerance);
     response->success = false;
+    if (labjack_handle == -1) {
+      RCLCPP_WARN(logger, "LabJack is not connected. Not scheduling a trigger.");
+    } else {
+      RCLCPP_WARN(logger,
+        "Requested trigger time %.4f (s) is too late (current time: %.4f s, tolerance: %.1f ms). Not scheduling.",
+        trigger_time, this->current_latency_corrected_time, 1000 * this->triggering_tolerance);
+    }
     return;
   }
 
-  /* Within acceptable range, schedule the trigger. */
+  /* Within acceptable range and LabJack is connected, schedule the trigger. */
   std::lock_guard<std::mutex> lock(queue_mutex);
   trigger_queue.push(trigger_time);
 
@@ -271,16 +277,15 @@ void TriggerTimer::handle_request_timed_trigger(
   response->success = true;
 }
 
-void TriggerTimer::trigger_labjack(const char* name) {
+bool TriggerTimer::trigger_labjack(const char* name) {
   if (labjack_handle == -1) {
-    RCLCPP_WARN(logger, "LabJack is not connected. Skipping trigger.");
-    return;
+    return false;
   }
 
   /* Set output port state to high. */
   int err = LJM_eWriteName(labjack_handle, name, 1);
   if (!safe_error_check(err, "Setting digital output on LabJack")) {
-    return;
+    return false;
   }
 
   /* Wait for one millisecond. */
@@ -289,8 +294,10 @@ void TriggerTimer::trigger_labjack(const char* name) {
   /* Set output port state to low. */
   err = LJM_eWriteName(labjack_handle, name, 0);
   if (!safe_error_check(err, "Setting digital output on LabJack")) {
-    return;
+    return false;
   }
+
+  return true;
 }
 
 int main(int argc, char *argv[]) {

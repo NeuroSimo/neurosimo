@@ -1163,8 +1163,9 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   auto decision_info = pipeline_interfaces::msg::DecisionInfo();
   decision_info.stimulate = is_decision_positive;
 
-  /* Ultimately, Trigger Timer knows if the decision is feasible. Use a dummy value here. */
-  decision_info.feasible = true;
+  /* If Decider publishes the decision info, stimulation is typically not feasible; the only exception is when the mTMS device is enabled,
+     handle that case separately. */
+  decision_info.feasible = false;
 
   decision_info.decision_time = sample_time;
   decision_info.decider_latency = decider_processing_time;
@@ -1213,9 +1214,11 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     return;
   }
 
-  /* In case of a positive stimulation decision including a timed trigger, the decision-making pathway extends to
-     Trigger Timer; hence, only publish the decision here if it is not a timed trigger. */
+  /* Only publish the decision info for a decision that passes the above checks here if it is not a timed trigger, that is,
+     the mTMS device is used. In that case, the decision is feasible. (If the decision is a timed trigger, it is published
+     by Trigger Timer and not by Decider.) */
   if (!timed_trigger) {
+    decision_info.feasible = true;
     this->decision_info_publisher->publish(decision_info);
   }
 

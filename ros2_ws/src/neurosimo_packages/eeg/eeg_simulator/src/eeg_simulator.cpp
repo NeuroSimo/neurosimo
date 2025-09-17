@@ -576,7 +576,8 @@ void EegSimulator::initialize_streaming() {
       dataset_buffer.push_back(data);
     }
   }
-  current_sample_index = 0;
+  this->current_index = 0;
+  this->time_offset = 0.0;
 
   this->current_data_file_path = data_file_path;
 
@@ -677,19 +678,19 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   double_t target_time = this->play_dataset_from + this->session_time;
 
   /* Publish samples until target time */
-  auto [last_published_time, next_index] = this->publish_until(this->current_sample_index, target_time);
-  
-  if (last_published_time > 0.0) {
-    this->latest_sample_time = last_published_time;
-    this->current_sample_index = next_index;
+  bool success = this->publish_until(target_time);
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to publish samples until target time. Stopping streaming.");
+    this->is_streaming = false;
+    return;
   }
 }
 
-/* Publish a single sample at the given index. Returns the sample time. */
-double_t EegSimulator::publish_single_sample(size_t sample_index) {
+/* Publish a single sample at the given index. Returns true if the sample was published successfully. */
+bool EegSimulator::publish_single_sample(size_t sample_index) {
   if (sample_index >= dataset_buffer.size()) {
     RCLCPP_ERROR(this->get_logger(), "Sample index %zu out of bounds (max: %zu)", sample_index, dataset_buffer.size() - 1);
-    return 0.0;
+    return false;
   }
 
   const std::vector<double_t>& data = dataset_buffer[sample_index];
@@ -697,10 +698,10 @@ double_t EegSimulator::publish_single_sample(size_t sample_index) {
 
   if (total_channels > static_cast<int>(data.size() - 1)) {
     RCLCPP_ERROR(this->get_logger(), "Total # of EEG and EMG channels (%d) exceeds # of channels in data (%zu)", total_channels, data.size() - 1);
-    return 0.0;
+    return false;
   }
 
-  double_t time = sample_time + time_offset;
+  double_t time = sample_time + this->time_offset;
 
   /* Create the sample message. */
   eeg_msgs::msg::Sample msg;
@@ -743,26 +744,24 @@ double_t EegSimulator::publish_single_sample(size_t sample_index) {
                        2000,
                        "Published sample at %.1f s.", time);
 
-  return sample_time;
+  return true;
 }
 
 /* Publish samples from start_index until (but not including) the first sample that is after until_time.
-   Returns a tuple of (last_sample_time, next_index). */
-std::tuple<double_t, size_t> EegSimulator::publish_until(size_t start_index, double_t until_time) {
+   Returns true if the samples were published successfully. */
+bool EegSimulator::publish_until(double_t until_time) {
   if (dataset_buffer.empty()) {
     RCLCPP_ERROR(this->get_logger(), "No data available to publish");
-    return std::make_tuple(0.0, start_index);
+    return false;
   }
 
-  double_t last_sample_time = 0.0;
-  size_t current_index = start_index;
-  bool has_published_any = false;
+  double_t sample_time = 0.0;
   size_t samples_published = 0;
   
   while (true) {
-    const std::vector<double_t>& data = dataset_buffer[current_index];
-    double_t sample_time = data.front();
-    double_t adjusted_time = sample_time + time_offset;
+    const std::vector<double_t>& data = dataset_buffer[this->current_index];
+    sample_time = data.front();
+    double_t adjusted_time = sample_time + this->time_offset;
 
     // If we've reached a sample after until_time, stop
     if (adjusted_time > until_time) {
@@ -770,17 +769,21 @@ std::tuple<double_t, size_t> EegSimulator::publish_until(size_t start_index, dou
     }
 
     // Publish this sample
-    last_sample_time = publish_single_sample(current_index);
-    has_published_any = true;
+    bool success = publish_single_sample(this->current_index);
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to publish sample at index %zu", current_index);
+      break;
+    }
+
     samples_published++;
     
     // Move to next sample
-    current_index = (current_index + 1) % dataset_buffer.size();
+    this->current_index = (this->current_index + 1) % dataset_buffer.size();
     
     // If we've wrapped around and are using loop mode, update time offset
-    if (current_index == 0 && loop && samples_published > 0) {
+    if (loop && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset, looping back to beginning.");
-      time_offset = time_offset + dataset_buffer.back().front() + sampling_period;
+      this->time_offset = this->time_offset + dataset_buffer.back().front() + sampling_period;
       
       // Reset event index when looping
       if (!events.empty()) {
@@ -789,7 +792,7 @@ std::tuple<double_t, size_t> EegSimulator::publish_until(size_t start_index, dou
     }
     
     // Safety check: prevent infinite loops if not in loop mode
-    if (!loop && current_index == start_index && samples_published > 0) {
+    if (!loop && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset without loop mode.");
       break;
     }
@@ -801,86 +804,7 @@ std::tuple<double_t, size_t> EegSimulator::publish_until(size_t start_index, dou
     }
   }
 
-  return std::make_tuple(has_published_any ? last_sample_time : 0.0, current_index);
-}
-
-std::tuple<bool, bool, double_t> EegSimulator::publish_sample(double_t current_time) {
-  bool looped = false;
-  std::string line;
-
-  if (current_sample_index >= dataset_buffer.size()) {
-    if (loop) {
-      RCLCPP_INFO(this->get_logger(), "Reached the end of data, looping back to beginning.");
-
-      current_sample_index = 0;
-      current_event_index = 0;  // Reset event index when looping
-
-      /* If the dataset looped, update the time offset. */
-      time_offset = time_offset + latest_sample_time + sampling_period;
-
-      looped = true;
-    } else {
-      RCLCPP_INFO(this->get_logger(), "Reached the end of data.");
-
-      return {true, looped, 0.0};
-    }
-  }
-
-  const std::vector<double_t>& data = dataset_buffer[current_sample_index];
-  double_t sample_time = data.front();
-
-  if (total_channels > static_cast<int>(data.size() - 1)) {
-      RCLCPP_ERROR(this->get_logger(), "Total # of EEG and EMG channels (%d) exceeds # of channels in data (%zu)", total_channels, data.size() - 1);
-      return {true, looped, 0.0};
-  }
-
-  double_t time = sample_time + time_offset;
-
-  /* Create the sample message. */
-  eeg_msgs::msg::Sample msg;
-
-  /* Note: + 1 below is to skip the time column. */
-  msg.eeg_data.insert(msg.eeg_data.end(), data.begin() + 1, data.begin() + 1 + num_of_eeg_channels);
-  msg.emg_data.insert(msg.emg_data.end(), data.begin() + 1 + num_of_eeg_channels, data.end());
-
-  msg.metadata.sampling_frequency = this->sampling_frequency;
-  msg.metadata.num_of_eeg_channels = this->num_of_eeg_channels;
-  msg.metadata.num_of_emg_channels = this->num_of_emg_channels;
-  msg.metadata.is_simulation = true;
-  msg.metadata.system_time = this->get_clock()->now();
-
-  msg.time = time;
-
-  if (!events.empty() && current_event_index < events.size()) {
-    const Event& next_event = events[current_event_index];
-    msg.is_event = next_event.time <= sample_time;
-    if (msg.is_event) {
-      msg.event_type = next_event.type;
-      current_event_index++;
-
-      RCLCPP_INFO(this->get_logger(), "Published event of type '%s' with timestamp %.4f s.", msg.event_type.c_str(), time);
-
-      /* Print information about the next event if there is one */
-      if (current_event_index < events.size()) {
-        const Event& next = events[current_event_index];
-        RCLCPP_INFO(this->get_logger(), "Next event (type '%s') due at %.4f s.", next.type.c_str(), next.time);
-      } else {
-        RCLCPP_INFO(this->get_logger(), "No more events in this dataset.");
-      }
-    }
-  }
-
-  eeg_publisher->publish(msg);
-
-  this->latest_sample_time = sample_time;
-  this->current_sample_index++;
-
-  RCLCPP_INFO_THROTTLE(this->get_logger(),
-                       *this->get_clock(),
-                       2000,
-                       "Still streaming at %.1f s.", time);
-
-  return {false, looped, sample_time};
+  return true;
 }
 
 /* Inotify functions */

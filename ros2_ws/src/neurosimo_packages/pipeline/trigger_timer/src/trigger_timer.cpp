@@ -1,9 +1,6 @@
 #include <chrono>
 #include <thread>
 
-#include <LabJackM.h>
-#include "LJM_Utilities.h"
-
 #include "trigger_timer.h"
 
 #include "realtime_utils/utils.h"
@@ -107,8 +104,9 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     "/pipeline/decision_info",
     10);
 
-  /* Start the non-blocking LabJack connection thread. */
-  start_connection_thread();
+  /* Initialize LabJack manager. */
+  labjack_manager = std::make_unique<LabJackManager>(this->get_logger());
+  labjack_manager->start();
 
   /* Set up a timer to signal connection attempts every second. */
   timer = this->create_wall_timer(
@@ -117,11 +115,8 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
 }
 
 TriggerTimer::~TriggerTimer() {
-  stop_connection_thread();
-  
-  int handle = labjack_handle.load();
-  if (handle != -1) {
-    CloseOrDie(handle);
+  if (labjack_manager) {
+    labjack_manager->stop();
   }
 }
 
@@ -155,86 +150,11 @@ void TriggerTimer::handle_timing_error(const std::shared_ptr<pipeline_interfaces
 }
 
 void TriggerTimer::attempt_labjack_connection() {
-  /* Signal the connection thread to attempt a connection if not already connected */
-  if (labjack_handle.load() == -1) {
-    should_attempt_connection.store(true);
-    connection_cv.notify_one();
+  if (labjack_manager) {
+    labjack_manager->request_connection_attempt();
   }
 }
 
-void TriggerTimer::start_connection_thread() {
-  connection_thread_running.store(true);
-  labjack_connection_thread = std::thread(&TriggerTimer::labjack_connection_worker, this);
-}
-
-void TriggerTimer::stop_connection_thread() {
-  connection_thread_running.store(false);
-  connection_cv.notify_one();
-  
-  if (labjack_connection_thread.joinable()) {
-    labjack_connection_thread.join();
-  }
-}
-
-void TriggerTimer::labjack_connection_worker() {
-  std::unique_lock<std::mutex> lock(connection_mutex);
-  
-  while (connection_thread_running.load()) {
-    /* Wait for a connection attempt signal or timeout after 1 second */
-    connection_cv.wait_for(lock, std::chrono::seconds(1), [this] {
-      return should_attempt_connection.load() || !connection_thread_running.load();
-    });
-    
-    if (!connection_thread_running.load()) {
-      break;
-    }
-    
-    if (should_attempt_connection.load() && labjack_handle.load() == -1) {
-      should_attempt_connection.store(false);
-      
-      /* Temporarily release the lock during the blocking operation */
-      lock.unlock();
-      
-      /* Measure how long the connection attempt takes */
-      auto start_time = std::chrono::high_resolution_clock::now();
-      
-      int new_handle = -1;
-      int err = LJM_Open(LJM_dtANY, LJM_ctANY, "LJM_idANY", &new_handle);
-      
-      auto end_time = std::chrono::high_resolution_clock::now();
-      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-      
-      if (err != LJME_NOERROR) {
-        /* Ensure that handle is marked as invalid. */
-        labjack_handle.store(-1);
-        RCLCPP_WARN(logger, "Failed to connect to LabJack. Error code: %d, Time taken: %ld ms", err, duration.count());
-      } else {
-        labjack_handle.store(new_handle);
-        PrintDeviceInfoFromHandle(new_handle);
-        RCLCPP_INFO(logger, "Successfully connected to LabJack. Time taken: %ld ms", duration.count());
-      }
-      
-      /* Reacquire the lock */
-      lock.lock();
-    }
-  }
-}
-
-bool TriggerTimer::safe_error_check(int err, const char* action) {
-  if (err != LJME_NOERROR) {
-    RCLCPP_ERROR(logger, "%s failed with error code: %d", action, err);
-    if (err == LJME_RECONNECT_FAILED) {
-      /* Mark as disconnected. */
-      labjack_handle.store(-1);
-      RCLCPP_WARN(logger, "LabJack connection lost. Will attempt to reconnect.");
-      /* Signal the connection thread to attempt reconnection */
-      should_attempt_connection.store(true);
-      connection_cv.notify_one();
-    }
-    return false;
-  }
-  return true;
-}
 
 void TriggerTimer::handle_mtms_device_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg) {
   this->mtms_device_available = msg->status.value == system_interfaces::msg::HealthcheckStatus::READY;
@@ -258,8 +178,8 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> m
 
     RCLCPP_INFO(logger, "Triggering at time: %.4f (current time: %.4f, error: %.4f)",
                 scheduled_time, this->current_latency_corrected_time, error);
-    bool success = trigger_labjack(tms_trigger_fio);
-    if (!success) {
+    
+    if (!labjack_manager || !labjack_manager->trigger_output(tms_trigger_fio)) {
       RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
       continue;
     }
@@ -280,8 +200,7 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> m
   if (current_time - latest_latency_measurement_time >= latency_measurement_interval) {
     latest_latency_measurement_time = current_time;
 
-    bool success = trigger_labjack(latency_measurement_trigger_fio);
-    if (!success) {
+    if (!labjack_manager || !labjack_manager->trigger_output(latency_measurement_trigger_fio)) {
       RCLCPP_ERROR(logger, "Failed to trigger latency measurement trigger.");
       return;
     }
@@ -295,7 +214,7 @@ void TriggerTimer::handle_request_timed_trigger(
   double_t trigger_time = request->timed_trigger.time;
 
   /* Trigger is feasible if LabJack is connected and requested trigger time is less than current time - tolerance. */
-  bool feasible = labjack_handle.load() != -1 && trigger_time > this->current_latency_corrected_time - this->triggering_tolerance;
+  bool feasible = labjack_manager && labjack_manager->is_connected() && trigger_time > this->current_latency_corrected_time - this->triggering_tolerance;
 
   /* Create and publish decision info. */
   auto msg = pipeline_interfaces::msg::DecisionInfo();
@@ -317,7 +236,7 @@ void TriggerTimer::handle_request_timed_trigger(
   /* If not within acceptable range, log and return. */
   if (!feasible) {
     response->success = false;
-    if (labjack_handle.load() == -1) {
+    if (!labjack_manager || !labjack_manager->is_connected()) {
       RCLCPP_WARN(logger, "LabJack is not connected. Not scheduling a trigger.");
     } else {
       RCLCPP_WARN(logger,
@@ -335,29 +254,6 @@ void TriggerTimer::handle_request_timed_trigger(
   response->success = true;
 }
 
-bool TriggerTimer::trigger_labjack(const char* name) {
-  int handle = labjack_handle.load();
-  if (handle == -1) {
-    return false;
-  }
-
-  /* Set output port state to high. */
-  int err = LJM_eWriteName(handle, name, 1);
-  if (!safe_error_check(err, "Setting digital output on LabJack")) {
-    return false;
-  }
-
-  /* Wait for one millisecond. */
-  std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
-  /* Set output port state to low. */
-  err = LJM_eWriteName(handle, name, 0);
-  if (!safe_error_check(err, "Setting digital output on LabJack")) {
-    return false;
-  }
-
-  return true;
-}
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);

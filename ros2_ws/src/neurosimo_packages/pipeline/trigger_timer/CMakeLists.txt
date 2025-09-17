@@ -22,6 +22,7 @@ add_executable(
         trigger_timer
 
         src/trigger_timer.cpp
+        src/labjack_manager.cpp
 )
 
 target_include_directories(trigger_timer

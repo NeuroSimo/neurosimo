@@ -6,11 +6,10 @@
 #define EEG_PROCESSOR_TRIGGERTIMER_H
 
 #include "rclcpp/rclcpp.hpp"
-#include <thread>
-#include <atomic>
-#include <condition_variable>
+#include <memory>
 
 #include "std_msgs/msg/bool.hpp"
+#include "labjack_manager.h"
 
 #include "eeg_msgs/msg/sample.hpp"
 
@@ -45,15 +44,8 @@ private:
   rclcpp::Subscription<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
 
-  std::atomic<int> labjack_handle{-1};
+  std::unique_ptr<LabJackManager> labjack_manager;
   bool mtms_device_available = false;
-
-  /* Non-blocking LabJack connection management */
-  std::thread labjack_connection_thread;
-  std::atomic<bool> connection_thread_running{false};
-  std::atomic<bool> should_attempt_connection{true};
-  std::mutex connection_mutex;
-  std::condition_variable connection_cv;
 
   double_t latest_timing_error = 0.0;
   double_t latest_latency_measurement_time = 0.0;
@@ -68,9 +60,6 @@ private:
 
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
   void attempt_labjack_connection();
-  void labjack_connection_worker();
-  void start_connection_thread();
-  void stop_connection_thread();
   void handle_mtms_device_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg);
   void handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
   void handle_request_timed_trigger(
@@ -78,8 +67,6 @@ private:
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
   void handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> msg);
   void handle_timing_error(const std::shared_ptr<pipeline_interfaces::msg::TimingError> msg);
-  bool trigger_labjack(const char* name);
-  bool safe_error_check(int err, const char* action);
 
   /* Session management */
   bool session_received = false;

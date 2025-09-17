@@ -65,7 +65,7 @@ private:
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
   void handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> msg);
   void handle_timing_error(const std::shared_ptr<pipeline_interfaces::msg::TimingError> msg);
-  void trigger_labjack(const char* name);
+  bool trigger_labjack(const char* name);
   bool safe_error_check(int err, const char* action);
 
   /* Session management */

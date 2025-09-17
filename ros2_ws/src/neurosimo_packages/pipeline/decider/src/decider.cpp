@@ -1157,7 +1157,9 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   /* Combine both trials (for mTMS device) and timed triggers (for other TMS devices). */
   bool is_decision_positive = trial || timed_trigger;
 
-  /* Create decision info, but only publish in Decider if the pathway doesn't reach the Trigger Timer. */
+  /* Create decision info, but only publish in Decider if the pathway doesn't reach the Trigger Timer.
+
+  XXX: The logic related to when to publish the decision info is quite messy. */
   auto decision_info = pipeline_interfaces::msg::DecisionInfo();
   decision_info.stimulate = is_decision_positive;
 

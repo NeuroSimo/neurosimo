@@ -48,6 +48,13 @@ builtins.print_throttle = print_throttle
     )", py::globals());
 }
 
+void DeciderWrapper::log_section_header(const std::string& title) {
+  std::wstring underline_str(title.size(), L'–');
+  RCLCPP_INFO(*logger_ptr, "%s%s%s", bold_on.c_str(), title.c_str(), bold_off.c_str());
+  RCLCPP_INFO(*logger_ptr, "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
+  RCLCPP_INFO(*logger_ptr, " ");
+}
+
 void DeciderWrapper::remove_modules(const std::string& base_directory) {
   py::module sys_module = py::module::import("sys");
   py::dict sys_modules = sys_module.attr("modules");
@@ -375,12 +382,16 @@ void DeciderWrapper::warm_up() {
       warm_up_rounds = decider_instance->attr("warm_up_rounds").cast<int>();
     }
 
+    log_section_header("Warm-up");
+
     if (warm_up_rounds <= 0) {
-      RCLCPP_DEBUG(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
+      RCLCPP_INFO(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
+      RCLCPP_INFO(*logger_ptr, " ");
+      log_section_header("Operation");
       return;
     }
 
-    RCLCPP_INFO(*logger_ptr, "Starting warm-up with %d rounds...", warm_up_rounds);
+    RCLCPP_INFO(*logger_ptr, "Starting %d warm-up rounds...", warm_up_rounds);
 
     // Initialize RNG with constant seed for reproducible warm-up data
     std::srand(12345);
@@ -436,19 +447,22 @@ void DeciderWrapper::warm_up() {
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration<double, std::milli>(end_time - start_time).count();
         
-        RCLCPP_INFO(*logger_ptr, "Warm-up round %d/%d completed in %.2f ms", 
+        RCLCPP_INFO(*logger_ptr, "  Round %d/%d: %.2f ms", 
                      round + 1, warm_up_rounds, duration);
         
       } catch (const py::error_already_set& e) {
-        RCLCPP_WARN(*logger_ptr, "Warm-up round %d failed with Python error: %s", round + 1, e.what());
+        RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (Python error: %s)", round + 1, warm_up_rounds, e.what());
         // Continue with remaining rounds
       } catch (const std::exception& e) {
-        RCLCPP_WARN(*logger_ptr, "Warm-up round %d failed with C++ error: %s", round + 1, e.what());
+        RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (C++ error: %s)", round + 1, warm_up_rounds, e.what());
         // Continue with remaining rounds
       }
     }
 
+    RCLCPP_INFO(*logger_ptr, " ");
     RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", warm_up_rounds);
+    RCLCPP_INFO(*logger_ptr, " ");
+    log_section_header("Operation");
 
   } catch (const py::error_already_set& e) {
     RCLCPP_ERROR(*logger_ptr, "Warm-up failed with Python error: %s", e.what());

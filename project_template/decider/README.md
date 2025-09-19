@@ -216,14 +216,69 @@ def get_configuration(self):
     }
 ```
 
+## Performance Optimization
+
+### Warm-up Configuration
+
+To prevent first-call performance delays, decider modules can request automatic warm-up during initialization.
+
+#### `warm_up_rounds` (int)
+
+Set this attribute in your decider's `__init__` method to specify the number of warm-up rounds:
+
+```python
+def __init__(self, num_eeg_channels, num_emg_channels, sampling_frequency):
+    # ... other initialization code ...
+    
+    # Configure warm-up (recommended: 2-3 rounds)
+    self.warm_up_rounds = 2
+```
+
+**How it works:**
+- The C++ wrapper automatically detects this attribute during module initialization
+- It calls your `process()` method the specified number of times with realistic dummy data
+- Each round uses fresh random data (seeded for reproducibility) to avoid state-dependent issues
+- This triggers JIT compilation, library loading, and other one-time initialization costs
+- Subsequent real processing calls should have a consistent latency
+
+**Configuration options:**
+- `0`: Disable warm-up (default behavior)
+- `1-5`: Recommended range (2-3 is usually optimal)
+- Higher values: May provide additional stability but with diminishing returns
+
+**When to use:**
+- Always recommended for computationally intensive deciders
+- Essential for real-time applications requiring consistent latency
+- Particularly beneficial for modules using scipy, sklearn, or other heavy libraries
+
+**Important for stateful deciders:**
+If your decider maintains internal state that depends on real EEG/EMG data patterns (e.g., running averages, learned parameters, adaptive thresholds), you should skip state updates during warm-up rounds. Warm-up calls can be identified by checking if `current_time == 0.0`:
+
+```python
+def process(self, current_time, timestamps, valid_samples, eeg_buffer, emg_buffer, 
+            current_sample_index, ready_for_trial, is_trigger, is_event, event_type):
+    
+    # Skip state updates during warm-up (dummy data)
+    is_warmup = (current_time == 0.0)
+    
+    # Your processing logic here...
+    processed_data = self.analyze_eeg(eeg_buffer)
+    
+    # Only update internal state with real data
+    if not is_warmup:
+        self.update_internal_state(processed_data)
+    
+    # Return decisions (warm-up returns are ignored by the system)
+    return self.make_decision(processed_data)
+```
+
 ## Best Practices
 
 1. **Check `ready_for_trial`** before scheduling triggers
 2. **Validate samples** using `valid_samples` array before processing
-3. **Use multiprocessing pool** for computationally intensive tasks to avoid blocking the pipeline
-4. **Handle edge cases** gracefully (empty buffers, invalid data)
-5. **Log important events** for debugging and analysis
-6. **Keep processing efficient** to maintain real-time performance
+3. **Configure warm-up** with `self.warm_up_rounds = 2` for consistent performance
+4. **Skip state updates during warm-up** by checking `current_time == 0.0` for stateful deciders
+5. **Use multiprocessing pool** for computationally intensive tasks to avoid blocking the pipeline
 
 ## mTMS Device Usage
 

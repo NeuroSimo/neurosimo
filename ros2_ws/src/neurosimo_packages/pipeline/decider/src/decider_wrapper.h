@@ -96,6 +96,8 @@ public:
   static void log(const std::string& message);
   static void log_throttle(const std::string& message, const double_t period);
 
+  void log_section_header(const std::string& title);
+
 private:
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */
   static rclcpp::Logger* logger_ptr;

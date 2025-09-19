@@ -340,6 +340,13 @@ void EegDecider::update_eeg_info(const eeg_msgs::msg::PreprocessedSampleMetadata
   this->sampling_period = 1.0 / this->sampling_frequency;
 }
 
+void EegDecider::log_section_header(const std::string& title) {
+  std::wstring underline_str(title.size(), L'–');
+  RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), title.c_str(), bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), " ");
+}
+
 void EegDecider::initialize_module() {
   if (this->working_directory == UNSET_STRING ||
       this->module_name == UNSET_STRING) {
@@ -350,13 +357,7 @@ void EegDecider::initialize_module() {
 
   RCLCPP_INFO(this->get_logger(), "");
 
-  /* Print underlined, bolded text. */
-  std::string text_str = "Loading decider: " + this->module_name;
-  std::wstring underline_str(text_str.size(), L'–');
-  RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), text_str.c_str(), bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
-
-  RCLCPP_INFO(this->get_logger(), "");
+  log_section_header("Loading decider: " + this->module_name);
 
   /* Clear the event queue before initializing. */
   while (!this->event_queue.empty()) {
@@ -382,15 +383,15 @@ void EegDecider::initialize_module() {
   size_t buffer_size = this->decider_wrapper->get_buffer_size();
   this->sample_buffer.reset(buffer_size);
 
-  /* Perform warm-up if requested by the Python module */
-  this->decider_wrapper->warm_up();
-
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->sampling_frequency, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->num_of_eeg_channels, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->num_of_emg_channels, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
+
+  /* Perform warm-up if requested by the Python module */
+  this->decider_wrapper->warm_up();
 
   /* Send the initial sensory stimuli to the presenter. */
   for (auto& sensory_stimulus : this->sensory_stimuli) {

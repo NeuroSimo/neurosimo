@@ -406,6 +406,11 @@ void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 
   RCLCPP_INFO(this->get_logger(), "Active project set to: %s", this->active_project.c_str());
 
+  /* Reset the current data file path to force reloading when switching projects.
+     This ensures that data from the previous project is not used when switching projects,
+     which is important when both projects have datasets with the same name. */
+  this->current_data_file_path = UNSET_STRING;
+
   /* Use a lock here to ensure that dataset is not reset by set_dataset while the list is still
      being updated. This can happen when the project manager first sets a new project using pub-sub
      and then immediately after that sets a new dataset with a service call. However, this is just

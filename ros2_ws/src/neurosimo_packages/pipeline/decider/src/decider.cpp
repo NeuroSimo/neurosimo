@@ -382,6 +382,9 @@ void EegDecider::initialize_module() {
   size_t buffer_size = this->decider_wrapper->get_buffer_size();
   this->sample_buffer.reset(buffer_size);
 
+  /* Perform warm-up if requested by the Python module */
+  this->decider_wrapper->warm_up();
+
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->sampling_frequency, bold_off.c_str());

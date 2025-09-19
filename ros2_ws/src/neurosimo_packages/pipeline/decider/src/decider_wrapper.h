@@ -61,6 +61,8 @@ public:
 
   void reset_module_state();
 
+  void warm_up();
+
   std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> get_targets();
 
   bool parse_sensory_stimulus_dict(

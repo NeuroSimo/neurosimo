@@ -96,6 +96,9 @@ class Decider:
 
         # Leave empty when mTMS device is not used
         self.targets = []
+        
+        # Number of warm-up rounds to prevent first-call delays (see README.md for details)
+        self.warm_up_rounds = 2
 
     def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """

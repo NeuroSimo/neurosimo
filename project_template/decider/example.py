@@ -21,6 +21,9 @@ class Decider:
         # Initialize multiprocessing pool for background computations
         self.pool = multiprocessing.Pool(processes=1)
 
+        # Number of warm-up rounds to prevent first-call delays (see README.md for details)
+        self.warm_up_rounds = 2
+
     def get_configuration(self):
         """Return configuration dictionary for the pipeline."""
         return {

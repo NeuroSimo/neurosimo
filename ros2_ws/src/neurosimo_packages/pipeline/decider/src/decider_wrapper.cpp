@@ -4,6 +4,8 @@
 #include <pybind11/numpy.h>
 #include <rcpputils/filesystem_helper.hpp>
 #include <cmath>
+#include <chrono>
+#include <cstdlib>
 
 #include "decider_wrapper.h"
 #include <eeg_msgs/msg/sample.hpp>
@@ -358,6 +360,101 @@ void DeciderWrapper::reset_module_state() {
   py_emg_data.reset();
 
   state = WrapperState::UNINITIALIZED;
+}
+
+void DeciderWrapper::warm_up() {
+  if (state != WrapperState::READY || !decider_instance) {
+    RCLCPP_WARN(*logger_ptr, "Cannot warm up: module not ready or instance not available");
+    return;
+  }
+
+  try {
+    // Check if the Python module has a warm_up_rounds attribute
+    int warm_up_rounds = 0;
+    if (py::hasattr(*decider_instance, "warm_up_rounds")) {
+      warm_up_rounds = decider_instance->attr("warm_up_rounds").cast<int>();
+    }
+
+    if (warm_up_rounds <= 0) {
+      RCLCPP_DEBUG(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
+      return;
+    }
+
+    RCLCPP_INFO(*logger_ptr, "Starting warm-up with %d rounds...", warm_up_rounds);
+
+    // Initialize RNG with constant seed for reproducible warm-up data
+    std::srand(12345);
+
+    // Get pointers to numpy arrays
+    auto timestamps_ptr = py_timestamps->mutable_data();
+    auto valid_ptr = py_valid->mutable_data();
+    auto eeg_data_ptr = py_eeg_data->mutable_data();
+    auto emg_data_ptr = py_emg_data->mutable_data();
+
+    // Dummy parameters for process method (constant across all rounds)
+    double_t dummy_current_time = 0.0;
+    int dummy_current_sample_index = -earliest_sample;
+    bool dummy_ready_for_trial = true;
+    bool dummy_is_trigger = false;
+    bool dummy_has_event = false;
+    std::string dummy_event_type = "";
+
+    // Perform warm-up rounds with fresh random data for each round
+    for (int round = 0; round < warm_up_rounds; round++) {
+      // Generate fresh random data for this round
+      for (size_t i = 0; i < buffer_size; i++) {
+        timestamps_ptr[i] = -static_cast<double>(buffer_size - 1 - i) / sampling_frequency;
+        valid_ptr[i] = true;
+        
+        // Fill EEG data with small random values
+        for (size_t j = 0; j < eeg_data_size; j++) {
+          eeg_data_ptr[i * eeg_data_size + j] = (static_cast<double>(std::rand()) / RAND_MAX - 0.5) * 1e-6;
+        }
+        
+        // Fill EMG data with small random values
+        for (size_t j = 0; j < emg_data_size; j++) {
+          emg_data_ptr[i * emg_data_size + j] = (static_cast<double>(std::rand()) / RAND_MAX - 0.5) * 1e-6;
+        }
+      }
+
+      try {
+        auto start_time = std::chrono::high_resolution_clock::now();
+        
+        py::object py_result = decider_instance->attr("process")(
+          dummy_current_time, 
+          *py_timestamps, 
+          *py_valid, 
+          *py_eeg_data, 
+          *py_emg_data, 
+          dummy_current_sample_index, 
+          dummy_ready_for_trial, 
+          dummy_is_trigger, 
+          dummy_has_event, 
+          dummy_event_type
+        );
+        
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+        
+        RCLCPP_INFO(*logger_ptr, "Warm-up round %d/%d completed in %.2f ms", 
+                     round + 1, warm_up_rounds, duration);
+        
+      } catch (const py::error_already_set& e) {
+        RCLCPP_WARN(*logger_ptr, "Warm-up round %d failed with Python error: %s", round + 1, e.what());
+        // Continue with remaining rounds
+      } catch (const std::exception& e) {
+        RCLCPP_WARN(*logger_ptr, "Warm-up round %d failed with C++ error: %s", round + 1, e.what());
+        // Continue with remaining rounds
+      }
+    }
+
+    RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", warm_up_rounds);
+
+  } catch (const py::error_already_set& e) {
+    RCLCPP_ERROR(*logger_ptr, "Warm-up failed with Python error: %s", e.what());
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(*logger_ptr, "Warm-up failed with C++ error: %s", e.what());
+  }
 }
 
 DeciderWrapper::~DeciderWrapper() {

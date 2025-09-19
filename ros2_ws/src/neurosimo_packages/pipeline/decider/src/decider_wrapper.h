@@ -98,6 +98,7 @@ public:
 
   /* Get buffered logs and clear the buffer */
   std::vector<std::string> get_and_clear_logs();
+  void log_section_header(const std::string& title);
 
 private:
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */

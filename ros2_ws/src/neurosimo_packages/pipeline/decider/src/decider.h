@@ -97,6 +97,7 @@ private:
 
   void update_eeg_info(const eeg_msgs::msg::PreprocessedSampleMetadata& msg);
   void initialize_module();
+  void log_section_header(const std::string& title);
 
   void reset_decider_state();
 

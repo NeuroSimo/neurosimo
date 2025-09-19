@@ -607,6 +607,7 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
 
 void EegDecider::reset_decider_state() {
   this->decider_state = this->enabled ? DeciderState::READY : DeciderState::WAITING_FOR_ENABLED;
+  this->samples_since_last_processing = 0;
 }
 
 void EegDecider::empty_trial_queue() {

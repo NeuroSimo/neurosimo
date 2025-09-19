@@ -62,10 +62,29 @@ MINIMUM_DELAY_BEFORE_PULSE = 0.050  # seconds
 
 
 class Decider:
-    def __init__(self, num_of_eeg_channels, num_of_emg_channels, sampling_frequency):
+    @staticmethod
+    def get_metadata_schema():
+        """Declare metadata schema. The metadata is prompted from the user in the GUI."""
+        return {
+            "subject": {
+                "type": "string",
+                "description": "Subject ID (e.g., S01)"
+            },
+            "session": {
+                "type": "int",
+                "description": "Session number",
+                "default": 1
+            }
+        }
+
+    def __init__(self, num_of_eeg_channels, num_of_emg_channels, sampling_frequency, **metadata):
         self.num_of_eeg_channels = num_of_eeg_channels
         self.num_of_emg_channels = num_of_emg_channels
         self.sampling_frequency = sampling_frequency
+
+        self.metadata = metadata
+        self.subject = metadata.get("subject", "unknown")
+        self.session = metadata.get("session", 1)
 
         self.buffer_count = 0
         

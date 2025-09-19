@@ -1120,13 +1120,9 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   this->samples_since_last_processing = 0;
 
   /* Determine if we are ready for a trial. */
-  auto time_since_previous_trial = sample_time - this->previous_stimulation_time;
-  auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                                time_since_previous_trial >= this->minimum_intertrial_interval;
   auto ready_for_trial = !performing_trial &&
                          !processing_timed_trigger &&
-                         this->trial_queue.empty() &&
-                         has_minimum_intertrial_interval_passed;
+                         this->trial_queue.empty();
 
   /* Process the sample. */
   auto [success, trial, timed_trigger] = this->decider_wrapper->process(
@@ -1205,13 +1201,28 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   }
 
   /* Check that the minimum pulse interval is respected. */
-  if (is_decision_positive && !has_minimum_intertrial_interval_passed) {
-    this->decision_info_publisher->publish(decision_info);
+  if (is_decision_positive) {
+    double_t actual_stimulation_time = UNSET_PREVIOUS_TIME;
 
-    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) not respected (time since previous stimulation: %.3f s), ignoring request.",
-                 this->minimum_intertrial_interval,
-                 time_since_previous_trial);
-    return;
+    if (timed_trigger) {
+      actual_stimulation_time = timed_trigger->time;
+    } else if (trial) {
+      /* For trials, we need to get the desired start time from the trial. */
+      actual_stimulation_time = trial->timing.desired_start_time;
+    }
+
+    auto time_since_previous_trial = actual_stimulation_time - this->previous_stimulation_time;
+    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
+
+    if (!has_minimum_intertrial_interval_passed) {
+      this->decision_info_publisher->publish(decision_info);
+
+      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) not respected (time since previous stimulation: %.3f s), ignoring request.",
+                   this->minimum_intertrial_interval,
+                   time_since_previous_trial);
+      return;
+    }
   }
 
   /* Only publish the decision info for a decision that passes the above checks here if it is not a timed trigger, that is,
@@ -1227,7 +1238,7 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     this->trial_queue.push({*trial, sample_time});
 
     /* Update the previous stimulation time. */
-    this->previous_stimulation_time = sample_time;
+    this->previous_stimulation_time = trial->timing.desired_start_time;
   }
 
   /* Send timed trigger if requested. */

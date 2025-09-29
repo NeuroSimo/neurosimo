@@ -33,6 +33,18 @@ const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 5ms;
 
 
 EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_logger("preprocessor")) {
+  /* Read ROS parameter: dropped sample threshold */
+  auto dropped_sample_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  dropped_sample_threshold_descriptor.description = "The threshold for the number of dropped samples before the decider enters an error state";
+  dropped_sample_threshold_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+  this->declare_parameter("dropped-sample-threshold", 4, dropped_sample_threshold_descriptor);
+  this->get_parameter("dropped-sample-threshold", this->dropped_sample_threshold);
+
+  /* Log the configuration. */
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "Configuration:");
+  RCLCPP_INFO(this->get_logger(), "  Dropped samples per second threshold: %d", this->dropped_sample_threshold);
+
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
 
@@ -155,6 +167,12 @@ void EegPreprocessor::publish_healthcheck() {
       healthcheck.actionable_message = "Sample(s) dropped in preprocessor.";
       break;
 
+    case PreprocessorState::DROPPED_SAMPLE_THRESHOLD_EXCEEDED:
+      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
+      healthcheck.status_message = "Dropped sample threshold exceeded";
+      healthcheck.actionable_message = "Dropped sample threshold (" + std::to_string(this->dropped_sample_threshold) + " per second) exceeded.";
+      break;
+
     case PreprocessorState::MODULE_ERROR:
       healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
       healthcheck.status_message = "Module error";
@@ -170,6 +188,7 @@ void EegPreprocessor::handle_session(const std::shared_ptr<system_interfaces::ms
 
   if (state_changed && this->session_state.value == system_interfaces::msg::SessionState::STOPPED) {
     this->first_sample_of_session = true;
+    this->total_dropped_samples = 0;
     this->reinitialize = true;
 
     /* Reset the preprocessor state when the session is stopped. */
@@ -476,27 +495,52 @@ void EegPreprocessor::update_preprocessor_list() {
 void EegPreprocessor::check_dropped_samples(double_t sample_time) {
   if (this->sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
     RCLCPP_WARN(this->get_logger(), "Sampling frequency not received, cannot check for dropped samples.");
+    return;
   }
 
-  if (this->sampling_frequency != UNSET_SAMPLING_FREQUENCY &&
-      this->previous_time) {
-
+  if (this->previous_time) {
     auto time_diff = sample_time - this->previous_time;
     auto threshold = this->sampling_period + this->TOLERANCE_S;
 
-    if (time_diff > threshold) {
-      /* Err if sample(s) were dropped. */
-      this->preprocessor_state = PreprocessorState::SAMPLES_DROPPED;
+    /* Calculate number of dropped samples. */
+    int dropped_samples = std::max(0, static_cast<int>(std::round((time_diff - this->sampling_period) * this->sampling_frequency)));
 
-      RCLCPP_ERROR(this->get_logger(),
-          "Sample(s) dropped. Time difference between consecutive samples: %.5f, should be: %.5f, limit: %.5f", time_diff, this->sampling_period, threshold);
+    if (time_diff > threshold) {
+      /* Accumulate dropped samples. */
+      this->total_dropped_samples += dropped_samples;
+
+      /* Sliding window: add dropped samples and clean up entries older than 1 second. */
+      this->dropped_samples_window.push_back({sample_time, dropped_samples});
+      while (!this->dropped_samples_window.empty() &&
+             (sample_time - this->dropped_samples_window.front().first > 1.0)) {
+        this->dropped_samples_window.pop_front();
+      }
+
+      /* Sum of dropped samples in the last second. */
+      int recent_dropped_samples = 0;
+      for (const auto& entry : this->dropped_samples_window) {
+        recent_dropped_samples += entry.second;
+      }
+
+      if (recent_dropped_samples > this->dropped_sample_threshold) {
+        this->preprocessor_state = PreprocessorState::DROPPED_SAMPLE_THRESHOLD_EXCEEDED;
+        RCLCPP_ERROR(this->get_logger(),
+            "Dropped samples exceeded threshold! Recent dropped samples: %d, Threshold: %d",
+            recent_dropped_samples, this->dropped_sample_threshold);
+      } else {
+        RCLCPP_WARN(this->get_logger(),
+            "Dropped samples detected. Time difference: %.5f, Dropped samples: %d",
+            time_diff, dropped_samples);
+      }
+      // Note: Dropped sample count is published by the decider, not the preprocessor
 
     } else {
-      /* If log-level is set to DEBUG, print time difference for all samples, regardless of if samples were dropped or not. */
       RCLCPP_DEBUG(this->get_logger(),
         "Time difference between consecutive samples: %.5f", time_diff);
     }
   }
+
+  /* Update the previous time. */
   this->previous_time = sample_time;
 }
 

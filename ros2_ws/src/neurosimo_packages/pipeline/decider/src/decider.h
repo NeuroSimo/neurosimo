@@ -31,6 +31,8 @@
 #include "system_interfaces/msg/session.hpp"
 #include "system_interfaces/msg/session_state.hpp"
 
+#include "targeting_msgs/msg/coil_target.hpp"
+
 #include "pipeline_interfaces/msg/timing_error.hpp"
 #include "pipeline_interfaces/msg/timing_latency.hpp"
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
@@ -163,6 +165,7 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionInfo>::SharedPtr decision_info_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
+  rclcpp::Publisher<targeting_msgs::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr dropped_sample_count_publisher;
 
   rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;

@@ -209,7 +209,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->timing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::TimingLatency>(
     "/pipeline/timing/latency",
     10);
-  
+
   /* Publisher for sensory stimulus. */
 
   // Messages can be sent in bursts so keep all messages in the queue.
@@ -219,6 +219,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->sensory_stimulus_publisher = this->create_publisher<pipeline_interfaces::msg::SensoryStimulus>(
     "/pipeline/sensory_stimulus",
     qos_keep_all);
+
+  /* Publisher for coil target. */
+  this->coil_target_publisher = this->create_publisher<targeting_msgs::msg::CoilTarget>(
+    "/neuronavigation/coil_target",
+    10);
 
   /* Action client for performing mTMS trials, only if mTMS device is available. */
   if (this->mtms_device_enabled) {
@@ -388,7 +393,7 @@ void EegDecider::initialize_module() {
 
 std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t current_time) {
   std::lock_guard<std::mutex> lock(this->event_queue_mutex);
-  
+
   if (this->event_queue.empty()) {
     return std::make_tuple(false, 0.0, "");
   }
@@ -739,7 +744,7 @@ bool EegDecider::change_working_directory(const std::string path) {
 
   /* Check that the directory exists and follow symlinks. */
   std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) || 
+  if (!std::filesystem::exists(this->working_directory, ec) ||
       !std::filesystem::is_directory(this->working_directory, ec)) {
     RCLCPP_ERROR(this->get_logger(), "Directory does not exist: %s.", path.c_str());
     if (ec) {
@@ -756,7 +761,7 @@ bool EegDecider::change_working_directory(const std::string path) {
       return false;
     }
     RCLCPP_INFO(this->get_logger(), "Resolved symlink %s to %s", path.c_str(), resolved_path.c_str());
-    
+
     if (!std::filesystem::is_directory(resolved_path, ec)) {
       RCLCPP_ERROR(this->get_logger(), "Symlink target is not a directory: %s -> %s", path.c_str(), resolved_path.c_str());
       return false;
@@ -798,10 +803,10 @@ void EegDecider::update_inotify_watch() {
 
   /* Collect working directory and its subdirectories. */
   std::vector<std::filesystem::path> directories;
-  
+
   /* Check if working directory exists and is accessible. */
   std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) || 
+  if (!std::filesystem::exists(this->working_directory, ec) ||
       !std::filesystem::is_directory(this->working_directory, ec)) {
     RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", this->working_directory.c_str());
     if (ec) {
@@ -819,7 +824,7 @@ void EegDecider::update_inotify_watch() {
         RCLCPP_WARN(this->get_logger(), "Error iterating directory %s: %s", this->working_directory.c_str(), ec.message().c_str());
         break;
       }
-      
+
       std::error_code entry_ec;
       if (std::filesystem::is_directory(entry, entry_ec) && !entry_ec) {
         directories.push_back(entry.path());
@@ -1136,7 +1141,7 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
                          this->trial_queue.empty();
 
   /* Process the sample. */
-  auto [success, trial, timed_trigger] = this->decider_wrapper->process(
+  auto [success, trial, timed_trigger, coil_target] = this->decider_wrapper->process(
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
@@ -1282,6 +1287,13 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     }
     this->sensory_stimuli.clear();
   }
+    /* Send coil target. */
+  if (!coil_target.empty()) {
+    auto coil_target_msg = targeting_msgs::msg::CoilTarget();
+    coil_target_msg.target_name = coil_target;
+    RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
+    this->coil_target_publisher->publish(coil_target_msg);
+  }
 }
 
 void EegDecider::spin() {
@@ -1338,7 +1350,7 @@ int main(int argc, char *argv[]) {
   signal(SIGSEGV, crash_handler);
   signal(SIGABRT, crash_handler);
   signal(SIGFPE, crash_handler);
-  
+
   rclcpp::init(argc, argv);
 
   auto logger = rclcpp::get_logger("decider");

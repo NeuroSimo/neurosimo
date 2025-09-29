@@ -79,6 +79,7 @@ private:
 
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
   void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
+  void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
   std::string goal_id_to_string(const rclcpp_action::GoalUUID &uuid);
 
@@ -147,6 +148,7 @@ private:
   rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr raw_eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
   rclcpp::Publisher<project_interfaces::msg::DeciderList>::SharedPtr decider_list_publisher;
 
   rclcpp::Service<project_interfaces::srv::SetDeciderModule>::SharedPtr set_decider_module_service;
@@ -218,6 +220,9 @@ private:
   bool preprocessor_enabled = false;
 
   double_t timing_latency = 0.0;
+
+  /* Neuronavigation */
+  bool is_coil_at_target = false;
 
   /* ROS parameters */
   double_t minimum_intertrial_interval;

@@ -21,6 +21,7 @@ using namespace std::placeholders;
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string HEALTHCHECK_TOPIC = "/eeg/decider/healthcheck";
+const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
@@ -145,6 +146,12 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/projects/active",
     qos_persist_latest,
     std::bind(&EegDecider::handle_set_active_project, this, _1));
+
+  /* Subscriber for is coil at target. */
+  this->is_coil_at_target_subscriber = create_subscription<std_msgs::msg::Bool>(
+    IS_COIL_AT_TARGET_TOPIC,
+    qos_persist_latest,
+    std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
 
   /* Publisher for listing deciders. */
   this->decider_list_publisher = this->create_publisher<project_interfaces::msg::DeciderList>(
@@ -721,6 +728,10 @@ void EegDecider::handle_set_active_project(const std::shared_ptr<std_msgs::msg::
   update_inotify_watch();
 }
 
+void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg) {
+  this->is_coil_at_target = msg->data;
+}
+
 /* File-system related functions */
 
 bool EegDecider::change_working_directory(const std::string path) {
@@ -1134,7 +1145,8 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     has_event,
     event_type,
     this->event_queue,
-    this->event_queue_mutex);
+    this->event_queue_mutex,
+    this->is_coil_at_target);
 
   /* Log and return early if the Python call failed. */
   if (!success) {

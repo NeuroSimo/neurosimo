@@ -78,7 +78,8 @@ public:
     std::priority_queue<std::pair<double, std::string>,
                        std::vector<std::pair<double, std::string>>,
                        std::greater<std::pair<double, std::string>>>& event_queue,
-    std::mutex& event_queue_mutex);
+    std::mutex& event_queue_mutex,
+    bool is_coil_at_target);
 
   WrapperState get_state() const;
   std::vector<std::string> get_internal_imports() const;

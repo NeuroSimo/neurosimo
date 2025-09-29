@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <rcpputils/filesystem_helper.hpp>
+#include <cmath>
 
 #include "decider_wrapper.h"
 #include <eeg_msgs/msg/sample.hpp>
@@ -265,7 +266,20 @@ void DeciderWrapper::initialize_module(
 
     /* Extract processing_interval_in_samples. */
     if (config.contains("processing_interval_in_samples")) {
-      this->processing_interval_in_samples = config["processing_interval_in_samples"].cast<uint16_t>();
+      try {
+        // Try to cast directly to uint16_t first
+        this->processing_interval_in_samples = config["processing_interval_in_samples"].cast<uint16_t>();
+      } catch (const py::cast_error&) {
+        try {
+          // If that fails, try casting to double first, then convert to uint16_t
+          double interval_double = config["processing_interval_in_samples"].cast<double>();
+          this->processing_interval_in_samples = static_cast<uint16_t>(std::round(interval_double));
+        } catch (const py::cast_error& e) {
+          RCLCPP_ERROR(*logger_ptr, "processing_interval_in_samples must be a number: %s", e.what());
+          state = WrapperState::ERROR;
+          return;
+        }
+      }
     } else {
       RCLCPP_ERROR(*logger_ptr, "'processing_interval_in_samples' key not found in configuration dictionary.");
       state = WrapperState::ERROR;

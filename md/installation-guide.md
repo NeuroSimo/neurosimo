@@ -111,3 +111,46 @@ To create a desktop link to the NeuroSimo panel:
 - Open Chrome and navigate to [http://localhost:3000](http://localhost:3000).
 - Click "Install NeuroSimo panel"
 - Enable launching for desktop shortcut
+
+
+## Troubleshooting
+
+### NVIDIA Driver Issues
+
+Sometimes after installing the OS, `nvidia-smi` may fail with a driver/library version mismatch error:
+
+```
+$ nvidia-smi
+Failed to initialize NVML: Driver/library version mismatch
+NVML library version: 535.86
+```
+
+To resolve this issue:
+
+1. **Purge NVIDIA completely:**
+   ```bash
+   sudo apt purge 'nvidia*'
+   sudo apt autoremove --purge -y
+   ```
+
+2. **Upgrade everything (kernel + system):**
+   ```bash
+   sudo apt update
+   sudo apt full-upgrade -y
+   ```
+
+3. **Reboot into the new kernel:**
+   ```bash
+   sudo reboot
+   ```
+
+4. **Install NVIDIA fresh, with DKMS:**
+   ```bash
+   sudo apt install nvidia-driver-580 nvidia-dkms-580
+   ```
+
+5. **Reboot again, then check:**
+   ```bash
+   sudo reboot
+   nvidia-smi
+   ```

@@ -88,5 +88,32 @@ else
     ./scripts/create-project example
 fi
 
-echo "Installation complete. Please reboot the system before proceeding."
+# Build NeuroSimo
+echo "Building NeuroSimo..."
+./scripts/build-neurosimo
+
+echo "Installation complete. Opening .env file for configuration..."
+
+# Check if gedit is available and we're in a graphical environment
+if command -v gedit &> /dev/null && [ -n "$DISPLAY" ]; then
+    echo "Opening .env file in gedit for editing..."
+    gedit .env &
+    echo "Please modify the .env file to your needs, then save and close the editor."
+else
+    echo "Please modify the .env file to your needs."
+    echo "You can edit it with: gedit .env"
+fi
+
+echo ""
+echo "For first-time installations, a reboot is recommended to ensure all changes take effect"
+echo "(kernel modules, drivers, environment variables, etc.)."
+echo ""
+read -p "Do you want to reboot now? [y/N] " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Rebooting system..."
+    sudo reboot
+else
+    echo "Reboot skipped. You can reboot later with: sudo reboot"
+fi
 echo ""

@@ -90,17 +90,6 @@ The script will run the Ansible playbooks to install the necessary software pack
 
 After the installation is complete, reboot the computer.
 
-After that, build the NeuroSimo project:
-
-```bash
-scripts/build-neurosimo
-```
-
-Modify `.env` file in the repository root to set the environment, including the EEG and
-TMS device settings.
-
-Finally, reboot the computer once more.
-
 After reboot, NeuroSimo should be installed and ready to use via the web interface at
 [http://localhost:3000](http://localhost:3000).
 

@@ -262,7 +262,7 @@ void DeciderWrapper::initialize_module(
       state = WrapperState::ERROR;
       return;
     }
-    
+
     /* Extract processing_interval_in_samples. */
     if (config.contains("processing_interval_in_samples")) {
       this->processing_interval_in_samples = config["processing_interval_in_samples"].cast<uint16_t>();
@@ -507,7 +507,7 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
 bool DeciderWrapper::process_sensory_stimuli_list(
     const py::list& py_sensory_stimuli,
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli) {
-  
+
   if (py_sensory_stimuli.size() > 0) {
     for (const auto& py_sensory_stimulus : py_sensory_stimuli) {
       if (!py::isinstance<py::dict>(py_sensory_stimulus)) {
@@ -530,7 +530,7 @@ bool DeciderWrapper::process_sensory_stimuli_list(
 }
 
 /* TODO: Use struct for the return value. */
-std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>> DeciderWrapper::process(
+std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> DeciderWrapper::process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
     double_t sample_time,
@@ -547,6 +547,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   bool success = true;
   std::shared_ptr<mtms_trial_interfaces::msg::Trial> trial = nullptr;
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
+  std::string coil_target;
 
   /* TODO: The logic below, as well as the difference in semantics between "sample time" and "current time", needs to
      be documented somewhere more thoroughly. */
@@ -587,19 +588,19 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     state = WrapperState::ERROR;
     success = false;
 
-    return {success, trial, timed_trigger};
+    return {success, trial, timed_trigger, coil_target};
 
   } catch(const std::exception& e) {
     RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
     state = WrapperState::ERROR;
     success = false;
 
-    return {success, trial, timed_trigger};
+    return {success, trial, timed_trigger, coil_target};
   }
 
   /* If the return value is None, return early but mark it as successful. */
   if (py_result.is_none()) {
-    return {success, trial, timed_trigger};
+    return {success, trial, timed_trigger, coil_target};
   }
 
   /* If the return value is not None, ensure that it is a dictionary. */
@@ -608,24 +609,30 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     state = WrapperState::ERROR;
     success = false;
 
-    return {success, trial, timed_trigger};
+    return {success, trial, timed_trigger, coil_target};
   }
 
+  /* Extract the dictionary from the result first */
   py::dict dict_result = py_result.cast<py::dict>();
 
   /* Validate that only allowed keys are present */
-  std::vector<std::string> allowed_keys = {"trial", "timed_trigger", "sensory_stimuli", "events"};
+  std::vector<std::string> allowed_keys = {"trial", "timed_trigger", "sensory_stimuli", "events", "coil_target"};
   for (const auto& item : dict_result) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'trial', 'timed_trigger', 'sensory_stimuli', and 'events' are allowed.", key.c_str());
+      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'trial', 'timed_trigger', 'sensory_stimuli', 'events', and 'coil_target' are allowed.", key.c_str());
       state = WrapperState::ERROR;
       success = false;
 
-      return {success, trial, timed_trigger};
+      return {success, trial, timed_trigger, coil_target};
     }
   }
 
+  if (dict_result.contains("coil_target")) {
+    coil_target = dict_result["coil_target"].cast<std::string>();
+  }
+
+  /* Extract the trial from the dictionary. */
   if (dict_result.contains("trial")) {
     /* If there is a trial in the dictionary, extract it and return early. */
     py::dict py_trial = dict_result["trial"].cast<py::dict>();
@@ -638,7 +645,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       state = WrapperState::ERROR;
       success = false;
 
-      return {success, trial, timed_trigger};
+      return {success, trial, timed_trigger, coil_target};
     }
 
     py::list py_targets = py_trial["targets"].cast<py::list>();
@@ -670,7 +677,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       state = WrapperState::ERROR;
       success = false;
 
-      return {success, trial, timed_trigger};
+      return {success, trial, timed_trigger, coil_target};
     }
 
     py::list py_pulse_times = py_trial["pulse_times"].cast<py::list>();
@@ -688,7 +695,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       state = WrapperState::ERROR;
       success = false;
 
-      return {success, trial, timed_trigger};
+      return {success, trial, timed_trigger, coil_target};
     }
 
     py::list py_triggers = py_trial["triggers"].cast<py::list>();
@@ -718,14 +725,14 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
       state = WrapperState::ERROR;
       success = false;
-      return {success, trial, timed_trigger};
+      return {success, trial, timed_trigger, coil_target};
     }
 
     py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
     if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
       state = WrapperState::ERROR;
       success = false;
-      return {success, trial, timed_trigger};
+      return {success, trial, timed_trigger, coil_target};
     }
   }
 
@@ -734,7 +741,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       RCLCPP_ERROR(*logger_ptr, "events must be a list.");
       state = WrapperState::ERROR;
       success = false;
-      return {success, trial, timed_trigger};
+      return {success, trial, timed_trigger, coil_target};
     }
 
     py::list events = dict_result["events"].cast<py::list>();
@@ -751,7 +758,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     }
   }
 
-  return {success, trial, timed_trigger};
+  return {success, trial, timed_trigger, coil_target};
 }
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;

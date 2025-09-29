@@ -36,6 +36,7 @@ enum class PreprocessorState {
   WAITING_FOR_ENABLED,
   READY,
   SAMPLES_DROPPED,
+  DROPPED_SAMPLE_THRESHOLD_EXCEEDED,
   MODULE_ERROR
 };
 
@@ -121,6 +122,11 @@ private:
   std::string module_name = UNSET_STRING;
 
   std::vector<std::string> modules;
+
+  std::deque<std::pair<double_t, int>> dropped_samples_window;
+
+  uint16_t total_dropped_samples = 0;
+  uint16_t dropped_sample_threshold;
 
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
   uint8_t num_of_eeg_channels = UNSET_NUM_OF_CHANNELS;

@@ -42,7 +42,7 @@ export const StatisticsProvider: React.FC<StatisticsProviderProps> = ({ children
     const eegStatisticsSubscriber = new Topic<EegStatistics>({
       ros: ros,
       name: '/eeg/statistics',
-      messageType: 'eeg_interfaces/EegStatistics',
+      messageType: 'eeg_msgs/EegStatistics',
     })
 
     const droppedSamplesSubscriber = new Topic<Int32>({

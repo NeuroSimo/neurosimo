@@ -541,7 +541,8 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     std::priority_queue<std::pair<double, std::string>,
                        std::vector<std::pair<double, std::string>>,
                        std::greater<std::pair<double, std::string>>>& event_queue,
-    std::mutex& event_queue_mutex) {
+    std::mutex& event_queue_mutex,
+    bool is_coil_at_target) {
 
   bool success = true;
   std::shared_ptr<mtms_trial_interfaces::msg::Trial> trial = nullptr;
@@ -579,7 +580,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   /* Call the Python function. */
   py::object py_result;
   try {
-    py_result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, has_event, event_type);
+    py_result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, has_event, event_type, is_coil_at_target);
 
   } catch(const py::error_already_set& e) {
     RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());

@@ -70,12 +70,14 @@ fi
 # Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
 ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml --extra-vars "ansible_become_password=$SUDO_PASS"
 
-# Build ROS workspace
+# Source environment to get ROS base installation
+source ~/.bash_env > /dev/null
+
 echo "Building ROS interfaces..."
 ./scripts/build-ros-interfaces
 
-# Source the updated environment
-source ~/.bash_env
+# Source the environment again to pick up the newly built ROS workspace
+source ~/.bash_env > /dev/null
 
 # Create 'example' project
 echo "Creating 'example' project..."

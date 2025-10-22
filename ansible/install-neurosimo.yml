@@ -18,9 +18,6 @@
     # ROS distro
     ros_distro: "iron"
 
-    # Whether to use GPU or not
-    use_gpu: true
-
   tasks:
     ########################################################################
     # Prerequisites
@@ -97,6 +94,16 @@
     ########################################################################
     # Copy systemd service files & enable
     ########################################################################
+    - name: Detect DISPLAY for target user
+      shell: echo $DISPLAY
+      become: no
+      register: user_display
+      changed_when: false
+
+    - name: Set display_number variable
+      set_fact:
+        display_number: "{{ user_display.stdout | default(':0') }}"
+
     - name: Copy NeuroSimo service
       template:
         src: files/neurosimo.service.j2

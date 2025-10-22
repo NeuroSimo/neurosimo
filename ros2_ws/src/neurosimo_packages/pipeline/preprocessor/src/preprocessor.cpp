@@ -113,6 +113,11 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     "/pipeline/preprocessor/enabled",
     qos_persist_latest);
 
+  /* Publisher for Python logs from preprocessor. */
+  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessage>(
+    "/pipeline/preprocessor/log",
+    100);  // Use larger queue to handle potential bursts of log messages
+
   /* Initialize variables. */
   this->preprocessor_wrapper = std::make_unique<PreprocessorWrapper>(logger);
 
@@ -663,6 +668,17 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample
     sample_buffer,
     sample_time,
     pulse_given);
+
+  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
+  auto python_logs = this->preprocessor_wrapper->get_and_clear_logs();
+  for (const auto& log_msg : python_logs) {
+    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
+    
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_msg;
+    msg.sample_time = sample_time;
+    this->python_log_publisher->publish(msg);
+  }
 
   if (success) {
     /* Copy metadata from the raw sample. */

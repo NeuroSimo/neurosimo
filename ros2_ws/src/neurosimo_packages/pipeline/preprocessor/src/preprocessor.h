@@ -25,6 +25,8 @@
 #include "project_interfaces/srv/set_preprocessor_module.hpp"
 #include "project_interfaces/srv/set_preprocessor_enabled.hpp"
 
+#include "pipeline_interfaces/msg/log_message.hpp"
+
 #include "ring_buffer.h"
 
 const uint16_t UNSET_SAMPLING_FREQUENCY = 0;
@@ -104,6 +106,8 @@ private:
 
   rclcpp::Service<project_interfaces::srv::SetPreprocessorEnabled>::SharedPtr set_preprocessor_enabled_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr preprocessor_enabled_publisher;
+
+  rclcpp::Publisher<pipeline_interfaces::msg::LogMessage>::SharedPtr python_log_publisher;
 
   bool enabled = false;
 

@@ -13,6 +13,7 @@
 #include "system_interfaces/msg/session_state.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
+#include "pipeline_interfaces/msg/log_message.hpp"
 
 #include "project_interfaces/msg/presenter_list.hpp"
 #include "project_interfaces/srv/set_presenter_module.hpp"
@@ -84,6 +85,8 @@ private:
 
   rclcpp::Service<project_interfaces::srv::SetPresenterEnabled>::SharedPtr set_presenter_enabled_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr presenter_enabled_publisher;
+
+  rclcpp::Publisher<pipeline_interfaces::msg::LogMessage>::SharedPtr python_log_publisher;
 
   bool enabled;
 

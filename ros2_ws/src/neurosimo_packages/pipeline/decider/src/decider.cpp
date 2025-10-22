@@ -225,6 +225,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/neuronavigation/coil_target",
     10);
 
+  /* Publisher for Python logs from decider. */
+  this->python_log_publisher = this->create_publisher<std_msgs::msg::String>(
+    "/pipeline/decider/log",
+    100);  // Use larger queue to handle potential bursts of log messages
+
   /* Action client for performing mTMS trials, only if mTMS device is available. */
   if (this->mtms_device_enabled) {
     this->perform_trial_client = rclcpp_action::create_client<mtms_trial_interfaces::action::PerformTrial>(
@@ -1152,6 +1157,16 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     this->event_queue,
     this->event_queue_mutex,
     this->is_coil_at_target);
+
+  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
+  auto python_logs = this->decider_wrapper->get_and_clear_logs();
+  for (const auto& log_msg : python_logs) {
+    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
+    
+    auto msg = std_msgs::msg::String();
+    msg.data = log_msg;
+    this->python_log_publisher->publish(msg);
+  }
 
   /* Log and return early if the Python call failed. */
   if (!success) {

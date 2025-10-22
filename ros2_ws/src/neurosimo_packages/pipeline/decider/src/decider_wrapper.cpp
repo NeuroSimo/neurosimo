@@ -464,12 +464,20 @@ void DeciderWrapper::warm_up() {
     RCLCPP_INFO(*logger_ptr, " ");
     RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", warm_up_rounds);
     RCLCPP_INFO(*logger_ptr, " ");
+    
+    // Clear any logs accumulated during warm-up to prevent them from being published
+    get_and_clear_logs();
+    
     log_section_header("Operation");
 
   } catch (const py::error_already_set& e) {
     RCLCPP_ERROR(*logger_ptr, "Warm-up failed with Python error: %s", e.what());
+    // Clear logs from failed warm-up as well
+    get_and_clear_logs();
   } catch (const std::exception& e) {
     RCLCPP_ERROR(*logger_ptr, "Warm-up failed with C++ error: %s", e.what());
+    // Clear logs from failed warm-up as well
+    get_and_clear_logs();
   }
 }
 

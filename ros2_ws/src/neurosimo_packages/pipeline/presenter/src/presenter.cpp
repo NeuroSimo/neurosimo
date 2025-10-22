@@ -144,6 +144,18 @@ void EegPresenter::initialize_presenter_module() {
   this->presenter_wrapper->initialize_module(
     this->working_directory,
     this->module_name);
+
+  /* Publish initialization logs from Python constructor */
+  auto initialization_logs = this->presenter_wrapper->get_and_clear_logs();
+  for (const auto& log_msg : initialization_logs) {
+    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
+    
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_msg;
+    msg.sample_time = 0.0;
+    msg.is_initialization = true;
+    this->python_log_publisher->publish(msg);
+  }
 }
 
 /* Session handler. */
@@ -426,6 +438,7 @@ void EegPresenter::update_time(double_t time) {
     auto msg = pipeline_interfaces::msg::LogMessage();
     msg.message = log_msg;
     msg.sample_time = stimulus_time;
+    msg.is_initialization = false;
     this->python_log_publisher->publish(msg);
   }
 

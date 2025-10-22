@@ -409,6 +409,7 @@ void DeciderWrapper::warm_up() {
     bool dummy_is_trigger = false;
     bool dummy_has_event = false;
     std::string dummy_event_type = "";
+    bool dummy_is_coil_at_target = true;
 
     // Perform warm-up rounds with fresh random data for each round
     for (int round = 0; round < warm_up_rounds; round++) {
@@ -441,7 +442,8 @@ void DeciderWrapper::warm_up() {
           dummy_ready_for_trial, 
           dummy_is_trigger, 
           dummy_has_event, 
-          dummy_event_type
+          dummy_event_type,
+          dummy_is_coil_at_target
         );
         
         auto end_time = std::chrono::high_resolution_clock::now();

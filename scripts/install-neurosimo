@@ -92,7 +92,10 @@ fi
 
 # Build NeuroSimo
 echo "Building NeuroSimo..."
-./scripts/build-neurosimo
+
+# Run build-neurosimo script with docker group permissions (group membership is added by the ansible playbook,
+# but only takes effect after a logout - hence the need for sg to run the script with the correct permissions.)
+sg docker -c "./scripts/build-neurosimo"
 
 echo "Installation complete. Opening .env file for configuration..."
 

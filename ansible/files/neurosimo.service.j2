@@ -21,7 +21,7 @@ ExecStartPre=/bin/bash -c 'for i in {1..30}; do if xhost >& /dev/null; then brea
 ExecStartPre=/usr/bin/xhost +local:docker
 
 # Start containers
-{% if use_gpu %}
+{% if use_gpu | bool %}
 ExecStart=docker-compose --profile gpu up
 {% else %}
 ExecStart=docker-compose --profile non-gpu up

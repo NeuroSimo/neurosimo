@@ -19,7 +19,12 @@ const DeciderLogPanelTitle = styled.div`
   align-items: center;
 `
 
-const ClearButton = styled.button`
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`
+
+const LogButton = styled.button`
   background-color: #d46c0b;
   color: white;
   border: none;
@@ -35,6 +40,11 @@ const ClearButton = styled.button`
 
   &:active {
     background-color: #9a4a07;
+  }
+
+  &:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
   }
 `
 
@@ -80,16 +90,30 @@ export const DeciderLogDisplay: React.FC = () => {
     }
   }, [deciderLogs])
 
+  const handleCopyLogs = async () => {
+    const logsText = deciderLogs.join('\n')
+    try {
+      await navigator.clipboard.writeText(logsText)
+    } catch (err) {
+      console.error('Failed to copy logs:', err)
+    }
+  }
+
   return (
     <>
       <DeciderLogPanelTitle>
-        <span>Decider Logs</span>
-        <ClearButton onClick={clearDeciderLogs}>Clear</ClearButton>
+        <span>Decider logs</span>
+        <ButtonGroup>
+          <LogButton onClick={handleCopyLogs} disabled={deciderLogs.length === 0}>
+            Copy
+          </LogButton>
+          <LogButton onClick={clearDeciderLogs}>Clear</LogButton>
+        </ButtonGroup>
       </DeciderLogPanelTitle>
       <DeciderLogPanel>
         <LogContainer ref={logContainerRef}>
           {deciderLogs.length === 0 ? (
-            <LogEntry style={{ color: '#999', fontStyle: 'italic' }}>No logs yet...</LogEntry>
+            <LogEntry style={{ color: '#999', fontStyle: 'italic' }}>No logs...</LogEntry>
           ) : (
             deciderLogs.map((log, index) => <LogEntry key={index}>{log}</LogEntry>)
           )}

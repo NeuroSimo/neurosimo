@@ -19,6 +19,7 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 WORKDIR /app/ros2_ws
 
 # ROS interfaces and utils
+COPY ros2_ws/src/neurosimo_packages/interfaces/pipeline_interfaces src/interfaces/pipeline_interfaces/
 COPY ros2_ws/src/neurosimo_packages/interfaces/project_interfaces src/interfaces/project_interfaces/
 COPY ros2_ws/src/shared_packages/interfaces/eeg_msgs src/shared_packages/interfaces/eeg_msgs/
 COPY ros2_ws/src/shared_packages/interfaces/system_interfaces src/shared_packages/interfaces/system_interfaces/

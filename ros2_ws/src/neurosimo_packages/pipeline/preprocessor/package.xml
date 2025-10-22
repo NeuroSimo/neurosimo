@@ -13,6 +13,7 @@
   <depend>std_msgs</depend>
 
   <depend>eeg_msgs</depend>
+  <depend>pipeline_interfaces</depend>
   <depend>project_interfaces</depend>
   <depend>system_interfaces</depend>
   <depend>realtime_utils</depend>

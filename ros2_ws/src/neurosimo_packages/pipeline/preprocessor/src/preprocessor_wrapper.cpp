@@ -206,4 +206,13 @@ bool PreprocessorWrapper::process(
   return true;
 }
 
+std::vector<std::string> PreprocessorWrapper::get_and_clear_logs() {
+  std::lock_guard<std::mutex> lock(log_buffer_mutex);
+  std::vector<std::string> logs = std::move(log_buffer);
+  log_buffer.clear();
+  return logs;
+}
+
 rclcpp::Logger* PreprocessorWrapper::logger_ptr = nullptr;
+std::vector<std::string> PreprocessorWrapper::log_buffer;
+std::mutex PreprocessorWrapper::log_buffer_mutex;

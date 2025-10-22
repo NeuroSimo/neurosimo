@@ -241,10 +241,14 @@
         line: "source /opt/ros/{{ ros_distro }}/setup.bash"
         state: present
 
-    - name: Ensure workspace is sourced
-      lineinfile:
+    - name: Ensure workspace is sourced (with conditional check)
+      blockinfile:
         dest: "{{ target_home }}/.bash_env"
-        line: "source {{ repo_root }}/ros2_ws/install/setup.bash"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        block: |
+          if [ -f {{ repo_root }}/ros2_ws/install/setup.bash ]; then
+              source {{ repo_root }}/ros2_ws/install/setup.bash
+          fi
         state: present
 
     - name: Ensure instructions script is sourced

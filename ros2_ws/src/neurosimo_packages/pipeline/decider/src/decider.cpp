@@ -226,7 +226,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     10);
 
   /* Publisher for Python logs from decider. */
-  this->python_log_publisher = this->create_publisher<std_msgs::msg::String>(
+  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessage>(
     "/pipeline/decider/log",
     100);  // Use larger queue to handle potential bursts of log messages
 
@@ -1168,8 +1168,9 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   for (const auto& log_msg : python_logs) {
     RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
     
-    auto msg = std_msgs::msg::String();
-    msg.data = log_msg;
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_msg;
+    msg.sample_time = sample_time;
     this->python_log_publisher->publish(msg);
   }
 

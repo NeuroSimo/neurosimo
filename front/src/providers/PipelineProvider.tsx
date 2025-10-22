@@ -40,6 +40,11 @@ interface RosString extends ROSLIB.Message {
   data: string
 }
 
+export interface LogMessage extends ROSLIB.Message {
+  message: string
+  sample_time: number
+}
+
 interface PipelineContextType {
   preprocessorList: string[]
   preprocessorModule: string
@@ -48,7 +53,7 @@ interface PipelineContextType {
   deciderList: string[]
   deciderModule: string
   deciderEnabled: boolean
-  deciderLogs: string[]
+  deciderLogs: LogMessage[]
 
   presenterList: string[]
   presenterModule: string
@@ -110,7 +115,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [deciderList, setDeciderList] = useState<string[]>([])
   const [deciderModule, setDeciderModule] = useState<string>('')
   const [deciderEnabled, setDeciderEnabled] = useState<boolean>(false)
-  const [deciderLogs, setDeciderLogs] = useState<string[]>([])
+  const [deciderLogs, setDeciderLogs] = useState<LogMessage[]>([])
 
   const [presenterList, setPresenterList] = useState<string[]>([])
   const [presenterModule, setPresenterModule] = useState<string>('')
@@ -258,14 +263,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     })
 
     /* Subscriber for decider logs. */
-    const deciderLogSubscriber = new Topic<RosString>({
+    const deciderLogSubscriber = new Topic<LogMessage>({
       ros: ros,
       name: '/pipeline/decider/log',
-      messageType: 'std_msgs/String',
+      messageType: 'pipeline_interfaces/LogMessage',
     })
 
     deciderLogSubscriber.subscribe((message) => {
-      setDeciderLogs((prevLogs) => [...prevLogs, message.data])
+      setDeciderLogs((prevLogs) => [...prevLogs, message])
     })
 
     /* Unsubscribers */

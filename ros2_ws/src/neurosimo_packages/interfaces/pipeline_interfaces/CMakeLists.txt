@@ -29,6 +29,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TriggerInfo.msg"
   "msg/DecisionInfo.msg"
   "msg/SensoryStimulus.msg"
+  "msg/LogMessage.msg"
 
   "srv/RequestTimedTrigger.srv"
 

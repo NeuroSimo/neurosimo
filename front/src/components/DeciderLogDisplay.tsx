@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel } from 'styles/General'
 
-import { PipelineContext } from 'providers/PipelineProvider'
+import { PipelineContext, LogMessage } from 'providers/PipelineProvider'
 
 const DeciderLogPanelTitle = styled.div`
   width: 680px;
@@ -82,7 +82,7 @@ const LogEntry = styled.div`
   margin-bottom: 4px;
   color: #333;
   display: grid;
-  grid-template-columns: 60px 1fr;
+  grid-template-columns: 80px 1fr;
   gap: 0;
 `
 
@@ -91,11 +91,11 @@ const Timestamp = styled.span`
   font-weight: bold;
   text-align: right;
   background-color: #e8e8e8;
-  padding: 2px 8px;
+  padding: 2px 4px;
   border-right: 2px solid #ccc;
 `
 
-const LogMessage = styled.span`
+const LogText = styled.span`
   padding: 2px 8px;
 `
 
@@ -111,7 +111,9 @@ export const DeciderLogDisplay: React.FC = () => {
   }, [deciderLogs])
 
   const handleCopyLogs = async () => {
-    const logsText = deciderLogs.map((log, index) => `${(index + 1).toFixed(1)} ${log}`).join('\n')
+    const logsText = deciderLogs
+      .map((log: LogMessage) => `${log.sample_time.toFixed(3)} ${log.message}`)
+      .join('\n')
     try {
       await navigator.clipboard.writeText(logsText)
     } catch (err) {
@@ -137,10 +139,10 @@ export const DeciderLogDisplay: React.FC = () => {
               No logs...
             </LogEntry>
           ) : (
-            deciderLogs.map((log, index) => (
+            deciderLogs.map((log: LogMessage, index: number) => (
               <LogEntry key={index}>
-                <Timestamp>{(index + 1).toFixed(1)}</Timestamp>
-                <LogMessage>{log}</LogMessage>
+                <Timestamp>{log.sample_time.toFixed(3)}</Timestamp>
+                <LogText>{log.message}</LogText>
               </LogEntry>
             ))
           )}

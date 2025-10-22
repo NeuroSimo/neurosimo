@@ -167,6 +167,7 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<targeting_msgs::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr dropped_sample_count_publisher;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr python_log_publisher;
 
   rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;
 

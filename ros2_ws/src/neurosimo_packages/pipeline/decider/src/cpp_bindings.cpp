@@ -8,19 +8,26 @@
 namespace py = pybind11;
 
 void DeciderWrapper::log(const std::string& message) {
-  RCLCPP_INFO(*logger_ptr, "[Python]: %s", message.c_str());
+  /* Buffer the log message to avoid ROS2 publishing overhead during Python execution */
+  std::lock_guard<std::mutex> lock(log_buffer_mutex);
+  log_buffer.push_back(message);
 }
 
 void DeciderWrapper::log_throttle(const std::string& message, const double_t period) {
-  static double_t last_log_time = 0.0;
-
+  static std::unordered_map<std::string, double_t> last_log_times;
+  
   double_t current_time = rclcpp::Clock().now().seconds();
-  if (current_time - last_log_time < period) {
+  
+  auto it = last_log_times.find(message);
+  if (it != last_log_times.end() && current_time - it->second < period) {
     return;
   }
-  RCLCPP_INFO(*logger_ptr, "[Python, throttled]: %s", message.c_str());
-
-  last_log_time = current_time;
+  
+  /* Buffer the throttled log message */
+  std::lock_guard<std::mutex> lock(log_buffer_mutex);
+  log_buffer.push_back("[Throttled] " + message);
+  
+  last_log_times[message] = current_time;
 }
 
 PYBIND11_MODULE(cpp_bindings, m) {

@@ -86,17 +86,17 @@ const LogEntry = styled.div`
   gap: 0;
 `
 
-const Timestamp = styled.span`
-  color: #555;
+const Timestamp = styled.span<{ $isInit?: boolean }>`
+  color: ${props => props.$isInit ? '#000' : '#555'};
   font-weight: bold;
   text-align: right;
-  background-color: #e8e8e8;
+  background-color: ${props => props.$isInit ? '#d46c0b' : '#e8e8e8'};
   padding: 2px 4px;
-  border-right: 2px solid #ccc;
+  border-right: 2px solid ${props => props.$isInit ? '#b85a09' : '#ccc'};
 `
 
 const LogText = styled.span`
-  padding: 2px 8px;
+  padding: 2px 10px;
 `
 
 export const DeciderLogDisplay: React.FC = () => {
@@ -112,7 +112,10 @@ export const DeciderLogDisplay: React.FC = () => {
 
   const handleCopyLogs = async () => {
     const logsText = deciderLogs
-      .map((log: LogMessage) => `${log.sample_time.toFixed(3)} ${log.message}`)
+      .map((log: LogMessage) => {
+        const timestamp = log.is_initialization ? 'Init' : log.sample_time.toFixed(3)
+        return `${timestamp} ${log.message}`
+      })
       .join('\n')
     try {
       await navigator.clipboard.writeText(logsText)
@@ -141,7 +144,9 @@ export const DeciderLogDisplay: React.FC = () => {
           ) : (
             deciderLogs.map((log: LogMessage, index: number) => (
               <LogEntry key={index}>
-                <Timestamp>{log.sample_time.toFixed(3)}</Timestamp>
+                <Timestamp $isInit={log.is_initialization}>
+                  {log.is_initialization ? 'Init' : log.sample_time.toFixed(3)}
+                </Timestamp>
                 <LogText>{log.message}</LogText>
               </LogEntry>
             ))

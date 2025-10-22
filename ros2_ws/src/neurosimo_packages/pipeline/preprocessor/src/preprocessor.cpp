@@ -234,6 +234,18 @@ void EegPreprocessor::initialize_module() {
     this->num_of_emg_channels,
     this->sampling_frequency);
 
+  /* Publish initialization logs from Python constructor */
+  auto initialization_logs = this->preprocessor_wrapper->get_and_clear_logs();
+  for (const auto& log_msg : initialization_logs) {
+    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
+    
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_msg;
+    msg.sample_time = 0.0;
+    msg.is_initialization = true;
+    this->python_log_publisher->publish(msg);
+  }
+
   if (this->preprocessor_wrapper->get_state() != WrapperState::READY) {
     RCLCPP_INFO(this->get_logger(), "Failed to initialize preprocessor.");
     return;
@@ -677,6 +689,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample
     auto msg = pipeline_interfaces::msg::LogMessage();
     msg.message = log_msg;
     msg.sample_time = sample_time;
+    msg.is_initialization = false;
     this->python_log_publisher->publish(msg);
   }
 

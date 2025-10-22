@@ -17,11 +17,8 @@ echo ""
 # Run the Docker installation playbook
 ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-docker.yml --extra-vars "ansible_become_password=$SUDO_PASS"
 
-# Run the Docker installation playbook
+# Run the ROS installation playbook
 ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-ros.yml --extra-vars "ansible_become_password=$SUDO_PASS"
-
-# Run the NeuroSimo setup playbook
-ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml --extra-vars "ansible_become_password=$SUDO_PASS"
 
 # Function to check if the kernel is preempt_rt
 is_preempt_rt() {
@@ -44,31 +41,82 @@ is_preempt_rt() {
     return 1
 }
 
-# Check if preempt_rt kernel is installed, and if so, prompt user for NVIDIA driver installation
-if is_preempt_rt; then
-    echo "Preempt-RT kernel detected."
-
-    # Prompt user for NVIDIA driver installation
-    read -p "Do you want to install NVIDIA drivers for Preempt-RT kernel? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo ""
-        echo "Please ensure that you are running this script in a text console (not a graphical terminal)."
-        echo "Press Ctrl+Alt+F3 to switch to a text console if necessary."
-        echo ""
-        echo "Note: you may need to switch back to the text console (Ctrl+Alt+F3) during the installation process if the display goes blank."
-        echo ""
-        read -p "Press Enter to continue..."
-        echo ""
-
-        ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+# Function to check if NVIDIA GPU is present
+has_nvidia_gpu() {
+    # Check using lspci for NVIDIA VGA or 3D controller
+    if lspci | grep -qi "nvidia.*\(vga\|3d\)"; then
+        return 0
     fi
+    return 1
+}
+
+# Check if NVIDIA GPU is present and set GPU flag
+if ! has_nvidia_gpu; then
+    echo ""
+    echo "WARNING: No NVIDIA GPU detected!"
+    echo "NeuroSimo will run in CPU-only mode, disabling GPU support."
+    echo ""
+    read -p "Do you want to continue without GPU support? [y/N] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Installation cancelled."
+        exit 1
+    fi
+    USE_GPU=false
 else
-    echo "Warning: Preempt-RT kernel not detected. Please install a Preempt-RT kernel for real-time capabilities."
+    echo "NVIDIA GPU detected, installing NeuroSimo with GPU support."
+    USE_GPU=true
 fi
 
-# Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
-ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+# Warn about Preempt-RT kernel if not installed
+if ! is_preempt_rt; then
+    echo "WARNING: Preempt-RT kernel not detected. Please install a Preempt-RT kernel for real-time capabilities."
+fi
+
+# Install NVIDIA drivers only if GPU is present
+if [ "$USE_GPU" = true ]; then
+    # Check if preempt_rt kernel is installed, and install appropriate drivers
+    if is_preempt_rt; then
+        echo "Preempt-RT kernel detected."
+
+        # Prompt user for NVIDIA driver installation
+        read -p "Do you want to install NVIDIA drivers for Preempt-RT kernel? [y/N] " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo ""
+            echo "Please ensure that you are running this script in a text console (not a graphical terminal)."
+            echo "Press Ctrl+Alt+F3 to switch to a text console if necessary."
+            echo ""
+            echo "Note: you may need to switch back to the text console (Ctrl+Alt+F3) during the installation process if the display goes blank."
+            echo ""
+            read -p "Press Enter to continue..."
+            echo ""
+
+            ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+        fi
+    else
+        # Standard kernel - install drivers using package manager
+        # Check if nvidia-smi is available (drivers already installed)
+        if ! command -v nvidia-smi &> /dev/null; then
+            read -p "Do you want to install NVIDIA drivers? [Y/n] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                echo "Installing NVIDIA drivers..."
+                ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+                echo ""
+                echo "NVIDIA drivers installed. A reboot is required for the drivers to take effect."
+            fi
+        else
+            echo "NVIDIA drivers are already installed."
+        fi
+    fi
+
+    # Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
+    ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+fi
+
+# Run the NeuroSimo setup playbook with GPU flag
+ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml --extra-vars "ansible_become_password=$SUDO_PASS use_gpu=$USE_GPU"
 
 # Source environment to get ROS base installation
 source ~/.bash_env > /dev/null
@@ -110,8 +158,7 @@ else
 fi
 
 echo ""
-echo "For first-time installations, a reboot is recommended to ensure all changes take effect"
-echo "(kernel modules, drivers, environment variables, etc.)."
+echo "For first-time installations, a reboot is required for all changes to take effect"
 echo ""
 read -p "Do you want to reboot now? [y/N] " -n 1 -r
 echo

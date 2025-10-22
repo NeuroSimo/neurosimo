@@ -1,0 +1,58 @@
+---
+- name: Setup NVIDIA Drivers (Standard Kernel)
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Add NVIDIA PPA repository
+      ansible.builtin.apt_repository:
+        repo: ppa:graphics-drivers/ppa
+        state: present
+        update_cache: yes
+
+    - name: Install Ubuntu drivers common
+      ansible.builtin.apt:
+        name: ubuntu-drivers-common
+        state: present
+        update_cache: yes
+
+    - name: Detect recommended NVIDIA driver
+      ansible.builtin.shell:
+        cmd: ubuntu-drivers devices | grep -oP 'driver\s+:\s+\K\S+' | grep nvidia | head -n1
+      register: recommended_driver
+      changed_when: false
+      failed_when: false
+
+    - name: Display recommended driver
+      ansible.builtin.debug:
+        msg: "Recommended NVIDIA driver: {{ recommended_driver.stdout }}"
+      when: recommended_driver.stdout != ""
+
+    - name: Install recommended NVIDIA driver
+      ansible.builtin.apt:
+        name: "{{ recommended_driver.stdout }}"
+        state: present
+        update_cache: yes
+      when: recommended_driver.stdout != ""
+
+    - name: Fallback to nvidia-driver-560 if detection failed
+      ansible.builtin.apt:
+        name: nvidia-driver-560
+        state: present
+        update_cache: yes
+      when: recommended_driver.stdout == ""
+
+    - name: Install NVIDIA utils
+      ansible.builtin.apt:
+        name:
+          - nvidia-utils-560
+        state: present
+
+    - name: Load NVIDIA kernel module
+      community.general.modprobe:
+        name: nvidia
+        state: present
+      ignore_errors: yes
+

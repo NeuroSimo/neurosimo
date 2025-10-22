@@ -48,6 +48,7 @@ interface PipelineContextType {
   deciderList: string[]
   deciderModule: string
   deciderEnabled: boolean
+  deciderLogs: string[]
 
   presenterList: string[]
   presenterModule: string
@@ -60,6 +61,7 @@ interface PipelineContextType {
   setTimingLatency: React.Dispatch<React.SetStateAction<TimingLatency | null>>
   setTimingError: React.Dispatch<React.SetStateAction<TimingError | null>>
   setDecisionInfo: React.Dispatch<React.SetStateAction<DecisionInfo | null>>
+  clearDeciderLogs: () => void
 }
 
 const defaultPipelineState: PipelineContextType = {
@@ -70,6 +72,7 @@ const defaultPipelineState: PipelineContextType = {
   deciderList: [],
   deciderModule: '',
   deciderEnabled: false,
+  deciderLogs: [],
 
   presenterList: [],
   presenterModule: '',
@@ -88,6 +91,9 @@ const defaultPipelineState: PipelineContextType = {
   setDecisionInfo: () => {
     console.warn('setDecisionInfo is not yet initialized.')
   },
+  clearDeciderLogs: () => {
+    console.warn('clearDeciderLogs is not yet initialized.')
+  },
 }
 
 export const PipelineContext = React.createContext<PipelineContextType>(defaultPipelineState)
@@ -104,6 +110,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [deciderList, setDeciderList] = useState<string[]>([])
   const [deciderModule, setDeciderModule] = useState<string>('')
   const [deciderEnabled, setDeciderEnabled] = useState<boolean>(false)
+  const [deciderLogs, setDeciderLogs] = useState<string[]>([])
 
   const [presenterList, setPresenterList] = useState<string[]>([])
   const [presenterModule, setPresenterModule] = useState<string>('')
@@ -112,6 +119,10 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [timingLatency, setTimingLatency] = useState<TimingLatency | null>(null)
   const [timingError, setTimingError] = useState<TimingError | null>(null)
   const [decisionInfo, setDecisionInfo] = useState<DecisionInfo | null>(null)
+
+  const clearDeciderLogs = () => {
+    setDeciderLogs([])
+  }
 
   useEffect(() => {
     /* Subscriber for preprocessor list. */
@@ -246,6 +257,17 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       setDecisionInfo(message)
     })
 
+    /* Subscriber for decider logs. */
+    const deciderLogSubscriber = new Topic<RosString>({
+      ros: ros,
+      name: '/pipeline/decider/log',
+      messageType: 'std_msgs/String',
+    })
+
+    deciderLogSubscriber.subscribe((message) => {
+      setDeciderLogs((prevLogs) => [...prevLogs, message.data])
+    })
+
     /* Unsubscribers */
     return () => {
       preprocessorListSubscriber.unsubscribe()
@@ -263,6 +285,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       timingLatencySubscriber.unsubscribe()
       timingErrorSubscriber.unsubscribe()
       decisionInfoSubscriber.unsubscribe()
+      deciderLogSubscriber.unsubscribe()
     }
   }, [])
 
@@ -275,6 +298,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         deciderList,
         deciderModule,
         deciderEnabled,
+        deciderLogs,
         presenterList,
         presenterModule,
         presenterEnabled,
@@ -284,6 +308,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         setTimingLatency,
         setTimingError,
         setDecisionInfo,
+        clearDeciderLogs,
       }}
     >
       {children}

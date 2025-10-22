@@ -8,6 +8,7 @@ import { EegStreamDisplay } from 'components/EegStreamDisplay'
 import { StatisticsDisplay } from 'components/StatisticsDisplay'
 import { LatencyDisplay } from 'components/LatencyDisplay'
 import { SessionDisplay } from 'components/SessionDisplay'
+import { DeciderLogDisplay } from 'components/DeciderLogDisplay'
 
 import { StyledPanel, ProjectRow, ConfigRow, ConfigLabel, Select, SmallerTitle } from 'styles/General'
 
@@ -303,6 +304,7 @@ export const PipelineView = () => {
       <EegStreamDisplay />
       <StatisticsDisplay />
       <LatencyDisplay />
+      <DeciderLogDisplay />
     </>
   )
 }

@@ -367,6 +367,13 @@ DeciderWrapper::~DeciderWrapper() {
   py_emg_data.reset();
 }
 
+std::vector<std::string> DeciderWrapper::get_and_clear_logs() {
+  std::lock_guard<std::mutex> lock(log_buffer_mutex);
+  std::vector<std::string> logs = std::move(log_buffer);
+  log_buffer.clear();
+  return logs;
+}
+
 std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> DeciderWrapper::get_targets() {
   std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> targets;
 
@@ -776,3 +783,5 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
 }
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
+std::vector<std::string> DeciderWrapper::log_buffer;
+std::mutex DeciderWrapper::log_buffer_mutex;

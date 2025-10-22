@@ -43,6 +43,7 @@ interface RosString extends ROSLIB.Message {
 export interface LogMessage extends ROSLIB.Message {
   message: string
   sample_time: number
+  is_initialization: boolean
 }
 
 interface PipelineContextType {

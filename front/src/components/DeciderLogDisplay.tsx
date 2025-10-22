@@ -81,6 +81,22 @@ const LogContainer = styled.div`
 const LogEntry = styled.div`
   margin-bottom: 4px;
   color: #333;
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 0;
+`
+
+const Timestamp = styled.span`
+  color: #555;
+  font-weight: bold;
+  text-align: right;
+  background-color: #e8e8e8;
+  padding: 2px 8px;
+  border-right: 2px solid #ccc;
+`
+
+const LogMessage = styled.span`
+  padding: 2px 8px;
 `
 
 export const DeciderLogDisplay: React.FC = () => {
@@ -95,7 +111,7 @@ export const DeciderLogDisplay: React.FC = () => {
   }, [deciderLogs])
 
   const handleCopyLogs = async () => {
-    const logsText = deciderLogs.join('\n')
+    const logsText = deciderLogs.map((log, index) => `${(index + 1).toFixed(1)} ${log}`).join('\n')
     try {
       await navigator.clipboard.writeText(logsText)
     } catch (err) {
@@ -117,9 +133,16 @@ export const DeciderLogDisplay: React.FC = () => {
       <DeciderLogPanel>
         <LogContainer ref={logContainerRef}>
           {deciderLogs.length === 0 ? (
-            <LogEntry style={{ color: '#999', fontStyle: 'italic' }}>No logs...</LogEntry>
+            <LogEntry style={{ color: '#999', fontStyle: 'italic', display: 'block' }}>
+              No logs...
+            </LogEntry>
           ) : (
-            deciderLogs.map((log, index) => <LogEntry key={index}>{log}</LogEntry>)
+            deciderLogs.map((log, index) => (
+              <LogEntry key={index}>
+                <Timestamp>{(index + 1).toFixed(1)}</Timestamp>
+                <LogMessage>{log}</LogMessage>
+              </LogEntry>
+            ))
           )}
         </LogContainer>
       </DeciderLogPanel>

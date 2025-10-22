@@ -133,7 +133,7 @@ if [ -n "$CONTAINER_NAME" ] && [ "$TIME_FILTERS" = false ]; then
 
     eval $CMD
 else
-    CMD="journalctl -u neurosimo"
+    CMD="journalctl -u neurosimo -b"
     if [ "$TIME_FILTERS" = false ]; then
         CMD="$CMD --lines $TAIL_LINES"
     fi

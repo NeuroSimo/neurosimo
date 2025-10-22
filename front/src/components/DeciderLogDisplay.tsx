@@ -72,6 +72,10 @@ const LogContainer = styled.div`
   line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 `
 
 const LogEntry = styled.div`

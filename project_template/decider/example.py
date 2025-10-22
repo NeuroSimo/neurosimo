@@ -35,7 +35,7 @@ class Decider:
         }
 
     def process(self, current_time, timestamps, valid_samples, eeg_buffer, emg_buffer, 
-               current_sample_index, ready_for_trial, is_trigger, is_event, event_type):
+               current_sample_index, ready_for_trial, is_trigger, is_event, event_type, is_coil_at_target):
         """Process EEG/EMG samples and decide whether to trigger stimulation."""
         print(f"Processing sample at time {current_time}.")
 

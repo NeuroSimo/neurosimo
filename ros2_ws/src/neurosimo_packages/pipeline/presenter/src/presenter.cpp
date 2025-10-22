@@ -96,6 +96,11 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     "/pipeline/presenter/enabled",
     qos_persist_latest);
 
+  /* Publisher for Python logs from presenter. */
+  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessage>(
+    "/pipeline/presenter/log",
+    100);  // Use larger queue to handle potential bursts of log messages
+
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
 
@@ -412,6 +417,17 @@ void EegPresenter::update_time(double_t time) {
 
   // Process the stimulus using the presenter wrapper
   bool success = this->presenter_wrapper->process(*stimulus);
+
+  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
+  auto python_logs = this->presenter_wrapper->get_and_clear_logs();
+  for (const auto& log_msg : python_logs) {
+    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
+    
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_msg;
+    msg.sample_time = stimulus_time;
+    this->python_log_publisher->publish(msg);
+  }
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");

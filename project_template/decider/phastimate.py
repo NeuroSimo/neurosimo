@@ -117,7 +117,8 @@ class Decider:
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                 eeg_buffer: np.ndarray, emg_buffer: np.ndarray, current_sample_index: int, 
-                ready_for_trial: bool, is_trigger: bool, is_event: bool, event_type: str) -> Optional[Dict[str, float]]:
+                ready_for_trial: bool, is_trigger: bool, is_event: bool, event_type: str, 
+                is_coil_at_target: bool) -> Optional[Dict[str, float]]:
         """
         Process the EEG data to estimate phase and schedule a trigger.
         
@@ -132,6 +133,7 @@ class Decider:
             is_trigger: Whether a trigger event occurred
             is_event: Whether an event occurred
             event_type: Type of event
+            is_coil_at_target: Whether the coil is currently at the target position
             
         Returns:
             Dictionary with 'timed_trigger' key and execution time, or None if no trigger scheduled

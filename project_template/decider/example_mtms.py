@@ -1,3 +1,4 @@
+from typing import Any, Dict, List, Optional, Union
 import multiprocessing
 import time
 from enum import Enum
@@ -62,7 +63,7 @@ MINIMUM_DELAY_BEFORE_PULSE = 0.050  # seconds
 
 
 class Decider:
-    def __init__(self, num_of_eeg_channels, num_of_emg_channels, sampling_frequency):
+    def __init__(self, num_of_eeg_channels: int, num_of_emg_channels: int, sampling_frequency: float):
         self.num_of_eeg_channels = num_of_eeg_channels
         self.num_of_emg_channels = num_of_emg_channels
         self.sampling_frequency = sampling_frequency
@@ -85,7 +86,7 @@ class Decider:
         # Initialize multiprocessing pool for background computations
         self.pool = multiprocessing.Pool(processes=1)
 
-    def get_configuration(self):
+    def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """Return configuration dictionary for the pipeline."""
         events = [
             {
@@ -105,8 +106,10 @@ class Decider:
             'events': events,
         }
 
-    def process(self, current_time, timestamps, valid_samples, eeg_buffer, emg_buffer, 
-               current_sample_index, ready_for_trial, is_trigger, is_event, event_type, is_coil_at_target):
+    def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
+               eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
+               current_sample_index: int, ready_for_trial: bool, is_trigger: bool, 
+               is_event: bool, event_type: str, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG samples and decide whether to trigger mTMS stimulation."""
         print("Processing EEG/EMG samples at time {:.4f}".format(current_time))
 
@@ -117,11 +120,11 @@ class Decider:
 
         # Skip if pipeline not ready or samples invalid
         if not ready_for_trial or not np.all(valid_samples):
-            return
+            return None
 
         # Perform trial at specified intervals
         if self.buffer_count % self.intertrial_interval_in_process_calls != 0:
-            return
+            return None
 
         # Cycle through target types
         targets = self.targets[self.target_type]

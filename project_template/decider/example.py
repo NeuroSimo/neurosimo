@@ -1,3 +1,4 @@
+from typing import Any, Dict, List, Optional, Union
 import multiprocessing
 import time
 from enum import Enum
@@ -10,7 +11,7 @@ class Event(Enum):
 
 
 class Decider:
-    def __init__(self, num_of_eeg_channels, num_of_emg_channels, sampling_frequency):
+    def __init__(self, num_of_eeg_channels: int, num_of_emg_channels: int, sampling_frequency: float):
         self.num_of_eeg_channels = num_of_eeg_channels
         self.num_of_emg_channels = num_of_emg_channels
         self.sampling_frequency = sampling_frequency
@@ -26,7 +27,7 @@ class Decider:
 
         print("Decider initialized with sampling frequency: ", sampling_frequency, "Hz")
 
-    def get_configuration(self):
+    def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """Return configuration dictionary for the pipeline."""
         return {
             'processing_interval_in_samples': self.sampling_frequency,  # Process once per second
@@ -36,8 +37,10 @@ class Decider:
             'sensory_stimuli': [],
         }
 
-    def process(self, current_time, timestamps, valid_samples, eeg_buffer, emg_buffer, 
-               current_sample_index, ready_for_trial, is_trigger, is_event, event_type, is_coil_at_target):
+    def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
+               eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
+               current_sample_index: int, ready_for_trial: bool, is_trigger: bool, 
+               is_event: bool, event_type: str, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG samples and decide whether to trigger stimulation."""
         print(f"Processing sample at time {current_time}.")
 
@@ -45,7 +48,7 @@ class Decider:
             print(f"Event received: {event_type}")
 
         if not np.all(valid_samples):
-            return
+            return None
 
         return {
             # Trigger TMS device after 5ms delay

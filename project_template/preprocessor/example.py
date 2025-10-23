@@ -1,8 +1,9 @@
+from typing import Dict, Union
 import numpy as np
 
 
 class Preprocessor:
-    def __init__(self, num_of_eeg_channels, num_of_emg_channels, sampling_frequency):
+    def __init__(self, num_of_eeg_channels: int, num_of_emg_channels: int, sampling_frequency: float):
         self.num_of_eeg_channels = num_of_eeg_channels
         self.num_of_emg_channels = num_of_emg_channels
         self.sampling_frequency = sampling_frequency
@@ -14,7 +15,8 @@ class Preprocessor:
         # Configure sample window for buffering
         self.sample_window = [-5, 5]
 
-    def process(self, timestamps, eeg_samples, emg_samples, current_sample_index, pulse_given):
+    def process(self, timestamps: np.ndarray, eeg_samples: np.ndarray, emg_samples: np.ndarray, 
+                current_sample_index: int, pulse_given: bool) -> Dict[str, Union[np.ndarray, bool]]:
         """Process incoming EEG/EMG samples and return preprocessed data."""
         
         # Handle pulse artifact detection

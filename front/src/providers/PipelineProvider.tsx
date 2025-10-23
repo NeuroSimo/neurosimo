@@ -43,8 +43,15 @@ interface RosString extends ROSLIB.Message {
 export interface LogMessage extends ROSLIB.Message {
   message: string
   sample_time: number
+  level: number  // 0 = INFO, 1 = WARNING, 2 = ERROR
   is_initialization: boolean
 }
+
+export const LogLevel = {
+  INFO: 0,
+  WARNING: 1,
+  ERROR: 2,
+} as const
 
 interface PipelineContextType {
   preprocessorList: string[]

@@ -347,6 +347,27 @@ void EegDecider::log_section_header(const std::string& title) {
   RCLCPP_INFO(this->get_logger(), " ");
 }
 
+void EegDecider::publish_python_logs(double sample_time, bool is_initialization) {
+  auto logs = this->decider_wrapper->get_and_clear_logs();
+  
+  for (const auto& log_entry : logs) {
+    // Log to console with appropriate level
+    if (log_entry.level == LogLevel::ERROR) {
+      RCLCPP_ERROR(this->get_logger(), "[Python Error]: %s", log_entry.message.c_str());
+    } else {
+      RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_entry.message.c_str());
+    }
+    
+    // Publish to ROS topic
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_entry.message;
+    msg.sample_time = sample_time;
+    msg.level = static_cast<uint8_t>(log_entry.level);
+    msg.is_initialization = is_initialization;
+    this->python_log_publisher->publish(msg);
+  }
+}
+
 void EegDecider::initialize_module() {
   if (this->working_directory == UNSET_STRING ||
       this->module_name == UNSET_STRING) {
@@ -376,16 +397,7 @@ void EegDecider::initialize_module() {
     this->event_queue_mutex);
 
   /* Publish initialization logs from Python constructor */
-  auto initialization_logs = this->decider_wrapper->get_and_clear_logs();
-  for (const auto& log_msg : initialization_logs) {
-    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
-    
-    auto msg = pipeline_interfaces::msg::LogMessage();
-    msg.message = log_msg;
-    msg.sample_time = 0.0;
-    msg.is_initialization = true;
-    this->python_log_publisher->publish(msg);
-  }
+  publish_python_logs(0.0, true);
 
   if (this->decider_wrapper->get_state() != WrapperState::READY) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load.");
@@ -1176,16 +1188,7 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     this->is_coil_at_target);
 
   /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  auto python_logs = this->decider_wrapper->get_and_clear_logs();
-  for (const auto& log_msg : python_logs) {
-    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
-    
-    auto msg = pipeline_interfaces::msg::LogMessage();
-    msg.message = log_msg;
-    msg.sample_time = sample_time;
-    msg.is_initialization = false;
-    this->python_log_publisher->publish(msg);
-  }
+  publish_python_logs(sample_time, false);
 
   /* Log and return early if the Python call failed. */
   if (!success) {

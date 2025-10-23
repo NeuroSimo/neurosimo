@@ -43,6 +43,7 @@ public:
 private:
   void reset_sensory_stimuli();
   void initialize_presenter_module();
+  void publish_python_logs(double sample_time, bool is_initialization);
   void unset_presenter_module();
 
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);

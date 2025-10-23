@@ -38,6 +38,17 @@ enum class WrapperState {
   ERROR
 };
 
+enum class LogLevel : uint8_t {
+  INFO = 0,
+  WARNING = 1,
+  ERROR = 2
+};
+
+struct LogEntry {
+  std::string message;
+  LogLevel level;
+};
+
 class DeciderWrapper {
 public:
   DeciderWrapper(rclcpp::Logger& logger);
@@ -97,7 +108,7 @@ public:
   static void log_throttle(const std::string& message, const double_t period);
 
   /* Get buffered logs and clear the buffer */
-  std::vector<std::string> get_and_clear_logs();
+  std::vector<LogEntry> get_and_clear_logs();
   void log_section_header(const std::string& title);
 
 private:
@@ -105,7 +116,7 @@ private:
   static rclcpp::Logger* logger_ptr;
 
   /* Buffer for Python logs - static to be accessible from static log functions */
-  static std::vector<std::string> log_buffer;
+  static std::vector<LogEntry> log_buffer;
   static std::mutex log_buffer_mutex;
 
   WrapperState state;

@@ -191,12 +191,28 @@ void DeciderWrapper::initialize_module(
     decider_module = std::make_unique<py::module>(imported_module);
 
   } catch (const py::error_already_set &e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
+    std::string error_msg = std::string("Python import error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return;
 
   } catch (const std::exception &e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
+    std::string error_msg = std::string("C++ error during import: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return;
   }
@@ -210,12 +226,28 @@ void DeciderWrapper::initialize_module(
     decider_instance = std::make_unique<py::object>(instance);
 
   } catch (const py::error_already_set &e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
+    std::string error_msg = std::string("Python initialization error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return;
 
   } catch (const std::exception &e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
+    std::string error_msg = std::string("C++ error during initialization: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return;
   }
@@ -488,9 +520,9 @@ DeciderWrapper::~DeciderWrapper() {
   py_emg_data.reset();
 }
 
-std::vector<std::string> DeciderWrapper::get_and_clear_logs() {
+std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
   std::lock_guard<std::mutex> lock(log_buffer_mutex);
-  std::vector<std::string> logs = std::move(log_buffer);
+  std::vector<LogEntry> logs = std::move(log_buffer);
   log_buffer.clear();
   return logs;
 }
@@ -726,14 +758,30 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     py_result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, has_event, event_type, is_coil_at_target);
 
   } catch(const py::error_already_set& e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
+    std::string error_msg = std::string("Python error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     success = false;
 
     return {success, trial, timed_trigger, coil_target};
 
   } catch(const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
+    std::string error_msg = std::string("C++ error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     success = false;
 
@@ -904,5 +952,5 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
 }
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
-std::vector<std::string> DeciderWrapper::log_buffer;
+std::vector<LogEntry> DeciderWrapper::log_buffer;
 std::mutex DeciderWrapper::log_buffer_mutex;

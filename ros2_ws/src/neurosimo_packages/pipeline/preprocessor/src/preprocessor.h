@@ -56,6 +56,7 @@ private:
 
   void update_eeg_info(const eeg_msgs::msg::SampleMetadata& msg);
   void initialize_module();
+  void publish_python_logs(double sample_time, bool is_initialization);
 
   void reset_preprocessor_state();
 

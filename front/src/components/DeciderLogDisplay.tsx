@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel } from 'styles/General'
 
-import { PipelineContext, LogMessage } from 'providers/PipelineProvider'
+import { PipelineContext, LogMessage, LogLevel } from 'providers/PipelineProvider'
 
 const DeciderLogPanelTitle = styled.div`
   width: 680px;
@@ -86,13 +86,27 @@ const LogEntry = styled.div`
   gap: 0;
 `
 
-const Timestamp = styled.span<{ $isInit?: boolean }>`
-  color: ${props => props.$isInit ? '#000' : '#555'};
+const Timestamp = styled.span<{ $isInit: boolean; $level: number }>`
+  color: ${props => {
+    if (props.$isInit) return '#000'  // INIT - black
+    if (props.$level === 2) return '#fff'  // ERROR - white
+    return '#555'  // INFO/WARNING - dark gray
+  }};
   font-weight: bold;
   text-align: right;
-  background-color: ${props => props.$isInit ? '#d46c0b' : '#e8e8e8'};
+  background-color: ${props => {
+    if (props.$isInit) return '#d46c0b'  // INIT - orange
+    if (props.$level === 2) return '#dc3545'  // ERROR - red
+    if (props.$level === 1) return '#ffc107'  // WARNING - yellow
+    return '#e8e8e8'  // INFO - light gray
+  }};
   padding: 2px 4px;
-  border-right: 2px solid ${props => props.$isInit ? '#b85a09' : '#ccc'};
+  border-right: 2px solid ${props => {
+    if (props.$isInit) return '#b85a09'  // INIT - darker orange
+    if (props.$level === 2) return '#c82333'  // ERROR - darker red
+    if (props.$level === 1) return '#e0a800'  // WARNING - darker yellow
+    return '#ccc'  // INFO - gray
+  }};
 `
 
 const LogText = styled.span`
@@ -110,12 +124,15 @@ export const DeciderLogDisplay: React.FC = () => {
     }
   }, [deciderLogs])
 
+  const getTimestampLabel = (log: LogMessage): string => {
+    if (log.is_initialization) return 'Init'
+    if (log.level === LogLevel.ERROR) return 'Error'
+    return log.sample_time.toFixed(3)
+  }
+
   const handleCopyLogs = async () => {
     const logsText = deciderLogs
-      .map((log: LogMessage) => {
-        const timestamp = log.is_initialization ? 'Init' : log.sample_time.toFixed(3)
-        return `${timestamp} ${log.message}`
-      })
+      .map((log: LogMessage) => `${getTimestampLabel(log)} ${log.message}`)
       .join('\n')
     try {
       await navigator.clipboard.writeText(logsText)
@@ -144,8 +161,8 @@ export const DeciderLogDisplay: React.FC = () => {
           ) : (
             deciderLogs.map((log: LogMessage, index: number) => (
               <LogEntry key={index}>
-                <Timestamp $isInit={log.is_initialization}>
-                  {log.is_initialization ? 'Init' : log.sample_time.toFixed(3)}
+                <Timestamp $isInit={log.is_initialization} $level={log.level}>
+                  {getTimestampLabel(log)}
                 </Timestamp>
                 <LogText>{log.message}</LogText>
               </LogEntry>

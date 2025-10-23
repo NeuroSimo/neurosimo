@@ -1,15 +1,16 @@
+from typing import Any, Dict
 from psychopy import visual, core
 import numpy as np
 
 
 class Presenter:
-    def __init__(self):
+    def __init__(self) -> None:
         self.win = visual.Window(size=[2560, 1440], pos=[2560, 0], allowGUI=False)
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.win.close()
 
-    def process(self, stimulus_type, parameters):
+    def process(self, stimulus_type: str, parameters: Dict[str, Any]) -> bool:
         """Process a sensory stimulus sent from the decider."""
         print(f"Received stimulus: {stimulus_type}")
         print(f"Parameters: {parameters}")

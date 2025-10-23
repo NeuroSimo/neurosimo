@@ -50,7 +50,7 @@ function print_usage() {
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --from) FROM=$2; FOLLOW=false; TIME_FILTERS=truel; shift 2;;
+        --from) FROM=$2; FOLLOW=false; TIME_FILTERS=true; shift 2;;
         --to) TO=$2; FOLLOW=false; TIME_FILTERS=true; shift 2;;
         --last-hour) FROM="1 hour ago"; FOLLOW=false; TIME_FILTERS=true; shift;;
         --last-day) FROM="1 day ago"; FOLLOW=false; TIME_FILTERS=true; shift;;
@@ -165,7 +165,7 @@ else
     [ "$FOLLOW" = true ] && CMD="$CMD -f"
 
     if [ -n "$CONTAINER_NAME" ]; then
-        CMD="$CMD | grep $CONTAINER_NAME"
+        CMD="$CMD | grep \"neurosimo-${CONTAINER_NAME}-1\""
     fi
 
     # XXX: Filter out the "Failed to parse type hash" messages. These are not useful; should look more closely

@@ -131,6 +131,27 @@ void EegPresenter::reset_sensory_stimuli() {
   }
 }
 
+void EegPresenter::publish_python_logs(double sample_time, bool is_initialization) {
+  auto logs = this->presenter_wrapper->get_and_clear_logs();
+  
+  for (const auto& log_entry : logs) {
+    // Log to console with appropriate level
+    if (log_entry.level == LogLevel::ERROR) {
+      RCLCPP_ERROR(this->get_logger(), "[Python Error]: %s", log_entry.message.c_str());
+    } else {
+      RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_entry.message.c_str());
+    }
+    
+    // Publish to ROS topic
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_entry.message;
+    msg.sample_time = sample_time;
+    msg.level = static_cast<uint8_t>(log_entry.level);
+    msg.is_initialization = is_initialization;
+    this->python_log_publisher->publish(msg);
+  }
+}
+
 /* Functions to re-initialize the presenter state. */
 void EegPresenter::initialize_presenter_module() {
   reset_sensory_stimuli();
@@ -146,16 +167,7 @@ void EegPresenter::initialize_presenter_module() {
     this->module_name);
 
   /* Publish initialization logs from Python constructor */
-  auto initialization_logs = this->presenter_wrapper->get_and_clear_logs();
-  for (const auto& log_msg : initialization_logs) {
-    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
-    
-    auto msg = pipeline_interfaces::msg::LogMessage();
-    msg.message = log_msg;
-    msg.sample_time = 0.0;
-    msg.is_initialization = true;
-    this->python_log_publisher->publish(msg);
-  }
+  publish_python_logs(0.0, true);
 }
 
 /* Session handler. */
@@ -431,16 +443,7 @@ void EegPresenter::update_time(double_t time) {
   bool success = this->presenter_wrapper->process(*stimulus);
 
   /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  auto python_logs = this->presenter_wrapper->get_and_clear_logs();
-  for (const auto& log_msg : python_logs) {
-    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
-    
-    auto msg = pipeline_interfaces::msg::LogMessage();
-    msg.message = log_msg;
-    msg.sample_time = stimulus_time;
-    msg.is_initialization = false;
-    this->python_log_publisher->publish(msg);
-  }
+  publish_python_logs(stimulus_time, false);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");

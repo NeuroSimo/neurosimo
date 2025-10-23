@@ -161,13 +161,13 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
   return py_result.cast<bool>();
 }
 
-std::vector<std::string> PresenterWrapper::get_and_clear_logs() {
+std::vector<LogEntry> PresenterWrapper::get_and_clear_logs() {
   std::lock_guard<std::mutex> lock(log_buffer_mutex);
-  std::vector<std::string> logs = std::move(log_buffer);
+  std::vector<LogEntry> logs = std::move(log_buffer);
   log_buffer.clear();
   return logs;
 }
 
 rclcpp::Logger* PresenterWrapper::logger_ptr = nullptr;
-std::vector<std::string> PresenterWrapper::log_buffer;
+std::vector<LogEntry> PresenterWrapper::log_buffer;
 std::mutex PresenterWrapper::log_buffer_mutex;

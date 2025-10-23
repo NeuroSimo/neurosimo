@@ -10,7 +10,7 @@ namespace py = pybind11;
 void DeciderWrapper::log(const std::string& message) {
   /* Buffer the log message to avoid ROS2 publishing overhead during Python execution */
   std::lock_guard<std::mutex> lock(log_buffer_mutex);
-  log_buffer.push_back(message);
+  log_buffer.push_back({message, LogLevel::INFO});
 }
 
 void DeciderWrapper::log_throttle(const std::string& message, const double_t period) {
@@ -25,7 +25,7 @@ void DeciderWrapper::log_throttle(const std::string& message, const double_t per
   
   /* Buffer the throttled log message */
   std::lock_guard<std::mutex> lock(log_buffer_mutex);
-  log_buffer.push_back("[Throttled] " + message);
+  log_buffer.push_back({"[Throttled] " + message, LogLevel::INFO});
   
   last_log_times[message] = current_time;
 }

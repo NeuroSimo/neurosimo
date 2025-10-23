@@ -209,6 +209,27 @@ void EegPreprocessor::update_eeg_info(const eeg_msgs::msg::SampleMetadata& msg) 
   this->sampling_period = 1.0 / this->sampling_frequency;
 }
 
+void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {
+  auto logs = this->preprocessor_wrapper->get_and_clear_logs();
+  
+  for (const auto& log_entry : logs) {
+    // Log to console with appropriate level
+    if (log_entry.level == LogLevel::ERROR) {
+      RCLCPP_ERROR(this->get_logger(), "[Python Error]: %s", log_entry.message.c_str());
+    } else {
+      RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_entry.message.c_str());
+    }
+    
+    // Publish to ROS topic
+    auto msg = pipeline_interfaces::msg::LogMessage();
+    msg.message = log_entry.message;
+    msg.sample_time = sample_time;
+    msg.level = static_cast<uint8_t>(log_entry.level);
+    msg.is_initialization = is_initialization;
+    this->python_log_publisher->publish(msg);
+  }
+}
+
 void EegPreprocessor::initialize_module() {
   if (this->working_directory == UNSET_STRING ||
       this->module_name == UNSET_STRING) {
@@ -235,16 +256,7 @@ void EegPreprocessor::initialize_module() {
     this->sampling_frequency);
 
   /* Publish initialization logs from Python constructor */
-  auto initialization_logs = this->preprocessor_wrapper->get_and_clear_logs();
-  for (const auto& log_msg : initialization_logs) {
-    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
-    
-    auto msg = pipeline_interfaces::msg::LogMessage();
-    msg.message = log_msg;
-    msg.sample_time = 0.0;
-    msg.is_initialization = true;
-    this->python_log_publisher->publish(msg);
-  }
+  publish_python_logs(0.0, true);
 
   if (this->preprocessor_wrapper->get_state() != WrapperState::READY) {
     RCLCPP_INFO(this->get_logger(), "Failed to initialize preprocessor.");
@@ -682,16 +694,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample
     pulse_given);
 
   /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  auto python_logs = this->preprocessor_wrapper->get_and_clear_logs();
-  for (const auto& log_msg : python_logs) {
-    RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_msg.c_str());
-    
-    auto msg = pipeline_interfaces::msg::LogMessage();
-    msg.message = log_msg;
-    msg.sample_time = sample_time;
-    msg.is_initialization = false;
-    this->python_log_publisher->publish(msg);
-  }
+  publish_python_logs(sample_time, false);
 
   if (success) {
     /* Copy metadata from the raw sample. */

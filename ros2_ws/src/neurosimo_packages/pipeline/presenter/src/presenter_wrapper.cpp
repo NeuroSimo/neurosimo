@@ -70,12 +70,28 @@ void PresenterWrapper::initialize_module(
     presenter_instance = std::make_unique<py::object>(instance);
 
   } catch(const py::error_already_set& e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
+    std::string error_msg = std::string("Python error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     this->_is_initialized = false;
     return;
 
   } catch(const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
+    std::string error_msg = std::string("C++ error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     this->_is_initialized = false;
     return;
   }
@@ -135,14 +151,28 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
                   ->attr("process")(type, py_params);
   }
   catch (const py::error_already_set &e) {
-    RCLCPP_ERROR(*logger_ptr,
-      "Python error in presenter.process: %s", e.what());
+    std::string error_msg = std::string("Python error in presenter.process: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     this->_error_occurred = true;
     return false;
   }
   catch (const std::exception &e) {
-    RCLCPP_ERROR(*logger_ptr,
-      "C++ exception in presenter.process: %s", e.what());
+    std::string error_msg = std::string("C++ exception in presenter.process: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     this->_error_occurred = true;
     return false;
   }

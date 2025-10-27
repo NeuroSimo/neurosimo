@@ -6,6 +6,7 @@ import numpy as np
 class Presenter:
     def __init__(self) -> None:
         self.win = visual.Window(size=[2560, 1440], pos=[2560, 0], allowGUI=False)
+        print("Presenter initialized")
 
     def __del__(self) -> None:
         self.win.close()

@@ -12,6 +12,34 @@ PreprocessorWrapper::PreprocessorWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
   state = WrapperState::UNINITIALIZED;
   guard = std::make_unique<py::scoped_interpreter>();
+  setup_custom_print();
+}
+
+void PreprocessorWrapper::setup_custom_print() {
+    py::exec(R"(
+import builtins
+import cpp_bindings
+
+def custom_print(*args, sep=' ', end='\n', file=None, flush=False):
+    output = sep.join(map(str, args))
+    cpp_bindings.log(output)
+    if file is not None:
+        file.write(output + end)
+        if flush:
+            file.flush()
+
+def print_throttle(*args, period=1.0, sep=' ', end='\n', file=None, flush=False):
+    assert period > 0.0, 'The period must be greater than zero.'
+    output = sep.join(map(str, args))
+    cpp_bindings.log_throttle(output, period)
+    if file is not None:
+        file.write(output + end)
+        if flush:
+            file.flush()
+
+builtins.print = custom_print
+builtins.print_throttle = print_throttle
+    )", py::globals());
 }
 
 void PreprocessorWrapper::initialize_module(
@@ -47,12 +75,28 @@ void PreprocessorWrapper::initialize_module(
     preprocessor_instance = std::make_unique<py::object>(instance);
 
   } catch(const py::error_already_set& e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
+    std::string error_msg = std::string("Python error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return;
 
   } catch(const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
+    std::string error_msg = std::string("C++ error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return;
   }
@@ -159,12 +203,28 @@ bool PreprocessorWrapper::process(
     result = preprocessor_instance->attr("process")(*py_timestamps, *py_eeg_data, *py_emg_data, current_sample_index, pulse_given);
 
   } catch(const py::error_already_set& e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
+    std::string error_msg = std::string("Python error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return false;
 
   } catch(const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
+    std::string error_msg = std::string("C++ error: ") + e.what();
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
     state = WrapperState::ERROR;
     return false;
   }

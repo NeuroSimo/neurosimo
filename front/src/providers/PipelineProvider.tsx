@@ -57,6 +57,7 @@ interface PipelineContextType {
   preprocessorList: string[]
   preprocessorModule: string
   preprocessorEnabled: boolean
+  preprocessorLogs: LogMessage[]
 
   deciderList: string[]
   deciderModule: string
@@ -66,6 +67,7 @@ interface PipelineContextType {
   presenterList: string[]
   presenterModule: string
   presenterEnabled: boolean
+  presenterLogs: LogMessage[]
 
   timingLatency: TimingLatency | null
   timingError: TimingError | null
@@ -74,13 +76,14 @@ interface PipelineContextType {
   setTimingLatency: React.Dispatch<React.SetStateAction<TimingLatency | null>>
   setTimingError: React.Dispatch<React.SetStateAction<TimingError | null>>
   setDecisionInfo: React.Dispatch<React.SetStateAction<DecisionInfo | null>>
-  clearDeciderLogs: () => void
+  clearAllLogs: () => void
 }
 
 const defaultPipelineState: PipelineContextType = {
   preprocessorList: [],
   preprocessorModule: '',
   preprocessorEnabled: false,
+  preprocessorLogs: [],
 
   deciderList: [],
   deciderModule: '',
@@ -90,6 +93,7 @@ const defaultPipelineState: PipelineContextType = {
   presenterList: [],
   presenterModule: '',
   presenterEnabled: false,
+  presenterLogs: [],
 
   timingLatency: null,
   timingError: null,
@@ -104,8 +108,8 @@ const defaultPipelineState: PipelineContextType = {
   setDecisionInfo: () => {
     console.warn('setDecisionInfo is not yet initialized.')
   },
-  clearDeciderLogs: () => {
-    console.warn('clearDeciderLogs is not yet initialized.')
+  clearAllLogs: () => {
+    console.warn('clearAllLogs is not yet initialized.')
   },
 }
 
@@ -119,6 +123,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
   const [preprocessorModule, setPreprocessorModule] = useState<string>('')
   const [preprocessorEnabled, setPreprocessorEnabled] = useState<boolean>(false)
+  const [preprocessorLogs, setPreprocessorLogs] = useState<LogMessage[]>([])
 
   const [deciderList, setDeciderList] = useState<string[]>([])
   const [deciderModule, setDeciderModule] = useState<string>('')
@@ -128,13 +133,16 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [presenterList, setPresenterList] = useState<string[]>([])
   const [presenterModule, setPresenterModule] = useState<string>('')
   const [presenterEnabled, setPresenterEnabled] = useState<boolean>(false)
+  const [presenterLogs, setPresenterLogs] = useState<LogMessage[]>([])
 
   const [timingLatency, setTimingLatency] = useState<TimingLatency | null>(null)
   const [timingError, setTimingError] = useState<TimingError | null>(null)
   const [decisionInfo, setDecisionInfo] = useState<DecisionInfo | null>(null)
 
-  const clearDeciderLogs = () => {
+  const clearAllLogs = () => {
+    setPreprocessorLogs([])
     setDeciderLogs([])
+    setPresenterLogs([])
   }
 
   useEffect(() => {
@@ -270,6 +278,17 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       setDecisionInfo(message)
     })
 
+    /* Subscriber for preprocessor logs. */
+    const preprocessorLogSubscriber = new Topic<LogMessage>({
+      ros: ros,
+      name: '/pipeline/preprocessor/log',
+      messageType: 'pipeline_interfaces/LogMessage',
+    })
+
+    preprocessorLogSubscriber.subscribe((message) => {
+      setPreprocessorLogs((prevLogs) => [...prevLogs, message])
+    })
+
     /* Subscriber for decider logs. */
     const deciderLogSubscriber = new Topic<LogMessage>({
       ros: ros,
@@ -279,6 +298,17 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
 
     deciderLogSubscriber.subscribe((message) => {
       setDeciderLogs((prevLogs) => [...prevLogs, message])
+    })
+
+    /* Subscriber for presenter logs. */
+    const presenterLogSubscriber = new Topic<LogMessage>({
+      ros: ros,
+      name: '/pipeline/presenter/log',
+      messageType: 'pipeline_interfaces/LogMessage',
+    })
+
+    presenterLogSubscriber.subscribe((message) => {
+      setPresenterLogs((prevLogs) => [...prevLogs, message])
     })
 
     /* Unsubscribers */
@@ -298,7 +328,10 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       timingLatencySubscriber.unsubscribe()
       timingErrorSubscriber.unsubscribe()
       decisionInfoSubscriber.unsubscribe()
+      
+      preprocessorLogSubscriber.unsubscribe()
       deciderLogSubscriber.unsubscribe()
+      presenterLogSubscriber.unsubscribe()
     }
   }, [])
 
@@ -308,6 +341,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         preprocessorList,
         preprocessorModule,
         preprocessorEnabled,
+        preprocessorLogs,
         deciderList,
         deciderModule,
         deciderEnabled,
@@ -315,13 +349,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         presenterList,
         presenterModule,
         presenterEnabled,
+        presenterLogs,
         timingLatency,
         timingError,
         decisionInfo,
         setTimingLatency,
         setTimingError,
         setDecisionInfo,
-        clearDeciderLogs,
+        clearAllLogs,
       }}
     >
       {children}

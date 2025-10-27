@@ -15,6 +15,8 @@ class Preprocessor:
         # Configure sample window for buffering
         self.sample_window = [-5, 5]
 
+        print("Preprocessor initialized with sampling frequency: ", sampling_frequency, "Hz")
+
     def process(self, timestamps: np.ndarray, eeg_samples: np.ndarray, emg_samples: np.ndarray, 
                 current_sample_index: int, pulse_given: bool) -> Dict[str, Union[np.ndarray, bool]]:
         """Process incoming EEG/EMG samples and return preprocessed data."""

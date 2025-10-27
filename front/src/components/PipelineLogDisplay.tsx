@@ -1,11 +1,13 @@
-import React, { useContext, useRef, useEffect } from 'react'
+import React, { useContext, useRef, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel } from 'styles/General'
 
 import { PipelineContext, LogMessage, LogLevel } from 'providers/PipelineProvider'
 
-const DeciderLogPanelTitle = styled.div`
+type LogSource = 'preprocessor' | 'decider' | 'presenter'
+
+const PipelineLogPanelTitle = styled.div`
   width: 680px;
   position: fixed;
   top: 686px;
@@ -17,6 +19,33 @@ const DeciderLogPanelTitle = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+`
+
+const TitleGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+`
+
+const LogSourceSelect = styled.select`
+  background-color: #f5f5f5;
+  border: 2px solid #d46c0b;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+
+  &:hover {
+    background-color: #fff;
+    border-color: #b85a09;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #9a4a07;
+  }
 `
 
 const ButtonGroup = styled.div`
@@ -48,7 +77,7 @@ const LogButton = styled.button`
   }
 `
 
-const DeciderLogPanel = styled(StyledPanel)`
+const PipelineLogPanel = styled(StyledPanel)`
   width: 640px;
   height: 406px;
   position: fixed;
@@ -113,16 +142,23 @@ const LogText = styled.span`
   padding: 2px 10px;
 `
 
-export const DeciderLogDisplay: React.FC = () => {
-  const { deciderLogs, clearDeciderLogs } = useContext(PipelineContext)
+export const PipelineLogDisplay: React.FC = () => {
+  const { preprocessorLogs, deciderLogs, presenterLogs, clearAllLogs } = useContext(PipelineContext)
+  const [selectedSource, setSelectedSource] = useState<LogSource>('decider')
   const logContainerRef = useRef<HTMLDivElement>(null)
+
+  // Get the currently selected logs
+  const currentLogs = 
+    selectedSource === 'preprocessor' ? preprocessorLogs :
+    selectedSource === 'decider' ? deciderLogs :
+    presenterLogs
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
     }
-  }, [deciderLogs])
+  }, [currentLogs])
 
   const getTimestampLabel = (log: LogMessage): string => {
     if (log.is_initialization) return 'Init'
@@ -131,7 +167,7 @@ export const DeciderLogDisplay: React.FC = () => {
   }
 
   const handleCopyLogs = async () => {
-    const logsText = deciderLogs
+    const logsText = currentLogs
       .map((log: LogMessage) => `${getTimestampLabel(log)} ${log.message}`)
       .join('\n')
     try {
@@ -141,25 +177,36 @@ export const DeciderLogDisplay: React.FC = () => {
     }
   }
 
+  const handleSourceChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedSource(event.target.value as LogSource)
+  }
+
   return (
     <>
-      <DeciderLogPanelTitle>
-        <span>Decider logs</span>
+      <PipelineLogPanelTitle>
+        <TitleGroup>
+          <span>Pipeline logs:</span>
+          <LogSourceSelect value={selectedSource} onChange={handleSourceChange}>
+            <option value="preprocessor">Preprocessor</option>
+            <option value="decider">Decider</option>
+            <option value="presenter">Presenter</option>
+          </LogSourceSelect>
+        </TitleGroup>
         <ButtonGroup>
-          <LogButton onClick={handleCopyLogs} disabled={deciderLogs.length === 0}>
+          <LogButton onClick={handleCopyLogs} disabled={currentLogs.length === 0}>
             Copy
           </LogButton>
-          <LogButton onClick={clearDeciderLogs}>Clear</LogButton>
+          <LogButton onClick={clearAllLogs}>Clear All</LogButton>
         </ButtonGroup>
-      </DeciderLogPanelTitle>
-      <DeciderLogPanel>
+      </PipelineLogPanelTitle>
+      <PipelineLogPanel>
         <LogContainer ref={logContainerRef}>
-          {deciderLogs.length === 0 ? (
+          {currentLogs.length === 0 ? (
             <LogEntry style={{ color: '#999', fontStyle: 'italic', display: 'block' }}>
               No logs...
             </LogEntry>
           ) : (
-            deciderLogs.map((log: LogMessage, index: number) => (
+            currentLogs.map((log: LogMessage, index: number) => (
               <LogEntry key={index}>
                 <Timestamp $isInit={log.is_initialization} $level={log.level}>
                   {getTimestampLabel(log)}
@@ -169,8 +216,9 @@ export const DeciderLogDisplay: React.FC = () => {
             ))
           )}
         </LogContainer>
-      </DeciderLogPanel>
+      </PipelineLogPanel>
     </>
   )
 }
+
 

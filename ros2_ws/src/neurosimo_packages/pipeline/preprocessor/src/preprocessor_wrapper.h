@@ -70,6 +70,7 @@ public:
   std::vector<LogEntry> get_and_clear_logs();
 
 private:
+  void setup_custom_print();
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */
   static rclcpp::Logger* logger_ptr;
 

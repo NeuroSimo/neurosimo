@@ -32,4 +32,4 @@ This project is licensed under the GPL v3 License - see the [LICENSE](LICENSE) f
 
 ## References
 
-1. Kahilakoski, O.-P., Alkio, K., Siljamo, O., Valén, K., Laurinoja, J., Haxel, L., Makkonen, M., Mutanen, T. P., Tommila, T., Guidotti, R., Pieramico, G., Ilmoniemi, R. J., & Roine, T. (2025). **NeuroSimo: an open-source software for real-time EEG- and EMG-guided TMS**. *Submitted to the Journal of Neural Engineering*.
+1. Kahilakoski, O.-P., Alkio, K., Siljamo, O., Valén, K., Laurinoja, J., Haxel, L., Makkonen, M., Mutanen, T. P., Tommila, T., Guidotti, R., Pieramico, G., Ilmoniemi, R. J., & Roine, T. (2025). **NeuroSimo: an open-source software for real-time EEG- and EMG-guided TMS**. [bioRxiv](https://www.biorxiv.org/content/10.1101/2025.04.05.647342v1)

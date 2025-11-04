@@ -26,6 +26,10 @@ See the [Hardware configuration guide](md/hardware-guide.md) for instructions on
 
 See the [Getting started guide](md/getting-started.md) for instructions on how to use NeuroSimo.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes in each release.
+
 ## License
 
 This project is licensed under the GPL v3 License - see the [LICENSE](LICENSE) file for details.

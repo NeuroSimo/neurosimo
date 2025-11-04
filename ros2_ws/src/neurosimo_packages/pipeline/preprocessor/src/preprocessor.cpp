@@ -114,9 +114,13 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     qos_persist_latest);
 
   /* Publisher for Python logs from preprocessor. */
-  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessage>(
+  // Logs can be sent in bursts so keep all messages in the queue.
+  auto qos_keep_all_logs = rclcpp::QoS(rclcpp::KeepAll())
+    .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+
+  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessages>(
     "/pipeline/preprocessor/log",
-    100);  // Use larger queue to handle potential bursts of log messages
+    qos_keep_all_logs);
 
   /* Initialize variables. */
   this->preprocessor_wrapper = std::make_unique<PreprocessorWrapper>(logger);
@@ -212,22 +216,33 @@ void EegPreprocessor::update_eeg_info(const eeg_msgs::msg::SampleMetadata& msg) 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {
   auto logs = this->preprocessor_wrapper->get_and_clear_logs();
   
+  if (logs.empty()) {
+    return;
+  }
+  
+  // Create a single batched message containing all logs
+  auto batch_msg = pipeline_interfaces::msg::LogMessages();
+  
   for (const auto& log_entry : logs) {
+    // Create individual log message
+    auto log_msg = pipeline_interfaces::msg::LogMessage();
+    log_msg.message = log_entry.message;
+    log_msg.sample_time = sample_time;
+    log_msg.level = static_cast<uint8_t>(log_entry.level);
+    log_msg.is_initialization = is_initialization;
+    
+    batch_msg.messages.push_back(log_msg);
+    
     // Log to console with appropriate level
     if (log_entry.level == LogLevel::ERROR) {
       RCLCPP_ERROR(this->get_logger(), "[Python Error]: %s", log_entry.message.c_str());
     } else {
       RCLCPP_INFO(this->get_logger(), "[Python]: %s", log_entry.message.c_str());
     }
-    
-    // Publish to ROS topic
-    auto msg = pipeline_interfaces::msg::LogMessage();
-    msg.message = log_entry.message;
-    msg.sample_time = sample_time;
-    msg.level = static_cast<uint8_t>(log_entry.level);
-    msg.is_initialization = is_initialization;
-    this->python_log_publisher->publish(msg);
   }
+  
+  // Publish all logs in a single batched message
+  this->python_log_publisher->publish(batch_msg);
 }
 
 void EegPreprocessor::initialize_module() {

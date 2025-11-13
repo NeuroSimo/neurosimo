@@ -329,6 +329,11 @@ void EegDecider::handle_session(const std::shared_ptr<system_interfaces::msg::Se
     this->reinitialize = true;
     this->previous_stimulation_time = UNSET_PREVIOUS_TIME;
 
+    /* Clear deferred processing queue when session stops. */
+    while (!this->deferred_processing_queue.empty()) {
+      this->deferred_processing_queue.pop();
+    }
+
     /* Reset the decider state when the session is stopped. */
     reset_decider_state();
   }
@@ -479,6 +484,196 @@ void EegDecider::pop_event() {
   std::lock_guard<std::mutex> lock(this->event_queue_mutex);
   if (!this->event_queue.empty()) {
     this->event_queue.pop();
+  }
+}
+
+void EegDecider::process_ready_deferred_requests(double_t current_sample_time) {
+  /* Process any deferred requests that are now ready (have enough look-ahead samples). */
+  while (!this->deferred_processing_queue.empty()) {
+    const auto& next_request = this->deferred_processing_queue.top();
+
+    /* Check if our current sample time is within the tolerance of the processing time of the next request. */
+    if (current_sample_time >= next_request.processing_time - this->TOLERANCE_S) {
+      /* Process this deferred request. */
+      process_deferred_request(next_request, current_sample_time);
+      this->deferred_processing_queue.pop();
+    } else {
+      /* The next request is not ready yet. */
+      break;
+    }
+  }
+}
+
+void EegDecider::process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time) {
+  auto start_time = std::chrono::high_resolution_clock::now();
+  
+  double_t sample_time = request.triggering_sample->time;
+  bool is_trigger = request.is_trigger;
+  bool has_event = request.has_event;
+  std::string event_type = request.event_type;
+
+  /* Determine if we are ready for a trial. */
+  auto ready_for_trial = !performing_trial &&
+                         !processing_timed_trigger &&
+                         this->trial_queue.empty();
+
+  /* Process the sample. */
+  auto [success, trial, timed_trigger, coil_target] = this->decider_wrapper->process(
+    this->sensory_stimuli,
+    this->sample_buffer,
+    sample_time,
+    ready_for_trial,
+    is_trigger,
+    has_event,
+    event_type,
+    this->event_queue,
+    this->event_queue_mutex,
+    this->is_coil_at_target);
+
+  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
+  publish_python_logs(sample_time, false);
+
+  /* Log and return early if the Python call failed. */
+  if (!success) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(),
+                          *this->get_clock(),
+                          1000,
+                          "Python call failed, not processing EEG sample at time %.3f (s).",
+                          sample_time);
+    return;
+  }
+
+  /* Calculate the total latency of the decider. */
+  auto end_time = std::chrono::high_resolution_clock::now();
+  double_t decider_processing_time = std::chrono::duration<double_t>(end_time - start_time).count();
+
+  /* Combine both trials (for mTMS device) and timed triggers (for other TMS devices). */
+  bool is_decision_positive = trial || timed_trigger;
+
+  /* Create decision info, but only publish in Decider if the pathway doesn't reach the Trigger Timer.
+
+  XXX: The logic related to when to publish the decision info is quite messy. */
+  auto decision_info = pipeline_interfaces::msg::DecisionInfo();
+  decision_info.stimulate = is_decision_positive;
+
+  /* If Decider publishes the decision info, stimulation is typically not feasible; the only exception is when the mTMS device is enabled,
+     handle that case separately. */
+  decision_info.feasible = false;
+
+  decision_info.decision_time = sample_time;
+  decision_info.decider_latency = decider_processing_time;
+  decision_info.preprocessor_latency = request.triggering_sample->metadata.processing_time;
+
+  rclcpp::Time now = this->get_clock()->now();
+  rclcpp::Time sample_time_rcl(request.triggering_sample->metadata.system_time);
+  double_t total_latency = now.seconds() - sample_time_rcl.seconds();
+
+  decision_info.total_latency = total_latency;
+
+  /* Check timing latency threshold.
+
+     XXX: Enabled only when using NeuroSimo without the mTMS device. The reason is that without the mTMS device,
+       latency is periodically and automatically measured by the pipeline (as described in the NeuroSimo article),
+       hence it is feasible to disable stimulation when it exceeds a threshold.
+
+       However, when the mTMS device is enabled, latency is measured only when a pulse is delivered. Even though
+       the latest measured latency is also in that case propagated into this->timing_latency, it won't be updated
+       before a new pulse is delivered, and therefore this check, when failing, prevents all future pulses. */
+  if (this->timing_latency > this->timing_latency_threshold && !this->mtms_device_enabled) {
+    this->decision_info_publisher->publish(decision_info);
+
+    RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms), ignoring stimulation request.", this->timing_latency * 1000, this->timing_latency_threshold * 1000);
+    return;
+  }
+
+  /* Check if a trial or timed trigger has already been requested. */
+  bool is_already_stimulating = this->performing_trial || this->processing_timed_trigger;
+
+  /* Check that the decider is not already stimulating. */
+  if (is_decision_positive && is_already_stimulating) {
+    this->decision_info_publisher->publish(decision_info);
+
+    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but already performing trial or timed trigger, ignoring request.");
+    return;
+  }
+
+  /* Check that the minimum pulse interval is respected. */
+  if (is_decision_positive) {
+    double_t actual_stimulation_time = UNSET_PREVIOUS_TIME;
+
+    if (timed_trigger) {
+      actual_stimulation_time = timed_trigger->time;
+    } else if (trial) {
+      /* For trials, we need to get the desired start time from the trial. */
+      actual_stimulation_time = trial->timing.desired_start_time;
+    }
+
+    auto time_since_previous_trial = actual_stimulation_time - this->previous_stimulation_time;
+    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
+
+    if (!has_minimum_intertrial_interval_passed) {
+      this->decision_info_publisher->publish(decision_info);
+
+      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) not respected (time since previous stimulation: %.3f s), ignoring request.",
+                   this->minimum_intertrial_interval,
+                   time_since_previous_trial);
+      return;
+    }
+  }
+
+  /* Only publish the decision info for a decision that passes the above checks here if it is not a timed trigger, that is,
+     the mTMS device is used. In that case, the decision is feasible. (If the decision is a timed trigger, it is published
+     by Trigger Timer and not by Decider.) */
+  if (!timed_trigger) {
+    decision_info.feasible = true;
+    this->decision_info_publisher->publish(decision_info);
+  }
+
+  /* Add trial to the queue if requested. */
+  if (trial) {
+    this->trial_queue.push({*trial, sample_time});
+
+    /* Update the previous stimulation time. */
+    this->previous_stimulation_time = trial->timing.desired_start_time;
+  }
+
+  /* Send timed trigger if requested. */
+  if (timed_trigger) {
+    double_t trigger_time = timed_trigger->time;
+
+    auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
+    request_msg->timed_trigger = *timed_trigger;
+    request_msg->decision_time = sample_time;
+    request_msg->system_time_for_sample = request.triggering_sample->metadata.system_time;
+    request_msg->preprocessor_latency = request.triggering_sample->metadata.processing_time;
+    request_msg->decider_latency = decider_processing_time;
+
+    this->request_timed_trigger(request_msg);
+
+    RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", trigger_time);
+
+    /* Update the previous stimulation time. */
+    this->previous_stimulation_time = trigger_time;
+  }
+
+  /* Publish sensory stimuli if the vector is not empty. */
+  if (!this->sensory_stimuli.empty()) {
+    auto sensory_stimulus_count = this->sensory_stimuli.size();
+    RCLCPP_INFO(this->get_logger(), "Requesting %zu sensory stimuli at time %.3f (s).", sensory_stimulus_count, sample_time);
+
+    for (const auto& sensory_stimulus : this->sensory_stimuli) {
+      this->sensory_stimulus_publisher->publish(sensory_stimulus);
+    }
+    this->sensory_stimuli.clear();
+  }
+  
+  /* Send coil target. */
+  if (!coil_target.empty()) {
+    auto coil_target_msg = targeting_msgs::msg::CoilTarget();
+    coil_target_msg.target_name = coil_target;
+    RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
+    this->coil_target_publisher->publish(coil_target_msg);
   }
 }
 
@@ -1138,6 +1333,9 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     return;
   }
 
+  /* Process any deferred requests that are now ready (have enough look-ahead samples). */
+  process_ready_deferred_requests(sample_time);
+
   /* Check if any decider-defined events occur at the current sample. */
   auto [has_event, event_time, event_type] = consume_next_event(sample_time);
   if (has_event) {
@@ -1157,196 +1355,63 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     }
   }
 
-  /* Check if the sample should be processed. */
-  bool process_current_sample = false;
+  /* Check if the sample should trigger processing. */
+  bool should_trigger_processing = false;
 
-  /* If process on trigger is enabled, process if the sample includes a trigger. */
+  /* If process on trigger is enabled, trigger processing if the sample includes a trigger. */
   bool is_trigger = msg->is_trigger;
   if (this->decider_wrapper->is_process_on_trigger_enabled() && is_trigger) {
-    process_current_sample = true;
+    should_trigger_processing = true;
   }
 
-  /* If processing interval is enabled, process every N samples, where N is defined on the Python side. */
+  /* If processing interval is enabled, trigger processing every N samples, where N is defined on the Python side. */
   if (this->decider_wrapper->is_processing_interval_enabled()) {
     this->samples_since_last_processing++;
 
     if (this->samples_since_last_processing == this->decider_wrapper->get_processing_interval_in_samples()) {
-      process_current_sample = true;
+      should_trigger_processing = true;
     }
   }
 
-  /* Always process if the sample includes an event. */
+  /* Always trigger processing if the sample includes an event. */
   if (has_event) {
-    process_current_sample = true;
+    should_trigger_processing = true;
   }
 
-  /* If neither condition is met, return early. */
-  if (!process_current_sample) {
-    return;
-  }
-  this->samples_since_last_processing = 0;
-
-  /* Determine if we are ready for a trial. */
-  auto ready_for_trial = !performing_trial &&
-                         !processing_timed_trigger &&
-                         this->trial_queue.empty();
-
-  /* Process the sample. */
-  auto [success, trial, timed_trigger, coil_target] = this->decider_wrapper->process(
-    this->sensory_stimuli,
-    this->sample_buffer,
-    sample_time,
-    ready_for_trial,
-    is_trigger,
-    has_event,
-    event_type,
-    this->event_queue,
-    this->event_queue_mutex,
-    this->is_coil_at_target);
-
-  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  publish_python_logs(sample_time, false);
-
-  /* Log and return early if the Python call failed. */
-  if (!success) {
-    RCLCPP_ERROR_THROTTLE(this->get_logger(),
-                          *this->get_clock(),
-                          1000,
-                          "Python call failed, not processing EEG sample at time %.3f (s).",
-                          sample_time);
-    return;
-  }
-
-  /* Calculate the total latency of the decider. */
-  auto end_time = std::chrono::high_resolution_clock::now();
-  double_t decider_processing_time = std::chrono::duration<double_t>(end_time - start_time).count();
-
-  /* Combine both trials (for mTMS device) and timed triggers (for other TMS devices). */
-  bool is_decision_positive = trial || timed_trigger;
-
-  /* Create decision info, but only publish in Decider if the pathway doesn't reach the Trigger Timer.
-
-  XXX: The logic related to when to publish the decision info is quite messy. */
-  auto decision_info = pipeline_interfaces::msg::DecisionInfo();
-  decision_info.stimulate = is_decision_positive;
-
-  /* If Decider publishes the decision info, stimulation is typically not feasible; the only exception is when the mTMS device is enabled,
-     handle that case separately. */
-  decision_info.feasible = false;
-
-  decision_info.decision_time = sample_time;
-  decision_info.decider_latency = decider_processing_time;
-  decision_info.preprocessor_latency = msg->metadata.processing_time;
-
-  rclcpp::Time now = this->get_clock()->now();
-  rclcpp::Time sample_time_rcl(msg->metadata.system_time);
-  double_t total_latency = now.seconds() - sample_time_rcl.seconds();
-
-  decision_info.total_latency = total_latency;
-
-  /* Check timing latency threshold.
-
-     XXX: Enabled only when using NeuroSimo without the mTMS device. The reason is that without the mTMS device,
-       latency is periodically and automatically measured by the pipeline (as described in the NeuroSimo article),
-       hence it is feasible to disable stimulation when it exceeds a threshold.
-
-       However, when the mTMS device is enabled, latency is measured only when a pulse is delivered. Even though
-       the latest measured latency is also in that case propagated into this->timing_latency, it won't be updated
-       before a new pulse is delivered, and therefore this check, when failing, prevents all future pulses. */
-  if (this->timing_latency > this->timing_latency_threshold && !this->mtms_device_enabled) {
-    this->decision_info_publisher->publish(decision_info);
-
-    RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms), ignoring stimulation request.", this->timing_latency * 1000, this->timing_latency_threshold * 1000);
-    return;
-  }
-
-  /* Check if a trial or timed trigger has already been requested. */
-  bool is_already_stimulating = this->performing_trial || this->processing_timed_trigger;
-
-  /* Check that the decider is not already stimulating. */
-  if (is_decision_positive && is_already_stimulating) {
-    this->decision_info_publisher->publish(decision_info);
-
-    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but already performing trial or timed trigger, ignoring request.");
-    return;
-  }
-
-  /* Check that the minimum pulse interval is respected. */
-  if (is_decision_positive) {
-    double_t actual_stimulation_time = UNSET_PREVIOUS_TIME;
-
-    if (timed_trigger) {
-      actual_stimulation_time = timed_trigger->time;
-    } else if (trial) {
-      /* For trials, we need to get the desired start time from the trial. */
-      actual_stimulation_time = trial->timing.desired_start_time;
+  /* If the sample should trigger processing, defer it based on the number of look-ahead samples. */
+  if (should_trigger_processing) {
+    this->samples_since_last_processing = 0;
+    
+    /* Calculate when processing should actually occur based on the look-ahead window.
+       For a sample window like [-10, 5], we need 5 samples of look-ahead after the
+       triggering sample before we can process it. */
+    int look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
+    
+    /* Create a deferred processing request. */
+    DeferredProcessingRequest request;
+    request.triggering_sample = msg;
+    request.is_trigger = is_trigger;
+    request.has_event = has_event;
+    request.event_type = event_type;
+    
+    /* Calculate the time when we'll have enough look-ahead samples.
+       If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
+       Each sample takes sampling_period time. */
+    if (look_ahead_samples > 0) {
+      request.processing_time = sample_time + (look_ahead_samples * this->sampling_period);
+      RCLCPP_DEBUG(this->get_logger(), 
+                   "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
+                   sample_time, request.processing_time, look_ahead_samples);
+    } else {
+      /* If look-ahead is 0 or negative, no look-ahead is needed, process at this sample time. */
+      request.processing_time = sample_time;
     }
-
-    auto time_since_previous_trial = actual_stimulation_time - this->previous_stimulation_time;
-    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
-
-    if (!has_minimum_intertrial_interval_passed) {
-      this->decision_info_publisher->publish(decision_info);
-
-      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) not respected (time since previous stimulation: %.3f s), ignoring request.",
-                   this->minimum_intertrial_interval,
-                   time_since_previous_trial);
-      return;
-    }
-  }
-
-  /* Only publish the decision info for a decision that passes the above checks here if it is not a timed trigger, that is,
-     the mTMS device is used. In that case, the decision is feasible. (If the decision is a timed trigger, it is published
-     by Trigger Timer and not by Decider.) */
-  if (!timed_trigger) {
-    decision_info.feasible = true;
-    this->decision_info_publisher->publish(decision_info);
-  }
-
-  /* Add trial to the queue if requested. */
-  if (trial) {
-    this->trial_queue.push({*trial, sample_time});
-
-    /* Update the previous stimulation time. */
-    this->previous_stimulation_time = trial->timing.desired_start_time;
-  }
-
-  /* Send timed trigger if requested. */
-  if (timed_trigger) {
-    double_t trigger_time = timed_trigger->time;
-
-    auto request = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
-    request->timed_trigger = *timed_trigger;
-    request->decision_time = sample_time;
-    request->system_time_for_sample = msg->metadata.system_time;
-    request->preprocessor_latency = msg->metadata.processing_time;
-    request->decider_latency = decider_processing_time;
-
-    this->request_timed_trigger(request);
-
-    RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", trigger_time);
-
-    /* Update the previous stimulation time. */
-    this->previous_stimulation_time = trigger_time;
-  }
-
-  /* Publish sensory stimuli if the vector is not empty. */
-  if (!this->sensory_stimuli.empty()) {
-    auto sensory_stimulus_count = this->sensory_stimuli.size();
-    RCLCPP_INFO(this->get_logger(), "Requesting %zu sensory stimuli at time %.3f (s).", sensory_stimulus_count, sample_time);
-
-    for (const auto& sensory_stimulus : this->sensory_stimuli) {
-      this->sensory_stimulus_publisher->publish(sensory_stimulus);
-    }
-    this->sensory_stimuli.clear();
-  }
-    /* Send coil target. */
-  if (!coil_target.empty()) {
-    auto coil_target_msg = targeting_msgs::msg::CoilTarget();
-    coil_target_msg.target_name = coil_target;
-    RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
-    this->coil_target_publisher->publish(coil_target_msg);
+    
+    /* Add to deferred processing queue. */
+    this->deferred_processing_queue.push(request);
+    
+    /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
+    process_ready_deferred_requests(sample_time);
   }
 }
 

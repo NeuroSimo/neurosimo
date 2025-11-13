@@ -82,7 +82,7 @@ public:
   std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
-    double_t sample_time,
+    double_t sample_window_base_time,
     bool ready_for_trial,
     bool is_trigger,
     bool has_event,
@@ -100,6 +100,7 @@ public:
   uint16_t get_processing_interval_in_samples() const;
   bool is_processing_interval_enabled() const;
   bool is_process_on_trigger_enabled() const;
+  int get_look_ahead_samples() const;
 
   void setup_custom_print();
 
@@ -133,8 +134,8 @@ private:
 
   std::unordered_map<std::string, std::chrono::steady_clock::time_point> last_log_time;
 
-  int earliest_sample;
-  int latest_sample;
+  int look_back_samples;
+  int look_ahead_samples;
   uint16_t sampling_frequency;
   uint16_t processing_interval_in_samples = 0;
   bool process_on_trigger = false;

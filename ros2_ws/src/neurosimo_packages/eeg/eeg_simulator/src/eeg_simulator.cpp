@@ -139,6 +139,12 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     qos_session,
     std::bind(&EegSimulator::handle_session, this, std::placeholders::_1));
 
+  /* Client for stopping session. */
+  this->stop_session_client = this->create_client<system_interfaces::srv::StopSession>(
+    "/system/session/stop",
+    rmw_qos_profile_services_default,
+    callback_group);
+
   /* Publisher for EEG samples.
 
      NB: It is crucial to not use the shared, re-entrant callback group for this publisher, as EEG sample messages
@@ -793,7 +799,12 @@ bool EegSimulator::publish_until(double_t until_time) {
     
     // Safety check: prevent infinite loops if not in loop mode
     if (!loop && this->current_index == 0) {
-      RCLCPP_INFO(this->get_logger(), "Reached end of dataset without loop mode.");
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset without loop mode. Stopping session.");
+      
+      // Call the stop session service
+      auto request = std::make_shared<system_interfaces::srv::StopSession::Request>();
+      auto result = stop_session_client->async_send_request(request);
+      
       break;
     }
     

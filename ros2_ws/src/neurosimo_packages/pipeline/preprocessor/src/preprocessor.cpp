@@ -200,6 +200,11 @@ void EegPreprocessor::handle_session(const std::shared_ptr<system_interfaces::ms
     this->total_dropped_samples = 0;
     this->reinitialize = true;
 
+    /* Clear deferred processing queue when session stops. */
+    while (!this->deferred_processing_queue.empty()) {
+      this->deferred_processing_queue.pop();
+    }
+
     /* Reset the preprocessor state when the session is stopped. */
     reset_preprocessor_state();
   }
@@ -613,6 +618,64 @@ void EegPreprocessor::handle_pulse_feedback(const std::shared_ptr<eeg_msgs::msg:
 }
 */
 
+void EegPreprocessor::process_ready_deferred_requests(double_t current_sample_time) {
+  /* Process any deferred requests that are now ready (have enough look-ahead samples). */
+  while (!this->deferred_processing_queue.empty()) {
+    const auto& next_request = this->deferred_processing_queue.top();
+    
+    /* Check if our current sample time is within the tolerance of the processing time of the next request. */
+    if (current_sample_time >= next_request.processing_time - this->TOLERANCE_S) {
+      /* Process this deferred request. */
+      process_deferred_request(next_request, current_sample_time);
+      this->deferred_processing_queue.pop();
+    } else {
+      /* The next request is not ready yet. */
+      break;
+    }
+  }
+}
+
+void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time) {
+  auto start_time = std::chrono::high_resolution_clock::now();
+
+  auto triggering_sample = request.triggering_sample;
+  double_t sample_time = triggering_sample->time;
+  
+  /* Determine if a pulse was given. */
+  bool pulse_given = is_pulse_feedback_received(sample_time) || triggering_sample->is_trigger;
+  
+  /* Process the sample. */
+  bool success = this->preprocessor_wrapper->process(
+    preprocessed_sample,
+    this->sample_buffer,
+    sample_time,
+    pulse_given);
+
+  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
+  publish_python_logs(sample_time, false);
+
+  if (success) {
+    /* Copy metadata from the triggering sample. */
+    preprocessed_sample.metadata.sampling_frequency = triggering_sample->metadata.sampling_frequency;
+    preprocessed_sample.metadata.num_of_eeg_channels = triggering_sample->metadata.num_of_eeg_channels;
+    preprocessed_sample.metadata.num_of_emg_channels = triggering_sample->metadata.num_of_emg_channels;
+    preprocessed_sample.metadata.is_simulation = triggering_sample->metadata.is_simulation;
+    preprocessed_sample.metadata.system_time = triggering_sample->metadata.system_time;
+
+    /* Copy event and trigger information. */
+    preprocessed_sample.is_trigger = triggering_sample->is_trigger;
+    preprocessed_sample.is_event = triggering_sample->is_event;
+    preprocessed_sample.event_type = triggering_sample->event_type;
+
+    /* Calculate processing time. */
+    auto end_time = std::chrono::high_resolution_clock::now();
+    preprocessed_sample.metadata.processing_time = std::chrono::duration<double_t>(end_time - start_time).count();
+
+    /* Publish the preprocessed sample. */
+    preprocessed_eeg_publisher->publish(preprocessed_sample);
+  }
+}
+
 bool EegPreprocessor::is_pulse_feedback_received(double_t sample_time) {
   bool pulse_feedback_received = false;
 
@@ -694,53 +757,40 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample
     RCLCPP_INFO(this->get_logger(), "Registered event at: %.5f (s).", sample_time);
   }
 
-  bool pulse_given = is_pulse_feedback_received(sample_time) || msg->is_trigger;
-
   this->sample_buffer.append(msg);
 
   if (!this->sample_buffer.is_full()) {
     return;
   }
 
-  bool success = this->preprocessor_wrapper->process(
-    preprocessed_sample,
-    sample_buffer,
-    sample_time,
-    pulse_given);
+  /* Process any deferred requests that are now ready (= have enough look-ahead samples). */
+  process_ready_deferred_requests(sample_time);
 
-  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  publish_python_logs(sample_time, false);
-
-  if (success) {
-    /* Copy metadata from the raw sample. */
-    preprocessed_sample.metadata.sampling_frequency = msg->metadata.sampling_frequency;
-    preprocessed_sample.metadata.num_of_eeg_channels = msg->metadata.num_of_eeg_channels;
-    preprocessed_sample.metadata.num_of_emg_channels = msg->metadata.num_of_emg_channels;
-    preprocessed_sample.metadata.is_simulation = msg->metadata.is_simulation;
-    preprocessed_sample.metadata.system_time = msg->metadata.system_time;
-
-    /* XXX: Just copy trigger and event fields into preprocessed sample; this is probably incorrect
-       in case samples are delayed by the preprocessor. */
-    preprocessed_sample.is_trigger = msg->is_trigger;
-    preprocessed_sample.is_event = msg->is_event;
-    preprocessed_sample.event_type = msg->event_type;
-
-    /* Measure and store the processing time for the sample. */
-    auto end_time = std::chrono::high_resolution_clock::now();
-    double_t processing_time = std::chrono::duration<double_t>(end_time - start_time).count();
-
-    preprocessed_sample.metadata.processing_time = processing_time;
-
-    /* Publish the preprocessed sample. */
-    this->preprocessed_eeg_publisher->publish(preprocessed_sample);
-
+  /* For every sample, create a deferred processing request.
+     Calculate when processing should actually occur based on the look-ahead window. */
+  int look_ahead_samples = this->preprocessor_wrapper->get_look_ahead_samples();
+  
+  DeferredProcessingRequest request;
+  request.triggering_sample = msg;
+  
+  /* Calculate the time when we'll have enough look-ahead samples.
+     If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
+     Each sample takes sampling_period time. */
+  if (look_ahead_samples > 0) {
+    request.processing_time = sample_time + (look_ahead_samples * this->sampling_period);
+    RCLCPP_DEBUG(this->get_logger(), 
+                 "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
+                 sample_time, request.processing_time, look_ahead_samples);
   } else {
-    RCLCPP_ERROR_THROTTLE(this->get_logger(),
-                          *this->get_clock(),
-                          1000,
-                          "Python call failed, not publishing data on topic %s",
-                          EEG_PREPROCESSED_TOPIC.c_str());
+    /* If look-ahead is 0 or negative, no look-ahead is needed, process immediately. */
+    request.processing_time = sample_time;
   }
+  
+  /* Add to deferred processing queue. */
+  this->deferred_processing_queue.push(request);
+  
+  /* Check requests once more so that a new request that was just added can be processed immediately if needed. */
+  process_ready_deferred_requests(sample_time);
 }
 
 int main(int argc, char *argv[]) {

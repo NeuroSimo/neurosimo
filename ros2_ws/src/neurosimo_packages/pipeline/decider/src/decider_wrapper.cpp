@@ -271,9 +271,14 @@ void DeciderWrapper::initialize_module(
     if (config.contains("sample_window")) {
       py::list sample_window = config["sample_window"].cast<py::list>();
       if (sample_window.size() == 2) {
-        this->earliest_sample = sample_window[0].cast<int>();
-        this->latest_sample = sample_window[1].cast<int>();
-        this->buffer_size = this->latest_sample - this->earliest_sample + 1;
+        int earliest_sample_index = sample_window[0].cast<int>();
+        int latest_sample_index = sample_window[1].cast<int>();
+        
+        /* Convert from indices to positive sample counts.
+           For window [-10, 5]: look_back_samples = 10, look_ahead_samples = 5 */
+        this->look_back_samples = -earliest_sample_index;
+        this->look_ahead_samples = latest_sample_index;
+        this->buffer_size = this->look_back_samples + this->look_ahead_samples + 1;
       } else {
         RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
         state = WrapperState::ERROR;
@@ -380,7 +385,7 @@ void DeciderWrapper::initialize_module(
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%d, %d]%s", bold_on.c_str(), this->earliest_sample, this->latest_sample, bold_off.c_str());
+  RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%d, %d]%s", bold_on.c_str(), -this->look_back_samples, this->look_ahead_samples, bold_off.c_str());
   if (this->processing_interval_in_samples == 0) {
     RCLCPP_INFO(*logger_ptr, "  - Processing interval: %sDisabled%s", bold_on.c_str(), bold_off.c_str());
   } else {
@@ -435,8 +440,8 @@ void DeciderWrapper::warm_up() {
     auto emg_data_ptr = py_emg_data->mutable_data();
 
     // Dummy parameters for process method (constant across all rounds)
-    double_t dummy_current_time = 0.0;
-    int dummy_current_sample_index = -earliest_sample;
+    double_t dummy_sample_window_base_time = 0.0;
+    int dummy_sample_window_base_index = look_back_samples;
     bool dummy_ready_for_trial = true;
     bool dummy_is_trigger = false;
     bool dummy_has_event = false;
@@ -465,12 +470,12 @@ void DeciderWrapper::warm_up() {
         auto start_time = std::chrono::high_resolution_clock::now();
         
         py::object py_result = decider_instance->attr("process")(
-          dummy_current_time, 
+          dummy_sample_window_base_time, 
           *py_timestamps, 
           *py_valid, 
           *py_eeg_data, 
           *py_emg_data, 
-          dummy_current_sample_index, 
+          dummy_sample_window_base_index,
           dummy_ready_for_trial, 
           dummy_is_trigger, 
           dummy_has_event, 
@@ -602,6 +607,12 @@ bool DeciderWrapper::is_process_on_trigger_enabled() const {
   return this->process_on_trigger;
 }
 
+int DeciderWrapper::get_look_ahead_samples() const {
+  /* For a sample window like [-10, 5], look_ahead_samples is 5, which represents
+     the number of samples we need to look ahead from the triggering sample. */
+  return this->look_ahead_samples;
+}
+
 bool DeciderWrapper::parse_sensory_stimulus_dict(
   const py::dict& py_sensory_stimulus,
   pipeline_interfaces::msg::SensoryStimulus& out_msg) {
@@ -707,7 +718,7 @@ bool DeciderWrapper::process_sensory_stimuli_list(
 std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> DeciderWrapper::process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
-    double_t sample_time,
+    double_t sample_window_base_time,
     bool ready_for_trial,
     bool is_trigger,
     bool has_event,
@@ -723,17 +734,9 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
   std::string coil_target;
 
-  /* TODO: The logic below, as well as the difference in semantics between "sample time" and "current time", needs to
-     be documented somewhere more thoroughly. */
-
-  /* An example: If the sample window is set to [-2, 2], the earliest sample will be -2, and the current sample,
-     i.e., the sample corresponding to 0, will have the index 2, hence the calculation below. */
-  int current_sample_index = -this->earliest_sample;
-
-  /* An example: If sample time is 5.0 and the sampling frequency is 5 kHz, and we have a sample window [-2, 2]
-     (the latest sample being 2), the sample 2 in the sample window corresponds to the time 5.0. Hence, sample 0
-     corresponds to the time 5.0 s - 2 / (5000 Hz) = 4.9996 s. */
-  double_t current_time = sample_time - (double)this->latest_sample / this->sampling_frequency;
+  /* An example: If the sample window is set to [-2, 5], look_back_samples = 2, and the sample window base index
+     (the index of sample 0 in the buffer) is 2. */
+  int sample_window_base_index = this->look_back_samples;
 
   /* Fill the numpy arrays. */
   auto timestamps_ptr = py_timestamps->mutable_data();
@@ -744,7 +747,9 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   buffer.process_elements([&](const auto& sample_ptr) {
     const auto& sample = *sample_ptr;
 
-    *timestamps_ptr++ = sample.time - current_time;
+    /* Note: The timestamps are relative to the sample window base time. Maybe they should be absolute times instead
+       or should we pass both relative and absolute times to Python? */
+    *timestamps_ptr++ = sample.time - sample_window_base_time;
     *valid_ptr++ = sample.valid;
     std::memcpy(eeg_data_ptr, sample.eeg_data.data(), eeg_data_size * sizeof(double));
     eeg_data_ptr += eeg_data_size;
@@ -755,7 +760,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   /* Call the Python function. */
   py::object py_result;
   try {
-    py_result = decider_instance->attr("process")(current_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, current_sample_index, ready_for_trial, is_trigger, has_event, event_type, is_coil_at_target);
+    py_result = decider_instance->attr("process")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_trigger, has_event, event_type, is_coil_at_target);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();

@@ -65,6 +65,28 @@ struct GoalMetadata {
   double decision_time;
 };
 
+struct DeferredProcessingRequest {
+  /* The time when processing should actually occur (after look-ahead samples have arrived). */
+  double_t processing_time;
+  
+  /* The sample that triggered the processing request. */
+  std::shared_ptr<eeg_msgs::msg::PreprocessedSample> triggering_sample;
+  
+  /* Whether this was triggered by a trigger signal. */
+  bool is_trigger;
+  
+  /* Whether this has an event. */
+  bool has_event;
+  
+  /* Event type if has_event is true. */
+  std::string event_type;
+  
+  /* Comparison operator for priority queue (min-heap by processing_time). */
+  bool operator>(const DeferredProcessingRequest& other) const {
+    return processing_time > other.processing_time;
+  }
+};
+
 
 class DeciderWrapper;
 
@@ -133,6 +155,9 @@ private:
 
   std::tuple<bool, double, std::string> consume_next_event(double_t current_time);
   void pop_event();
+  
+  void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
+  void process_ready_deferred_requests(double_t current_sample_time);
 
   /* File-system related functions */
   bool change_working_directory(const std::string path);
@@ -254,6 +279,11 @@ private:
                       std::vector<std::pair<double, std::string>>,
                       std::greater<std::pair<double, std::string>>> event_queue;
   std::mutex event_queue_mutex;
+
+  /* Deferred processing queue for handling look-ahead samples. */
+  std::priority_queue<DeferredProcessingRequest,
+                      std::vector<DeferredProcessingRequest>,
+                      std::greater<DeferredProcessingRequest>> deferred_processing_queue;
 
   /* When determining if samples have been dropped by comparing the timestamps of two consecutive
      samples, allow some tolerance to account for finite precision of floating point numbers. */

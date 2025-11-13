@@ -43,6 +43,19 @@ enum class PreprocessorState {
   MODULE_ERROR
 };
 
+struct DeferredProcessingRequest {
+  /* The time when processing should actually occur (after look-ahead samples have arrived). */
+  double_t processing_time;
+  
+  /* The sample that triggered the processing request. */
+  std::shared_ptr<eeg_msgs::msg::Sample> triggering_sample;
+  
+  /* Comparison operator for priority queue (min-heap by processing_time). */
+  bool operator>(const DeferredProcessingRequest& other) const {
+    return processing_time > other.processing_time;
+  }
+};
+
 class PreprocessorWrapper;
 
 class EegPreprocessor : public rclcpp::Node {
@@ -82,6 +95,9 @@ private:
   bool is_pulse_feedback_received(double_t sample_time);
 
   void process_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
+  
+  void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
+  void process_ready_deferred_requests(double_t current_sample_time);
 
   /* File-system related functions */
   bool change_working_directory(const std::string path);
@@ -148,6 +164,11 @@ private:
   eeg_msgs::msg::PreprocessedSample preprocessed_sample;
 
   std::unique_ptr<PreprocessorWrapper> preprocessor_wrapper;
+
+  /* Deferred processing queue for handling look-ahead samples. */
+  std::priority_queue<DeferredProcessingRequest,
+                      std::vector<DeferredProcessingRequest>,
+                      std::greater<DeferredProcessingRequest>> deferred_processing_queue;
 
   /* Healthcheck */
   uint8_t status;

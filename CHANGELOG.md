@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed log message loss when publishing bursts of messages from Python pipeline modules by batching related messages together
+- Fixed preprocessor and decider to correctly handle look-ahead windows in EEG buffers
+
+### Changed
+- Automatically stop session when EEG simulator reaches end of dataset without loop mode
 
 ## [0.1.0] - 2025-10-27
 

@@ -26,6 +26,7 @@
 
 #include "system_interfaces/msg/session.hpp"
 #include "system_interfaces/msg/session_state.hpp"
+#include "system_interfaces/srv/stop_session.hpp"
 
 
 enum class EegSimulatorState {
@@ -167,6 +168,7 @@ private:
   rclcpp::Publisher<eeg_msgs::msg::EegInfo>::SharedPtr eeg_info_publisher;
 
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
+  rclcpp::Client<system_interfaces::srv::StopSession>::SharedPtr stop_session_client;
 
   /* Inotify variables */
   rclcpp::TimerBase::SharedPtr inotify_timer;

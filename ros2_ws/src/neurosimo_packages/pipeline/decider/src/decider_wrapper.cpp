@@ -252,6 +252,13 @@ void DeciderWrapper::initialize_module(
     return;
   }
 
+  /* Check that the Python module has a process_eeg_trigger method (mandatory). */
+  if (!py::hasattr(*decider_instance, "process_eeg_trigger")) {
+    RCLCPP_ERROR(*logger_ptr, "Decider module must implement 'process_eeg_trigger' method.");
+    state = WrapperState::ERROR;
+    return;
+  }
+
   /* Extract the configuration from decider_instance. */
   if (py::hasattr(*decider_instance, "get_configuration")) {
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
@@ -465,7 +472,6 @@ void DeciderWrapper::warm_up() {
     double_t dummy_sample_window_base_time = 0.0;
     int dummy_sample_window_base_index = look_back_samples;
     bool dummy_ready_for_trial = true;
-    bool dummy_is_trigger = false;
     bool dummy_has_event = false;
     std::string dummy_event_type = "";
     bool dummy_is_coil_at_target = true;
@@ -499,7 +505,6 @@ void DeciderWrapper::warm_up() {
           *py_emg_data, 
           dummy_sample_window_base_index,
           dummy_ready_for_trial, 
-          dummy_is_trigger, 
           dummy_has_event, 
           dummy_event_type,
           dummy_is_coil_at_target
@@ -783,10 +788,16 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     emg_data_ptr += emg_data_size;
   });
 
-  /* Call the Python function. */
+  /* Call the appropriate Python function. */
   py::object py_result;
   try {
-    py_result = decider_instance->attr("process")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_trigger, has_event, event_type, is_coil_at_target);
+    if (is_trigger) {
+      /* Call process_eeg_trigger. */
+      py_result = decider_instance->attr("process_eeg_trigger")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_coil_at_target);
+    } else {
+      /* Call standard process method. */
+      py_result = decider_instance->attr("process")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, has_event, event_type, is_coil_at_target);
+    }
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();

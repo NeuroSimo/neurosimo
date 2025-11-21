@@ -264,11 +264,11 @@ void DeciderWrapper::initialize_module(
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
 
     /* Validate that only allowed keys are present */
-    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_interval", "process_on_trigger", "predefined_events", "pulse_lockout_duration"};
+    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_interval", "process_on_trigger", "predefined_events", "pulse_lockout_duration", "event_handlers"};
     for (const auto& item : config) {
       std::string key = py::str(item.first).cast<std::string>();
       if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_interval', 'process_on_trigger', 'predefined_events', and 'pulse_lockout_duration' are allowed.", key.c_str());
+        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_interval', 'process_on_trigger', 'predefined_events', 'pulse_lockout_duration', and 'event_handlers' are allowed.", key.c_str());
         state = WrapperState::ERROR;
         return;
       }
@@ -385,6 +385,37 @@ void DeciderWrapper::initialize_module(
     } else {
       this->pulse_lockout_duration = 0.0;
     }
+
+    /* Extract event_handlers. */
+    if (config.contains("event_handlers")) {
+      if (!py::isinstance<py::dict>(config["event_handlers"])) {
+        RCLCPP_ERROR(*logger_ptr, "event_handlers must be a dictionary.");
+        state = WrapperState::ERROR;
+        return;
+      }
+
+      py::dict handlers = config["event_handlers"].cast<py::dict>();
+      this->event_handlers.clear();
+      
+      for (const auto& item : handlers) {
+        std::string event_type = py::str(item.first).cast<std::string>();
+        py::object handler = item.second.cast<py::object>();
+        
+        /* Verify that the handler is callable */
+        if (!py::hasattr(handler, "__call__")) {
+          RCLCPP_ERROR(*logger_ptr, "Event handler for '%s' is not callable.", event_type.c_str());
+          state = WrapperState::ERROR;
+          return;
+        }
+        
+        this->event_handlers[event_type] = handler;
+        RCLCPP_DEBUG(*logger_ptr, "Registered event handler for: %s", event_type.c_str());
+      }
+    } else {
+      RCLCPP_ERROR(*logger_ptr, "'event_handlers' key not found in configuration dictionary.");
+      state = WrapperState::ERROR;
+      return;
+    }
   } else {
     RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Decider instance.");
     state = WrapperState::ERROR;
@@ -472,8 +503,6 @@ void DeciderWrapper::warm_up() {
     double_t dummy_sample_window_base_time = 0.0;
     int dummy_sample_window_base_index = look_back_samples;
     bool dummy_ready_for_trial = true;
-    bool dummy_has_event = false;
-    std::string dummy_event_type = "";
     bool dummy_is_coil_at_target = true;
 
     // Perform warm-up rounds with fresh random data for each round
@@ -505,8 +534,6 @@ void DeciderWrapper::warm_up() {
           *py_emg_data, 
           dummy_sample_window_base_index,
           dummy_ready_for_trial, 
-          dummy_has_event, 
-          dummy_event_type,
           dummy_is_coil_at_target
         );
         
@@ -794,9 +821,29 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     if (is_trigger) {
       /* Call process_eeg_trigger. */
       py_result = decider_instance->attr("process_eeg_trigger")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_coil_at_target);
+    } else if (has_event) {
+      /* Call event handler for this event type. */
+      auto handler_it = event_handlers.find(event_type);
+      if (handler_it == event_handlers.end()) {
+        std::string error_msg = std::string("No event handler registered for event type: ") + event_type;
+        RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+        
+        // Add error to log buffer so it can be published to UI
+        {
+          std::lock_guard<std::mutex> lock(log_buffer_mutex);
+          log_buffer.push_back({error_msg, LogLevel::ERROR});
+        }
+        
+        state = WrapperState::ERROR;
+        success = false;
+        return {success, trial, timed_trigger, coil_target};
+      }
+      
+      /* Call the event handler. */
+      py_result = handler_it->second(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_coil_at_target);
     } else {
-      /* Call standard process method. */
-      py_result = decider_instance->attr("process")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, has_event, event_type, is_coil_at_target);
+      /* Call standard process method (for periodic processing). */
+      py_result = decider_instance->attr("process")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_coil_at_target);
     }
 
   } catch(const py::error_already_set& e) {

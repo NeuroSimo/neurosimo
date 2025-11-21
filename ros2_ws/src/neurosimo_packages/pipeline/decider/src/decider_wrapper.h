@@ -128,6 +128,9 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
 
+  /* Map of event type to handler function */
+  std::unordered_map<std::string, py::object> event_handlers;
+
   std::unique_ptr<py::array_t<double>> py_timestamps;
   std::unique_ptr<py::array_t<bool>> py_valid;
   std::unique_ptr<py::array_t<double>> py_eeg_data;

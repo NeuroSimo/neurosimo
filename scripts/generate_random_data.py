@@ -60,9 +60,9 @@ if __name__ == "__main__":
     if not args.no_events:
         # Define events with string-based event types
         events = [
-            [1.0, "prepulse"],
-            [2.0, "postpulse"],
-            [5.0, "prepulse"],
+            [1.0, "pulse"],
+            [2.0, "pulse"],
+            [5.0, "pulse"],
         ]
         event_filename = args.output_filename + "_events.csv" if not args.no_events else None
 

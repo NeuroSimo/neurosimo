@@ -65,14 +65,13 @@ Two-element list `[earliest_sample, latest_sample]` defining the buffer size rel
 List of event dictionaries for scheduled processing triggers.
 
 **Event dictionary structure:**
-- `type` (str): Event type identifier (e.g., "prepulse", "postpulse", "baseline_start")
+- `type` (str): Event type identifier (e.g., "pulse", "baseline_start")
 - `time` (float): Event time in seconds relative to session start
 
 **Example:**
 ```python
 'events': [
-    {'type': 'prepulse', 'time': 10.0},
-    {'type': 'postpulse', 'time': 10.5}
+    {'type': 'pulse', 'time': 10.0},
 ]
 ```
 
@@ -142,7 +141,7 @@ Whether a trigger was received from EEG device on this sample.
 Whether an event occurred on this sample (from `events` configuration).
 
 #### `event_type` (str)
-Type of event that occurred (e.g., "prepulse", "postpulse").
+Type of event that occurred (e.g., "pulse").
 
 **Return Value:**
 

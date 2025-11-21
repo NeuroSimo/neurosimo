@@ -109,20 +109,31 @@ class Decider:
             Dictionary containing processing configuration parameters
         """
         return {
+            # Data configuration
+            'sample_window': [-(self.buffer_size_samples - 1), 0],
+            
+            # Processing triggers
             'periodic_processing_interval': self.periodic_processing_interval,
             'process_on_trigger': False,
-            'sample_window': [-(self.buffer_size_samples - 1), 0],
+            
+            # Event system
             'predefined_events': [],
+            'event_handlers': {
+                'pulse': self.handle_pulse,
+            },
+            
+            # Stimuli
             'predefined_sensory_stimuli': [],
+            
+            # Constraints
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                 eeg_buffer: np.ndarray, emg_buffer: np.ndarray, current_sample_index: int, 
-                ready_for_trial: bool, is_event: bool, event_type: str, 
-                is_coil_at_target: bool) -> Optional[Dict[str, float]]:
+                ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
         """
-        Process the EEG data to estimate phase and schedule a trigger.
+        Process the EEG data to estimate phase and schedule a trigger (periodic processing).
         
         Args:
             current_time: Current timestamp
@@ -132,9 +143,6 @@ class Decider:
             emg_buffer: EMG data buffer (unused)
             current_sample_index: Current sample index
             ready_for_trial: Whether the system is ready for a new trial
-            is_trigger: Whether a trigger event occurred
-            is_event: Whether an event occurred
-            event_type: Type of event
             is_coil_at_target: Whether the coil is currently at the target position
             
         Returns:
@@ -397,4 +405,13 @@ class Decider:
         """Handle EEG trigger from the EEG device."""
         print(f'EEG trigger received at time {current_time:.4f}')
         # Phastimate doesn't process EEG triggers, just log them
+        return None
+
+    def handle_pulse(self, current_time: float, timestamps: np.ndarray, 
+                    valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
+                    emg_buffer: np.ndarray, current_sample_index: int, 
+                    ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
+        """Handle pulse event."""
+        print(f'Pulse event received at time {current_time:.4f}')
+        # Add your pulse event handling logic here
         return None

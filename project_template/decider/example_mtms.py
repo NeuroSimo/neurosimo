@@ -116,8 +116,8 @@ class Decider:
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
                current_sample_index: int, ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
-        """Process EEG/EMG samples (periodic processing)."""
-        print("Processing EEG/EMG samples at time {:.4f}".format(current_time))
+        """Process EEG/EMG buffer (periodic processing)."""
+        print("Periodically processing EEG/EMG buffer at time {:.4f}".format(current_time))
 
         self.buffer_count += 1
 

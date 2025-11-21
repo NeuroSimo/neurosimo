@@ -257,11 +257,11 @@ void DeciderWrapper::initialize_module(
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
 
     /* Validate that only allowed keys are present */
-    std::vector<std::string> allowed_keys = {"sample_window", "sensory_stimuli", "processing_interval_in_samples", "process_on_trigger", "events"};
+    std::vector<std::string> allowed_keys = {"sample_window", "sensory_stimuli", "processing_interval_in_samples", "process_on_trigger", "events", "pulse_lockout_duration"};
     for (const auto& item : config) {
       std::string key = py::str(item.first).cast<std::string>();
       if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'sensory_stimuli', 'processing_interval_in_samples', 'process_on_trigger', and 'events' are allowed.", key.c_str());
+        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'sensory_stimuli', 'processing_interval_in_samples', 'process_on_trigger', 'events', and 'pulse_lockout_duration' are allowed.", key.c_str());
         state = WrapperState::ERROR;
         return;
       }
@@ -360,6 +360,24 @@ void DeciderWrapper::initialize_module(
       state = WrapperState::ERROR;
       return;
     }
+
+    /* Extract pulse_lockout_duration (optional, defaults to 0.0). */
+    if (config.contains("pulse_lockout_duration")) {
+      try {
+        this->pulse_lockout_duration = config["pulse_lockout_duration"].cast<double>();
+        if (this->pulse_lockout_duration < 0.0) {
+          RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be non-negative.");
+          state = WrapperState::ERROR;
+          return;
+        }
+      } catch (const py::cast_error& e) {
+        RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be a number: %s", e.what());
+        state = WrapperState::ERROR;
+        return;
+      }
+    } else {
+      this->pulse_lockout_duration = 0.0;
+    }
   } else {
     RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Decider instance.");
     state = WrapperState::ERROR;
@@ -392,6 +410,9 @@ void DeciderWrapper::initialize_module(
     RCLCPP_INFO(*logger_ptr, "  - Processing interval: %s%d%s (samples)", bold_on.c_str(), this->processing_interval_in_samples, bold_off.c_str());
   }
   RCLCPP_INFO(*logger_ptr, "  - Process on trigger: %s%s%s", bold_on.c_str(), this->process_on_trigger ? "Enabled" : "Disabled", bold_off.c_str());
+  if (this->pulse_lockout_duration > 0.0) {
+    RCLCPP_INFO(*logger_ptr, "  - Pulse lockout duration: %s%.1f%s (s)", bold_on.c_str(), this->pulse_lockout_duration, bold_off.c_str());
+  }
   RCLCPP_INFO(*logger_ptr, " ");
 }
 
@@ -611,6 +632,10 @@ int DeciderWrapper::get_look_ahead_samples() const {
   /* For a sample window like [-10, 5], look_ahead_samples is 5, which represents
      the number of samples we need to look ahead from the triggering sample. */
   return this->look_ahead_samples;
+}
+
+double DeciderWrapper::get_pulse_lockout_duration() const {
+  return this->pulse_lockout_duration;
 }
 
 bool DeciderWrapper::parse_sensory_stimulus_dict(

@@ -214,6 +214,9 @@ private:
      interval is respected. */
   double_t previous_stimulation_time = UNSET_PREVIOUS_TIME;
 
+  /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
+  double_t pulse_lockout_end_time = UNSET_PREVIOUS_TIME;
+
   bool reinitialize = true;
 
   std::string active_project = UNSET_STRING;

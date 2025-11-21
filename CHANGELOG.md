@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added pulse lockout duration to decider configuration
+
 ### Fixed
 - Fixed log message loss when publishing bursts of messages from Python pipeline modules by batching related messages together
 - Fixed preprocessor and decider to correctly handle look-ahead windows in EEG buffers
+- Events that trigger processing in decider now do not reset the processing interval
 
 ### Changed
 - Automatically stop session when EEG simulator reaches end of dataset without loop mode
+- Decreased processing interval to 0.1 seconds in phastimate example, with 2 second pulse lockout duration
 
 ## [0.1.0] - 2025-10-27
 

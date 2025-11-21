@@ -119,7 +119,7 @@ class Decider:
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                 eeg_buffer: np.ndarray, emg_buffer: np.ndarray, current_sample_index: int, 
-                ready_for_trial: bool, is_trigger: bool, is_event: bool, event_type: str, 
+                ready_for_trial: bool, is_event: bool, event_type: str, 
                 is_coil_at_target: bool) -> Optional[Dict[str, float]]:
         """
         Process the EEG data to estimate phase and schedule a trigger.
@@ -389,3 +389,12 @@ class Decider:
         amplitudes = np.abs(analytic_signal)
 
         return phases, amplitudes
+
+    def process_eeg_trigger(self, current_time: float, timestamps: np.ndarray, 
+                           valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
+                           emg_buffer: np.ndarray, current_sample_index: int, 
+                           ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
+        """Handle EEG trigger from the EEG device."""
+        print(f'EEG trigger received at time {current_time:.4f}')
+        # Phastimate doesn't process EEG triggers, just log them
+        return None

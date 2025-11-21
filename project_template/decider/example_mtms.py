@@ -110,7 +110,7 @@ class Decider:
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
-               current_sample_index: int, ready_for_trial: bool, is_trigger: bool, 
+               current_sample_index: int, ready_for_trial: bool, 
                is_event: bool, event_type: str, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG samples and decide whether to trigger mTMS stimulation."""
         print("Processing EEG/EMG samples at time {:.4f}".format(current_time))
@@ -150,3 +150,12 @@ class Decider:
         }
 
         return {'trial': trial}
+
+    def process_eeg_trigger(self, current_time: float, timestamps: np.ndarray, 
+                           valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
+                           emg_buffer: np.ndarray, current_sample_index: int, 
+                           ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+        """Handle EEG trigger from the EEG device."""
+        print("EEG trigger received at time {:.4f}".format(current_time))
+        # This example doesn't process EEG triggers, just log them
+        return None

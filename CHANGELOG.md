@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatically stop session when EEG simulator reaches end of dataset without loop mode
 - Decreased processing interval to 0.1 seconds in phastimate example, with 2 second pulse lockout duration
 - Periodic processing interval is now specified in seconds in decider configuration instead of samples, and the parameter name changed from `processing_interval_in_samples` to `periodic_processing_interval`
+- Decider module now requires a `process_eeg_trigger` method, which is called when the EEG device receives a trigger
 
 ## [0.1.0] - 2025-10-27
 

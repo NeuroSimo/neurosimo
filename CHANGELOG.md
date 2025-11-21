@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `events` parameter to `predefined_events` in decider configuration
 - Renamed `sensory_stimuli` parameter to `predefined_sensory_stimuli` in decider configuration
 - Dropped `process_on_trigger` parameter from decider configuration: decider now always triggers processing if the sample includes an EEG trigger
+- Made periodic processing scheduling independent of the buffer size in decider
 
 ## [0.1.0] - 2025-10-27
 

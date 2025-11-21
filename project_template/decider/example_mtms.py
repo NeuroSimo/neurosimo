@@ -99,9 +99,9 @@ class Decider:
             # Data configuration
             'sample_window': [-5, 0],
             
-            # Processing triggers
+            # Periodic processing
             'periodic_processing_interval': 1.0,  # Process once per second
-            'process_on_trigger': True,
+            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
             
             # Event system
             'predefined_events': predefined_events,
@@ -109,11 +109,8 @@ class Decider:
                 'pulse': self.handle_pulse,
             },
             
-            # Stimuli
+            # Sensory stimuli
             'predefined_sensory_stimuli': [],
-            
-            # Constraints
-            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 

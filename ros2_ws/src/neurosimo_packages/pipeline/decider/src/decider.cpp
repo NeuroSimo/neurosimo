@@ -1377,10 +1377,10 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     in_lockout_period = true;
   }
 
-  /* If process on trigger is enabled, trigger processing if the sample includes a trigger
-     (irrespective of the lockout period). */
+  /* If the sample includes an EEG trigger, always trigger processing
+     (irrespective of the lockout period). The handler can return None if it doesn't care about the trigger. */
   bool is_trigger = msg->is_trigger;
-  if (this->decider_wrapper->is_process_on_trigger_enabled() && is_trigger) {
+  if (is_trigger) {
     should_trigger_processing = true;
   }
 

@@ -113,7 +113,7 @@ class Decider:
             'sample_window': [-(self.buffer_size_samples - 1), 0],
             
             # Periodic processing
-            'periodic_processing_interval': 1.0,  # Process once per second
+            'periodic_processing_interval': 0.1,  # Process every 0.1 seconds
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
             
             # Event system
@@ -256,7 +256,7 @@ class Decider:
         time_offset_seconds = (optimal_sample_index * self.downsample_ratio) / self.sampling_frequency
         execution_time = current_time + time_offset_seconds
 
-        print(f'Triggering at time {execution_time:.3f} (s) with {time_offset_seconds:.3f} (s) offset')
+        print(f'Triggering at time {execution_time:.3f} s based on phase estimate at time {current_time:.1f} s')
 
         return {'timed_trigger': execution_time}
 

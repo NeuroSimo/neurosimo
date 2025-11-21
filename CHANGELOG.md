@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Decider module now requires a `process_eeg_trigger` method, which is called when the EEG device receives a trigger
 - Renamed `events` parameter to `predefined_events` in decider configuration
 - Renamed `sensory_stimuli` parameter to `predefined_sensory_stimuli` in decider configuration
+- Dropped `process_on_trigger` parameter from decider configuration: decider now always triggers processing if the sample includes an EEG trigger
 
 ## [0.1.0] - 2025-10-27
 

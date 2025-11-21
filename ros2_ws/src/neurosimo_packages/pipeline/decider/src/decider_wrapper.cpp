@@ -264,11 +264,11 @@ void DeciderWrapper::initialize_module(
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
 
     /* Validate that only allowed keys are present */
-    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_interval", "process_on_trigger", "predefined_events", "pulse_lockout_duration", "event_handlers"};
+    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_interval", "predefined_events", "pulse_lockout_duration", "event_handlers"};
     for (const auto& item : config) {
       std::string key = py::str(item.first).cast<std::string>();
       if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_interval', 'process_on_trigger', 'predefined_events', 'pulse_lockout_duration', and 'event_handlers' are allowed.", key.c_str());
+        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_interval', 'predefined_events', 'pulse_lockout_duration', and 'event_handlers' are allowed.", key.c_str());
         state = WrapperState::ERROR;
         return;
       }
@@ -335,15 +335,6 @@ void DeciderWrapper::initialize_module(
       }
     } else {
       RCLCPP_ERROR(*logger_ptr, "'periodic_processing_interval' key not found in configuration dictionary.");
-      state = WrapperState::ERROR;
-      return;
-    }
-
-    /* Extract process_on_trigger. */
-    if (config.contains("process_on_trigger")) {
-      this->process_on_trigger = config["process_on_trigger"].cast<bool>();
-    } else {
-      RCLCPP_ERROR(*logger_ptr, "'process_on_trigger' key not found in configuration dictionary.");
       state = WrapperState::ERROR;
       return;
     }
@@ -448,7 +439,6 @@ void DeciderWrapper::initialize_module(
     double interval_seconds = static_cast<double>(this->processing_interval_in_samples) / sampling_frequency;
     RCLCPP_INFO(*logger_ptr, "  - Periodic processing interval: %s%.3f%s (s)", bold_on.c_str(), interval_seconds, bold_off.c_str());
   }
-  RCLCPP_INFO(*logger_ptr, "  - Process on trigger: %s%s%s", bold_on.c_str(), this->process_on_trigger ? "Enabled" : "Disabled", bold_off.c_str());
   if (this->pulse_lockout_duration > 0.0) {
     RCLCPP_INFO(*logger_ptr, "  - Pulse lockout duration: %s%.1f%s (s)", bold_on.c_str(), this->pulse_lockout_duration, bold_off.c_str());
   }
@@ -655,10 +645,6 @@ uint16_t DeciderWrapper::get_processing_interval_in_samples() const {
 
 bool DeciderWrapper::is_processing_interval_enabled() const {
   return this->processing_interval_in_samples > 0;
-}
-
-bool DeciderWrapper::is_process_on_trigger_enabled() const {
-  return this->process_on_trigger;
 }
 
 int DeciderWrapper::get_look_ahead_samples() const {

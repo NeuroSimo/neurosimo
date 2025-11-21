@@ -112,9 +112,9 @@ class Decider:
             # Data configuration
             'sample_window': [-(self.buffer_size_samples - 1), 0],
             
-            # Processing triggers
-            'periodic_processing_interval': self.periodic_processing_interval,
-            'process_on_trigger': False,
+            # Periodic processing
+            'periodic_processing_interval': 1.0,  # Process once per second
+            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
             
             # Event system
             'predefined_events': [],
@@ -122,11 +122,8 @@ class Decider:
                 'pulse': self.handle_pulse,
             },
             
-            # Stimuli
+            # Sensory stimuli
             'predefined_sensory_stimuli': [],
-            
-            # Constraints
-            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 

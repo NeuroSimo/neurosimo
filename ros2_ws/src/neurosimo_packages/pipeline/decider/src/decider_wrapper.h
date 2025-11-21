@@ -101,6 +101,7 @@ public:
   bool is_processing_interval_enabled() const;
   bool is_process_on_trigger_enabled() const;
   int get_look_ahead_samples() const;
+  double get_pulse_lockout_duration() const;
 
   void setup_custom_print();
 
@@ -139,6 +140,7 @@ private:
   uint16_t sampling_frequency;
   uint16_t processing_interval_in_samples = 0;
   bool process_on_trigger = false;
+  double pulse_lockout_duration = 0.0;
 
   std::vector<std::string> internal_imports;
 

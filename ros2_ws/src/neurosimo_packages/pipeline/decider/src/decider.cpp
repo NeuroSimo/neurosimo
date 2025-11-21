@@ -328,6 +328,7 @@ void EegDecider::handle_session(const std::shared_ptr<system_interfaces::msg::Se
 
     this->reinitialize = true;
     this->previous_stimulation_time = UNSET_PREVIOUS_TIME;
+    this->pulse_lockout_end_time = UNSET_PREVIOUS_TIME;
 
     /* Clear deferred processing queue when session stops. */
     while (!this->deferred_processing_queue.empty()) {
@@ -636,6 +637,12 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
     /* Update the previous stimulation time. */
     this->previous_stimulation_time = trial->timing.desired_start_time;
+    
+    /* Set the pulse lockout end time. */
+    double lockout_duration = this->decider_wrapper->get_pulse_lockout_duration();
+    if (lockout_duration > 0.0) {
+      this->pulse_lockout_end_time = trial->timing.desired_start_time + lockout_duration;
+    }
   }
 
   /* Send timed trigger if requested. */
@@ -655,6 +662,12 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
     /* Update the previous stimulation time. */
     this->previous_stimulation_time = trigger_time;
+    
+    /* Set the pulse lockout end time. */
+    double lockout_duration = this->decider_wrapper->get_pulse_lockout_duration();
+    if (lockout_duration > 0.0) {
+      this->pulse_lockout_end_time = trigger_time + lockout_duration;
+    }
   }
 
   /* Publish sensory stimuli if the vector is not empty. */
@@ -1358,29 +1371,40 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   /* Check if the sample should trigger processing. */
   bool should_trigger_processing = false;
 
-  /* If process on trigger is enabled, trigger processing if the sample includes a trigger. */
+  /* Check if we're in the pulse lockout period. */
+  bool in_lockout_period = false;
+  if (!std::isnan(this->pulse_lockout_end_time) && sample_time < this->pulse_lockout_end_time) {
+    in_lockout_period = true;
+  }
+
+  /* If process on trigger is enabled, trigger processing if the sample includes a trigger
+     (irrespective of the lockout period). */
   bool is_trigger = msg->is_trigger;
   if (this->decider_wrapper->is_process_on_trigger_enabled() && is_trigger) {
     should_trigger_processing = true;
   }
 
-  /* If processing interval is enabled, trigger processing every N samples, where N is defined on the Python side. */
+  /* If processing interval is enabled, trigger processing every N samples, where N is defined on the Python side.
+     However, skip periodic processing if we're in the lockout period. */
   if (this->decider_wrapper->is_processing_interval_enabled()) {
     this->samples_since_last_processing++;
 
     if (this->samples_since_last_processing == this->decider_wrapper->get_processing_interval_in_samples()) {
-      should_trigger_processing = true;
+      /* Reset counter but don't trigger processing during lockout. */
+      this->samples_since_last_processing = 0;
+      if (!in_lockout_period) {
+        should_trigger_processing = true;
+      }
     }
   }
 
-  /* Always trigger processing if the sample includes an event. */
+  /* Always trigger processing if the sample includes an event (irrespective of the lockout period). */
   if (has_event) {
     should_trigger_processing = true;
   }
 
   /* If the sample should trigger processing, defer it based on the number of look-ahead samples. */
   if (should_trigger_processing) {
-    this->samples_since_last_processing = 0;
     
     /* Calculate when processing should actually occur based on the look-ahead window.
        For a sample window like [-10, 5], we need 5 samples of look-ahead after the

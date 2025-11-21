@@ -377,6 +377,10 @@ void DeciderWrapper::initialize_module(
       this->pulse_lockout_duration = 0.0;
     }
 
+    /* Initialize max window to default window */
+    this->max_look_back_samples = this->look_back_samples;
+    this->max_look_ahead_samples = this->look_ahead_samples;
+
     /* Extract event_handlers. */
     if (config.contains("event_handlers")) {
       if (!py::isinstance<py::dict>(config["event_handlers"])) {
@@ -387,10 +391,50 @@ void DeciderWrapper::initialize_module(
 
       py::dict handlers = config["event_handlers"].cast<py::dict>();
       this->event_handlers.clear();
+      this->event_sample_windows.clear();
       
       for (const auto& item : handlers) {
         std::string event_type = py::str(item.first).cast<std::string>();
-        py::object handler = item.second.cast<py::object>();
+        py::object value = item.second.cast<py::object>();
+        
+        py::object handler;
+        
+        /* Check if value is a dict (with 'handler' and optional 'sample_window') or a callable */
+        if (py::isinstance<py::dict>(value)) {
+          py::dict handler_config = value.cast<py::dict>();
+          
+          /* Extract handler */
+          if (!handler_config.contains("handler")) {
+            RCLCPP_ERROR(*logger_ptr, "Event handler config for '%s' must contain 'handler' key.", event_type.c_str());
+            state = WrapperState::ERROR;
+            return;
+          }
+          handler = handler_config["handler"].cast<py::object>();
+          
+          /* Extract optional sample_window */
+          if (handler_config.contains("sample_window")) {
+            py::list sample_window = handler_config["sample_window"].cast<py::list>();
+            if (sample_window.size() != 2) {
+              RCLCPP_ERROR(*logger_ptr, "sample_window for event '%s' must have 2 elements.", event_type.c_str());
+              state = WrapperState::ERROR;
+              return;
+            }
+            int earliest = sample_window[0].cast<int>();
+            int latest = sample_window[1].cast<int>();
+            
+            /* Update maximum envelope to cover this window */
+            int event_look_back = -earliest;
+            int event_look_ahead = latest;
+            this->max_look_back_samples = std::max(this->max_look_back_samples, event_look_back);
+            this->max_look_ahead_samples = std::max(this->max_look_ahead_samples, event_look_ahead);
+            
+            this->event_sample_windows[event_type] = std::make_pair(earliest, latest);
+            RCLCPP_DEBUG(*logger_ptr, "Registered custom sample window [%d, %d] for event: %s", earliest, latest, event_type.c_str());
+          }
+        } else {
+          /* Simple format: value is the handler directly */
+          handler = value;
+        }
         
         /* Verify that the handler is callable */
         if (!py::hasattr(handler, "__call__")) {
@@ -413,9 +457,19 @@ void DeciderWrapper::initialize_module(
     return;
   }
 
-  /* Initialize numpy arrays. */
-  py_timestamps = std::make_unique<py::array_t<double>>(buffer_size);
+  /* Calculate the maximum buffer size needed to cover all windows.
+     The ring buffer will be sized to this maximum envelope. */
+  size_t max_buffer_size = this->max_look_back_samples + this->max_look_ahead_samples + 1;
+  this->buffer_size = max_buffer_size;
+  
+  RCLCPP_DEBUG(*logger_ptr, "Maximum envelope: [%d, %d], buffer size: %zu", 
+               -this->max_look_back_samples, this->max_look_ahead_samples, max_buffer_size);
 
+  this->eeg_data_size = eeg_data_size;
+  this->emg_data_size = emg_data_size;
+
+  /* Initialize numpy arrays for default sample window. */
+  py_timestamps = std::make_unique<py::array_t<double>>(buffer_size);
   py_valid = std::make_unique<py::array_t<bool>>(buffer_size);
 
   std::vector<size_t> eeg_data_shape = {buffer_size, eeg_data_size};
@@ -424,15 +478,47 @@ void DeciderWrapper::initialize_module(
   std::vector<size_t> emg_data_shape = {buffer_size, emg_data_size};
   py_emg_data = std::make_unique<py::array_t<double>>(emg_data_shape);
 
-  this->eeg_data_size = eeg_data_size;
-  this->emg_data_size = emg_data_size;
+  /* Initialize numpy arrays for custom event windows. */
+  for (const auto& [event_type, window] : event_sample_windows) {
+    int earliest = window.first;
+    int latest = window.second;
+    int event_look_back = -earliest;
+    int event_look_ahead = latest;
+    size_t event_buffer_size = event_look_back + event_look_ahead + 1;
+    int event_sample_window_base_index = event_look_back;
+
+    EventArrays arrays;
+    arrays.timestamps = std::make_unique<py::array_t<double>>(event_buffer_size);
+    arrays.valid = std::make_unique<py::array_t<bool>>(event_buffer_size);
+    
+    std::vector<size_t> event_eeg_shape = {event_buffer_size, eeg_data_size};
+    arrays.eeg_data = std::make_unique<py::array_t<double>>(event_eeg_shape);
+    
+    std::vector<size_t> event_emg_shape = {event_buffer_size, emg_data_size};
+    arrays.emg_data = std::make_unique<py::array_t<double>>(event_emg_shape);
+    
+    arrays.buffer_size = event_buffer_size;
+    arrays.sample_window_base_index = event_sample_window_base_index;
+
+    event_arrays[event_type] = std::move(arrays);
+    RCLCPP_DEBUG(*logger_ptr, "Preallocated arrays for event '%s' with buffer size %zu", event_type.c_str(), event_buffer_size);
+  }
 
   state = WrapperState::READY;
 
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%d, %d]%s", bold_on.c_str(), -this->look_back_samples, this->look_ahead_samples, bold_off.c_str());
+  RCLCPP_INFO(*logger_ptr, "  - Default sample window: %s[%d, %d]%s", bold_on.c_str(), -this->look_back_samples, this->look_ahead_samples, bold_off.c_str());
+  
+  /* Log custom event windows if any */
+  if (!event_sample_windows.empty()) {
+    RCLCPP_INFO(*logger_ptr, "  - Event-specific windows:");
+    for (const auto& [event_type, window] : event_sample_windows) {
+      RCLCPP_INFO(*logger_ptr, "      '%s': %s[%d, %d]%s", event_type.c_str(), bold_on.c_str(), window.first, window.second, bold_off.c_str());
+    }
+  }
+  
   if (this->processing_interval_in_samples == 0) {
     RCLCPP_INFO(*logger_ptr, "  - Periodic processing interval: %sDisabled%s", bold_on.c_str(), bold_off.c_str());
   } else {
@@ -450,8 +536,11 @@ void DeciderWrapper::reset_module_state() {
   decider_module = nullptr;
 
   py_timestamps.reset();
+  py_valid.reset();
   py_eeg_data.reset();
   py_emg_data.reset();
+  
+  event_arrays.clear();
 
   state = WrapperState::UNINITIALIZED;
 }
@@ -567,6 +656,7 @@ DeciderWrapper::~DeciderWrapper() {
   py_valid.reset();
   py_eeg_data.reset();
   py_emg_data.reset();
+  event_arrays.clear();
 }
 
 std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
@@ -650,6 +740,18 @@ bool DeciderWrapper::is_processing_interval_enabled() const {
 int DeciderWrapper::get_look_ahead_samples() const {
   /* For a sample window like [-10, 5], look_ahead_samples is 5, which represents
      the number of samples we need to look ahead from the triggering sample. */
+  return this->look_ahead_samples;
+}
+
+int DeciderWrapper::get_look_ahead_samples_for_event(const std::string& event_type) const {
+  /* Check if this event has a custom sample window. */
+  auto window_it = event_sample_windows.find(event_type);
+  if (window_it != event_sample_windows.end()) {
+    /* Event has custom window - return its look-ahead. */
+    int latest = window_it->second.second;
+    return latest;
+  }
+  /* Event uses default window. */
   return this->look_ahead_samples;
 }
 
@@ -758,6 +860,37 @@ bool DeciderWrapper::process_sensory_stimuli_list(
   return true;
 }
 
+void DeciderWrapper::fill_arrays_from_buffer(
+    const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
+    double_t sample_window_base_time,
+    py::array_t<double>& timestamps,
+    py::array_t<bool>& valid,
+    py::array_t<double>& eeg_data,
+    py::array_t<double>& emg_data,
+    size_t start_offset,
+    size_t num_samples) {
+  
+  auto timestamps_ptr = timestamps.mutable_data();
+  auto valid_ptr = valid.mutable_data();
+  auto eeg_data_ptr = eeg_data.mutable_data();
+  auto emg_data_ptr = emg_data.mutable_data();
+
+  size_t ring_idx = 0;
+  size_t out_idx = 0;
+  buffer.process_elements([&](const auto& sample_ptr) {
+    /* Check if this sample is in the range we want */
+    if (ring_idx >= start_offset && out_idx < num_samples) {
+      const auto& sample = *sample_ptr;
+      timestamps_ptr[out_idx] = sample.time - sample_window_base_time;
+      valid_ptr[out_idx] = sample.valid;
+      std::memcpy(eeg_data_ptr + out_idx * eeg_data_size, sample.eeg_data.data(), eeg_data_size * sizeof(double));
+      std::memcpy(emg_data_ptr + out_idx * emg_data_size, sample.emg_data.data(), emg_data_size * sizeof(double));
+      out_idx++;
+    }
+    ring_idx++;
+  });
+}
+
 /* TODO: Use struct for the return value. */
 std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> DeciderWrapper::process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
@@ -778,35 +911,43 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
   std::string coil_target;
 
-  /* An example: If the sample window is set to [-2, 5], look_back_samples = 2, and the sample window base index
-     (the index of sample 0 in the buffer) is 2. */
+  /* Determine which arrays to use. Default to standard arrays. */
+  py::array_t<double>* timestamps_to_use = py_timestamps.get();
+  py::array_t<bool>* valid_to_use = py_valid.get();
+  py::array_t<double>* eeg_data_to_use = py_eeg_data.get();
+  py::array_t<double>* emg_data_to_use = py_emg_data.get();
   int sample_window_base_index = this->look_back_samples;
+  size_t num_samples = this->look_back_samples + this->look_ahead_samples + 1;
+  
+  /* Override with event-specific arrays if this event has a custom window. */
+  if (has_event) {
+    auto arrays_it = event_arrays.find(event_type);
+    if (arrays_it != event_arrays.end()) {
+      EventArrays& arrays = arrays_it->second;
+      timestamps_to_use = arrays.timestamps.get();
+      valid_to_use = arrays.valid.get();
+      eeg_data_to_use = arrays.eeg_data.get();
+      emg_data_to_use = arrays.emg_data.get();
+      sample_window_base_index = arrays.sample_window_base_index;
+      num_samples = arrays.buffer_size;
+    }
+  }
+  
+  /* Always extract the most recent num_samples from the ring buffer.
+     By the time we process (after deferring for look-ahead), the buffer has advanced
+     and contains all the samples we need at the end of the buffer, including the look-ahead samples. */
+  size_t start_offset = this->buffer_size - num_samples;
 
-  /* Fill the numpy arrays. */
-  auto timestamps_ptr = py_timestamps->mutable_data();
-  auto valid_ptr = py_valid->mutable_data();
-  auto eeg_data_ptr = py_eeg_data->mutable_data();
-  auto emg_data_ptr = py_emg_data->mutable_data();
+  /* Fill the selected arrays from buffer at the calculated offset. */
+  fill_arrays_from_buffer(buffer, sample_window_base_time, *timestamps_to_use, *valid_to_use, 
+                          *eeg_data_to_use, *emg_data_to_use, start_offset, num_samples);
 
-  buffer.process_elements([&](const auto& sample_ptr) {
-    const auto& sample = *sample_ptr;
-
-    /* Note: The timestamps are relative to the sample window base time. Maybe they should be absolute times instead
-       or should we pass both relative and absolute times to Python? */
-    *timestamps_ptr++ = sample.time - sample_window_base_time;
-    *valid_ptr++ = sample.valid;
-    std::memcpy(eeg_data_ptr, sample.eeg_data.data(), eeg_data_size * sizeof(double));
-    eeg_data_ptr += eeg_data_size;
-    std::memcpy(emg_data_ptr, sample.emg_data.data(), emg_data_size * sizeof(double));
-    emg_data_ptr += emg_data_size;
-  });
-
-  /* Call the appropriate Python function. */
+  /* Call the appropriate Python function using the selected arrays. */
   py::object py_result;
   try {
     if (is_trigger) {
       /* Call process_eeg_trigger. */
-      py_result = decider_instance->attr("process_eeg_trigger")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_coil_at_target);
+      py_result = decider_instance->attr("process_eeg_trigger")(sample_window_base_time, *timestamps_to_use, *valid_to_use, *eeg_data_to_use, *emg_data_to_use, sample_window_base_index, ready_for_trial, is_coil_at_target);
     } else if (has_event) {
       /* Call event handler for this event type. */
       auto handler_it = event_handlers.find(event_type);
@@ -825,11 +966,11 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
         return {success, trial, timed_trigger, coil_target};
       }
       
-      /* Call the event handler. */
-      py_result = handler_it->second(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_coil_at_target);
+      /* Call the event handler (arrays already selected and filled). */
+      py_result = handler_it->second(sample_window_base_time, *timestamps_to_use, *valid_to_use, *eeg_data_to_use, *emg_data_to_use, sample_window_base_index, ready_for_trial, is_coil_at_target);
     } else {
       /* Call standard process method (for periodic processing). */
-      py_result = decider_instance->attr("process")(sample_window_base_time, *py_timestamps, *py_valid, *py_eeg_data, *py_emg_data, sample_window_base_index, ready_for_trial, is_coil_at_target);
+      py_result = decider_instance->attr("process")(sample_window_base_time, *timestamps_to_use, *valid_to_use, *eeg_data_to_use, *emg_data_to_use, sample_window_base_index, ready_for_trial, is_coil_at_target);
     }
 
   } catch(const py::error_already_set& e) {

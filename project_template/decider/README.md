@@ -33,35 +33,43 @@ Called by the pipeline during initialization. Must return a dictionary with conf
 
 **Return dictionary keys:**
 
-#### `processing_interval_in_samples` (int)
-How frequently the `process` method is called, in samples.
+#### `periodic_processing_interval` (float)
+How frequently the `process` method is called, in seconds.
 
 **Special cases:**
-- `1`: Process method called for every new sample (continuous monitoring)
-- `0`: Process method never called periodically (only on triggers/events if enabled)
+- `0.0`: Process method never called periodically (only on events/EEG triggers)
+- Very small values (e.g., `0.001`): Near-continuous processing
 
 **Examples:**
-- `100`: Process every 100 samples
-- `sampling_frequency`: Process once per second
+- `1.0`: Process once per second
+- `0.1`: Process 10 times per second
+- `0.01`: Process 100 times per second
 
-#### `process_on_trigger` (bool)
-Whether to call `process` method when triggers are received from the EEG device.
-- `True`: Process on triggers in addition to periodic processing
-- `False`: Only process periodically
+**Note:** EEG triggers always call `process_eeg_trigger()` regardless of this setting.
 
 #### `sample_window` (list)
 Two-element list `[earliest_sample, latest_sample]` defining the buffer size relative to current sample.
 - Current sample is always `0`
-- Earliest sample is always negative
+- Earliest sample is always negative or zero
 - Values are in samples, not seconds
 
 **Examples:**
 - `[-5, 0]`: Keep last 5 samples + current (6 total)
 - `[-999, 0]`: Keep last second at 1000 Hz
 - `[0, 0]`: Keep only current sample
-- `[-5, -5]`: Look 5 samples into future (introduces 5-sample delay)
+- `[-5, 5]`: Look 5 samples back and 5 ahead (introduces 5-sample delay)
 
-#### `events` (list)
+#### `pulse_lockout_duration` (float)
+Duration in seconds during which periodic processing is disabled after a pulse is delivered.
+- Prevents new stimulation during the lockout period
+- Events and EEG triggers are still processed during lockout
+- Set to `0.0` to disable lockout
+
+**Examples:**
+- `2.0`: No periodic processing for 2 seconds after pulse
+- `0.0`: No lockout (periodic processing continues immediately)
+
+#### `predefined_events` (list)
 List of event dictionaries for scheduled processing triggers.
 
 **Event dictionary structure:**
@@ -70,13 +78,55 @@ List of event dictionaries for scheduled processing triggers.
 
 **Example:**
 ```python
-'events': [
+'predefined_events': [
     {'type': 'pulse', 'time': 10.0},
+    {'type': 'baseline_start', 'time': 5.0},
 ]
 ```
 
-#### `sensory_stimuli` (list)
-List of pre-defined sensory stimuli sent to the presenter.
+#### `event_handlers` (dict)
+Dictionary mapping event types to handler methods. Each event type must have a corresponding handler.
+
+**Simple format:**
+```python
+'event_handlers': {
+    'pulse': self.handle_pulse,
+    'baseline_start': self.handle_baseline_start,
+}
+```
+
+**Advanced format with custom sample window:**
+```python
+'event_handlers': {
+    'pulse': {
+        'handler': self.handle_pulse,
+        'sample_window': [-500, 100],  # Custom window just for pulse events
+    },
+    'baseline_start': self.handle_baseline_start,  # Uses default window
+}
+```
+
+When an event occurs, its corresponding handler method is called instead of the regular `process()` method. Handler methods have the same signature as `process()` but without event-related parameters (`is_event`, `event_type`).
+
+**Custom sample windows:**
+- By default, event handlers use the same `sample_window` as periodic processing
+- You can optionally specify a different window for specific events
+- Custom windows can be smaller or larger, overlapping or non-overlapping
+- The system automatically manages buffer sizing to accommodate all windows
+
+**Example handler method:**
+```python
+def handle_pulse(self, current_time, timestamps, valid_samples, 
+                eeg_buffer, emg_buffer, current_sample_index, 
+                ready_for_trial, is_coil_at_target):
+    """Handle pulse events."""
+    print(f"Pulse event at {current_time}")
+    # Process pulse-specific logic
+    return None
+```
+
+#### `predefined_sensory_stimuli` (list)
+List of pre-defined sensory stimuli sent to the presenter at initialization.
 
 **Stimulus dictionary structure:**
 - `time` (float): When to present stimulus (seconds from session start)
@@ -85,7 +135,7 @@ List of pre-defined sensory stimuli sent to the presenter.
 
 **Example:**
 ```python
-'sensory_stimuli': [
+'predefined_sensory_stimuli': [
     {
         'time': 5.0,
         'type': 'visual',
@@ -102,7 +152,7 @@ List of pre-defined sensory stimuli sent to the presenter.
 
 ### `process(...)`
 
-Main processing method called by the pipeline for new EEG/EMG samples.
+Main processing method called by the pipeline for periodic processing of EEG/EMG samples.
 
 **Parameters:**
 
@@ -132,16 +182,8 @@ Whether pipeline can accept new trial requests.
 - Decider should not trigger trials when `False` (warnings issued if attempted)
 - Other processing (logging, filtering, training) can continue regardless
 
-#### `is_trigger` (bool)
-Whether a trigger was received from EEG device on this sample.
-- Not available with simulated data
-- Use events for similar functionality
-
-#### `is_event` (bool)
-Whether an event occurred on this sample (from `events` configuration).
-
-#### `event_type` (str)
-Type of event that occurred (e.g., "pulse").
+#### `is_coil_at_target` (bool)
+Whether the coil is currently positioned at the target location (for neuronavigation systems).
 
 **Return Value:**
 
@@ -175,17 +217,66 @@ return {
 }
 ```
 
+### `process_eeg_trigger(...)`
+
+**Mandatory method** called when an EEG trigger is received from the EEG device.
+
+**Parameters:**
+Same as `process()` method but without `is_event` and `event_type` parameters:
+- `current_time` (float)
+- `timestamps` (numpy.ndarray)
+- `valid_samples` (numpy.ndarray)
+- `eeg_buffer` (numpy.ndarray)
+- `emg_buffer` (numpy.ndarray)
+- `current_sample_index` (int)
+- `ready_for_trial` (bool)
+- `is_coil_at_target` (bool)
+
+**Return Value:**
+Same format as `process()` method.
+
+**Example:**
+```python
+def process_eeg_trigger(self, current_time, timestamps, valid_samples,
+                       eeg_buffer, emg_buffer, current_sample_index,
+                       ready_for_trial, is_coil_at_target):
+    """Handle EEG trigger from the EEG device."""
+    print(f"EEG trigger received at {current_time}")
+    # Return None if you don't care about EEG triggers
+    return None
+```
+
+**Note:** EEG triggers are not available with simulated data. Use events for similar functionality.
+
+### Event Handler Methods
+
+Event handler methods are called when events occur (defined in `event_handlers` configuration). Each handler has the same signature as `process_eeg_trigger()`.
+
+**Example:**
+```python
+def handle_pulse(self, current_time, timestamps, valid_samples,
+                eeg_buffer, emg_buffer, current_sample_index,
+                ready_for_trial, is_coil_at_target):
+    """Handle pulse events."""
+    print(f"Pulse event at {current_time}")
+    # Process event-specific logic
+    return {'sensory_stimuli': [...]}  # Or None
+```
+
+**Handler naming:** Handler method names are arbitrary - they are explicitly mapped in `event_handlers` configuration.
+
 ## Example Workflows
 
 ### Continuous Monitoring
 ```python
 def get_configuration(self):
     return {
-        'processing_interval_in_samples': 1,  # Every sample
-        'process_on_trigger': False,
         'sample_window': [-100, 0],  # Last 100ms at 1kHz
-        'events': [],
-        'sensory_stimuli': []
+        'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
+        'predefined_events': [],
+        'event_handlers': {},
+        'predefined_sensory_stimuli': [],
+        'pulse_lockout_duration': 0.0,
     }
 ```
 
@@ -193,13 +284,16 @@ def get_configuration(self):
 ```python
 def get_configuration(self):
     return {
-        'processing_interval_in_samples': 0,  # No periodic processing
-        'process_on_trigger': True,
         'sample_window': [-500, 0],
-        'events': [
+        'periodic_processing_interval': 0.0,  # No periodic processing
+        'predefined_events': [
             {'type': 'trial_start', 'time': 10.0}
         ],
-        'sensory_stimuli': []
+        'event_handlers': {
+            'trial_start': self.handle_trial_start,
+        },
+        'predefined_sensory_stimuli': [],
+        'pulse_lockout_duration': 0.0,
     }
 ```
 
@@ -207,11 +301,12 @@ def get_configuration(self):
 ```python
 def get_configuration(self):
     return {
-        'processing_interval_in_samples': self.sampling_frequency // 10,  # 10 times per second
-        'process_on_trigger': False,
         'sample_window': [-1000, 0],  # Last second
-        'events': [],
-        'sensory_stimuli': []
+        'periodic_processing_interval': 0.1,  # 10 times per second
+        'predefined_events': [],
+        'event_handlers': {},
+        'predefined_sensory_stimuli': [],
+        'pulse_lockout_duration': 2.0,
     }
 ```
 
@@ -255,7 +350,7 @@ If your decider maintains internal state that depends on real EEG/EMG data patte
 
 ```python
 def process(self, current_time, timestamps, valid_samples, eeg_buffer, emg_buffer, 
-            current_sample_index, ready_for_trial, is_trigger, is_event, event_type):
+            current_sample_index, ready_for_trial, is_coil_at_target):
     
     # Skip state updates during warm-up (dummy data)
     is_warmup = (current_time == 0.0)

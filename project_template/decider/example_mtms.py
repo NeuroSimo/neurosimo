@@ -100,10 +100,11 @@ class Decider:
         ]
 
         return {
-            'processing_interval_in_samples': 5000,  # Process once per second at 5 kHz
+            'periodic_processing_interval': 1.0,  # Process once per second
             'process_on_trigger': True,
             'sample_window': [-5, 0],
             'events': events,
+            'sensory_stimuli': [],
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 

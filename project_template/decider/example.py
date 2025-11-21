@@ -30,7 +30,7 @@ class Decider:
     def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """Return configuration dictionary for the pipeline."""
         return {
-            'processing_interval_in_samples': self.sampling_frequency,  # Process once per second
+            'periodic_processing_interval': 1.0,  # Process once per second
             'process_on_trigger': False,
             'sample_window': [-1000, 0],
             'events': [],

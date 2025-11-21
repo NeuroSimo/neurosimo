@@ -264,11 +264,11 @@ void DeciderWrapper::initialize_module(
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
 
     /* Validate that only allowed keys are present */
-    std::vector<std::string> allowed_keys = {"sample_window", "sensory_stimuli", "periodic_processing_interval", "process_on_trigger", "events", "pulse_lockout_duration"};
+    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_interval", "process_on_trigger", "predefined_events", "pulse_lockout_duration"};
     for (const auto& item : config) {
       std::string key = py::str(item.first).cast<std::string>();
       if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'sensory_stimuli', 'periodic_processing_interval', 'process_on_trigger', 'events', and 'pulse_lockout_duration' are allowed.", key.c_str());
+        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_interval', 'process_on_trigger', 'predefined_events', and 'pulse_lockout_duration' are allowed.", key.c_str());
         state = WrapperState::ERROR;
         return;
       }
@@ -298,21 +298,21 @@ void DeciderWrapper::initialize_module(
       return;
     }
 
-    /* Extract sensory_stimuli. */
-    if (config.contains("sensory_stimuli")) {
-      if (!py::isinstance<py::list>(config["sensory_stimuli"])) {
-        RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
+    /* Extract predefined_sensory_stimuli. */
+    if (config.contains("predefined_sensory_stimuli")) {
+      if (!py::isinstance<py::list>(config["predefined_sensory_stimuli"])) {
+        RCLCPP_ERROR(*logger_ptr, "predefined_sensory_stimuli must be a list.");
         state = WrapperState::ERROR;
         return;
       }
 
-      py::list py_sensory_stimuli = config["sensory_stimuli"].cast<py::list>();
+      py::list py_sensory_stimuli = config["predefined_sensory_stimuli"].cast<py::list>();
       if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
         state = WrapperState::ERROR;
         return;
       }
     } else {
-      RCLCPP_ERROR(*logger_ptr, "'sensory_stimuli' key not found in configuration dictionary.");
+      RCLCPP_ERROR(*logger_ptr, "'predefined_sensory_stimuli' key not found in configuration dictionary.");
       state = WrapperState::ERROR;
       return;
     }
@@ -348,9 +348,9 @@ void DeciderWrapper::initialize_module(
       return;
     }
 
-    /* Extract events. */
-    if (config.contains("events")) {
-      py::list events = config["events"].cast<py::list>();
+    /* Extract predefined_events. */
+    if (config.contains("predefined_events")) {
+      py::list events = config["predefined_events"].cast<py::list>();
       {
         std::lock_guard<std::mutex> lock(event_queue_mutex);
         for (const auto& event : events) {
@@ -363,7 +363,7 @@ void DeciderWrapper::initialize_module(
         }
       }
     } else {
-      RCLCPP_ERROR(*logger_ptr, "'events' key not found in configuration dictionary.");
+      RCLCPP_ERROR(*logger_ptr, "'predefined_events' key not found in configuration dictionary.");
       state = WrapperState::ERROR;
       return;
     }

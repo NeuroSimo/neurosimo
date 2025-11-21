@@ -45,8 +45,8 @@ class Decider:
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
                current_sample_index: int, ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
-        """Process EEG/EMG samples (periodic processing)."""
-        print(f"Processing sample at time {current_time}.")
+        """Process EEG/EMG buffer (periodic processing)."""
+        print(f"Periodically processing EEG/EMG buffer at time {current_time}.")
 
         if not np.all(valid_samples):
             return None

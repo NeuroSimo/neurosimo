@@ -35,6 +35,7 @@ class Decider:
             'sample_window': [-1000, 0],
             'events': [],
             'sensory_stimuli': [],
+            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 

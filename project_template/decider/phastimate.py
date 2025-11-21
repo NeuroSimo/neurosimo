@@ -48,7 +48,7 @@ DEFAULT_AR_MODEL_ORDER = 15
 DEFAULT_DOWNSAMPLE_RATIO = 10
 
 # Processing timing constants
-DEFAULT_PROCESSING_INTERVAL_SECONDS = 1.0
+DEFAULT_PROCESSING_INTERVAL_SECONDS = 0.1
 DEFAULT_BUFFER_SIZE_SECONDS = 1.0
 
 class Decider:
@@ -115,6 +115,7 @@ class Decider:
             'sample_window': [-(self.buffer_size_samples - 1), 0],
             'events': [],
             'sensory_stimuli': [],
+            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 

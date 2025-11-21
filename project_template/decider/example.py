@@ -1,13 +1,8 @@
 from typing import Any, Dict, List, Optional, Union
 import multiprocessing
 import time
-from enum import Enum
 
 import numpy as np
-
-class Event(Enum):
-    PREPULSE = "prepulse"
-    POSTPULSE = "postpulse"
 
 
 class Decider:
@@ -30,23 +25,31 @@ class Decider:
     def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """Return configuration dictionary for the pipeline."""
         return {
+            # Data configuration
+            'sample_window': [-1000, 0],
+            
+            # Processing triggers
             'periodic_processing_interval': 1.0,  # Process once per second
             'process_on_trigger': False,
-            'sample_window': [-1000, 0],
+            
+            # Event system
             'predefined_events': [],
+            'event_handlers': {
+                'pulse': self.handle_pulse,
+            },
+            
+            # Stimuli
             'predefined_sensory_stimuli': [],
+            
+            # Constraints
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
-               current_sample_index: int, ready_for_trial: bool, 
-               is_event: bool, event_type: str, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
-        """Process EEG/EMG samples and decide whether to trigger stimulation."""
+               current_sample_index: int, ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+        """Process EEG/EMG samples (periodic processing)."""
         print(f"Processing sample at time {current_time}.")
-
-        if is_event:
-            print(f"Event received: {event_type}")
 
         if not np.all(valid_samples):
             return None
@@ -76,4 +79,13 @@ class Decider:
         """Handle EEG trigger from the EEG device."""
         print(f"EEG trigger received at time {current_time}.")
         # This example doesn't process EEG triggers, just log them
+        return None
+
+    def handle_pulse(self, current_time: float, timestamps: np.ndarray, 
+                    valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
+                    emg_buffer: np.ndarray, current_sample_index: int, 
+                    ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+        """Handle pulse event."""
+        print(f"Pulse event received at time {current_time}.")
+        # Add your pulse event handling logic here
         return None

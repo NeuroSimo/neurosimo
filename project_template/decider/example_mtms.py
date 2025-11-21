@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 import multiprocessing
 import time
-from enum import Enum
 
 import numpy as np
 
@@ -43,9 +42,6 @@ PAIRED_PULSE_TARGET = [
     },
 ]
 
-class Event(Enum):
-    PREPULSE = 1
-    POSTPULSE = 2
 
 # Configure mTMS trigger outputs
 TRIGGERS = [
@@ -90,35 +86,43 @@ class Decider:
         """Return configuration dictionary for the pipeline."""
         predefined_events = [
             {
-                'type': Event.PREPULSE.value,
+                'type': 'pulse',
                 'time': 2.0,
             },
             {
-                'type': Event.POSTPULSE.value,
+                'type': 'pulse',
                 'time': 3.0,
             },
         ]
 
         return {
+            # Data configuration
+            'sample_window': [-5, 0],
+            
+            # Processing triggers
             'periodic_processing_interval': 1.0,  # Process once per second
             'process_on_trigger': True,
-            'sample_window': [-5, 0],
+            
+            # Event system
             'predefined_events': predefined_events,
+            'event_handlers': {
+                'pulse': self.handle_pulse,
+            },
+            
+            # Stimuli
             'predefined_sensory_stimuli': [],
+            
+            # Constraints
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
-               current_sample_index: int, ready_for_trial: bool, 
-               is_event: bool, event_type: str, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
-        """Process EEG/EMG samples and decide whether to trigger mTMS stimulation."""
+               current_sample_index: int, ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+        """Process EEG/EMG samples (periodic processing)."""
         print("Processing EEG/EMG samples at time {:.4f}".format(current_time))
 
         self.buffer_count += 1
-
-        if is_event:
-            print("Event of type {} received at time {:.4f}".format(event_type, current_time))
 
         # Skip if pipeline not ready or samples invalid
         if not ready_for_trial or not np.all(valid_samples):
@@ -158,4 +162,13 @@ class Decider:
         """Handle EEG trigger from the EEG device."""
         print("EEG trigger received at time {:.4f}".format(current_time))
         # This example doesn't process EEG triggers, just log them
+        return None
+
+    def handle_pulse(self, current_time: float, timestamps: np.ndarray, 
+                    valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
+                    emg_buffer: np.ndarray, current_sample_index: int, 
+                    ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+        """Handle pulse event."""
+        print("Pulse event received at time {:.4f}".format(current_time))
+        # Add your pulse event handling logic here
         return None

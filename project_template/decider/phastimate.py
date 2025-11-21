@@ -112,8 +112,8 @@ class Decider:
             'periodic_processing_interval': self.periodic_processing_interval,
             'process_on_trigger': False,
             'sample_window': [-(self.buffer_size_samples - 1), 0],
-            'events': [],
-            'sensory_stimuli': [],
+            'predefined_events': [],
+            'predefined_sensory_stimuli': [],
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 

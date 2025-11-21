@@ -88,7 +88,7 @@ class Decider:
 
     def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """Return configuration dictionary for the pipeline."""
-        events = [
+        predefined_events = [
             {
                 'type': Event.PREPULSE.value,
                 'time': 2.0,
@@ -103,8 +103,8 @@ class Decider:
             'periodic_processing_interval': 1.0,  # Process once per second
             'process_on_trigger': True,
             'sample_window': [-5, 0],
-            'events': events,
-            'sensory_stimuli': [],
+            'predefined_events': predefined_events,
+            'predefined_sensory_stimuli': [],
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 

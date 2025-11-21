@@ -77,11 +77,10 @@ class Decider:
         self.downsample_ratio = DEFAULT_DOWNSAMPLE_RATIO
 
         # Processing timing parameters
-        self.processing_interval_seconds = DEFAULT_PROCESSING_INTERVAL_SECONDS
+        self.periodic_processing_interval = DEFAULT_PROCESSING_INTERVAL_SECONDS
         self.buffer_size_seconds = DEFAULT_BUFFER_SIZE_SECONDS
 
         # Convert timing parameters to samples
-        self.processing_interval_samples = int(self.processing_interval_seconds * sampling_frequency)
         self.buffer_size_samples = int(self.buffer_size_seconds * sampling_frequency)
 
         # Filter coefficients
@@ -110,7 +109,7 @@ class Decider:
             Dictionary containing processing configuration parameters
         """
         return {
-            'processing_interval_in_samples': self.processing_interval_samples,
+            'periodic_processing_interval': self.periodic_processing_interval,
             'process_on_trigger': False,
             'sample_window': [-(self.buffer_size_samples - 1), 0],
             'events': [],

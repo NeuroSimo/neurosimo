@@ -100,6 +100,7 @@ public:
   uint16_t get_processing_interval_in_samples() const;
   bool is_processing_interval_enabled() const;
   int get_look_ahead_samples() const;
+  int get_look_ahead_samples_for_event(const std::string& event_type) const;
   double get_pulse_lockout_duration() const;
 
   void setup_custom_print();
@@ -130,10 +131,25 @@ private:
   /* Map of event type to handler function */
   std::unordered_map<std::string, py::object> event_handlers;
 
+  /* Map of event type to custom sample window (optional) */
+  std::unordered_map<std::string, std::pair<int, int>> event_sample_windows;
+
+  /* Preallocated numpy arrays for default sample window */
   std::unique_ptr<py::array_t<double>> py_timestamps;
   std::unique_ptr<py::array_t<bool>> py_valid;
   std::unique_ptr<py::array_t<double>> py_eeg_data;
   std::unique_ptr<py::array_t<double>> py_emg_data;
+
+  /* Preallocated numpy arrays for custom event windows */
+  struct EventArrays {
+    std::unique_ptr<py::array_t<double>> timestamps;
+    std::unique_ptr<py::array_t<bool>> valid;
+    std::unique_ptr<py::array_t<double>> eeg_data;
+    std::unique_ptr<py::array_t<double>> emg_data;
+    size_t buffer_size;
+    int sample_window_base_index;
+  };
+  std::unordered_map<std::string, EventArrays> event_arrays;
 
   std::unordered_map<std::string, std::chrono::steady_clock::time_point> last_log_time;
 
@@ -142,6 +158,10 @@ private:
   uint16_t sampling_frequency;
   uint16_t processing_interval_in_samples = 0;
   double pulse_lockout_duration = 0.0;
+  
+  /* Maximum window covering all handlers */
+  int max_look_back_samples;
+  int max_look_ahead_samples;
 
   std::vector<std::string> internal_imports;
 
@@ -152,6 +172,16 @@ private:
   bool process_sensory_stimuli_list(
     const py::list& py_sensory_stimuli,
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
+
+  void fill_arrays_from_buffer(
+    const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
+    double_t sample_window_base_time,
+    py::array_t<double>& timestamps,
+    py::array_t<bool>& valid,
+    py::array_t<double>& eeg_data,
+    py::array_t<double>& emg_data,
+    size_t start_offset,
+    size_t num_samples);
 };
 
 #endif

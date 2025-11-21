@@ -1408,8 +1408,17 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
     
     /* Calculate when processing should actually occur based on the look-ahead window.
        For a sample window like [-10, 5], we need 5 samples of look-ahead after the
-       triggering sample before we can process it. */
-    int look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
+       triggering sample before we can process it.
+       
+       The look-ahead depends on what's being processed:
+       - Events with custom sample windows: use event-specific look-ahead
+       - EEG triggers and periodic processing: use default look-ahead */
+    int look_ahead_samples;
+    if (has_event) {
+      look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_event(event_type);
+    } else {
+      look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
+    }
     
     /* Create a deferred processing request. */
     DeferredProcessingRequest request;

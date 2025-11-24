@@ -288,6 +288,31 @@ def handle_pulse(self, current_time, timestamps, valid_samples,
 
 **Handler naming:** Handler method names are arbitrary - they are explicitly mapped in `event_handlers` configuration.
 
+## Processing Precedence
+
+When multiple processing triggers occur at the same sample, only one Python method is called, following this precedence order:
+
+1. **EEG Triggers** (from hardware): `process_eeg_trigger()` is always called
+2. **Events** (predefined or dynamic): Corresponding event handler is called
+3. **Periodic Processing**: `process()` is called at regular intervals
+
+**Important Notes:**
+- When an event occurs at the same time as periodic processing, the event handler takes precedence and the `process()` method is **not** called for that sample
+- However, the periodic processing timer continues to advance normally, so the next periodic processing will still occur at the expected time
+- Events and EEG triggers are processed even during pulse lockout periods; only periodic processing is suppressed during lockout
+
+**Example Timeline:**
+```
+With periodic_processing_interval=3.0 and first_periodic_processing_at=1.0:
+- 1.0s: Periodic processing scheduled, process() called
+- 2.0s: Event "pulse" occurs, handle_pulse() called (not process())
+- 4.0s: Periodic processing scheduled, process() called
+- 5.0s: Event "pulse" occurs, handle_pulse() called (not process())
+- 7.0s: Periodic processing scheduled, process() called
+```
+
+In this example, even though events occurred at 2.0s and 5.0s, the periodic processing schedule (1.0s, 4.0s, 7.0s, ...) remains consistent and unaffected.
+
 ## Example Workflows
 
 ### Continuous Monitoring

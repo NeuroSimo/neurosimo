@@ -33,19 +33,24 @@ Called by the pipeline during initialization. Must return a dictionary with conf
 
 **Return dictionary keys:**
 
-#### `periodic_processing_interval` (float)
-How frequently the `process` method is called, in seconds.
+#### `periodic_processing_enabled` (bool)
+Whether periodic processing is enabled. When `False`, the `process` method is never called periodically (only on events and EEG triggers).
 
-**Special cases:**
-- `0.0`: Process method never called periodically (only on events/EEG triggers)
-- Very small values (e.g., `0.001`): Near-continuous processing
+**Examples:**
+- `True`: Enable periodic processing
+- `False`: Disable periodic processing (event-driven only)
+
+**Note:** EEG triggers always call `process_eeg_trigger()` regardless of this setting.
+
+#### `periodic_processing_interval` (float, optional when disabled)
+How frequently the `process` method is called, in seconds. Required when `periodic_processing_enabled` is `True`, optional (defaults to `0.0`) when `False`.
 
 **Examples:**
 - `1.0`: Process once per second
 - `0.1`: Process 10 times per second
 - `0.01`: Process 100 times per second
 
-**Note:** EEG triggers always call `process_eeg_trigger()` regardless of this setting.
+**Validation:** When `periodic_processing_enabled` is `True`, this value must be greater than `0.0`.
 
 #### `first_periodic_processing_at` (float, optional)
 Time of the first periodic processing call in seconds (relative to session start). Defaults to `periodic_processing_interval` if not specified.
@@ -54,7 +59,7 @@ Time of the first periodic processing call in seconds (relative to session start
 - `1.0`: First processing at 1.0s, then every `periodic_processing_interval`
 - `0.5`: First processing at 0.5s (useful for offset timing)
 
-**Note:** This parameter is optional and primarily exists for precise timing control. Most users should omit it and use the default behavior.
+**Note:** Only relevant when `periodic_processing_enabled` is `True`. This parameter is optional and primarily exists for precise timing control. Most users should omit it and use the default behavior.
 
 #### `sample_window` (list)
 Two-element list `[earliest_sample, latest_sample]` defining the buffer size relative to current sample.
@@ -281,6 +286,7 @@ def handle_pulse(self, current_time, timestamps, valid_samples,
 def get_configuration(self):
     return {
         'sample_window': [-100, 0],  # Last 100ms at 1kHz
+        'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
         'predefined_events': [],
         'event_handlers': {},
@@ -294,7 +300,7 @@ def get_configuration(self):
 def get_configuration(self):
     return {
         'sample_window': [-500, 0],
-        'periodic_processing_interval': 0.0,  # No periodic processing
+        'periodic_processing_enabled': False,  # No periodic processing
         'predefined_events': [
             {'type': 'trial_start', 'time': 10.0}
         ],
@@ -311,6 +317,7 @@ def get_configuration(self):
 def get_configuration(self):
     return {
         'sample_window': [-1000, 0],  # Last second
+        'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.1,  # 10 times per second
         'predefined_events': [],
         'event_handlers': {},

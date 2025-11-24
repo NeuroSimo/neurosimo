@@ -29,6 +29,7 @@ class Decider:
             'sample_window': [-1000, 0],
             
             # Periodic processing
+            'periodic_processing_enabled': True,
             'periodic_processing_interval': 1.0,  # Process once per second
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
 

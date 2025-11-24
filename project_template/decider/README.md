@@ -4,6 +4,15 @@
 
 The Decider module processes real-time EEG/EMG data and makes decisions about when to trigger TMS pulses or present sensory stimuli. This documentation covers the complete API and configuration options.
 
+## Example Deciders
+
+The `project_template/decider/` directory contains several example decider modules:
+
+- **`example.py`**: Basic periodic processing with event handling
+- **`example_sensory_stimuli.py`**: Demonstrates both predefined and dynamic sensory stimuli
+- **`example_mtms.py`**: Example for use with mTMS device (multi-locus TMS)
+- **`phastimate.py`**: Real-time phase estimation for brain state-dependent stimulation
+
 ## Available Libraries
 
 The following third-party libraries are currently available in the decider environment:
@@ -317,6 +326,62 @@ def get_configuration(self):
         'periodic_processing_interval': 0.1,  # 10 times per second
         'event_handlers': {},
         'pulse_lockout_duration': 2.0,
+    }
+```
+
+### Sensory Stimuli Example
+For a complete example demonstrating both predefined and dynamic sensory stimuli, see `example_sensory_stimuli.py`.
+
+**Key features demonstrated:**
+- Predefined stimuli sent at session start (text messages and visual cues)
+- Dynamic stimuli generated during processing based on real-time data
+- Compatible stimulus types for use with the presenter (`visual_cue`, `text_message`)
+
+**Predefined stimuli in configuration:**
+```python
+'predefined_sensory_stimuli': [
+    {
+        'time': 0.5,
+        'type': 'text_message',
+        'parameters': {
+            'text': 'Session Starting...',
+            'duration': 2.0
+        }
+    },
+    {
+        'time': 3.0,
+        'type': 'visual_cue',
+        'parameters': {
+            'color': 'green',
+            'size': 100,
+            'duration': 1.0,
+            'position_x': 0,
+            'position_y': 200
+        }
+    }
+]
+```
+
+**Dynamic stimuli in process method:**
+```python
+def process(self, current_time, timestamps, valid_samples, 
+           eeg_buffer, emg_buffer, current_sample_index,
+           ready_for_trial, is_coil_at_target):
+    # Generate stimuli based on current time or data
+    return {
+        'sensory_stimuli': [
+            {
+                'time': current_time + 0.5,  # 0.5s from now
+                'type': 'visual_cue',
+                'parameters': {
+                    'color': 'red',
+                    'size': 150,
+                    'duration': 1.5,
+                    'position_x': 200,
+                    'position_y': 100
+                }
+            }
+        ]
     }
 ```
 

@@ -860,7 +860,7 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
 
 void EegDecider::reset_decider_state() {
   this->decider_state = this->enabled ? DeciderState::READY : DeciderState::WAITING_FOR_ENABLED;
-  this->samples_since_last_processing = 0;
+  this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
 }
 
 void EegDecider::empty_trial_queue() {
@@ -1341,15 +1341,12 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
   /* Append the sample to the buffer. */
   this->sample_buffer.append(msg);
 
-  /* Track periodic processing interval even before buffer is full, so that the first
-     processing happens at the expected time (e.g., 1.0s) rather than depending on the buffer size. */
+  /* Check if periodic processing should trigger based on time comparison. */
   bool periodic_processing_triggered = false;
   if (this->decider_wrapper->is_processing_interval_enabled()) {
-    this->samples_since_last_processing++;
-
-    if (this->samples_since_last_processing >= this->decider_wrapper->get_processing_interval_in_samples()) {
-      /* Reset counter and mark that periodic processing should occur (if buffer is full and not in lockout). */
-      this->samples_since_last_processing = 0;
+    if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE_S) {
+      /* Move to next processing time and mark that periodic processing should occur (if buffer is full and not in lockout). */
+      this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
       periodic_processing_triggered = true;
     }
   }

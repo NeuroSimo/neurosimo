@@ -208,7 +208,7 @@ private:
   bool first_sample_ever = true;
   bool first_sample_of_session = false;
 
-  uint16_t samples_since_last_processing = 0;
+  double_t next_periodic_processing_time = UNSET_PREVIOUS_TIME;
 
   /* Used for keeping track of the time of the previous trigger time to ensure that the minimum pulse
      interval is respected. */

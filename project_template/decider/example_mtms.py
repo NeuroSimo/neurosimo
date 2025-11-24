@@ -111,11 +111,11 @@ class Decider:
             },
         }
 
-    def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
-               eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
-               current_sample_index: int, ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+    def process(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+               eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
+               ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG buffer (periodic processing)."""
-        print("Periodically processing EEG/EMG buffer at time {:.4f}".format(current_time))
+        print("Periodically processing EEG/EMG buffer at time {:.4f}".format(reference_time))
 
         self.buffer_count += 1
 
@@ -132,7 +132,7 @@ class Decider:
         self.target_type = (self.target_type + 1) % len(self.targets)
 
         # Calculate pulse timing
-        start_time = current_time + MINIMUM_DELAY_BEFORE_PULSE
+        start_time = reference_time + MINIMUM_DELAY_BEFORE_PULSE
 
         if len(targets) == 2:  # Paired-pulse
             pulse_times = [start_time, start_time + 0.1]
@@ -140,7 +140,7 @@ class Decider:
             pulse_times = [start_time]
 
         print("Decided at time {:.4f} to perform trial at time {:.4f} with {} target(s)".format(
-            current_time, start_time, len(targets)))
+            reference_time, start_time, len(targets)))
 
         trial = {
             'targets': targets,
@@ -150,20 +150,18 @@ class Decider:
 
         return {'trial': trial}
 
-    def process_eeg_trigger(self, current_time: float, timestamps: np.ndarray, 
-                           valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
-                           emg_buffer: np.ndarray, current_sample_index: int, 
+    def process_eeg_trigger(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+                           eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Handle EEG trigger from the EEG device."""
-        print("EEG trigger received at time {:.4f}".format(current_time))
+        print("EEG trigger received at time {:.4f}".format(reference_time))
         # This example doesn't process EEG triggers, just log them
         return None
 
-    def handle_pulse(self, current_time: float, timestamps: np.ndarray, 
-                    valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
-                    emg_buffer: np.ndarray, current_sample_index: int, 
+    def handle_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+                    eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                     ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Handle pulse event."""
-        print("Pulse event received at time {:.4f}".format(current_time))
+        print("Pulse event received at time {:.4f}".format(reference_time))
         # Add your pulse event handling logic here
         return None

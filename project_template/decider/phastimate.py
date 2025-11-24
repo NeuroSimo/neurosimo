@@ -123,19 +123,19 @@ class Decider:
             },
         }
 
-    def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
-                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, current_sample_index: int, 
+    def process(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                 ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
         """
         Process the EEG data to estimate phase and schedule a trigger (periodic processing).
         
         Args:
-            current_time: Current timestamp
-            timestamps: Array of sample timestamps
+            reference_time: Reference time point for the sample window (typically current sample time)
+            time_offsets: Array of time offsets relative to reference_time
             valid_samples: Boolean array indicating valid samples
             eeg_buffer: EEG data buffer (samples x channels)
             emg_buffer: EMG data buffer (unused)
-            current_sample_index: Current sample index
+            reference_index: Index in the buffer corresponding to reference_time (where time_offsets[i] == 0)
             ready_for_trial: Whether the system is ready for a new trial
             is_coil_at_target: Whether the coil is currently at the target position
             
@@ -160,7 +160,7 @@ class Decider:
             return None
 
         # Find optimal trigger timing
-        trigger_timing = self._find_optimal_trigger_timing(estimated_phases, current_time)
+        trigger_timing = self._find_optimal_trigger_timing(estimated_phases, reference_time)
         
         return trigger_timing
 
@@ -219,13 +219,13 @@ class Decider:
         
         return estimated_phases
 
-    def _find_optimal_trigger_timing(self, estimated_phases: np.ndarray, current_time: float) -> Optional[Dict[str, float]]:
+    def _find_optimal_trigger_timing(self, estimated_phases: np.ndarray, reference_time: float) -> Optional[Dict[str, float]]:
         """
         Find optimal trigger timing based on estimated phases.
         
         Args:
             estimated_phases: Array of estimated phase values
-            current_time: Current timestamp
+            reference_time: Reference time point
             
         Returns:
             Dictionary with trigger timing or None if no suitable timing found
@@ -251,9 +251,9 @@ class Decider:
 
         # Calculate trigger execution time
         time_offset_seconds = (optimal_sample_index * self.downsample_ratio) / self.sampling_frequency
-        execution_time = current_time + time_offset_seconds
+        execution_time = reference_time + time_offset_seconds
 
-        print(f'Triggering at time {execution_time:.3f} s based on phase estimate at time {current_time:.1f} s')
+        print(f'Triggering at time {execution_time:.3f} s based on phase estimate at time {reference_time:.1f} s')
 
         return {'timed_trigger': execution_time}
 
@@ -392,20 +392,18 @@ class Decider:
 
         return phases, amplitudes
 
-    def process_eeg_trigger(self, current_time: float, timestamps: np.ndarray, 
-                           valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
-                           emg_buffer: np.ndarray, current_sample_index: int, 
+    def process_eeg_trigger(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+                           eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
         """Handle EEG trigger from the EEG device."""
-        print(f'EEG trigger received at time {current_time:.4f}')
+        print(f'EEG trigger received at time {reference_time:.4f}')
         # Phastimate doesn't process EEG triggers, just log them
         return None
 
-    def handle_pulse(self, current_time: float, timestamps: np.ndarray, 
-                    valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
-                    emg_buffer: np.ndarray, current_sample_index: int, 
+    def handle_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+                    eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                     ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
         """Handle pulse event."""
-        print(f'Pulse event received at time {current_time:.4f}')
+        print(f'Pulse event received at time {reference_time:.4f}')
         # Add your pulse event handling logic here
         return None

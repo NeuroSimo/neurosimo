@@ -69,11 +69,11 @@ class Decider:
             ],
         }
 
-    def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 
-               eeg_buffer: np.ndarray, emg_buffer: np.ndarray, 
-               current_sample_index: int, ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+    def process(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+               eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
+               ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG buffer (periodic processing)."""
-        print(f"Periodically processing EEG/EMG buffer at time {current_time:.1f}s")
+        print(f"Periodically processing EEG/EMG buffer at time {reference_time:.1f}s")
 
         if not np.all(valid_samples):
             print("Some samples are invalid, skipping")
@@ -81,12 +81,12 @@ class Decider:
 
         # Example: Send dynamic sensory stimuli based on processing time
         # Every 4 seconds (at 2s, 6s, 10s, etc. when we process at 2s intervals)
-        if int(current_time) % 4 == 0:
-            print(f"Sending dynamic visual cue at {current_time:.1f}s")
+        if int(reference_time) % 4 == 0:
+            print(f"Sending dynamic visual cue at {reference_time:.1f}s")
             return {
                 'sensory_stimuli': [
                     {
-                        'time': current_time + 0.5,  # 0.5 seconds from now
+                        'time': reference_time + 0.5,  # 0.5 seconds from now
                         'type': 'visual_cue',
                         'parameters': {
                             'color': 'red',
@@ -97,10 +97,10 @@ class Decider:
                         }
                     },
                     {
-                        'time': current_time + 2.0,  # 2 seconds from now
+                        'time': reference_time + 2.0,  # 2 seconds from now
                         'type': 'text_message',
                         'parameters': {
-                            'text': f'Processing at {current_time:.1f}s',
+                            'text': f'Processing at {reference_time:.1f}s',
                             'duration': 1.0
                         }
                     }
@@ -109,27 +109,25 @@ class Decider:
 
         return None
 
-    def process_eeg_trigger(self, current_time: float, timestamps: np.ndarray, 
-                           valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
-                           emg_buffer: np.ndarray, current_sample_index: int, 
+    def process_eeg_trigger(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+                           eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Handle EEG trigger from the EEG device."""
-        print(f"EEG trigger received at time {current_time}.")
+        print(f"EEG trigger received at time {reference_time}.")
         # This example doesn't process EEG triggers, just log them
         return None
 
-    def handle_pulse(self, current_time: float, timestamps: np.ndarray, 
-                    valid_samples: np.ndarray, eeg_buffer: np.ndarray, 
-                    emg_buffer: np.ndarray, current_sample_index: int, 
+    def handle_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+                    eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                     ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Handle pulse event."""
-        print(f"Pulse event received at time {current_time}.")
+        print(f"Pulse event received at time {reference_time}.")
         
         # Send a text message when pulse occurs
         return {
             'sensory_stimuli': [
                 {
-                    'time': current_time + 0.1,  # Shortly after pulse
+                    'time': reference_time + 0.1,  # Shortly after pulse
                     'type': 'text_message',
                     'parameters': {
                         'text': 'Pulse Delivered!',

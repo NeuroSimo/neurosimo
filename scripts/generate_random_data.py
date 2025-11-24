@@ -59,10 +59,11 @@ if __name__ == "__main__":
     event_filename = None
     if not args.no_events:
         # Define events with string-based event types
+        # Times chosen to avoid coinciding with common periodic processing intervals
         events = [
-            [1.0, "pulse"],
-            [2.0, "pulse"],
-            [5.0, "pulse"],
+            [1.5, "pulse"],
+            [2.5, "pulse"],
+            [5.5, "pulse"],
         ]
         event_filename = args.output_filename + "_events.csv" if not args.no_events else None
 

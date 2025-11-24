@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `event_handlers` parameter to decider configuration: a dictionary from event types to handler functions
 - Added support for custom sample windows for event handlers
 - Allow setting the first periodic processing time in decider configuration, with convenient default behavior
+- Added `periodic_processing_enabled` parameter to decider configuration, making it explicit whether periodic processing is enabled
 
 ### Fixed
 - Fixed log message loss when publishing bursts of messages from Python pipeline modules by batching related messages together

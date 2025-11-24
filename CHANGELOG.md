@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed log message loss when publishing bursts of messages from Python pipeline modules by batching related messages together
 - Fixed preprocessor and decider to correctly handle look-ahead windows in EEG buffers
 - Events that trigger processing in decider now do not reset the processing interval
+- Fixed crash in preprocessor, decider, and presenter when project directory is deleted while they are running
 
 ### Changed
 - Automatically stop session when EEG simulator reaches end of dataset without loop mode

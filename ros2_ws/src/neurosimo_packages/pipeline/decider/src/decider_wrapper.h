@@ -157,6 +157,7 @@ private:
   int look_back_samples;
   int look_ahead_samples;
   uint16_t sampling_frequency;
+  bool periodic_processing_enabled = false;
   double periodic_processing_interval = 0.0;
   double first_periodic_processing_at = 0.0;
   double pulse_lockout_duration = 0.0;

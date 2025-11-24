@@ -118,13 +118,9 @@ class Decider:
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
             
             # Event system
-            'predefined_events': [],
             'event_handlers': {
                 'pulse': self.handle_pulse,
             },
-            
-            # Sensory stimuli
-            'predefined_sensory_stimuli': [],
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 

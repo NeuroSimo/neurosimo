@@ -298,7 +298,7 @@ void DeciderWrapper::initialize_module(
       return;
     }
 
-    /* Extract predefined_sensory_stimuli. */
+    /* Extract predefined_sensory_stimuli (optional). */
     if (config.contains("predefined_sensory_stimuli")) {
       if (!py::isinstance<py::list>(config["predefined_sensory_stimuli"])) {
         RCLCPP_ERROR(*logger_ptr, "predefined_sensory_stimuli must be a list.");
@@ -311,10 +311,6 @@ void DeciderWrapper::initialize_module(
         state = WrapperState::ERROR;
         return;
       }
-    } else {
-      RCLCPP_ERROR(*logger_ptr, "'predefined_sensory_stimuli' key not found in configuration dictionary.");
-      state = WrapperState::ERROR;
-      return;
     }
 
     /* Extract periodic_processing_enabled (mandatory). */
@@ -376,7 +372,7 @@ void DeciderWrapper::initialize_module(
       this->first_periodic_processing_at = this->periodic_processing_interval;
     }
 
-    /* Extract predefined_events. */
+    /* Extract predefined_events (optional). */
     if (config.contains("predefined_events")) {
       py::list events = config["predefined_events"].cast<py::list>();
       {
@@ -390,10 +386,6 @@ void DeciderWrapper::initialize_module(
           event_queue.push(std::make_pair(event_time, event_type));
         }
       }
-    } else {
-      RCLCPP_ERROR(*logger_ptr, "'predefined_events' key not found in configuration dictionary.");
-      state = WrapperState::ERROR;
-      return;
     }
 
     /* Extract pulse_lockout_duration (optional, defaults to 0.0). */

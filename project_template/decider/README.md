@@ -83,8 +83,8 @@ Duration in seconds during which periodic processing is disabled after a pulse i
 - `2.0`: No periodic processing for 2 seconds after pulse
 - `0.0`: No lockout (periodic processing continues immediately)
 
-#### `predefined_events` (list)
-List of event dictionaries for scheduled processing triggers.
+#### `predefined_events` (list, optional)
+List of event dictionaries for scheduled processing triggers. Can be omitted if no predefined events are needed.
 
 **Event dictionary structure:**
 - `type` (str): Event type identifier (e.g., "pulse", "baseline_start")
@@ -139,8 +139,8 @@ def handle_pulse(self, current_time, timestamps, valid_samples,
     return None
 ```
 
-#### `predefined_sensory_stimuli` (list)
-List of pre-defined sensory stimuli sent to the presenter at initialization.
+#### `predefined_sensory_stimuli` (list, optional)
+List of pre-defined sensory stimuli sent to the presenter at initialization. Can be omitted if no predefined stimuli are needed.
 
 **Stimulus dictionary structure:**
 - `time` (float): When to present stimulus (seconds from session start)
@@ -288,9 +288,7 @@ def get_configuration(self):
         'sample_window': [-100, 0],  # Last 100ms at 1kHz
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
-        'predefined_events': [],
         'event_handlers': {},
-        'predefined_sensory_stimuli': [],
         'pulse_lockout_duration': 0.0,
     }
 ```
@@ -307,8 +305,6 @@ def get_configuration(self):
         'event_handlers': {
             'trial_start': self.handle_trial_start,
         },
-        'predefined_sensory_stimuli': [],
-        'pulse_lockout_duration': 0.0,
     }
 ```
 
@@ -319,9 +315,7 @@ def get_configuration(self):
         'sample_window': [-1000, 0],  # Last second
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.1,  # 10 times per second
-        'predefined_events': [],
         'event_handlers': {},
-        'predefined_sensory_stimuli': [],
         'pulse_lockout_duration': 2.0,
     }
 ```

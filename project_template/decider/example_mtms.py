@@ -109,9 +109,6 @@ class Decider:
             'event_handlers': {
                 'pulse': self.handle_pulse,
             },
-            
-            # Sensory stimuli
-            'predefined_sensory_stimuli': [],
         }
 
     def process(self, current_time: float, timestamps: np.ndarray, valid_samples: np.ndarray, 

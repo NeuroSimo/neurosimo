@@ -47,6 +47,15 @@ How frequently the `process` method is called, in seconds.
 
 **Note:** EEG triggers always call `process_eeg_trigger()` regardless of this setting.
 
+#### `first_periodic_processing_at` (float, optional)
+Time of the first periodic processing call in seconds (relative to session start). Defaults to `periodic_processing_interval` if not specified.
+
+**Examples:**
+- `1.0`: First processing at 1.0s, then every `periodic_processing_interval`
+- `0.5`: First processing at 0.5s (useful for offset timing)
+
+**Note:** This parameter is optional and primarily exists for precise timing control. Most users should omit it and use the default behavior.
+
 #### `sample_window` (list)
 Two-element list `[earliest_sample, latest_sample]` defining the buffer size relative to current sample.
 - Current sample is always `0`

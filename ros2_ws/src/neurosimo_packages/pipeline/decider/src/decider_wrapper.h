@@ -97,7 +97,8 @@ public:
   std::vector<std::string> get_internal_imports() const;
 
   std::size_t get_buffer_size() const;
-  uint16_t get_processing_interval_in_samples() const;
+  double get_periodic_processing_interval() const;
+  double get_first_periodic_processing_at() const;
   bool is_processing_interval_enabled() const;
   int get_look_ahead_samples() const;
   int get_look_ahead_samples_for_event(const std::string& event_type) const;
@@ -156,7 +157,8 @@ private:
   int look_back_samples;
   int look_ahead_samples;
   uint16_t sampling_frequency;
-  uint16_t processing_interval_in_samples = 0;
+  double periodic_processing_interval = 0.0;
+  double first_periodic_processing_at = 0.0;
   double pulse_lockout_duration = 0.0;
   
   /* Maximum window covering all handlers */

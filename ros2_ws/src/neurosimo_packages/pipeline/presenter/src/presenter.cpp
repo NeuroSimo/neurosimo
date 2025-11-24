@@ -343,12 +343,23 @@ bool EegPresenter::change_working_directory(const std::string path) {
 std::vector<std::string> EegPresenter::list_python_modules_in_working_directory() {
   std::vector<std::string> modules;
 
-  /* List all .py files in the current working directory. */
-  auto path = std::filesystem::current_path();
-  for (const auto &entry : std::filesystem::directory_iterator(path)) {
-    if (entry.is_regular_file() && entry.path().extension() == ".py") {
-      modules.push_back(entry.path().stem().string());
+  /* List all .py files in the working directory. */
+  std::error_code ec;
+  try {
+    for (const auto &entry : std::filesystem::directory_iterator(this->working_directory, ec)) {
+      if (ec) {
+        RCLCPP_WARN(this->get_logger(), "Error accessing directory %s: %s", this->working_directory.c_str(), ec.message().c_str());
+        return modules;  // Return empty vector
+      }
+      
+      std::error_code entry_ec;
+      if (entry.is_regular_file(entry_ec) && !entry_ec && entry.path().extension() == ".py") {
+        modules.push_back(entry.path().stem().string());
+      }
     }
+  } catch (const std::filesystem::filesystem_error& e) {
+    RCLCPP_WARN(this->get_logger(), "Filesystem error while listing modules in %s: %s", this->working_directory.c_str(), e.what());
+    return modules;  // Return whatever we managed to collect
   }
 
   /* Sort modules */

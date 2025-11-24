@@ -8,7 +8,7 @@ import { PipelineContext, LogMessage, LogLevel } from 'providers/PipelineProvide
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
 const PipelineLogPanelTitle = styled.div`
-  width: 680px;
+  width: 710px;
   position: fixed;
   top: 686px;
   left: 55px;
@@ -78,7 +78,7 @@ const LogButton = styled.button`
 `
 
 const PipelineLogPanel = styled(StyledPanel)`
-  width: 640px;
+  width: 680px;
   height: 406px;
   position: fixed;
   top: 718px;

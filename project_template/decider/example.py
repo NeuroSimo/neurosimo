@@ -51,19 +51,6 @@ class Decider:
         return {
             # Trigger TMS device after 5ms delay
             'timed_trigger': current_time + 0.005,
-
-            # Example dynamic sensory stimulus
-            # 'sensory_stimuli': [
-            #     {
-            #         'time': current_time + 1.0,
-            #         'type': 'visual_cue',
-            #         'parameters': {
-            #             'color': 'blue',
-            #             'intensity': 0.8,
-            #             'duration': 0.2
-            #         }
-            #     }
-            # ]
         }
 
     def process_eeg_trigger(self, current_time: float, timestamps: np.ndarray, 

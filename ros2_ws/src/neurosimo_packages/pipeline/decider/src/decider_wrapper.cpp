@@ -635,11 +635,11 @@ void DeciderWrapper::warm_up() {
         
         py::object py_result = decider_instance->attr("process")(
           dummy_sample_window_base_time, 
+          dummy_sample_window_base_index,
           *py_timestamps, 
-          *py_valid, 
           *py_eeg_data, 
           *py_emg_data, 
-          dummy_sample_window_base_index,
+          *py_valid, 
           dummy_ready_for_trial, 
           dummy_is_coil_at_target
         );
@@ -944,7 +944,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   std::string coil_target;
 
   /* Determine which arrays to use. Default to standard arrays. */
-  py::array_t<double>* timestamps_to_use = py_timestamps.get();
+  py::array_t<double>* time_offsets_to_use = py_timestamps.get();
   py::array_t<bool>* valid_to_use = py_valid.get();
   py::array_t<double>* eeg_data_to_use = py_eeg_data.get();
   py::array_t<double>* emg_data_to_use = py_emg_data.get();
@@ -956,7 +956,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
     auto arrays_it = event_arrays.find(event_type);
     if (arrays_it != event_arrays.end()) {
       EventArrays& arrays = arrays_it->second;
-      timestamps_to_use = arrays.timestamps.get();
+      time_offsets_to_use = arrays.timestamps.get();
       valid_to_use = arrays.valid.get();
       eeg_data_to_use = arrays.eeg_data.get();
       emg_data_to_use = arrays.emg_data.get();
@@ -971,7 +971,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   size_t start_offset = this->buffer_size - num_samples;
 
   /* Fill the selected arrays from buffer at the calculated offset. */
-  fill_arrays_from_buffer(buffer, sample_window_base_time, *timestamps_to_use, *valid_to_use, 
+  fill_arrays_from_buffer(buffer, sample_window_base_time, *time_offsets_to_use, *valid_to_use, 
                           *eeg_data_to_use, *emg_data_to_use, start_offset, num_samples);
 
   /* Call the appropriate Python function using the selected arrays. */
@@ -979,7 +979,7 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
   try {
     if (is_trigger) {
       /* Call process_eeg_trigger. */
-      py_result = decider_instance->attr("process_eeg_trigger")(sample_window_base_time, *timestamps_to_use, *valid_to_use, *eeg_data_to_use, *emg_data_to_use, sample_window_base_index, ready_for_trial, is_coil_at_target);
+      py_result = decider_instance->attr("process_eeg_trigger")(sample_window_base_time, sample_window_base_index, *time_offsets_to_use, *eeg_data_to_use, *emg_data_to_use, *valid_to_use, ready_for_trial, is_coil_at_target);
     } else if (has_event) {
       /* Call event handler for this event type. */
       auto handler_it = event_handlers.find(event_type);
@@ -999,10 +999,10 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       }
       
       /* Call the event handler (arrays already selected and filled). */
-      py_result = handler_it->second(sample_window_base_time, *timestamps_to_use, *valid_to_use, *eeg_data_to_use, *emg_data_to_use, sample_window_base_index, ready_for_trial, is_coil_at_target);
+      py_result = handler_it->second(sample_window_base_time, sample_window_base_index, *time_offsets_to_use, *eeg_data_to_use, *emg_data_to_use, *valid_to_use, ready_for_trial, is_coil_at_target);
     } else {
       /* Call standard process method (for periodic processing). */
-      py_result = decider_instance->attr("process")(sample_window_base_time, *timestamps_to_use, *valid_to_use, *eeg_data_to_use, *emg_data_to_use, sample_window_base_index, ready_for_trial, is_coil_at_target);
+      py_result = decider_instance->attr("process")(sample_window_base_time, sample_window_base_index, *time_offsets_to_use, *eeg_data_to_use, *emg_data_to_use, *valid_to_use, ready_for_trial, is_coil_at_target);
     }
 
   } catch(const py::error_already_set& e) {

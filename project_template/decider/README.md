@@ -129,7 +129,7 @@ Dictionary mapping event types to handler methods. Each event type must have a c
 }
 ```
 
-When an event occurs, its corresponding handler method is called instead of the regular `process()` method. Handler methods have the same signature as `process()` but without event-related parameters (`is_event`, `event_type`).
+When an event occurs, its corresponding handler method is called instead of the regular `process()` method.
 
 **Custom sample windows:**
 - By default, event handlers use the same `sample_window` as periodic processing
@@ -139,11 +139,11 @@ When an event occurs, its corresponding handler method is called instead of the 
 
 **Example handler method:**
 ```python
-def handle_pulse(self, current_time, timestamps, valid_samples, 
-                eeg_buffer, emg_buffer, current_sample_index, 
+def handle_pulse(self, reference_time, reference_index, time_offsets, 
+                eeg_buffer, emg_buffer, valid_samples, 
                 ready_for_trial, is_coil_at_target):
     """Handle pulse events."""
-    print(f"Pulse event at {current_time}")
+    print(f"Pulse event at {reference_time}")
     # Process pulse-specific logic
     return None
 ```
@@ -179,16 +179,16 @@ Main processing method called by the pipeline for periodic processing of EEG/EMG
 
 **Parameters:**
 
-#### `current_time` (float)
-Time of current sample in seconds.
+#### `reference_time` (float)
+Reference time point in seconds. Other times in the buffer are relative to this.
 
-#### `timestamps` (numpy.ndarray)
-Timestamps for samples in the buffer. Shape: `(num_samples,)` where `num_samples` matches the sample window size.
+#### `reference_index` (int)
+Index in the buffer where `time_offsets[reference_index] == 0`. Points to last sample when `sample_window` is `[-n, 0]`.
 
-#### `valid_samples` (numpy.ndarray)
-Boolean array indicating sample validity. Shape: `(num_samples,)`. 
-- Sample validity determined by pipeline preprocessor
-- Default preprocessor marks samples invalid for 1 second after each pulse
+#### `time_offsets` (numpy.ndarray)
+Time offsets relative to `reference_time`. Shape: `(num_samples,)` where `num_samples` matches the sample window size.
+- Absolute time for sample i is: `reference_time + time_offsets[i]`
+- For `sample_window = [-1.0, 0]`, offsets range from -1.0 to 0.0 seconds
 
 #### `eeg_buffer` (numpy.ndarray)
 EEG sample data. Shape: `(num_samples, num_eeg_channels)`
@@ -196,8 +196,10 @@ EEG sample data. Shape: `(num_samples, num_eeg_channels)`
 #### `emg_buffer` (numpy.ndarray)
 EMG sample data. Shape: `(num_samples, num_emg_channels)`
 
-#### `current_sample_index` (int)
-Index of current sample in the buffer. Points to last sample when `sample_window` is `[-n, 0]`.
+#### `valid_samples` (numpy.ndarray)
+Boolean array indicating sample validity. Shape: `(num_samples,)`. 
+- Sample validity determined by pipeline preprocessor
+- Default preprocessor marks samples invalid for 1 second after each pulse
 
 #### `ready_for_trial` (bool)
 Whether pipeline can accept new trial requests.
@@ -217,7 +219,7 @@ Schedule a trigger pulse at specified time (seconds). Uses LabJack T4 for trigge
 
 **Example:**
 ```python
-return {'timed_trigger': current_time + 0.005}  # Trigger after 5ms
+return {'timed_trigger': reference_time + 0.005}  # Trigger after 5ms
 ```
 
 #### `sensory_stimuli` (list)
@@ -228,7 +230,7 @@ Dynamic sensory stimuli based on real-time data analysis. Same format as static 
 return {
     'sensory_stimuli': [
         {
-            'time': current_time + 1.0,
+            'time': reference_time + 1.0,
             'type': 'visual_cue',
             'parameters': {
                 'color': 'blue',
@@ -245,13 +247,13 @@ return {
 **Mandatory method** called when an EEG trigger is received from the EEG device.
 
 **Parameters:**
-Same as `process()` method but without `is_event` and `event_type` parameters:
-- `current_time` (float)
-- `timestamps` (numpy.ndarray)
-- `valid_samples` (numpy.ndarray)
+Same as `process()` method:
+- `reference_time` (float)
+- `reference_index` (int)
+- `time_offsets` (numpy.ndarray)
 - `eeg_buffer` (numpy.ndarray)
 - `emg_buffer` (numpy.ndarray)
-- `current_sample_index` (int)
+- `valid_samples` (numpy.ndarray)
 - `ready_for_trial` (bool)
 - `is_coil_at_target` (bool)
 
@@ -260,11 +262,11 @@ Same format as `process()` method.
 
 **Example:**
 ```python
-def process_eeg_trigger(self, current_time, timestamps, valid_samples,
-                       eeg_buffer, emg_buffer, current_sample_index,
+def process_eeg_trigger(self, reference_time, reference_index, time_offsets,
+                       eeg_buffer, emg_buffer, valid_samples,
                        ready_for_trial, is_coil_at_target):
     """Handle EEG trigger from the EEG device."""
-    print(f"EEG trigger received at {current_time}")
+    print(f"EEG trigger received at {reference_time}")
     # Return None if you don't care about EEG triggers
     return None
 ```
@@ -277,11 +279,11 @@ Event handler methods are called when events occur (defined in `event_handlers` 
 
 **Example:**
 ```python
-def handle_pulse(self, current_time, timestamps, valid_samples,
-                eeg_buffer, emg_buffer, current_sample_index,
+def handle_pulse(self, reference_time, reference_index, time_offsets,
+                eeg_buffer, emg_buffer, valid_samples,
                 ready_for_trial, is_coil_at_target):
     """Handle pulse events."""
-    print(f"Pulse event at {current_time}")
+    print(f"Pulse event at {reference_time}")
     # Process event-specific logic
     return {'sensory_stimuli': [...]}  # Or None
 ```
@@ -296,7 +298,7 @@ When multiple processing triggers occur at the same sample, only one Python meth
 2. **Events** (predefined or dynamic): Corresponding event handler is called
 3. **Periodic Processing**: `process()` is called at regular intervals
 
-**Important Notes:**
+**Notes:**
 - When an event occurs at the same time as periodic processing, the event handler takes precedence and the `process()` method is **not** called for that sample
 - However, the periodic processing timer continues to advance normally, so the next periodic processing will still occur at the expected time
 - Events and EEG triggers are processed even during pulse lockout periods; only periodic processing is suppressed during lockout
@@ -389,14 +391,14 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 
 **Dynamic stimuli in process method:**
 ```python
-def process(self, current_time, timestamps, valid_samples, 
-           eeg_buffer, emg_buffer, current_sample_index,
+def process(self, reference_time, reference_index, time_offsets, 
+           eeg_buffer, emg_buffer, valid_samples,
            ready_for_trial, is_coil_at_target):
     # Generate stimuli based on current time or data
     return {
         'sensory_stimuli': [
             {
-                'time': current_time + 0.5,  # 0.5s from now
+                'time': reference_time + 0.5,  # 0.5s from now
                 'type': 'visual_cue',
                 'parameters': {
                     'color': 'red',
@@ -446,14 +448,14 @@ def __init__(self, num_eeg_channels, num_emg_channels, sampling_frequency):
 - Particularly beneficial for modules using scipy, sklearn, or other heavy libraries
 
 **Important for stateful deciders:**
-If your decider maintains internal state that depends on real EEG/EMG data patterns (e.g., running averages, learned parameters, adaptive thresholds), you should skip state updates during warm-up rounds. Warm-up calls can be identified by checking if `current_time == 0.0`:
+If your decider maintains internal state that depends on real EEG/EMG data patterns (e.g., running averages, learned parameters, adaptive thresholds), you should skip state updates during warm-up rounds. Warm-up calls can be identified by checking if `reference_time == 0.0`:
 
 ```python
-def process(self, current_time, timestamps, valid_samples, eeg_buffer, emg_buffer, 
-            current_sample_index, ready_for_trial, is_coil_at_target):
+def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, 
+            valid_samples, ready_for_trial, is_coil_at_target):
     
     # Skip state updates during warm-up (dummy data)
-    is_warmup = (current_time == 0.0)
+    is_warmup = (reference_time == 0.0)
     
     # Your processing logic here...
     processed_data = self.analyze_eeg(eeg_buffer)
@@ -471,7 +473,7 @@ def process(self, current_time, timestamps, valid_samples, eeg_buffer, emg_buffe
 1. **Check `ready_for_trial`** before scheduling triggers
 2. **Validate samples** using `valid_samples` array before processing
 3. **Configure warm-up** with `self.warm_up_rounds = 2` for consistent performance
-4. **Skip state updates during warm-up** by checking `current_time == 0.0` for stateful deciders
+4. **Skip state updates during warm-up** by checking `reference_time == 0.0` for stateful deciders
 5. **Use multiprocessing pool** for computationally intensive tasks to avoid blocking the pipeline
 
 ## mTMS Device Usage

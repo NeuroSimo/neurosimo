@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Made periodic processing scheduling independent of the buffer size in decider
 - Documented processing precedence in decider: events and EEG triggers take precedence over periodic processing
 - Changed event timings in example datasets to 1.5s, 2.5s, 5.5s to avoid coinciding with periodic processing interval of 1 second
+- Renamed and reordered decider method parameters (see example decider for the new names and order)
 
 ## [0.1.0] - 2025-10-27
 

@@ -15,7 +15,7 @@ https://github.com/bnplab/phastimate
 This version is based on MATLAB adaptation of Phastimate by Joonas Laurinoja at Aalto University.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from scipy.signal import filtfilt, hilbert
 from spectrum import aryule

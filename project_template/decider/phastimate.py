@@ -119,15 +119,15 @@ class Decider:
             
             # Event system
             'event_handlers': {
-                'pulse': self.handle_pulse,
+                'pulse': self.process_pulse,
             },
         }
 
-    def process(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+    def process_periodic(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
                 eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                 ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
         """
-        Process the EEG data to estimate phase and schedule a trigger (periodic processing).
+        Process the EEG data to estimate phase and schedule a trigger periodically.
         
         Args:
             reference_time: Reference time point for the sample window (typically current sample time)
@@ -395,15 +395,15 @@ class Decider:
     def process_eeg_trigger(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
                            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
-        """Handle EEG trigger from the EEG device."""
+        """Process EEG trigger from the EEG device."""
         print(f'EEG trigger received at time {reference_time:.4f}')
         # Phastimate doesn't process EEG triggers, just log them
         return None
 
-    def handle_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+    def process_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
                     eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                     ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
-        """Handle pulse event."""
+        """Process pulse event."""
         print(f'Pulse event received at time {reference_time:.4f}')
         # Add your pulse event handling logic here
         return None

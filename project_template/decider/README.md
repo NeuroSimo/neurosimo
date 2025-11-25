@@ -139,9 +139,10 @@ When an event occurs, its corresponding handler method is called instead of the 
 
 **Example handler method:**
 ```python
-def process_pulse(self, reference_time, reference_index, time_offsets, 
-                eeg_buffer, emg_buffer, valid_samples, 
-                ready_for_trial, is_coil_at_target):
+def process_pulse(
+        self, reference_time, reference_index, time_offsets, 
+        eeg_buffer, emg_buffer, valid_samples, 
+        ready_for_trial, is_coil_at_target):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process pulse-specific logic
@@ -262,9 +263,10 @@ Same format as `process_periodic()` method.
 
 **Example:**
 ```python
-def process_eeg_trigger(self, reference_time, reference_index, time_offsets,
-                       eeg_buffer, emg_buffer, valid_samples,
-                       ready_for_trial, is_coil_at_target):
+def process_eeg_trigger(
+        self, reference_time, reference_index, time_offsets,
+        eeg_buffer, emg_buffer, valid_samples,
+        ready_for_trial, is_coil_at_target):
     """Process EEG trigger from the EEG device."""
     print(f"EEG trigger received at {reference_time}")
     # Return None if you don't care about EEG triggers
@@ -279,9 +281,10 @@ Event handler methods are called when events occur (defined in `event_handlers` 
 
 **Example:**
 ```python
-def process_pulse(self, reference_time, reference_index, time_offsets,
-                eeg_buffer, emg_buffer, valid_samples,
-                ready_for_trial, is_coil_at_target):
+def process_pulse(
+        self, reference_time, reference_index, time_offsets,
+        eeg_buffer, emg_buffer, valid_samples,
+        ready_for_trial, is_coil_at_target):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process event-specific logic
@@ -391,9 +394,10 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 
 **Dynamic stimuli in process_periodic method:**
 ```python
-def process_periodic(self, reference_time, reference_index, time_offsets, 
-           eeg_buffer, emg_buffer, valid_samples,
-           ready_for_trial, is_coil_at_target):
+def process_periodic(
+        self, reference_time, reference_index, time_offsets, 
+        eeg_buffer, emg_buffer, valid_samples,
+        ready_for_trial, is_coil_at_target):
     # Generate stimuli based on current time or data
     return {
         'sensory_stimuli': [
@@ -451,8 +455,10 @@ def __init__(self, num_eeg_channels, num_emg_channels, sampling_frequency):
 If your decider maintains internal state that depends on real EEG/EMG data patterns (e.g., running averages, learned parameters, adaptive thresholds), you should skip state updates during warm-up rounds. Warm-up calls can be identified by checking if `reference_time == 0.0`:
 
 ```python
-def process_periodic(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, 
-            valid_samples, ready_for_trial, is_coil_at_target):
+def process_periodic(
+        self, reference_time, reference_index, time_offsets, 
+        eeg_buffer, emg_buffer, valid_samples,
+        ready_for_trial, is_coil_at_target):
     
     # Skip state updates during warm-up (dummy data)
     is_warmup = (reference_time == 0.0)

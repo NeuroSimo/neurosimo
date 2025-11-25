@@ -633,7 +633,7 @@ void DeciderWrapper::warm_up() {
       try {
         auto start_time = std::chrono::high_resolution_clock::now();
         
-        py::object py_result = decider_instance->attr("process")(
+        py::object py_result = decider_instance->attr("process_periodic")(
           dummy_sample_window_base_time, 
           dummy_sample_window_base_index,
           *py_timestamps, 
@@ -1001,8 +1001,8 @@ std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared
       /* Call the event handler (arrays already selected and filled). */
       py_result = handler_it->second(sample_window_base_time, sample_window_base_index, *time_offsets_to_use, *eeg_data_to_use, *emg_data_to_use, *valid_to_use, ready_for_trial, is_coil_at_target);
     } else {
-      /* Call standard process method (for periodic processing). */
-      py_result = decider_instance->attr("process")(sample_window_base_time, sample_window_base_index, *time_offsets_to_use, *eeg_data_to_use, *emg_data_to_use, *valid_to_use, ready_for_trial, is_coil_at_target);
+      /* Call standard process_periodic method (for periodic processing). */
+      py_result = decider_instance->attr("process_periodic")(sample_window_base_time, sample_window_base_index, *time_offsets_to_use, *eeg_data_to_use, *emg_data_to_use, *valid_to_use, ready_for_trial, is_coil_at_target);
     }
 
   } catch(const py::error_already_set& e) {

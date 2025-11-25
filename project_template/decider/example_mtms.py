@@ -107,15 +107,15 @@ class Decider:
             # Event system
             'predefined_events': predefined_events,
             'event_handlers': {
-                'pulse': self.handle_pulse,
+                'pulse': self.process_pulse,
             },
         }
 
-    def process(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+    def process_periodic(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
-        """Process EEG/EMG buffer (periodic processing)."""
-        print("Periodically processing EEG/EMG buffer at time {:.4f}".format(reference_time))
+        """Process EEG/EMG buffer periodically."""
+        print("Periodic processing at time {:.4f}".format(reference_time))
 
         self.buffer_count += 1
 
@@ -153,15 +153,15 @@ class Decider:
     def process_eeg_trigger(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
                            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
-        """Handle EEG trigger from the EEG device."""
+        """Process EEG trigger from the EEG device."""
         print("EEG trigger received at time {:.4f}".format(reference_time))
         # This example doesn't process EEG triggers, just log them
         return None
 
-    def handle_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+    def process_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
                     eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
                     ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
-        """Handle pulse event."""
+        """Process pulse event."""
         print("Pulse event received at time {:.4f}".format(reference_time))
         # Add your pulse event handling logic here
         return None

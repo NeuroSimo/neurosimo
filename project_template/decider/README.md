@@ -43,7 +43,7 @@ Called by the pipeline during initialization. Must return a dictionary with conf
 **Return dictionary keys:**
 
 #### `periodic_processing_enabled` (bool)
-Whether periodic processing is enabled. When `False`, the `process` method is never called periodically (only on events and EEG triggers).
+Whether periodic processing is enabled. When `False`, the `process_periodic()` method is never called periodically (only events and EEG triggers are processed).
 
 **Examples:**
 - `True`: Enable periodic processing
@@ -52,7 +52,7 @@ Whether periodic processing is enabled. When `False`, the `process` method is ne
 **Note:** EEG triggers always call `process_eeg_trigger()` regardless of this setting.
 
 #### `periodic_processing_interval` (float, optional when disabled)
-How frequently the `process` method is called, in seconds. Required when `periodic_processing_enabled` is `True`, optional (defaults to `0.0`) when `False`.
+How frequently the `process_periodic()` method is called, in seconds. Required when `periodic_processing_enabled` is `True`, optional (defaults to `0.0`) when `False`.
 
 **Examples:**
 - `1.0`: Process once per second
@@ -113,8 +113,8 @@ Dictionary mapping event types to handler methods. Each event type must have a c
 **Simple format:**
 ```python
 'event_handlers': {
-    'pulse': self.handle_pulse,
-    'baseline_start': self.handle_baseline_start,
+    'pulse': self.process_pulse,
+    'baseline_start': self.process_baseline_start,
 }
 ```
 
@@ -122,14 +122,14 @@ Dictionary mapping event types to handler methods. Each event type must have a c
 ```python
 'event_handlers': {
     'pulse': {
-        'handler': self.handle_pulse,
+        'handler': self.process_pulse,
         'sample_window': [-500, 100],  # Custom window just for pulse events
     },
-    'baseline_start': self.handle_baseline_start,  # Uses default window
+    'baseline_start': self.process_baseline_start,  # Uses default window
 }
 ```
 
-When an event occurs, its corresponding handler method is called instead of the regular `process()` method.
+When an event occurs, its corresponding handler method is called instead of the regular `process_periodic()` method.
 
 **Custom sample windows:**
 - By default, event handlers use the same `sample_window` as periodic processing
@@ -139,10 +139,10 @@ When an event occurs, its corresponding handler method is called instead of the 
 
 **Example handler method:**
 ```python
-def handle_pulse(self, reference_time, reference_index, time_offsets, 
+def process_pulse(self, reference_time, reference_index, time_offsets, 
                 eeg_buffer, emg_buffer, valid_samples, 
                 ready_for_trial, is_coil_at_target):
-    """Handle pulse events."""
+    """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process pulse-specific logic
     return None
@@ -173,7 +173,7 @@ List of pre-defined sensory stimuli sent to the presenter at initialization. Can
 ]
 ```
 
-### `process(...)`
+### `process_periodic(...)`
 
 Main processing method called by the pipeline for periodic processing of EEG/EMG samples.
 
@@ -212,7 +212,7 @@ Whether the coil is currently positioned at the target location (for neuronaviga
 
 **Return Value:**
 
-The `process` method can return a dictionary with the following optional keys:
+The `process_periodic()` method can return a dictionary with the following optional keys:
 
 #### `timed_trigger` (float)
 Schedule a trigger pulse at specified time (seconds). Uses LabJack T4 for triggering external devices like commercial TMS systems.
@@ -247,7 +247,7 @@ return {
 **Mandatory method** called when an EEG trigger is received from the EEG device.
 
 **Parameters:**
-Same as `process()` method:
+Same as `process_periodic()` method:
 - `reference_time` (float)
 - `reference_index` (int)
 - `time_offsets` (numpy.ndarray)
@@ -258,14 +258,14 @@ Same as `process()` method:
 - `is_coil_at_target` (bool)
 
 **Return Value:**
-Same format as `process()` method.
+Same format as `process_periodic()` method.
 
 **Example:**
 ```python
 def process_eeg_trigger(self, reference_time, reference_index, time_offsets,
                        eeg_buffer, emg_buffer, valid_samples,
                        ready_for_trial, is_coil_at_target):
-    """Handle EEG trigger from the EEG device."""
+    """Process EEG trigger from the EEG device."""
     print(f"EEG trigger received at {reference_time}")
     # Return None if you don't care about EEG triggers
     return None
@@ -279,38 +279,38 @@ Event handler methods are called when events occur (defined in `event_handlers` 
 
 **Example:**
 ```python
-def handle_pulse(self, reference_time, reference_index, time_offsets,
+def process_pulse(self, reference_time, reference_index, time_offsets,
                 eeg_buffer, emg_buffer, valid_samples,
                 ready_for_trial, is_coil_at_target):
-    """Handle pulse events."""
+    """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process event-specific logic
     return {'sensory_stimuli': [...]}  # Or None
 ```
 
-**Handler naming:** Handler method names are arbitrary - they are explicitly mapped in `event_handlers` configuration.
+**Handler naming:** Handler method names should follow the pattern `process_<event_type>()` for consistency - they are explicitly mapped in `event_handlers` configuration.
 
 ## Processing Precedence
 
 When multiple processing triggers occur at the same sample, only one Python method is called, following this precedence order:
 
 1. **EEG Triggers** (from hardware): `process_eeg_trigger()` is always called
-2. **Events** (predefined or dynamic): Corresponding event handler is called
-3. **Periodic Processing**: `process()` is called at regular intervals
+2. **Events** (predefined or dynamic): Corresponding event handler (e.g., `process_pulse()`) is called
+3. **Periodic Processing**: `process_periodic()` is called at regular intervals
 
 **Notes:**
-- When an event occurs at the same time as periodic processing, the event handler takes precedence and the `process()` method is **not** called for that sample
+- When an event occurs at the same time as periodic processing, the event handler takes precedence and the `process_periodic()` method is **not** called for that sample
 - However, the periodic processing timer continues to advance normally, so the next periodic processing will still occur at the expected time
 - Events and EEG triggers are processed even during pulse lockout periods; only periodic processing is suppressed during lockout
 
 **Example Timeline:**
 ```
 With periodic_processing_interval=3.0 and first_periodic_processing_at=1.0:
-- 1.0s: Periodic processing scheduled, process() called
-- 2.0s: Event "pulse" occurs, handle_pulse() called (not process())
-- 4.0s: Periodic processing scheduled, process() called
-- 5.0s: Event "pulse" occurs, handle_pulse() called (not process())
-- 7.0s: Periodic processing scheduled, process() called
+- 1.0s: Periodic processing scheduled, process_periodic() called
+- 2.0s: Event "pulse" occurs, process_pulse() called (not process_periodic())
+- 4.0s: Periodic processing scheduled, process_periodic() called
+- 5.0s: Event "pulse" occurs, process_pulse() called (not process_periodic())
+- 7.0s: Periodic processing scheduled, process_periodic() called
 ```
 
 In this example, even though events occurred at 2.0s and 5.0s, the periodic processing schedule (1.0s, 4.0s, 7.0s, ...) remains consistent and unaffected.
@@ -389,9 +389,9 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 ]
 ```
 
-**Dynamic stimuli in process method:**
+**Dynamic stimuli in process_periodic method:**
 ```python
-def process(self, reference_time, reference_index, time_offsets, 
+def process_periodic(self, reference_time, reference_index, time_offsets, 
            eeg_buffer, emg_buffer, valid_samples,
            ready_for_trial, is_coil_at_target):
     # Generate stimuli based on current time or data
@@ -432,7 +432,7 @@ def __init__(self, num_eeg_channels, num_emg_channels, sampling_frequency):
 
 **How it works:**
 - The C++ wrapper automatically detects this attribute during module initialization
-- It calls your `process()` method the specified number of times with realistic dummy data
+- It calls your `process_periodic()` method the specified number of times with realistic dummy data
 - Each round uses fresh random data (seeded for reproducibility) to avoid state-dependent issues
 - This triggers JIT compilation, library loading, and other one-time initialization costs
 - Subsequent real processing calls should have a consistent latency
@@ -451,7 +451,7 @@ def __init__(self, num_eeg_channels, num_emg_channels, sampling_frequency):
 If your decider maintains internal state that depends on real EEG/EMG data patterns (e.g., running averages, learned parameters, adaptive thresholds), you should skip state updates during warm-up rounds. Warm-up calls can be identified by checking if `reference_time == 0.0`:
 
 ```python
-def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, 
+def process_periodic(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, 
             valid_samples, ready_for_trial, is_coil_at_target):
     
     # Skip state updates during warm-up (dummy data)

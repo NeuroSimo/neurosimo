@@ -761,11 +761,11 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample
   }
 
   if (msg->is_trigger) {
-    RCLCPP_INFO(this->get_logger(), "Registered trigger at: %.5f (s).", sample_time);
+    RCLCPP_INFO(this->get_logger(), "Registered trigger at: %.1f (s).", sample_time);
   }
 
   if (msg->is_event) {
-    RCLCPP_INFO(this->get_logger(), "Registered event at: %.5f (s).", sample_time);
+    RCLCPP_INFO(this->get_logger(), "Registered event at: %.1f (s).", sample_time);
   }
 
   this->sample_buffer.append(msg);

@@ -27,7 +27,7 @@ class Decider:
             'periodic_processing_interval': 2.0,  # Process every 2 seconds
             
             # Event system
-            'event_handlers': {
+            'event_processors': {
                 'pulse': self.process_pulse,
             },
             

@@ -106,7 +106,7 @@ class Decider:
             
             # Event system
             'predefined_events': predefined_events,
-            'event_handlers': {
+            'event_processors': {
                 'pulse': self.process_pulse,
             },
         }

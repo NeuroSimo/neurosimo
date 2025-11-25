@@ -107,12 +107,12 @@ List of event dictionaries for scheduled processing triggers. Can be omitted if 
 ]
 ```
 
-#### `event_handlers` (dict)
-Dictionary mapping event types to handler methods. Each event type must have a corresponding handler.
+#### `event_processors` (dict)
+Dictionary mapping event types to processor methods. Each event type must have a corresponding processor.
 
 **Simple format:**
 ```python
-'event_handlers': {
+'event_processors': {
     'pulse': self.process_pulse,
     'baseline_start': self.process_baseline_start,
 }
@@ -120,24 +120,24 @@ Dictionary mapping event types to handler methods. Each event type must have a c
 
 **Advanced format with custom sample window:**
 ```python
-'event_handlers': {
+'event_processors': {
     'pulse': {
-        'handler': self.process_pulse,
+        'processor': self.process_pulse,
         'sample_window': [-500, 100],  # Custom window just for pulse events
     },
     'baseline_start': self.process_baseline_start,  # Uses default window
 }
 ```
 
-When an event occurs, its corresponding handler method is called instead of the regular `process_periodic()` method.
+When an event occurs, its corresponding processor method is called instead of the regular `process_periodic()` method.
 
 **Custom sample windows:**
-- By default, event handlers use the same `sample_window` as periodic processing
+- By default, event processors use the same `sample_window` as periodic processing
 - You can optionally specify a different window for specific events
 - Custom windows can be smaller or larger, overlapping or non-overlapping
 - The system automatically manages buffer sizing to accommodate all windows
 
-**Example handler method:**
+**Example processor method:**
 ```python
 def process_pulse(
         self, reference_time, reference_index, time_offsets, 
@@ -275,9 +275,9 @@ def process_eeg_trigger(
 
 **Note:** EEG triggers are not available with simulated data. Use events for similar functionality.
 
-### Event Handler Methods
+### Event Processor Methods
 
-Event handler methods are called when events occur (defined in `event_handlers` configuration). Each handler has the same signature as `process_eeg_trigger()`.
+Event processor methods are called when events occur (defined in `event_processors` configuration). Each processor has the same signature as `process_eeg_trigger()`.
 
 **Example:**
 ```python
@@ -291,18 +291,18 @@ def process_pulse(
     return {'sensory_stimuli': [...]}  # Or None
 ```
 
-**Handler naming:** Handler method names should follow the pattern `process_<event_type>()` for consistency - they are explicitly mapped in `event_handlers` configuration.
+**Processor naming:** Processor method names should follow the pattern `process_<event_type>()` for consistency - they are explicitly mapped in `event_processors` configuration.
 
 ## Processing Precedence
 
 When multiple processing triggers occur at the same sample, only one Python method is called, following this precedence order:
 
 1. **EEG Triggers** (from hardware): `process_eeg_trigger()` is always called
-2. **Events** (predefined or dynamic): Corresponding event handler (e.g., `process_pulse()`) is called
+2. **Events** (predefined or dynamic): Corresponding event processor (e.g., `process_pulse()`) is called
 3. **Periodic Processing**: `process_periodic()` is called at regular intervals
 
 **Notes:**
-- When an event occurs at the same time as periodic processing, the event handler takes precedence and the `process_periodic()` method is **not** called for that sample
+- When an event occurs at the same time as periodic processing, the event processor takes precedence and the `process_periodic()` method is **not** called for that sample
 - However, the periodic processing timer continues to advance normally, so the next periodic processing will still occur at the expected time
 - Events and EEG triggers are processed even during pulse lockout periods; only periodic processing is suppressed during lockout
 
@@ -327,7 +327,7 @@ def get_configuration(self):
         'sample_window': [-100, 0],  # Last 100ms at 1kHz
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
-        'event_handlers': {},
+        'event_processors': {},
         'pulse_lockout_duration': 0.0,
     }
 ```
@@ -341,7 +341,7 @@ def get_configuration(self):
         'predefined_events': [
             {'type': 'trial_start', 'time': 10.0}
         ],
-        'event_handlers': {
+        'event_processors': {
             'trial_start': self.handle_trial_start,
         },
     }
@@ -354,7 +354,7 @@ def get_configuration(self):
         'sample_window': [-1000, 0],  # Last second
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.1,  # 10 times per second
-        'event_handlers': {},
+        'event_processors': {},
         'pulse_lockout_duration': 2.0,
     }
 ```

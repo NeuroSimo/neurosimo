@@ -34,7 +34,7 @@ class Decider:
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
 
             # Event system
-            'event_handlers': {
+            'event_processors': {
                 'pulse': self.process_pulse,
             },
         }

@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added pulse lockout duration to decider configuration
-- Added `event_handlers` parameter to decider configuration: a dictionary from event types to handler functions
-- Added support for custom sample windows for event handlers
+- Added `event_processors` parameter to decider configuration: a dictionary from event types to processor functions
+- Added support for custom sample windows for event processors
 - Allow setting the first periodic processing time in decider configuration, with convenient default behavior
 - Added `periodic_processing_enabled` parameter to decider configuration, making it explicit whether periodic processing is enabled
 - Added separate example decider for sending sensory stimuli to the presenter

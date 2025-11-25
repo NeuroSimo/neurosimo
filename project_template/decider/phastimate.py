@@ -123,9 +123,10 @@ class Decider:
             },
         }
 
-    def process_periodic(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-                eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-                ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
+    def process_periodic(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
+            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """
         Process the EEG data to estimate phase and schedule a trigger periodically.
         
@@ -219,7 +220,7 @@ class Decider:
         
         return estimated_phases
 
-    def _find_optimal_trigger_timing(self, estimated_phases: np.ndarray, reference_time: float) -> Optional[Dict[str, float]]:
+    def _find_optimal_trigger_timing(self, estimated_phases: np.ndarray, reference_time: float) -> Optional[Dict[str, Any]]:
         """
         Find optimal trigger timing based on estimated phases.
         
@@ -392,17 +393,19 @@ class Decider:
 
         return phases, amplitudes
 
-    def process_eeg_trigger(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-                           eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-                           ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
+    def process_eeg_trigger(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
+            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG trigger from the EEG device."""
         print(f'EEG trigger received at time {reference_time:.4f}')
         # Phastimate doesn't process EEG triggers, just log them
         return None
 
-    def process_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-                    eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-                    ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, float]]:
+    def process_pulse(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
+            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process pulse event."""
         print(f'Pulse event received at time {reference_time:.4f}')
         # Add your pulse event handling logic here

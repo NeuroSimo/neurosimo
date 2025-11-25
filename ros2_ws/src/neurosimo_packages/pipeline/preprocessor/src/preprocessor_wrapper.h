@@ -86,7 +86,7 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> guard;
 
-  std::unique_ptr<py::array_t<double>> py_timestamps;
+  std::unique_ptr<py::array_t<double>> py_time_offsets;
   std::unique_ptr<py::array_t<double>> py_eeg_data;
   std::unique_ptr<py::array_t<double>> py_emg_data;
 

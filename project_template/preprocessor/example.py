@@ -17,8 +17,10 @@ class Preprocessor:
 
         print("Preprocessor initialized with sampling frequency: ", sampling_frequency, "Hz")
 
-    def process(self, timestamps: np.ndarray, eeg_samples: np.ndarray, emg_samples: np.ndarray, 
-                current_sample_index: int, pulse_given: bool) -> Dict[str, Union[np.ndarray, bool]]:
+    def process(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray,
+            pulse_given: bool) -> Dict[str, Union[np.ndarray, bool]]:
         """Process incoming EEG/EMG samples and return preprocessed data."""
         
         # Handle pulse artifact detection
@@ -34,8 +36,8 @@ class Preprocessor:
                 self.ongoing_pulse_artifact = False
 
         # Pass through raw samples (no actual preprocessing in this example)
-        eeg_sample_preprocessed = eeg_samples[current_sample_index, :]
-        emg_sample_preprocessed = emg_samples[current_sample_index, :]
+        eeg_sample_preprocessed = eeg_buffer[reference_index, :]
+        emg_sample_preprocessed = emg_buffer[reference_index, :]
         
         # Mark sample validity
         valid = not self.ongoing_pulse_artifact

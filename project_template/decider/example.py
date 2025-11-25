@@ -39,9 +39,10 @@ class Decider:
             },
         }
 
-    def process_periodic(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-               eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-               ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+    def process_periodic(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray,
+            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG buffer periodically."""
         print(f"Periodic processing at time {reference_time}.")
 
@@ -53,17 +54,19 @@ class Decider:
             'timed_trigger': reference_time + 0.005,
         }
 
-    def process_eeg_trigger(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-                           eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-                           ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+    def process_eeg_trigger(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray,
+            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG trigger from the EEG device."""
         print(f"EEG trigger received at time {reference_time}.")
         # This example doesn't process EEG triggers, just log them
         return None
 
-    def process_pulse(self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-                    eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-                    ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+    def process_pulse(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray,
+            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process pulse event."""
         print(f"Pulse event received at time {reference_time}.")
         # Add your pulse event handling logic here

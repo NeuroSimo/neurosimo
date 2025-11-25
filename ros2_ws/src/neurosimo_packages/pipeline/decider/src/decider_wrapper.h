@@ -129,8 +129,8 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
 
-  /* Map of event type to handler function */
-  std::unordered_map<std::string, py::object> event_handlers;
+  /* Map of event type to processor function */
+  std::unordered_map<std::string, py::object> event_processors;
 
   /* Map of event type to custom sample window (optional) */
   std::unordered_map<std::string, std::pair<int, int>> event_sample_windows;
@@ -162,7 +162,7 @@ private:
   double first_periodic_processing_at = 0.0;
   double pulse_lockout_duration = 0.0;
   
-  /* Maximum window covering all handlers */
+  /* Maximum window covering all processors */
   int max_look_back_samples;
   int max_look_ahead_samples;
 

@@ -122,7 +122,7 @@ void PreprocessorWrapper::initialize_module(
   }
 
   /* Initialize numpy arrays. */
-  py_timestamps = std::make_unique<py::array_t<double>>(buffer_size);
+  py_time_offsets = std::make_unique<py::array_t<double>>(buffer_size);
 
   std::vector<size_t> eeg_data_shape = {buffer_size, eeg_data_size};
   py_eeg_data = std::make_unique<py::array_t<double>>(eeg_data_shape);
@@ -146,7 +146,7 @@ void PreprocessorWrapper::reset_module_state() {
   preprocessor_module = nullptr;
   preprocessor_instance = nullptr;
 
-  py_timestamps.reset();
+  py_time_offsets.reset();
   py_eeg_data.reset();
   py_emg_data.reset();
 
@@ -156,7 +156,7 @@ void PreprocessorWrapper::reset_module_state() {
 }
 
 PreprocessorWrapper::~PreprocessorWrapper() {
-  py_timestamps.reset();
+  py_time_offsets.reset();
   py_eeg_data.reset();
   py_emg_data.reset();
 }
@@ -178,22 +178,22 @@ int PreprocessorWrapper::get_look_ahead_samples() const {
 bool PreprocessorWrapper::process(
     eeg_msgs::msg::PreprocessedSample& output_sample,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
-    double_t sample_window_base_time,
+    double_t reference_time,
     bool pulse_given) {
 
   /* An example: If the sample window is set to [-2, 5], look_back_samples = 2, and the sample window base index
      (the index of sample 0 in the buffer) is 2. */
-  int sample_window_base_index = this->look_back_samples;
+  int reference_index = this->look_back_samples;
 
   /* Fill the numpy arrays. */
-  auto timestamps_ptr = py_timestamps->mutable_data();
+  auto time_offsets_ptr = py_time_offsets->mutable_data();
   auto eeg_data_ptr = py_eeg_data->mutable_data();
   auto emg_data_ptr = py_emg_data->mutable_data();
 
   buffer.process_elements([&](const auto& sample_ptr) {
     const auto& sample = *sample_ptr;
 
-    *timestamps_ptr++ = sample.time - sample_window_base_time;
+    *time_offsets_ptr++ = sample.time - reference_time;
     std::memcpy(eeg_data_ptr, sample.eeg_data.data(), eeg_data_size * sizeof(double));
     eeg_data_ptr += eeg_data_size;
     std::memcpy(emg_data_ptr, sample.emg_data.data(), emg_data_size * sizeof(double));
@@ -203,7 +203,7 @@ bool PreprocessorWrapper::process(
   /* Call the Python function. */
   py::object result;
   try {
-    result = preprocessor_instance->attr("process")(*py_timestamps, *py_eeg_data, *py_emg_data, sample_window_base_index, pulse_given);
+    result = preprocessor_instance->attr("process")(reference_time, reference_index, *py_time_offsets, *py_eeg_data, *py_emg_data, pulse_given);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
@@ -264,7 +264,7 @@ bool PreprocessorWrapper::process(
   output_sample.emg_data = dict_result["emg_sample"].cast<std::vector<double>>();
   output_sample.valid = dict_result["valid"].cast<bool>();
 
-  output_sample.time = sample_window_base_time;
+  output_sample.time = reference_time;
 
   return true;
 }

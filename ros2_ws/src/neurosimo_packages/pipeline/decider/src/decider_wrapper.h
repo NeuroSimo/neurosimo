@@ -136,19 +136,19 @@ private:
   std::unordered_map<std::string, std::pair<int, int>> event_sample_windows;
 
   /* Preallocated numpy arrays for default sample window */
-  std::unique_ptr<py::array_t<double>> py_timestamps;
+  std::unique_ptr<py::array_t<double>> py_time_offsets;
   std::unique_ptr<py::array_t<bool>> py_valid;
   std::unique_ptr<py::array_t<double>> py_eeg_data;
   std::unique_ptr<py::array_t<double>> py_emg_data;
 
   /* Preallocated numpy arrays for custom event windows */
   struct EventArrays {
-    std::unique_ptr<py::array_t<double>> timestamps;
+    std::unique_ptr<py::array_t<double>> time_offsets;
     std::unique_ptr<py::array_t<bool>> valid;
     std::unique_ptr<py::array_t<double>> eeg_data;
     std::unique_ptr<py::array_t<double>> emg_data;
     size_t buffer_size;
-    int sample_window_base_index;
+    int reference_index;
   };
   std::unordered_map<std::string, EventArrays> event_arrays;
 

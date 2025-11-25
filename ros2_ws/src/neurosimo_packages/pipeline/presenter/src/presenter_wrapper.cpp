@@ -96,6 +96,60 @@ void PresenterWrapper::initialize_module(
     return;
   }
 
+  /* Check that the Python module has a get_configuration method (mandatory). */
+  if (!py::hasattr(*presenter_instance, "get_configuration")) {
+    RCLCPP_ERROR(*logger_ptr, "Presenter module must implement 'get_configuration' method.");
+    this->_is_initialized = false;
+    return;
+  }
+
+  /* Extract the configuration from presenter_instance. */
+  py::dict config = presenter_instance->attr("get_configuration")().cast<py::dict>();
+
+  /* Validate that only allowed keys are present */
+  std::vector<std::string> allowed_keys = {"stimulus_processors"};
+  for (const auto& item : config) {
+    std::string key = py::str(item.first).cast<std::string>();
+    if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
+      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'stimulus_processors' is allowed.", key.c_str());
+      this->_is_initialized = false;
+      return;
+    }
+  }
+
+  /* Check that the configuration contains a 'stimulus_processors' key. */
+  if (!config.contains("stimulus_processors")) {
+    RCLCPP_ERROR(*logger_ptr, "Configuration must contain 'stimulus_processors' key.");
+    this->_is_initialized = false;
+    return;
+  }
+
+  /* Check that the 'stimulus_processors' value is a dictionary. */
+  if (!py::isinstance<py::dict>(config["stimulus_processors"])) {
+    RCLCPP_ERROR(*logger_ptr, "stimulus_processors must be a dictionary.");
+    this->_is_initialized = false;
+    return;
+  }
+
+  /* Extract stimulus_processors. */
+  py::dict processors = config["stimulus_processors"].cast<py::dict>();
+  this->stimulus_processors.clear();
+  
+  for (const auto& item : processors) {
+    std::string stimulus_type = py::str(item.first).cast<std::string>();
+    py::object processor = item.second.cast<py::object>();
+    
+    /* Verify that the processor is callable */
+    if (!py::hasattr(processor, "__call__")) {
+      RCLCPP_ERROR(*logger_ptr, "Stimulus processor for '%s' is not callable.", stimulus_type.c_str());
+      this->_is_initialized = false;
+      return;
+    }
+    
+    this->stimulus_processors[stimulus_type] = processor;
+    RCLCPP_DEBUG(*logger_ptr, "Registered stimulus processor for: %s", stimulus_type.c_str());
+  }
+
   RCLCPP_INFO(*logger_ptr, "Presenter set to: %s.", module_name.c_str());
 
   this->_is_initialized = true;
@@ -105,6 +159,7 @@ void PresenterWrapper::initialize_module(
 void PresenterWrapper::reset_module_state() {
   presenter_module = nullptr;
   presenter_instance = nullptr;
+  stimulus_processors.clear();
 
   this->_is_initialized = false;
   this->_error_occurred = false;
@@ -121,6 +176,22 @@ bool PresenterWrapper::error_occurred() const {
 bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
   // Extract fields
   std::string type = msg.type;
+
+  // Look up the processor for this stimulus type
+  auto processor_it = stimulus_processors.find(type);
+  if (processor_it == stimulus_processors.end()) {
+    std::string error_msg = std::string("No stimulus processor registered for type: ") + type;
+    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    
+    // Add error to log buffer so it can be published to UI
+    {
+      std::lock_guard<std::mutex> lock(log_buffer_mutex);
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+    }
+    
+    this->_error_occurred = true;
+    return false;
+  }
 
   // Build a py::dict for parameters, parsing numbers when possible
   py::dict py_params;
@@ -144,14 +215,13 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
     py_params[py::str(kv.key)] = pyval;
   }
 
-  // Call Python: process(type, parameters_dict)
+  // Call Python processor with parameters
   py::object py_result;
   try {
-    py_result = presenter_instance
-                  ->attr("process")(type, py_params);
+    py_result = processor_it->second(py_params);
   }
   catch (const py::error_already_set &e) {
-    std::string error_msg = std::string("Python error in presenter.process: ") + e.what();
+    std::string error_msg = std::string("Python error in stimulus processor '") + type + "': " + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
     
     // Add error to log buffer so it can be published to UI
@@ -164,7 +234,7 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
     return false;
   }
   catch (const std::exception &e) {
-    std::string error_msg = std::string("C++ exception in presenter.process: ") + e.what();
+    std::string error_msg = std::string("C++ exception in stimulus processor '") + type + "': " + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
     
     // Add error to log buffer so it can be published to UI
@@ -182,8 +252,8 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
     // convert the Python type object to a C++ string
     std::string got_type = py::str(py_result.get_type());
     RCLCPP_ERROR(*logger_ptr,
-      "presenter.process must return a bool, got %s",
-      got_type.c_str());
+      "Stimulus processor for '%s' must return a bool, got %s",
+      type.c_str(), got_type.c_str());
     this->_error_occurred = true;
     return false;
   }

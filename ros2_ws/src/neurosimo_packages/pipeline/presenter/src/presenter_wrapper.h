@@ -6,6 +6,7 @@
 #include <pybind11/numpy.h>
 #include <memory>
 #include <string>
+#include <map>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -65,6 +66,9 @@ private:
   std::unique_ptr<py::object> presenter_instance;
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
+  
+  /* Map from stimulus type to Python processor callable */
+  std::map<std::string, py::object> stimulus_processors;
 };
 
 #endif

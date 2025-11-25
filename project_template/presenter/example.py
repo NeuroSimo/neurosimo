@@ -5,7 +5,7 @@ import numpy as np
 
 class Presenter:
     def __init__(self) -> None:
-        self.win = visual.Window(size=[2560, 1440], pos=[2560, 0], allowGUI=False)
+        self.win = visual.Window(size=[400, 400], pos=[0, 0], allowGUI=False, units='norm')
         print("Presenter initialized")
 
     def __del__(self) -> None:
@@ -19,10 +19,10 @@ class Presenter:
         if stimulus_type == 'visual_cue':
             # Extract parameters with defaults
             color = parameters.get('color', 'white')
-            size = parameters.get('size', 50)
+            size = parameters.get('size', 0.1)
             duration = parameters.get('duration', 1.0)
-            pos_x = parameters.get('position_x', 0)
-            pos_y = parameters.get('position_y', 0)
+            pos_x = parameters.get('position_x', 0.0)
+            pos_y = parameters.get('position_y', 0.0)
             
             # Create and display visual stimulus
             stim = visual.Circle(
@@ -46,7 +46,6 @@ class Presenter:
             text_stim = visual.TextStim(
                 win=self.win,
                 text=message,
-                height=50
             )
             
             text_stim.draw()

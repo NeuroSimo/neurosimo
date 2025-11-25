@@ -38,7 +38,7 @@ class Decider:
                     'time': 0.5,
                     'type': 'text_message',
                     'parameters': {
-                        'text': 'Session Starting...',
+                        'text': 'Session starting...',
                         'duration': 2.0
                     }
                 },
@@ -48,10 +48,10 @@ class Decider:
                     'type': 'visual_cue',
                     'parameters': {
                         'color': 'green',
-                        'size': 100,
+                        'size': 0.3,
                         'duration': 1.0,
                         'position_x': 0,
-                        'position_y': 200
+                        'position_y': 0
                     }
                 },
                 # Another visual cue at 5 seconds
@@ -60,9 +60,9 @@ class Decider:
                     'type': 'visual_cue',
                     'parameters': {
                         'color': 'blue',
-                        'size': 75,
+                        'size': 0.2,
                         'duration': 0.5,
-                        'position_x': -200,
+                        'position_x': -0.5,
                         'position_y': 0
                     }
                 },
@@ -133,7 +133,7 @@ class Decider:
                     'time': reference_time + 0.1,  # Shortly after pulse
                     'type': 'text_message',
                     'parameters': {
-                        'text': 'Pulse Delivered!',
+                        'text': 'Pulse delivered!',
                         'duration': 1.0
                     }
                 }

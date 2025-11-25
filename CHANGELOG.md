@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allow setting the first periodic processing time in decider configuration, with convenient default behavior
 - Added `periodic_processing_enabled` parameter to decider configuration, making it explicit whether periodic processing is enabled
 - Added separate example decider for sending sensory stimuli to the presenter
+- Added `stimulus_processors` parameter to presenter configuration: a dictionary from stimulus types to processor functions
 
 ### Fixed
 - Fixed log message loss when publishing bursts of messages from Python pipeline modules by batching related messages together

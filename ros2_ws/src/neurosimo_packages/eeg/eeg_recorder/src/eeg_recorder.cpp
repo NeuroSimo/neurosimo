@@ -59,7 +59,7 @@ EegRecorder::EegRecorder() : Node("eeg_recorder") {
     std::bind(&EegRecorder::handle_raw_eeg_sample, this, _1));
 
   /* Subscriber for preprocessed EEG. */
-  eeg_preprocessed_subscriber = this->create_subscription<eeg_msgs::msg::PreprocessedSample>(
+  eeg_preprocessed_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
     EEG_PREPROCESSED_TOPIC,
     EEG_QUEUE_LENGTH,
     std::bind(&EegRecorder::handle_preprocessed_eeg_sample, this, _1));
@@ -267,7 +267,7 @@ void EegRecorder::handle_raw_eeg_sample([[maybe_unused]] const std::shared_ptr<e
   raw_buffer << temp_buffer.str();
 }
 
-void EegRecorder::handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_msgs::msg::PreprocessedSample> msg) {
+void EegRecorder::handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
   this->previous_clock_time_preprocessed = std::chrono::system_clock::now();
 
   double_t sample_time = msg->time;
@@ -290,7 +290,7 @@ void EegRecorder::handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_msgs:
   temp_buffer.clear();
 
   temp_buffer << std::fixed << std::setprecision(4) << msg->time
-              << "," << std::setprecision(6) << msg->metadata.processing_time
+              << "," << std::setprecision(6) << msg->metadata.preprocessing_duration
               << std::setprecision(4) << "," << msg->valid;
 
   /* Helper function to concatenate with comma. */

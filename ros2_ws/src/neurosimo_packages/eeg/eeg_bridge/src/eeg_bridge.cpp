@@ -341,6 +341,10 @@ void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
     }
 
     sample.time -= this->time_offset;
+
+    /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
+    sample.valid = true;
+
     this->eeg_sample_publisher->publish(sample);
 
     /* If the mTMS device is not available, return early. */

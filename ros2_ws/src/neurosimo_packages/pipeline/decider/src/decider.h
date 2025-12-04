@@ -18,7 +18,6 @@
 #include "std_msgs/msg/int32.hpp"
 
 #include "eeg_msgs/msg/sample.hpp"
-#include "eeg_msgs/msg/preprocessed_sample.hpp"
 
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
@@ -67,10 +66,10 @@ struct GoalMetadata {
 
 struct DeferredProcessingRequest {
   /* The time when processing should actually occur (after look-ahead samples have arrived). */
-  double_t processing_time;
+  double_t scheduled_time;
   
   /* The sample that triggered the processing request. */
-  std::shared_ptr<eeg_msgs::msg::PreprocessedSample> triggering_sample;
+  std::shared_ptr<eeg_msgs::msg::Sample> triggering_sample;
   
   /* Whether this was triggered by a trigger signal. */
   bool is_trigger;
@@ -81,9 +80,9 @@ struct DeferredProcessingRequest {
   /* Event type if has_event is true. */
   std::string event_type;
   
-  /* Comparison operator for priority queue (min-heap by processing_time). */
+  /* Comparison operator for priority queue (min-heap by scheduled_time). */
   bool operator>(const DeferredProcessingRequest& other) const {
-    return processing_time > other.processing_time;
+    return scheduled_time > other.scheduled_time;
   }
 };
 
@@ -119,7 +118,7 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
-  void update_eeg_info(const eeg_msgs::msg::PreprocessedSampleMetadata& msg);
+  void update_eeg_info(const eeg_msgs::msg::SampleMetadata& msg);
   void initialize_module();
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
@@ -148,8 +147,7 @@ private:
 
   void handle_trigger_from_eeg_device(const double_t trigger_time);
 
-  void process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg::PreprocessedSample> msg);
-  void process_raw_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
+  void process_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
 
   void log_trial(const mtms_trial_interfaces::msg::Trial& trial, size_t num_of_remaining_trials);
 
@@ -175,8 +173,7 @@ private:
 
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
 
-  rclcpp::Subscription<eeg_msgs::msg::PreprocessedSample>::SharedPtr preprocessed_eeg_subscriber;
-  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr raw_eeg_subscriber;
+  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
@@ -242,7 +239,7 @@ private:
   /* For checking if samples have been dropped, store the time of the previous sample received. */
   double_t previous_time = UNSET_PREVIOUS_TIME;
 
-  RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>> sample_buffer;
+  RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>> sample_buffer;
   std::vector<pipeline_interfaces::msg::SensoryStimulus> sensory_stimuli;
 
   std::unique_ptr<DeciderWrapper> decider_wrapper;
@@ -250,10 +247,10 @@ private:
   std::queue<std::pair<mtms_trial_interfaces::msg::Trial, double>> trial_queue;
   std::map<std::string, GoalMetadata> goal_to_metadata_map;
 
-  bool performing_trial = false;
-  bool processing_timed_trigger = false;
+  bool is_performing_trial = false;
+  bool is_processing_timed_trigger = false;
 
-  bool preprocessor_enabled = false;
+  bool is_preprocessor_enabled = false;
 
   double_t timing_latency = 0.0;
 

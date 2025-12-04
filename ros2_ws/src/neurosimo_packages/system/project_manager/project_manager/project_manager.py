@@ -7,17 +7,13 @@ from project_interfaces.srv import (
     ListProjects,
     SetActiveProject,
     SetDeciderModule,
-    SetDeciderEnabled,
     SetPreprocessorModule,
-    SetPreprocessorEnabled,
     SetPresenterModule,
-    SetPresenterEnabled,
     SetDataset,
-    SetPlayback,
-    SetLoop,
     SetStartTime,
-    SetRecordData,
 )
+
+from std_srvs.srv import SetBool
 
 from std_msgs.msg import String, Bool, Float64
 
@@ -47,17 +43,17 @@ class ProjectManagerNode(Node):
 
         # Clients
         self.decider_module_client = self.create_client(SetDeciderModule, "/pipeline/decider/module/set", callback_group=self.callback_group)
-        self.decider_enabled_client = self.create_client(SetDeciderEnabled, "/pipeline/decider/enabled/set", callback_group=self.callback_group)
+        self.decider_enabled_client = self.create_client(SetBool, "/pipeline/decider/enabled/set", callback_group=self.callback_group)
         self.preprocessor_module_client = self.create_client(SetPreprocessorModule, "/pipeline/preprocessor/module/set", callback_group=self.callback_group)
-        self.preprocessor_enabled_client = self.create_client(SetPreprocessorEnabled, "/pipeline/preprocessor/enabled/set", callback_group=self.callback_group)
+        self.preprocessor_enabled_client = self.create_client(SetBool, "/pipeline/preprocessor/enabled/set", callback_group=self.callback_group)
         self.presenter_module_client = self.create_client(SetPresenterModule, "/pipeline/presenter/module/set", callback_group=self.callback_group)
-        self.presenter_enabled_client = self.create_client(SetPresenterEnabled, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
+        self.presenter_enabled_client = self.create_client(SetBool, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
 
         self.set_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
-        self.set_playback_service = self.create_client(SetPlayback, "/eeg_simulator/playback/set", callback_group=self.callback_group)
-        self.set_loop_service = self.create_client(SetLoop, "/eeg_simulator/loop/set", callback_group=self.callback_group)
+        self.set_playback_service = self.create_client(SetBool, "/eeg_simulator/playback/set", callback_group=self.callback_group)
+        self.set_loop_service = self.create_client(SetBool, "/eeg_simulator/loop/set", callback_group=self.callback_group)
         self.set_start_time_service = self.create_client(SetStartTime, "/eeg_simulator/start_time/set", callback_group=self.callback_group)
-        self.record_data_service = self.create_client(SetRecordData, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
+        self.record_data_service = self.create_client(SetBool, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
 
         # Wait for services to be available
         while not self.preprocessor_module_client.wait_for_service(timeout_sec=2.0):
@@ -355,8 +351,8 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_decider_enabled(self, enabled):
-        request = SetDeciderEnabled.Request()
-        request.enabled = enabled
+        request = SetBool.Request()
+        request.data = enabled
 
         future = self.decider_enabled_client.call_async(request)
 
@@ -381,8 +377,8 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
     
     def set_preprocessor_enabled(self, enabled):
-        request = SetPreprocessorEnabled.Request()
-        request.enabled = enabled
+        request = SetBool.Request()
+        request.data = enabled
 
         future = self.preprocessor_enabled_client.call_async(request)
 
@@ -407,8 +403,8 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_presenter_enabled(self, enabled):
-        request = SetPresenterEnabled.Request()
-        request.enabled = enabled
+        request = SetBool.Request()
+        request.data = enabled
 
         future = self.presenter_enabled_client.call_async(request)
 
@@ -433,8 +429,8 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
     
     def set_playback(self, playback):
-        request = SetPlayback.Request()
-        request.playback = playback
+        request = SetBool.Request()
+        request.data = playback
 
         future = self.set_playback_service.call_async(request)
 
@@ -446,8 +442,8 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
     
     def set_loop(self, loop):
-        request = SetLoop.Request()
-        request.loop = loop
+        request = SetBool.Request()
+        request.data = loop
 
         future = self.set_loop_service.call_async(request)
 
@@ -472,8 +468,8 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
     
     def set_record_data(self, record_data):
-        request = SetRecordData.Request()
-        request.record_data = record_data
+        request = SetBool.Request()
+        request.data = record_data
 
         future = self.record_data_service.call_async(request)
 

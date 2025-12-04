@@ -27,15 +27,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   "msg/PreprocessorList.msg"
   "srv/SetPreprocessorModule.srv"
-  "srv/SetPreprocessorEnabled.srv"
 
   "msg/DeciderList.msg"
   "srv/SetDeciderModule.srv"
-  "srv/SetDeciderEnabled.srv"
 
   "msg/PresenterList.msg"
   "srv/SetPresenterModule.srv"
-  "srv/SetPresenterEnabled.srv"
 
   "msg/ProtocolList.msg"
   "srv/SetProtocol.srv"
@@ -43,10 +40,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Dataset.msg"
   "msg/DatasetList.msg"
   "srv/SetDataset.srv"
-  "srv/SetPlayback.srv"
-  "srv/SetLoop.srv"
   "srv/SetStartTime.srv"
-  "srv/SetRecordData.srv"
 )
 
 ament_package()

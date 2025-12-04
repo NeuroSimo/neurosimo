@@ -11,7 +11,7 @@
 #include "eeg_msgs/msg/sample.hpp"
 #include "eeg_msgs/msg/eeg_info.hpp"
 
-#include "project_interfaces/srv/set_record_data.hpp"
+#include "std_srvs/srv/set_bool.hpp"
 
 #include "system_interfaces/msg/session.hpp"
 #include "system_interfaces/msg/session_state.hpp"
@@ -33,7 +33,7 @@ private:
   rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_preprocessed_subscriber;
 
-  rclcpp::Service<project_interfaces::srv::SetRecordData>::SharedPtr set_record_data_service;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_record_data_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr record_data_publisher;
 
   rclcpp::TimerBase::SharedPtr timer;
@@ -48,8 +48,8 @@ private:
   void handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
 
   void handle_set_record_data(
-      const std::shared_ptr<project_interfaces::srv::SetRecordData::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetRecordData::Response> response);
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
   void write_raw_buffer();
   void write_preprocessed_buffer();

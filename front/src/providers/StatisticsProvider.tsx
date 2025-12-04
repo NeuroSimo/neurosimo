@@ -8,14 +8,14 @@ interface Int32 extends Message {
 
 interface EegStatistics extends Message {
   num_of_raw_samples: number
-  max_time_between_raw_samples: number
+  max_interval_between_raw_samples: number
 
   num_of_preprocessed_samples: number
-  max_time_between_preprocessed_samples: number
+  max_interval_between_preprocessed_samples: number
 
-  preprocessing_time_max: number
-  preprocessing_time_q95: number
-  preprocessing_time_median: number
+  preprocessing_duration_max: number
+  preprocessing_duration_q95: number
+  preprocessing_duration_median: number
 }
 
 interface StatisticsContextType {

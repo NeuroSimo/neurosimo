@@ -9,7 +9,6 @@
 #include "std_msgs/msg/bool.hpp"
 
 #include "eeg_msgs/msg/sample.hpp"
-#include "eeg_msgs/msg/preprocessed_sample.hpp"
 #include "eeg_msgs/msg/eeg_info.hpp"
 
 #include "project_interfaces/srv/set_record_data.hpp"
@@ -32,7 +31,7 @@ private:
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
 
   rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_raw_subscriber;
-  rclcpp::Subscription<eeg_msgs::msg::PreprocessedSample>::SharedPtr eeg_preprocessed_subscriber;
+  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_preprocessed_subscriber;
 
   rclcpp::Service<project_interfaces::srv::SetRecordData>::SharedPtr set_record_data_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr record_data_publisher;
@@ -46,7 +45,7 @@ private:
   void check_dropped_samples(double_t sample_time, double_t previous_time);
 
   void handle_raw_eeg_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
-  void handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_msgs::msg::PreprocessedSample> msg);
+  void handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
 
   void handle_set_record_data(
       const std::shared_ptr<project_interfaces::srv::SetRecordData::Request> request,

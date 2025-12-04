@@ -15,7 +15,6 @@
 #include <diagnostic_msgs/msg/key_value.hpp>
 
 #include "eeg_msgs/msg/sample.hpp"
-#include "eeg_msgs/msg/preprocessed_sample.hpp"
 
 #include "mtms_trial_interfaces/msg/trial.hpp"
 #include "targeting_msgs/msg/electric_target.hpp"
@@ -81,7 +80,7 @@ public:
     pipeline_interfaces::msg::SensoryStimulus& out_msg);
   std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
+    const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     bool ready_for_trial,
     bool is_trigger,
@@ -177,7 +176,7 @@ private:
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
 
   void fill_arrays_from_buffer(
-    const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
+    const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     py::array_t<double>& timestamps,
     py::array_t<bool>& valid,

@@ -176,7 +176,7 @@ int PreprocessorWrapper::get_look_ahead_samples() const {
 }
 
 bool PreprocessorWrapper::process(
-    eeg_msgs::msg::PreprocessedSample& output_sample,
+    eeg_msgs::msg::Sample& output_sample,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
     double_t reference_time,
     bool pulse_given) {

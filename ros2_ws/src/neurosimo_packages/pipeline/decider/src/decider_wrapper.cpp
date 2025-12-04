@@ -893,7 +893,7 @@ bool DeciderWrapper::process_sensory_stimuli_list(
 }
 
 void DeciderWrapper::fill_arrays_from_buffer(
-    const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
+    const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
     double_t reference_time,
     py::array_t<double>& time_offsets,
     py::array_t<bool>& valid,
@@ -926,7 +926,7 @@ void DeciderWrapper::fill_arrays_from_buffer(
 /* TODO: Use struct for the return value. */
 std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> DeciderWrapper::process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    const RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>& buffer,
+    const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
     double_t reference_time,
     bool ready_for_trial,
     bool is_trigger,

@@ -13,7 +13,6 @@
 #include "std_msgs/msg/bool.hpp"
 
 #include "eeg_msgs/msg/sample.hpp"
-#include "eeg_msgs/msg/preprocessed_sample.hpp"
 
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
@@ -45,14 +44,14 @@ enum class PreprocessorState {
 
 struct DeferredProcessingRequest {
   /* The time when processing should actually occur (after look-ahead samples have arrived). */
-  double_t processing_time;
+  double_t scheduled_time;
   
   /* The sample that triggered the processing request. */
   std::shared_ptr<eeg_msgs::msg::Sample> triggering_sample;
   
-  /* Comparison operator for priority queue (min-heap by processing_time). */
+  /* Comparison operator for priority queue (min-heap by scheduled_time). */
   bool operator>(const DeferredProcessingRequest& other) const {
-    return processing_time > other.processing_time;
+    return scheduled_time > other.scheduled_time;
   }
 };
 
@@ -114,7 +113,7 @@ private:
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
 
   rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr raw_eeg_subscriber;
-  rclcpp::Publisher<eeg_msgs::msg::PreprocessedSample>::SharedPtr preprocessed_eeg_publisher;
+  rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr preprocessed_eeg_publisher;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   rclcpp::Publisher<project_interfaces::msg::PreprocessorList>::SharedPtr preprocessor_list_publisher;
@@ -161,7 +160,7 @@ private:
   std::queue<double_t> pulse_execution_times;
 
   RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>> sample_buffer;
-  eeg_msgs::msg::PreprocessedSample preprocessed_sample;
+  eeg_msgs::msg::Sample preprocessed_sample;
 
   std::unique_ptr<PreprocessorWrapper> preprocessor_wrapper;
 

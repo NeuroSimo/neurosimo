@@ -69,7 +69,7 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     subscription_options);
 
   /* Publisher for preprocessed EEG data. */
-  this->preprocessed_eeg_publisher = this->create_publisher<eeg_msgs::msg::PreprocessedSample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
+  this->preprocessed_eeg_publisher = this->create_publisher<eeg_msgs::msg::Sample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
 
   /* Subscriber for EEG data. */
   this->raw_eeg_subscriber = create_subscription<eeg_msgs::msg::Sample>(
@@ -126,7 +126,7 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   this->preprocessor_wrapper = std::make_unique<PreprocessorWrapper>(logger);
 
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>();
-  this->preprocessed_sample = eeg_msgs::msg::PreprocessedSample();
+  this->preprocessed_sample = eeg_msgs::msg::Sample();
 
   /* Initialize inotify. */
   this->inotify_descriptor = inotify_init();
@@ -635,7 +635,7 @@ void EegPreprocessor::process_ready_deferred_requests(double_t current_sample_ti
     const auto& next_request = this->deferred_processing_queue.top();
     
     /* Check if our current sample time is within the tolerance of the processing time of the next request. */
-    if (current_sample_time >= next_request.processing_time - this->TOLERANCE_S) {
+    if (current_sample_time >= next_request.scheduled_time - this->TOLERANCE_S) {
       /* Process this deferred request. */
       process_deferred_request(next_request, current_sample_time);
       this->deferred_processing_queue.pop();
@@ -672,15 +672,19 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     preprocessed_sample.metadata.num_of_emg_channels = triggering_sample->metadata.num_of_emg_channels;
     preprocessed_sample.metadata.is_simulation = triggering_sample->metadata.is_simulation;
     preprocessed_sample.metadata.system_time = triggering_sample->metadata.system_time;
+    preprocessed_sample.metadata.passed_experiment_coordinator = triggering_sample->metadata.passed_experiment_coordinator;
+  
+    /* Mark the sample as passed the preprocessor. */
+    preprocessed_sample.metadata.passed_preprocessor = true;
 
     /* Copy event and trigger information. */
     preprocessed_sample.is_trigger = triggering_sample->is_trigger;
     preprocessed_sample.is_event = triggering_sample->is_event;
     preprocessed_sample.event_type = triggering_sample->event_type;
 
-    /* Calculate processing time. */
+    /* Calculate preprocessing duration. */
     auto end_time = std::chrono::high_resolution_clock::now();
-    preprocessed_sample.metadata.processing_time = std::chrono::duration<double_t>(end_time - start_time).count();
+    preprocessed_sample.metadata.preprocessing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
     /* Publish the preprocessed sample. */
     preprocessed_eeg_publisher->publish(preprocessed_sample);
@@ -788,13 +792,13 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample
      If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
      Each sample takes sampling_period time. */
   if (look_ahead_samples > 0) {
-    request.processing_time = sample_time + (look_ahead_samples * this->sampling_period);
+    request.scheduled_time = sample_time + (look_ahead_samples * this->sampling_period);
     RCLCPP_DEBUG(this->get_logger(), 
                  "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
-                 sample_time, request.processing_time, look_ahead_samples);
+                 sample_time, request.scheduled_time, look_ahead_samples);
   } else {
     /* If look-ahead is 0 or negative, no look-ahead is needed, process immediately. */
-    request.processing_time = sample_time;
+    request.scheduled_time = sample_time;
   }
   
   /* Add to deferred processing queue. */

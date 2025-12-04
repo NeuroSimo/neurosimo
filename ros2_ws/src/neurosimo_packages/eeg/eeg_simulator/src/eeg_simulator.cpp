@@ -724,6 +724,9 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
 
   msg.time = time;
 
+  /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
+  msg.valid = true;
+
   if (!events.empty() && current_event_index < events.size()) {
     const Event& next_event = events[current_event_index];
     msg.is_event = next_event.time <= sample_time;

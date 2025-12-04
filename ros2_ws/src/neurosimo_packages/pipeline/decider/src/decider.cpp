@@ -123,19 +123,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     std::bind(&EegDecider::handle_session, this, _1),
     subscription_options);
 
-  /* Subscriber for preprocessed EEG data. */
-  this->preprocessed_eeg_subscriber = create_subscription<eeg_msgs::msg::PreprocessedSample>(
-    EEG_PREPROCESSED_TOPIC,
-    /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
-    EEG_QUEUE_LENGTH,
-    std::bind(&EegDecider::process_preprocessed_sample, this, _1));
-
-  /* Subscriber for raw EEG data. Used only when preprocessor is disabled. */
-  this->raw_eeg_subscriber = create_subscription<eeg_msgs::msg::Sample>(
-    EEG_RAW_TOPIC,
-    /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
-    EEG_QUEUE_LENGTH,
-    std::bind(&EegDecider::process_raw_sample, this, _1));
+  /* EEG subscriber will be created by handle_preprocessor_enabled based on preprocessor state. */
 
   /* Subscriber for active project. */
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
@@ -256,7 +244,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   /* Initialize variables. */
   this->decider_wrapper = std::make_unique<DeciderWrapper>(logger);
 
-  this->sample_buffer = RingBuffer<std::shared_ptr<eeg_msgs::msg::PreprocessedSample>>();
+  this->sample_buffer = RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>();
 
   /* Initialize inotify. */
   this->inotify_descriptor = inotify_init();
@@ -344,7 +332,7 @@ void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces
   this->timing_latency = msg->latency;
 }
 
-void EegDecider::update_eeg_info(const eeg_msgs::msg::PreprocessedSampleMetadata& msg) {
+void EegDecider::update_eeg_info(const eeg_msgs::msg::SampleMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
   this->num_of_eeg_channels = msg.num_of_eeg_channels;
   this->num_of_emg_channels = msg.num_of_emg_channels;
@@ -494,7 +482,7 @@ void EegDecider::process_ready_deferred_requests(double_t current_sample_time) {
     const auto& next_request = this->deferred_processing_queue.top();
 
     /* Check if our current sample time is within the tolerance of the processing time of the next request. */
-    if (current_sample_time >= next_request.processing_time - this->TOLERANCE_S) {
+    if (current_sample_time >= next_request.scheduled_time - this->TOLERANCE_S) {
       /* Process this deferred request. */
       process_deferred_request(next_request, current_sample_time);
       this->deferred_processing_queue.pop();
@@ -514,8 +502,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   std::string event_type = request.event_type;
 
   /* Determine if we are ready for a trial. */
-  auto ready_for_trial = !performing_trial &&
-                         !processing_timed_trigger &&
+  auto ready_for_trial = !is_performing_trial &&
+                         !is_processing_timed_trigger &&
                          this->trial_queue.empty();
 
   /* Process the sample. */
@@ -546,7 +534,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   /* Calculate the total latency of the decider. */
   auto end_time = std::chrono::high_resolution_clock::now();
-  double_t decider_processing_time = std::chrono::duration<double_t>(end_time - start_time).count();
+  double_t decider_processing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
   /* Combine both trials (for mTMS device) and timed triggers (for other TMS devices). */
   bool is_decision_positive = trial || timed_trigger;
@@ -562,8 +550,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   decision_info.feasible = false;
 
   decision_info.decision_time = sample_time;
-  decision_info.decider_latency = decider_processing_time;
-  decision_info.preprocessor_latency = request.triggering_sample->metadata.processing_time;
+  decision_info.decider_latency = decider_processing_duration;
+  decision_info.preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
 
   rclcpp::Time now = this->get_clock()->now();
   rclcpp::Time sample_time_rcl(request.triggering_sample->metadata.system_time);
@@ -588,7 +576,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
 
   /* Check if a trial or timed trigger has already been requested. */
-  bool is_already_stimulating = this->performing_trial || this->processing_timed_trigger;
+  bool is_already_stimulating = this->is_performing_trial || this->is_processing_timed_trigger;
 
   /* Check that the decider is not already stimulating. */
   if (is_decision_positive && is_already_stimulating) {
@@ -653,8 +641,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     request_msg->timed_trigger = *timed_trigger;
     request_msg->decision_time = sample_time;
     request_msg->system_time_for_sample = request.triggering_sample->metadata.system_time;
-    request_msg->preprocessor_latency = request.triggering_sample->metadata.processing_time;
-    request_msg->decider_latency = decider_processing_time;
+    request_msg->preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
+    request_msg->decider_latency = decider_processing_duration;
 
     this->request_timed_trigger(request_msg);
 
@@ -764,7 +752,7 @@ void EegDecider::perform_trial(const mtms_trial_interfaces::msg::Trial& trial, d
 
   perform_trial_client->async_send_goal(goal, send_goal_options);
 
-  this->performing_trial = true;
+  this->is_performing_trial = true;
 }
 
 void EegDecider::goal_response_callback(std::shared_ptr<rclcpp_action::ClientGoalHandle<mtms_trial_interfaces::action::PerformTrial>> goal_handle, const mtms_trial_interfaces::msg::Trial& trial, double decision_time) {
@@ -779,7 +767,7 @@ void EegDecider::goal_response_callback(std::shared_ptr<rclcpp_action::ClientGoa
 
 /* Note: This method is only called in the mTMS context. */
 void EegDecider::trial_performed_callback(const rclcpp_action::ClientGoalHandle<mtms_trial_interfaces::action::PerformTrial>::WrappedResult &result) {
-  this->performing_trial = false;
+  this->is_performing_trial = false;
 
   auto trial_result = result.result->trial_result;
   auto actual_start_time = trial_result.actual_start_time;
@@ -845,7 +833,7 @@ void EegDecider::request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv:
 
   auto future_result = this->timed_trigger_client->async_send_request(request, response_received_callback);
 
-  this->processing_timed_trigger = true;
+  this->is_processing_timed_trigger = true;
 }
 
 void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future) {
@@ -853,7 +841,7 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
   if (!result->success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to send timed trigger.");
   }
-  this->processing_timed_trigger = false;
+  this->is_processing_timed_trigger = false;
 }
 
 /* Initialization and reset functions */
@@ -870,13 +858,20 @@ void EegDecider::empty_trial_queue() {
 }
 
 void EegDecider::handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg::Bool> msg) {
-  this->preprocessor_enabled = msg->data;
+  this->is_preprocessor_enabled = msg->data;
 
-  if (this->preprocessor_enabled) {
-    RCLCPP_INFO(this->get_logger(), "Reading %spreprocessed%s EEG data.", bold_on.c_str(), bold_off.c_str());
-  } else {
-    RCLCPP_INFO(this->get_logger(), "Reading %sraw%s EEG data.", bold_on.c_str(), bold_off.c_str());
-  }
+  /* Destroy existing subscriber. */
+  this->eeg_subscriber.reset();
+
+  /* Create the subscriber based on preprocessor state. */
+  std::string topic = this->is_preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_RAW_TOPIC;
+  this->eeg_subscriber = create_subscription<eeg_msgs::msg::Sample>(
+    topic,
+    /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
+    EEG_QUEUE_LENGTH,
+    std::bind(&EegDecider::process_sample, this, _1));
+
+  RCLCPP_INFO(this->get_logger(), "Reading %s%s%s EEG data.", bold_on.c_str(), topic.c_str(), bold_off.c_str());
 }
 
 /* Listing and setting EEG deciders. */
@@ -1247,42 +1242,7 @@ void EegDecider::handle_trigger_from_eeg_device(const double_t actual_trigger_ti
   this->timing_error_publisher->publish(msg);
 }
 
-void EegDecider::process_raw_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
-  /* Only process raw sample if preprocessor is bypassed. */
-  if (this->preprocessor_enabled) {
-    return;
-  }
-
-  /* Copy the raw sample to a preprocessed sample message. There might be a cleaner way to do this. */
-  auto preprocessed_msg = std::make_shared<eeg_msgs::msg::PreprocessedSample>();
-  preprocessed_msg->eeg_data = msg->eeg_data;
-  preprocessed_msg->emg_data = msg->emg_data;
-
-  preprocessed_msg->time = msg->time;
-
-  preprocessed_msg->is_trigger = msg->is_trigger;
-  preprocessed_msg->is_event = msg->is_event;
-  preprocessed_msg->event_type = msg->event_type;
-
-  /* Always mark sample as valid if preprocessor is bypassed. */
-  preprocessed_msg->valid = true;
-
-  auto preprocessed_metadata = eeg_msgs::msg::PreprocessedSampleMetadata();
-  preprocessed_metadata.sampling_frequency = msg->metadata.sampling_frequency;
-  preprocessed_metadata.num_of_eeg_channels = msg->metadata.num_of_eeg_channels;
-  preprocessed_metadata.num_of_emg_channels = msg->metadata.num_of_emg_channels;
-  preprocessed_metadata.is_simulation = msg->metadata.is_simulation;
-  preprocessed_metadata.system_time = msg->metadata.system_time;
-
-  /* XXX: Use dummy value for processing time if not available. */
-  preprocessed_metadata.processing_time = 0.0;
-
-  preprocessed_msg->metadata = preprocessed_metadata;
-
-  process_preprocessed_sample(preprocessed_msg);
-}
-
-void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg::PreprocessedSample> msg) {
+void EegDecider::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
   auto start_time = std::chrono::high_resolution_clock::now();
 
   double_t sample_time = msg->time;
@@ -1448,13 +1408,13 @@ void EegDecider::process_preprocessed_sample(const std::shared_ptr<eeg_msgs::msg
       If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
       Each sample takes sampling_period time. */
   if (look_ahead_samples > 0) {
-    request.processing_time = sample_time + (look_ahead_samples * this->sampling_period);
+    request.scheduled_time = sample_time + (look_ahead_samples * this->sampling_period);
     RCLCPP_DEBUG(this->get_logger(), 
                   "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
-                  sample_time, request.processing_time, look_ahead_samples);
+                  sample_time, request.scheduled_time, look_ahead_samples);
   } else {
     /* If look-ahead is 0 or negative, no look-ahead is needed, process at this sample time. */
-    request.processing_time = sample_time;
+    request.scheduled_time = sample_time;
   }
   
   /* Add to deferred processing queue. */
@@ -1470,7 +1430,7 @@ void EegDecider::spin() {
   while (rclcpp::ok()) {
     rclcpp::spin_some(base_interface);
 
-    if (!this->trial_queue.empty() && !this->performing_trial) {
+    if (!this->trial_queue.empty() && !this->is_performing_trial) {
       auto num_of_remaining_trials = this->trial_queue.size();
 
       auto [trial, decision_time] = this->trial_queue.front();

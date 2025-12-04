@@ -66,15 +66,15 @@ export const StatisticsDisplay: React.FC = () => {
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Median</IndentedStateTitle>
-          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_time_median)}</StateValue>
+          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_duration_median)}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Q95</IndentedStateTitle>
-          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_time_q95)}</StateValue>
+          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_duration_q95)}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Max</IndentedStateTitle>
-          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_time_max)}</StateValue>
+          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_duration_max)}</StateValue>
         </StateRow>
         <br />
         <StateRow>
@@ -82,11 +82,11 @@ export const StatisticsDisplay: React.FC = () => {
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Raw</IndentedStateTitle>
-          <StateValue>{formatTimeToMilliseconds(eegStatistics?.max_time_between_raw_samples)}</StateValue>
+          <StateValue>{formatTimeToMilliseconds(eegStatistics?.max_interval_between_raw_samples)}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Preprocessed</IndentedStateTitle>
-          <StateValue>{formatTimeToMilliseconds(eegStatistics?.max_time_between_preprocessed_samples)}</StateValue>
+          <StateValue>{formatTimeToMilliseconds(eegStatistics?.max_interval_between_preprocessed_samples)}</StateValue>
         </StateRow>
       </StatisticsPanel>
     </>

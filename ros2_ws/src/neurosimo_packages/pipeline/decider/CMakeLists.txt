@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rcpputils REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(eeg_msgs REQUIRED)
 find_package(mtms_trial_interfaces REQUIRED)
 find_package(pipeline_interfaces REQUIRED)
@@ -44,6 +45,7 @@ ament_target_dependencies(
   rclcpp_action
   rcpputils
   std_msgs
+  std_srvs
   eeg_msgs
   mtms_trial_interfaces
   pipeline_interfaces
@@ -86,6 +88,7 @@ ament_target_dependencies(
   rclcpp_action
   rcpputils
   std_msgs
+  std_srvs
   eeg_msgs
   mtms_trial_interfaces
   pipeline_interfaces

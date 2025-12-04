@@ -104,7 +104,7 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     qos_persist_latest);
 
   /* Service for enabling and disabling preprocessor. */
-  this->set_preprocessor_enabled_service = this->create_service<project_interfaces::srv::SetPreprocessorEnabled>(
+  this->set_preprocessor_enabled_service = this->create_service<std_srvs::srv::SetBool>(
     "/pipeline/preprocessor/enabled/set",
     std::bind(&EegPreprocessor::handle_set_preprocessor_enabled, this, _1, _2));
 
@@ -331,10 +331,11 @@ bool EegPreprocessor::set_preprocessor_enabled(bool enabled) {
 }
 
 void EegPreprocessor::handle_set_preprocessor_enabled(
-      const std::shared_ptr<project_interfaces::srv::SetPreprocessorEnabled::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPreprocessorEnabled::Response> response) {
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 
-  response->success = set_preprocessor_enabled(request->enabled);
+  response->success = set_preprocessor_enabled(request->data);
+  response->message = "";
 }
 
 std::string EegPreprocessor::get_module_name_with_fallback(const std::string module_name) {

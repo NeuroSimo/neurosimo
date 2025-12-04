@@ -17,9 +17,9 @@
 #include "project_interfaces/msg/dataset.hpp"
 #include "project_interfaces/msg/dataset_list.hpp"
 #include "project_interfaces/srv/set_dataset.hpp"
-#include "project_interfaces/srv/set_playback.hpp"
-#include "project_interfaces/srv/set_loop.hpp"
 #include "project_interfaces/srv/set_start_time.hpp"
+
+#include "std_srvs/srv/set_bool.hpp"
 
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
@@ -61,12 +61,12 @@ private:
 
   void set_playback(bool playback);
   void handle_set_playback(
-      const std::shared_ptr<project_interfaces::srv::SetPlayback::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPlayback::Response> response);
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
   void handle_set_loop(
-      const std::shared_ptr<project_interfaces::srv::SetLoop::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetLoop::Response> response);
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
   void handle_set_start_time(
       const std::shared_ptr<project_interfaces::srv::SetStartTime::Request> request,
@@ -155,10 +155,10 @@ private:
   rclcpp::Service<project_interfaces::srv::SetDataset>::SharedPtr set_dataset_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr dataset_publisher;
 
-  rclcpp::Service<project_interfaces::srv::SetPlayback>::SharedPtr set_playback_service;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_playback_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr playback_publisher;
 
-  rclcpp::Service<project_interfaces::srv::SetLoop>::SharedPtr set_loop_service;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_loop_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr loop_publisher;
 
   rclcpp::Service<project_interfaces::srv::SetStartTime>::SharedPtr start_time_service;

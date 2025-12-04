@@ -41,7 +41,8 @@
 
 #include "project_interfaces/msg/decider_list.hpp"
 #include "project_interfaces/srv/set_decider_module.hpp"
-#include "project_interfaces/srv/set_decider_enabled.hpp"
+
+#include "std_srvs/srv/set_bool.hpp"
 
 #include "ring_buffer.h"
 
@@ -131,8 +132,8 @@ private:
   void handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
   void handle_set_decider_enabled(
-      const std::shared_ptr<project_interfaces::srv::SetDeciderEnabled::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetDeciderEnabled::Response> response);
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
   std::string get_module_name_with_fallback(const std::string module_name);
   bool set_decider_module(const std::string module);
@@ -182,7 +183,7 @@ private:
   rclcpp::Service<project_interfaces::srv::SetDeciderModule>::SharedPtr set_decider_module_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decider_module_publisher;
 
-  rclcpp::Service<project_interfaces::srv::SetDeciderEnabled>::SharedPtr set_decider_enabled_service;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_decider_enabled_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr decider_enabled_publisher;
 
   rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;

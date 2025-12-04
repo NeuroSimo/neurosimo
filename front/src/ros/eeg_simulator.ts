@@ -33,12 +33,12 @@ export const setDatasetRos = (filename: string, callback: () => void) => {
 const setPlaybackService = new ROSLIB.Service({
   ros: ros,
   name: '/eeg_simulator/playback/set',
-  serviceType: 'project_interfaces/SetPlayback',
+  serviceType: 'std_srvs/SetBool',
 })
 
 export const setPlaybackRos = (playback: boolean, callback: () => void) => {
   const request = new ROSLIB.ServiceRequest({
-    playback: playback,
+    data: playback,
   }) as any
 
   setPlaybackService.callService(
@@ -61,12 +61,12 @@ export const setPlaybackRos = (playback: boolean, callback: () => void) => {
 const setLoopService = new ROSLIB.Service({
   ros: ros,
   name: '/eeg_simulator/loop/set',
-  serviceType: 'project_interfaces/SetLoop',
+  serviceType: 'std_srvs/SetBool',
 })
 
 export const setLoopRos = (loop: boolean, callback: () => void) => {
   const request = new ROSLIB.ServiceRequest({
-    loop: loop,
+    data: loop,
   }) as any
 
   setLoopService.callService(
@@ -117,12 +117,12 @@ export const setStartTimeRos = (startTime: number, callback: () => void) => {
 const setRecordDataService = new ROSLIB.Service({
   ros: ros,
   name: '/eeg_recorder/record_data/set',
-  serviceType: 'project_interfaces/SetRecordData',
+  serviceType: 'std_srvs/SetBool',
 })
 
 export const setRecordDataRos = (recordData: boolean, callback: () => void) => {
   const request = new ROSLIB.ServiceRequest({
-    record_data: recordData,
+    data: recordData,
   }) as any
 
   setRecordDataService.callService(

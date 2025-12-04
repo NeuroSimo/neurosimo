@@ -33,12 +33,12 @@ export const setPreprocessorModuleRos = (module: string, callback: () => void) =
 const setPreprocessorEnabledService = new ROSLIB.Service({
   ros: ros,
   name: '/pipeline/preprocessor/enabled/set',
-  serviceType: 'project_interfaces/SetPreprocessorEnabled',
+  serviceType: 'std_srvs/SetBool',
 })
 
 export const setPreprocessorEnabledRos = (enabled: boolean, callback: () => void) => {
   const request = new ROSLIB.ServiceRequest({
-    enabled: enabled,
+    data: enabled,
   }) as any
 
   setPreprocessorEnabledService.callService(
@@ -89,12 +89,12 @@ export const setDeciderModuleRos = (module: string, callback: () => void) => {
 const setDeciderEnabledService = new ROSLIB.Service({
   ros: ros,
   name: '/pipeline/decider/enabled/set',
-  serviceType: 'project_interfaces/SetDeciderEnabled',
+  serviceType: 'std_srvs/SetBool',
 })
 
 export const setDeciderEnabledRos = (enabled: boolean, callback: () => void) => {
   const request = new ROSLIB.ServiceRequest({
-    enabled: enabled,
+    data: enabled,
   }) as any
 
   setDeciderEnabledService.callService(
@@ -145,12 +145,12 @@ export const setPresenterModuleRos = (module: string, callback: () => void) => {
 const setPresenterEnabledService = new ROSLIB.Service({
   ros: ros,
   name: '/pipeline/presenter/enabled/set',
-  serviceType: 'project_interfaces/SetPresenterEnabled',
+  serviceType: 'std_srvs/SetBool',
 })
 
 export const setPresenterEnabledRos = (enabled: boolean, callback: () => void) => {
   const request = new ROSLIB.ServiceRequest({
-    enabled: enabled,
+    data: enabled,
   }) as any
 
   setPresenterEnabledService.callService(

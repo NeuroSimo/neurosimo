@@ -81,14 +81,14 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     callback_group);
 
   /* Service for changing playback. */
-  this->set_playback_service = this->create_service<project_interfaces::srv::SetPlayback>(
+  this->set_playback_service = this->create_service<std_srvs::srv::SetBool>(
     "/eeg_simulator/playback/set",
     std::bind(&EegSimulator::handle_set_playback, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
     callback_group);
 
   /* Service for changing loop. */
-  this->set_loop_service = this->create_service<project_interfaces::srv::SetLoop>(
+  this->set_loop_service = this->create_service<std_srvs::srv::SetBool>(
     "/eeg_simulator/loop/set",
     std::bind(&EegSimulator::handle_set_loop, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
@@ -487,18 +487,19 @@ void EegSimulator::set_playback(bool playback) {
 }
 
 void EegSimulator::handle_set_playback(
-      const std::shared_ptr<project_interfaces::srv::SetPlayback::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPlayback::Response> response) {
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 
-  set_playback(request->playback);
+  set_playback(request->data);
   response->success = true;
+  response->message = "";
 }
 
 void EegSimulator::handle_set_loop(
-      const std::shared_ptr<project_interfaces::srv::SetLoop::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetLoop::Response> response) {
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 
-  this->loop = request->loop;
+  this->loop = request->data;
 
   RCLCPP_INFO(this->get_logger(), "Loop %s.", this->loop ? "enabled" : "disabled");
 
@@ -509,6 +510,7 @@ void EegSimulator::handle_set_loop(
   this->loop_publisher->publish(msg);
 
   response->success = true;
+  response->message = "";
 }
 
 void EegSimulator::handle_set_start_time(

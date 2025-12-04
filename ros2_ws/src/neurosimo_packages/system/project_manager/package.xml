@@ -8,9 +8,12 @@
   <license>GPL-3.0-only</license>
 
   <depend>rclpy</depend>
+  <depend>std_srvs</depend>
 
   <depend>mep_interfaces</depend>
   <depend>mtms_trial_interfaces</depend>
+  <depend>project_interfaces</depend>
+  <depend>system_interfaces</depend>
 
   <export>
     <build_type>ament_python</build_type>

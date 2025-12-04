@@ -8,6 +8,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(eeg_msgs REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(project_interfaces REQUIRED)
@@ -22,6 +23,7 @@ ament_target_dependencies(
   eeg_recorder
   rclcpp
   std_msgs
+  std_srvs
   eeg_msgs
   system_interfaces
   project_interfaces

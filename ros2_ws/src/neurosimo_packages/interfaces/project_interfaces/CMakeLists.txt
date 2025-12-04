@@ -37,6 +37,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetPresenterModule.srv"
   "srv/SetPresenterEnabled.srv"
 
+  "msg/ProtocolList.msg"
+  "srv/SetProtocol.srv"
+
   "msg/Dataset.msg"
   "msg/DatasetList.msg"
   "srv/SetDataset.srv"

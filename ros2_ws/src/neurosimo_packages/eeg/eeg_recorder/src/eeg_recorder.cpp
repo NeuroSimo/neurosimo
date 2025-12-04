@@ -65,7 +65,7 @@ EegRecorder::EegRecorder() : Node("eeg_recorder") {
     std::bind(&EegRecorder::handle_preprocessed_eeg_sample, this, _1));
 
   /* Service for changing record data. */
-  this->set_record_data_service = this->create_service<project_interfaces::srv::SetRecordData>(
+  this->set_record_data_service = this->create_service<std_srvs::srv::SetBool>(
     "/eeg_recorder/record_data/set",
     std::bind(&EegRecorder::handle_set_record_data, this, _1, _2));
 
@@ -127,11 +127,11 @@ void EegRecorder::handle_session(const std::shared_ptr<system_interfaces::msg::S
 }
 
 void EegRecorder::handle_set_record_data(
-      const std::shared_ptr<project_interfaces::srv::SetRecordData::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetRecordData::Response> response) {
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 
   /* XXX: Slight mismatch in naming; maybe it should be record_simulation_data throughout the code. */
-  this->record_simulation_data= request->record_data;
+  this->record_simulation_data= request->data;
 
   RCLCPP_INFO(this->get_logger(), "Storing simulation data %s.", this->record_simulation_data ? "enabled" : "disabled");
 
@@ -142,6 +142,7 @@ void EegRecorder::handle_set_record_data(
   this->record_data_publisher->publish(msg);
 
   response->success = true;
+  response->message = "";
 }
 
 void EegRecorder::write_preprocessed_buffer() {

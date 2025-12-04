@@ -13,6 +13,7 @@ find_package(pybind11_vendor REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(eeg_msgs REQUIRED)
 find_package(pipeline_interfaces REQUIRED)
 find_package(project_interfaces REQUIRED)
@@ -41,6 +42,7 @@ ament_target_dependencies(
   rclcpp
   rclcpp_action
   std_msgs
+  std_srvs
   eeg_msgs
   pipeline_interfaces
   project_interfaces
@@ -81,6 +83,7 @@ ament_target_dependencies(
   rclcpp
   rclcpp_action
   std_msgs
+  std_srvs
   eeg_msgs
   pipeline_interfaces
   project_interfaces

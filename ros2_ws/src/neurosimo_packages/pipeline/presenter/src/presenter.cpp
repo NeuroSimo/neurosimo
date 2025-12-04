@@ -87,7 +87,7 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     qos_persist_latest);
 
   /* Service for enabling and disabling presenter. */
-  this->set_presenter_enabled_service = this->create_service<project_interfaces::srv::SetPresenterEnabled>(
+  this->set_presenter_enabled_service = this->create_service<std_srvs::srv::SetBool>(
     "/pipeline/presenter/enabled/set",
     std::bind(&EegPresenter::handle_set_presenter_enabled, this, _1, _2));
 
@@ -200,11 +200,11 @@ void EegPresenter::handle_session(const std::shared_ptr<system_interfaces::msg::
 /* Listing and setting EEG presenters. */
 
 void EegPresenter::handle_set_presenter_enabled(
-      const std::shared_ptr<project_interfaces::srv::SetPresenterEnabled::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPresenterEnabled::Response> response) {
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 
   /* Update local state variable. */
-  this->enabled = request->enabled;
+  this->enabled = request->data;
 
   /* Update ROS state variable. */
   auto msg = std_msgs::msg::Bool();
@@ -225,6 +225,7 @@ void EegPresenter::handle_set_presenter_enabled(
   }
 
   response->success = true;
+  response->message = "";
 }
 
 void EegPresenter::unset_presenter_module() {

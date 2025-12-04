@@ -22,7 +22,8 @@
 
 #include "project_interfaces/msg/preprocessor_list.hpp"
 #include "project_interfaces/srv/set_preprocessor_module.hpp"
-#include "project_interfaces/srv/set_preprocessor_enabled.hpp"
+
+#include "std_srvs/srv/set_bool.hpp"
 
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
@@ -77,8 +78,8 @@ private:
 
   bool set_preprocessor_enabled(bool enabled);
   void handle_set_preprocessor_enabled(
-      const std::shared_ptr<project_interfaces::srv::SetPreprocessorEnabled::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPreprocessorEnabled::Response> response);
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
   std::string get_module_name_with_fallback(const std::string module_name);
   bool set_preprocessor_module(const std::string module_name);
@@ -121,7 +122,7 @@ private:
   rclcpp::Service<project_interfaces::srv::SetPreprocessorModule>::SharedPtr set_preprocessor_module_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr preprocessor_module_publisher;
 
-  rclcpp::Service<project_interfaces::srv::SetPreprocessorEnabled>::SharedPtr set_preprocessor_enabled_service;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_preprocessor_enabled_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr preprocessor_enabled_publisher;
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;

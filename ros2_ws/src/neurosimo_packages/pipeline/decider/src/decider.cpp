@@ -163,7 +163,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     qos_persist_latest);
 
   /* Service for enabling and disabling decider. */
-  this->set_decider_enabled_service = this->create_service<project_interfaces::srv::SetDeciderEnabled>(
+  this->set_decider_enabled_service = this->create_service<std_srvs::srv::SetBool>(
     "/pipeline/decider/enabled/set",
     std::bind(&EegDecider::handle_set_decider_enabled, this, _1, _2));
 
@@ -905,10 +905,11 @@ bool EegDecider::set_decider_enabled(bool enabled) {
 }
 
 void EegDecider::handle_set_decider_enabled(
-      const std::shared_ptr<project_interfaces::srv::SetDeciderEnabled::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetDeciderEnabled::Response> response) {
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 
-  response->success = set_decider_enabled(request->enabled);;
+  response->success = set_decider_enabled(request->data);
+  response->message = "";
 }
 
 void EegDecider::unset_decider_module() {

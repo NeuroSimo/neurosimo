@@ -18,7 +18,8 @@
 
 #include "project_interfaces/msg/presenter_list.hpp"
 #include "project_interfaces/srv/set_presenter_module.hpp"
-#include "project_interfaces/srv/set_presenter_enabled.hpp"
+
+#include "std_srvs/srv/set_bool.hpp"
 
 const std::string bold_on = "\033[1m";
 const std::string bold_off = "\033[0m";
@@ -57,8 +58,8 @@ private:
       std::shared_ptr<project_interfaces::srv::SetPresenterModule::Response> response);
 
   void handle_set_presenter_enabled(
-      const std::shared_ptr<project_interfaces::srv::SetPresenterEnabled::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPresenterEnabled::Response> response);
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
   void update_presenter_list();
@@ -85,7 +86,7 @@ private:
   rclcpp::Service<project_interfaces::srv::SetPresenterModule>::SharedPtr set_presenter_module_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr presenter_module_publisher;
 
-  rclcpp::Service<project_interfaces::srv::SetPresenterEnabled>::SharedPtr set_presenter_enabled_service;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_presenter_enabled_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr presenter_enabled_publisher;
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;

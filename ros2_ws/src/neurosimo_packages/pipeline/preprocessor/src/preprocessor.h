@@ -113,7 +113,7 @@ private:
   rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
 
-  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr raw_eeg_subscriber;
+  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr enriched_eeg_subscriber;
   rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr preprocessed_eeg_publisher;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;

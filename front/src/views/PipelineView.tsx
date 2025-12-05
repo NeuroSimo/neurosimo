@@ -10,6 +10,7 @@ import { PreprocessorNode } from 'components/pipeline/PreprocessorNode'
 import { DeciderNode } from 'components/pipeline/DeciderNode'
 import { PresenterNode } from 'components/pipeline/PresenterNode'
 import { TmsNode } from 'components/pipeline/TmsNode'
+import { ExperimentPanel } from 'components/pipeline/ExperimentPanel'
 
 import { StyledPanel, ProjectRow, ConfigRow, ConfigLabel, Select, SmallerTitle } from 'styles/General'
 
@@ -36,14 +37,6 @@ const InputRow = styled.div`
   align-items: center;
   gap: 5px;
   margin-bottom: 16px;
-`
-
-const CoordinatorPanel = styled(StyledPanel)`
-  width: 185px;
-  position: relative;
-  margin-top: -117px;
-  margin-left: 80px;
-  left: 10px;
 `
 
 /* Pipeline definition */
@@ -272,47 +265,13 @@ export const PipelineView = () => {
           <TmsNode />
         </TmsSlot>
       </PipelinePanel>
-      <CoordinatorPanel>
-        <SmallerTitle>Experiment</SmallerTitle>
-        <ConfigRow>
-          <ConfigLabel>Protocol:</ConfigLabel>
-          <Select onChange={handleProtocolChange} value={protocolName}>
-            {protocolList.map((protocol, index) => (
-              <option key={index} value={protocol}>
-                {protocol}
-              </option>
-            ))}
-          </Select>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Status:</ConfigLabel>
-          <ConfigLabel>{experimentState?.ongoing ? 'Running' : 'Idle'}</ConfigLabel>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Stage:</ConfigLabel>
-          <ConfigLabel>
-            {experimentState?.current_stage_name
-              ? `${experimentState.current_stage_name} (${(experimentState.current_stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
-              : '—'}
-          </ConfigLabel>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Trial:</ConfigLabel>
-          <ConfigLabel>
-            {experimentState
-              ? `${experimentState.current_trial}/${experimentState.total_trials_in_stage || 0}`
-              : '—'}
-          </ConfigLabel>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Experiment time:</ConfigLabel>
-          <ConfigLabel>{formatSeconds(experimentState?.experiment_time)}</ConfigLabel>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Stage elapsed:</ConfigLabel>
-          <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
-        </ConfigRow>
-      </CoordinatorPanel>
+      <ExperimentPanel
+        protocolName={protocolName}
+        protocolList={protocolList}
+        experimentState={experimentState}
+        onProtocolChange={handleProtocolChange}
+        formatSeconds={formatSeconds}
+      />
       <EegSimulatorDisplay />
       <PipelineLogDisplay />
     </>

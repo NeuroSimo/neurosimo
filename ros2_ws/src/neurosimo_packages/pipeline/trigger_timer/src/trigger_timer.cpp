@@ -35,10 +35,18 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     return;
   }
 
+  /* Read ROS parameter: LabJack simulation mode */
+  auto simulate_labjack_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  simulate_labjack_descriptor.description = "Simulate LabJack device when hardware is not available";
+  simulate_labjack_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
+  this->declare_parameter("simulate-labjack", false, simulate_labjack_descriptor);
+  this->get_parameter("simulate-labjack", this->simulate_labjack);
+
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Triggering tolerance (ms): %.1f", 1000 * this->triggering_tolerance);
+  RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Subscriber for mTMS device healthcheck. */
@@ -110,7 +118,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     100);
 
   /* Initialize LabJack manager. */
-  labjack_manager = std::make_unique<LabJackManager>(this->get_logger());
+  labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), this->simulate_labjack);
   labjack_manager->start();
 
   /* Set up a timer to signal connection attempts every second. */

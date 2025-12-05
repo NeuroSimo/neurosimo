@@ -6,7 +6,8 @@
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
-LabJackManager::LabJackManager(rclcpp::Logger logger) : logger_(logger) {
+LabJackManager::LabJackManager(rclcpp::Logger logger, bool simulation_mode) 
+  : logger_(logger), simulation_mode_(simulation_mode) {
 }
 
 LabJackManager::~LabJackManager() {
@@ -16,6 +17,12 @@ LabJackManager::~LabJackManager() {
 void LabJackManager::start() {
   if (thread_running_.load()) {
     return; // Already running
+  }
+  
+  // In simulation mode, skip the connection thread
+  if (simulation_mode_) {
+    RCLCPP_INFO(logger_, "LabJackManager started in simulation mode");
+    return;
   }
   
   thread_running_.store(true);
@@ -51,10 +58,22 @@ void LabJackManager::request_connection_attempt() {
 }
 
 bool LabJackManager::is_connected() const {
+  // In simulation mode, always report as connected
+  if (simulation_mode_) {
+    return true;
+  }
   return labjack_handle_.load() != -1;
 }
 
 bool LabJackManager::trigger_output(const char* output_name) {
+  // In simulation mode, simulate the trigger without hardware
+  if (simulation_mode_) {
+    RCLCPP_DEBUG(logger_, "Simulated trigger on %s", output_name);
+    // Simulate the same 1ms delay as real hardware
+    std::this_thread::sleep_for(1ms);
+    return true;
+  }
+  
   int handle = labjack_handle_.load();
   if (handle == -1) {
     return false;

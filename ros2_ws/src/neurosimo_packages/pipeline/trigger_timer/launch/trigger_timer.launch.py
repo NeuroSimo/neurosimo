@@ -18,8 +18,14 @@ def generate_launch_description():
         description="Tolerance when triggering (in seconds)",
     )
 
+    simulate_labjack_arg = DeclareLaunchArgument(
+        "simulate-labjack",
+        description="Simulate LabJack device when hardware is not available",
+    )
+
     logger = LaunchConfiguration("log-level")
     triggering_tolerance = LaunchConfiguration("triggering-tolerance")
+    simulate_labjack = LaunchConfiguration("simulate-labjack")
 
     node = Node(
         package="trigger_timer",
@@ -28,6 +34,7 @@ def generate_launch_description():
         parameters=[
             {
                 "triggering-tolerance": triggering_tolerance,
+                "simulate-labjack": simulate_labjack,
             }
         ],
         arguments=['--ros-args', '--log-level', logger]
@@ -35,5 +42,6 @@ def generate_launch_description():
     ld.add_action(node)
     ld.add_action(log_arg)
     ld.add_action(triggering_tolerance_arg)
+    ld.add_action(simulate_labjack_arg)
 
     return ld

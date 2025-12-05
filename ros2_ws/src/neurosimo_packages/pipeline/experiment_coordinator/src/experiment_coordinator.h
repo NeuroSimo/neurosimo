@@ -17,6 +17,7 @@
 #include "system_interfaces/msg/healthcheck_status.hpp"
 #include "project_interfaces/msg/protocol_list.hpp"
 #include "project_interfaces/srv/set_protocol.hpp"
+#include "pipeline_interfaces/msg/experiment_state.hpp"
 
 #include "protocol.h"
 #include "protocol_loader.h"
@@ -39,6 +40,7 @@ private:
   // Publishers
   rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
   rclcpp::Publisher<project_interfaces::msg::ProtocolList>::SharedPtr protocol_list_publisher;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr protocol_module_publisher;
   rclcpp::Client<system_interfaces::srv::StopSession>::SharedPtr stop_session_client;
@@ -98,6 +100,7 @@ private:
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void request_stop_session();
   void mark_protocol_complete();
+  void publish_experiment_state(double current_time);
     
   void handle_set_protocol(
     const std::shared_ptr<project_interfaces::srv::SetProtocol::Request> request,

@@ -9,12 +9,20 @@ import { PipelineLayout } from 'components/pipeline/PipelineLayout'
 
 export const PipelineView = () => {
   return (
-    <PipelineLayout>
-      <ProjectSelector />
-      <PipelineDiagram />
-      <ExperimentPanel />
-      <EegSimulatorDisplay />
-      <PipelineLogDisplay />
-    </PipelineLayout>
+    <PipelineLayout
+      setup={
+        <>
+          <ProjectSelector />
+          <ExperimentPanel />
+          <EegSimulatorDisplay />
+        </>
+      }
+      pipeline={
+        <>
+          <PipelineDiagram />
+          <PipelineLogDisplay />
+        </>
+      }
+    />
   )
 }

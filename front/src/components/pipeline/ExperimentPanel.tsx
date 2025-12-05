@@ -8,9 +8,9 @@ import { PipelineContext } from 'providers/PipelineProvider'
 const Container = styled(StyledPanel)`
   width: 185px;
   position: relative;
-  margin-top: -117px;
-  margin-left: 80px;
-  left: 10px;
+  margin-top: 0;
+  margin-left: 22px;
+  left: 0;
 `
 
 export const ExperimentPanel: React.FC = () => {

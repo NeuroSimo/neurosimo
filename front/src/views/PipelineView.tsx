@@ -5,6 +5,11 @@ import { TabBar } from 'styles/General'
 
 import { EegSimulatorDisplay } from 'components/EegSimulatorDisplay'
 import { PipelineLogDisplay } from 'components/PipelineLogDisplay'
+import { ProjectSelector } from 'components/ProjectSelector'
+import { PreprocessorNode } from 'components/pipeline/PreprocessorNode'
+import { DeciderNode } from 'components/pipeline/DeciderNode'
+import { PresenterNode } from 'components/pipeline/PresenterNode'
+import { TmsNode } from 'components/pipeline/TmsNode'
 
 import { StyledPanel, ProjectRow, ConfigRow, ConfigLabel, Select, SmallerTitle } from 'styles/General'
 
@@ -33,14 +38,6 @@ const InputRow = styled.div`
   margin-bottom: 16px;
 `
 
-const Label = styled.label`
-  width: 92px;
-  text-align: left;
-  margin-right: 5px;
-  margin-left: 18px;
-  display: inline-block;
-`
-
 const CoordinatorPanel = styled(StyledPanel)`
   width: 185px;
   position: relative;
@@ -61,6 +58,26 @@ const PipelinePanel = styled.div`
   margin-left: 18px;
 `
 
+const PreprocessorSlot = styled.div`
+  grid-row: 1 / 2;
+  grid-column: 2 / 3;
+`
+
+const DeciderSlot = styled.div`
+  grid-row: 1 / 2;
+  grid-column: 3 / 4;
+`
+
+const PresenterSlot = styled.div`
+  grid-row: 1 / 2;
+  grid-column: 4 / 5;
+`
+
+const TmsSlot = styled.div`
+  grid-row: 2 / 3;
+  grid-column: 4 / 5;
+`
+
 const EegCircle = styled.div`
   display: flex;
   justify-content: center;
@@ -73,34 +90,6 @@ const EegCircle = styled.div`
   background-color: #d46c0b;
   border-radius: 50%;
   font-weight: bold;
-`
-
-const PreprocessorPanel = styled(StyledPanel)`
-  grid-row: 1 / 2;
-  grid-column: 2 / 3;
-  width: 154px;
-  height: 92px;
-`
-
-const DeciderPanel = styled(StyledPanel)`
-  grid-row: 1 / 2;
-  grid-column: 3 / 4;
-  width: 154px;
-  height: 92px;
-`
-
-const PresenterPanel = styled(StyledPanel)`
-  grid-row: 1 / 2;
-  grid-column: 4 / 5;
-  width: 154px;
-  height: 92px;
-`
-
-const TmsPanel = styled(StyledPanel)`
-  grid-row: 2 / 3;
-  grid-column: 4 / 5;
-  width: 154px;
-  height: 55px;
 `
 
 const Arrow = styled.div`
@@ -244,16 +233,7 @@ export const PipelineView = () => {
 
   return (
     <>
-      <ProjectRow>
-        <Label>Project:</Label>
-        <Select onChange={handleProjectChange} value={activeProject}>
-          {projects.map((project, index) => (
-            <option key={index} value={project}>
-              {project}
-            </option>
-          ))}
-        </Select>
-      </ProjectRow>
+      <ProjectSelector projects={projects} activeProject={activeProject} onChange={handleProjectChange} />
 
       <PipelinePanel>
         <Arrow style={{ left: '47px', top: '68px' }} />
@@ -261,64 +241,36 @@ export const PipelineView = () => {
         <Arrow style={{ left: '457px', top: '68px' }} />
         <Arrow style={{ left: '453px', top: '146px', width: '27px', transform: 'rotate(45deg)' }} />
         <EegCircle>EEG</EegCircle>
-        <PreprocessorPanel>
-          <SmallerTitle>Preprocessor {preprocessorEnabled ? '' : '(bypass)'}</SmallerTitle>
-          <ConfigRow>
-            <ConfigLabel>Enabled:</ConfigLabel>
-            <ToggleSwitch type='flat' checked={preprocessorEnabled} onChange={handlePreprocessorEnabled} />
-          </ConfigRow>
-          <ConfigRow>
-            <ConfigLabel>Module:</ConfigLabel>
-            <Select onChange={handlePreprocessorModuleChange} value={preprocessorModule}>
-              {preprocessorList.map((module, index) => (
-                <option key={index} value={module}>
-                  {module}
-                </option>
-              ))}
-            </Select>
-          </ConfigRow>
-        </PreprocessorPanel>
-        <DeciderPanel>
-          <SmallerTitle>Decider</SmallerTitle>
-          <ConfigRow>
-            <ConfigLabel>Enabled:</ConfigLabel>
-            <ToggleSwitch type='flat' checked={deciderEnabled} onChange={handleDeciderEnabled} />
-          </ConfigRow>
-          <ConfigRow>
-            <ConfigLabel>Module:</ConfigLabel>
-            <Select onChange={handleDeciderModuleChange} value={deciderModule}>
-              {deciderList.map((module, index) => (
-                <option key={index} value={module}>
-                  {module}
-                </option>
-              ))}
-            </Select>
-          </ConfigRow>
-        </DeciderPanel>
-        <PresenterPanel>
-          <SmallerTitle>Presenter</SmallerTitle>
-          <ConfigRow>
-            <ConfigLabel>Enabled:</ConfigLabel>
-            <ToggleSwitch type='flat' checked={presenterEnabled} onChange={handlePresenterEnabled} />
-          </ConfigRow>
-          <ConfigRow>
-            <ConfigLabel>Module:</ConfigLabel>
-            <Select onChange={handlePresenterModuleChange} value={presenterModule}>
-              {presenterList.map((module, index) => (
-                <option key={index} value={module}>
-                  {module}
-                </option>
-              ))}
-            </Select>
-          </ConfigRow>
-        </PresenterPanel>
-        <TmsPanel>
-          <SmallerTitle>TMS device</SmallerTitle>
-          <ConfigRow>
-            <ConfigLabel>Type:</ConfigLabel>
-            <ConfigLabel>Multi-locus</ConfigLabel>
-          </ConfigRow>
-        </TmsPanel>
+        <PreprocessorSlot>
+          <PreprocessorNode
+            enabled={preprocessorEnabled}
+            module={preprocessorModule}
+            modules={preprocessorList}
+            onToggle={handlePreprocessorEnabled}
+            onModuleChange={handlePreprocessorModuleChange}
+          />
+        </PreprocessorSlot>
+        <DeciderSlot>
+          <DeciderNode
+            enabled={deciderEnabled}
+            module={deciderModule}
+            modules={deciderList}
+            onToggle={handleDeciderEnabled}
+            onModuleChange={handleDeciderModuleChange}
+          />
+        </DeciderSlot>
+        <PresenterSlot>
+          <PresenterNode
+            enabled={presenterEnabled}
+            module={presenterModule}
+            modules={presenterList}
+            onToggle={handlePresenterEnabled}
+            onModuleChange={handlePresenterModuleChange}
+          />
+        </PresenterSlot>
+        <TmsSlot>
+          <TmsNode />
+        </TmsSlot>
       </PipelinePanel>
       <CoordinatorPanel>
         <SmallerTitle>Experiment</SmallerTitle>

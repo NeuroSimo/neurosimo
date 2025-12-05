@@ -11,6 +11,7 @@ from project_interfaces.srv import (
     SetPresenterModule,
     SetDataset,
     SetStartTime,
+    SetProtocol,
 )
 
 from std_srvs.srv import SetBool
@@ -48,6 +49,7 @@ class ProjectManagerNode(Node):
         self.preprocessor_enabled_client = self.create_client(SetBool, "/pipeline/preprocessor/enabled/set", callback_group=self.callback_group)
         self.presenter_module_client = self.create_client(SetPresenterModule, "/pipeline/presenter/module/set", callback_group=self.callback_group)
         self.presenter_enabled_client = self.create_client(SetBool, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
+        self.experiment_protocol_client = self.create_client(SetProtocol, "/experiment/protocol/set", callback_group=self.callback_group)
 
         self.set_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
         self.set_playback_service = self.create_client(SetBool, "/eeg_simulator/playback/set", callback_group=self.callback_group)
@@ -67,6 +69,9 @@ class ProjectManagerNode(Node):
 
         while not self.presenter_enabled_client.wait_for_service(timeout_sec=2.0):
             self.logger.error("Presenter enabled service not available, waiting...")
+
+        while not self.experiment_protocol_client.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Experiment protocol service not available, waiting...")
 
         while not self.decider_module_client.wait_for_service(timeout_sec=2.0):
             self.logger.error("Decider module service not available, waiting...")
@@ -102,6 +107,7 @@ class ProjectManagerNode(Node):
         self.create_subscription(Bool, "/pipeline/preprocessor/enabled", self.preprocessor_enabled_callback, 10)
         self.create_subscription(String, "/pipeline/presenter/module", self.presenter_module_callback, 10)
         self.create_subscription(Bool, "/pipeline/presenter/enabled", self.presenter_enabled_callback, 10)
+        self.create_subscription(String, "/experiment/protocol", self.protocol_callback, 10)
 
         self.create_subscription(String, "/eeg_simulator/dataset", self.dataset_callback, 10)
         self.create_subscription(Bool, "/eeg_simulator/playback", self.playback_callback, 10)
@@ -183,13 +189,16 @@ class ProjectManagerNode(Node):
                 "loop": False,
                 "start_time": 0.0
             },
+            "experiment": {
+                "protocol": 'example',
+            },
             "recorder": {
                 "record_data": False
             }
         }
 
     def validate_project_state(self, state):
-        required_keys = ["decider", "preprocessor", "presenter", "simulator", "recorder"]
+        required_keys = ["decider", "preprocessor", "presenter", "simulator", "experiment", "recorder"]
         for key in required_keys:
             if key not in state:
                 self.logger.error(f"State file is missing required key: {key}")
@@ -199,8 +208,8 @@ class ProjectManagerNode(Node):
             self.logger.error("State file has invalid structure for decider, preprocessor, or presenter.")
             return False
     
-        if not isinstance(state["simulator"], dict) or not isinstance(state["recorder"], dict):
-            self.logger.error("State file has invalid structure for simulator or recorder.")
+        if not isinstance(state["simulator"], dict) or not isinstance(state["experiment"], dict) or not isinstance(state["recorder"], dict):
+            self.logger.error("State file has invalid structure for simulator, experiment, or recorder.")
             return False
     
         if not all(key in state["decider"] for key in ["module", "enabled"]):
@@ -217,6 +226,10 @@ class ProjectManagerNode(Node):
     
         if not all(key in state["simulator"] for key in ["dataset_filename", "playback", "loop", "start_time"]):
             self.logger.error("State file is missing required keys in simulator.")
+            return False
+    
+        if not all(key in state["experiment"] for key in ["protocol"]):
+            self.logger.error("State file is missing required keys in experiment.")
             return False
     
         if not all(key in state["recorder"] for key in ["record_data"]):
@@ -256,6 +269,7 @@ class ProjectManagerNode(Node):
         preprocessor_enabled = self.project_state["preprocessor"]["enabled"]
         presenter_module = self.project_state["presenter"]["module"]
         presenter_enabled = self.project_state["presenter"]["enabled"]
+        protocol = self.project_state["experiment"]["protocol"]
 
         # XXX: If the pipeline stage is enabled, first set the module and then enable it
         # so that the module is set before the enabling the stage. Reverse the order
@@ -281,6 +295,9 @@ class ProjectManagerNode(Node):
         else:
             self.set_presenter_enabled(presenter_enabled)
             self.set_presenter_module(presenter_module)
+
+        # Set the state for the experiment coordinator
+        self.set_protocol(protocol)
 
         # Set the state for the simulator
         dataset_filename = self.project_state["simulator"]["dataset_filename"]
@@ -415,6 +432,20 @@ class ProjectManagerNode(Node):
 
         future.add_done_callback(callback)
 
+    def set_protocol(self, protocol_name):
+        request = SetProtocol.Request()
+        request.protocol = protocol_name
+
+        self.logger.info(f"Setting experiment protocol to {protocol_name}...")
+        future = self.experiment_protocol_client.call_async(request)
+
+        def callback(future):
+            result = future.result()
+            if result is None or not result.success:
+                self.logger.error(f"Failed to set experiment protocol to {protocol_name}.")
+
+        future.add_done_callback(callback)
+
     def set_dataset(self, dataset_filename):
         request = SetDataset.Request()
         request.filename = dataset_filename
@@ -525,6 +556,13 @@ class ProjectManagerNode(Node):
         flag = msg.data
         with self.project_state_lock:
             self.project_state["presenter"]["enabled"] = flag
+            self.save_project_state(self.project_state)
+
+    def protocol_callback(self, msg: String):
+        if self.project_state is None:
+            return
+        with self.project_state_lock:
+            self.project_state["experiment"]["protocol"] = msg.data
             self.save_project_state(self.project_state)
 
     def dataset_callback(self, msg: String):

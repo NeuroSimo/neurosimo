@@ -4,10 +4,6 @@ import styled from 'styled-components'
 import { TabBar } from 'styles/General'
 
 import { EegSimulatorDisplay } from 'components/EegSimulatorDisplay'
-import { EegStreamDisplay } from 'components/EegStreamDisplay'
-import { StatisticsDisplay } from 'components/StatisticsDisplay'
-import { LatencyDisplay } from 'components/LatencyDisplay'
-import { SessionDisplay } from 'components/SessionDisplay'
 import { PipelineLogDisplay } from 'components/PipelineLogDisplay'
 
 import { StyledPanel, ProjectRow, ConfigRow, ConfigLabel, Select, SmallerTitle } from 'styles/General'
@@ -365,11 +361,7 @@ export const PipelineView = () => {
           <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
         </ConfigRow>
       </CoordinatorPanel>
-      <SessionDisplay />
       <EegSimulatorDisplay />
-      <EegStreamDisplay />
-      <StatisticsDisplay />
-      <LatencyDisplay />
       <PipelineLogDisplay />
     </>
   )

@@ -15,6 +15,9 @@ export const Select = styled.select`
   }
 `
 
+// Shared width for configuration panels
+export const CONFIG_PANEL_WIDTH = 220
+
 /* Shared dashboard panel title offset (px). */
 export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 580
 export const DASHBOARD_PANEL_HEIGHT = 300
@@ -125,10 +128,27 @@ export const CloseConfigRow = styled(ConfigRow)`
 export const ConfigLabel = styled.label`
   width: 185px;
   font-size: 11px;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  color: #333;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
 `
 
 export const IndentedLabel = styled(ConfigLabel)`
   padding-left: 10px;
+`
+
+export const ConfigValue = styled.div`
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 120px;
+  text-align: right;
+  font-size: 11px;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  color: #333;
+  margin-right: 20px;
 `
 
 export const SmallerTitle = styled.h2`

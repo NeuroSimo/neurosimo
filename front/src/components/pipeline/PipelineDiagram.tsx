@@ -7,15 +7,24 @@ import { PresenterNode } from 'components/pipeline/PresenterNode'
 import { TmsNode } from 'components/pipeline/TmsNode'
 import { PipelineConnections } from 'components/pipeline/PipelineConnections'
 
+const PipelineContainer = styled.div`
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 24px 32px;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: center;
+`
+
 const PipelinePanel = styled.div`
   display: grid;
   grid-template-rows: repeat(2, 1fr);
   grid-template-columns: repeat(4, 1fr);
-  width: 370px;
-  height: 277px;
+  width: 650px;
+  height: 360px;
   gap: 30px;
   position: relative;
-  margin-left: 18px;
+  margin: 12px auto 0 auto;
 `
 
 const PreprocessorSlot = styled.div`
@@ -53,21 +62,23 @@ const EegCircle = styled.div`
 `
 
 export const PipelineDiagram: React.FC = () => (
-  <PipelinePanel>
-    <PipelineConnections />
-    <EegCircle>EEG</EegCircle>
-    <PreprocessorSlot>
-      <PreprocessorNode />
-    </PreprocessorSlot>
-    <DeciderSlot>
-      <DeciderNode />
-    </DeciderSlot>
-    <PresenterSlot>
-      <PresenterNode />
-    </PresenterSlot>
-    <TmsSlot>
-      <TmsNode />
-    </TmsSlot>
-  </PipelinePanel>
+  <PipelineContainer>
+    <PipelinePanel>
+      <PipelineConnections />
+      <EegCircle>EEG</EegCircle>
+      <PreprocessorSlot>
+        <PreprocessorNode />
+      </PreprocessorSlot>
+      <DeciderSlot>
+        <DeciderNode />
+      </DeciderSlot>
+      <PresenterSlot>
+        <PresenterNode />
+      </PresenterSlot>
+      <TmsSlot>
+        <TmsNode />
+      </TmsSlot>
+    </PipelinePanel>
+  </PipelineContainer>
 )
 

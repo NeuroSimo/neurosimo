@@ -11,7 +11,7 @@ const PipelineLogPanelTitle = styled.div`
   width: 437px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  left: 33px;
+  left: 680px;
   z-index: 1001;
   text-align: left;
   font-size: 12px;
@@ -81,8 +81,8 @@ const PipelineLogPanel = styled(StyledPanel)`
   width: 419px;
   height: 250px;
   position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
-  left: 33px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 30}px;
+  left: 680px;
   z-index: 1000;
   padding: 9px;
   display: flex;

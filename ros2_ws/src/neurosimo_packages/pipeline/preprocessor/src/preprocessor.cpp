@@ -16,7 +16,7 @@
 using namespace std::chrono;
 using namespace std::placeholders;
 
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
+const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
 const std::string HEALTHCHECK_TOPIC = "/eeg/preprocessor/healthcheck";
 
@@ -72,8 +72,8 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   this->preprocessed_eeg_publisher = this->create_publisher<eeg_msgs::msg::Sample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
 
   /* Subscriber for EEG data. */
-  this->raw_eeg_subscriber = create_subscription<eeg_msgs::msg::Sample>(
-    EEG_RAW_TOPIC,
+  this->enriched_eeg_subscriber = create_subscription<eeg_msgs::msg::Sample>(
+    EEG_ENRICHED_TOPIC,
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
     EEG_QUEUE_LENGTH,
     std::bind(&EegPreprocessor::process_sample, this, _1));

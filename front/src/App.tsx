@@ -15,6 +15,7 @@ import { SessionProvider } from './providers/SessionProvider'
 import { HealthcheckMessageDisplay } from 'components/HealthcheckMessageDisplay'
 import { HealthcheckStatusDisplay } from 'components/HealthcheckStatusDisplay'
 import { PipelineView } from 'views/PipelineView'
+import { DashboardView } from 'views/DashboardView'
 import { Header as StyledHeader } from 'styles/StyledTypography'
 import { ProjectProvider } from 'providers/ProjectProvider'
 
@@ -26,6 +27,7 @@ const App = () => {
       <HealthcheckMessageDisplay />
       <Wrapper>
         <PipelineView />
+        <DashboardView />
       </Wrapper>
     </Providers>
   )

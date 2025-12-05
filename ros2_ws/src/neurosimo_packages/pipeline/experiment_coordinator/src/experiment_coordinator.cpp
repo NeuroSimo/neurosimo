@@ -58,6 +58,10 @@ ExperimentCoordinator::ExperimentCoordinator()
   this->enriched_eeg_publisher = this->create_publisher<eeg_msgs::msg::Sample>(
     EEG_ENRICHED_TOPIC, EEG_QUEUE_LENGTH);
   
+  /* Publisher for experiment UI state. */
+  this->experiment_state_publisher = this->create_publisher<pipeline_interfaces::msg::ExperimentState>(
+    "/experiment/state", qos_persist_latest);
+  
   /* Subscriber for raw EEG data. */
   this->raw_eeg_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
     EEG_RAW_TOPIC,
@@ -164,9 +168,11 @@ void ExperimentCoordinator::handle_session(const std::shared_ptr<system_interfac
       RCLCPP_INFO(this->get_logger(), "Session started, resetting experiment state");
       reset_experiment_state();
       state.session_started = true;
+      publish_experiment_state(0.0);
     } else if (this->session_state.value == system_interfaces::msg::SessionState::STOPPED) {
       RCLCPP_INFO(this->get_logger(), "Session stopped");
       state.session_started = false;
+      publish_experiment_state(state.last_sample_time);
     }
   }
 }
@@ -206,7 +212,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_msgs::ms
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
     const auto& element = protocol->elements[state.current_element_index];
     if (element.type == ProtocolElement::Type::STAGE) {
-      enriched.current_stage = element.stage->name;
+      enriched.current_stage_name = element.stage->name;
     }
   }
   
@@ -215,6 +221,8 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_msgs::ms
   
   /* Publish enriched sample. */
   this->enriched_eeg_publisher->publish(enriched);
+  
+  publish_experiment_state(sample_time);
 }
 
 void ExperimentCoordinator::handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg) {
@@ -263,6 +271,8 @@ void ExperimentCoordinator::handle_pulse_event(const std::shared_ptr<std_msgs::m
     /* Advance to next element. */
     advance_to_next_element();
   }
+  
+  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::handle_pause(
@@ -284,6 +294,7 @@ void ExperimentCoordinator::handle_pause(
   
   response->success = true;
   response->message = "Experiment paused";
+  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::handle_resume(
@@ -306,6 +317,7 @@ void ExperimentCoordinator::handle_resume(
   
   response->success = true;
   response->message = "Experiment resumed";
+  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::update_experiment_state(double current_time) {
@@ -327,6 +339,8 @@ void ExperimentCoordinator::update_experiment_state(double current_time) {
       }
     }
   }
+  
+  publish_experiment_state(current_time);
 }
 
 void ExperimentCoordinator::advance_to_next_element() {
@@ -349,6 +363,8 @@ void ExperimentCoordinator::advance_to_next_element() {
   } else if (element.type == ProtocolElement::Type::REST) {
     start_rest(element.rest.value(), current_time);
   }
+  
+  publish_experiment_state(current_time);
 }
 
 void ExperimentCoordinator::mark_protocol_complete() {
@@ -359,6 +375,7 @@ void ExperimentCoordinator::mark_protocol_complete() {
   state.protocol_complete = true;
   RCLCPP_INFO(this->get_logger(), "Protocol complete! Requesting session stop.");
   request_stop_session();
+  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::start_rest(const Rest& rest, double current_time) {
@@ -422,6 +439,8 @@ void ExperimentCoordinator::reset_experiment_state() {
       start_rest(first_element.rest.value(), initial_time);
     }
   }
+  
+  publish_experiment_state(0.0);
 }
 
 /* Protocol management */
@@ -677,6 +696,99 @@ void ExperimentCoordinator::request_stop_session() {
         RCLCPP_ERROR(this->get_logger(), "Error calling stop session service: %s", e.what());
       }
     });
+}
+
+void ExperimentCoordinator::publish_experiment_state(double current_time) {
+  if (!this->experiment_state_publisher) {
+    return;
+  }
+  
+  pipeline_interfaces::msg::ExperimentState msg;
+  
+  const bool has_protocol = protocol.has_value();
+  const auto experiment_time = get_experiment_time(current_time);
+  
+  msg.in_rest = state.in_rest;
+  msg.paused = state.paused;
+  msg.experiment_time = experiment_time;
+  
+  /* Stage info */
+  size_t total_stages = 0;
+  size_t current_stage_index = 0;
+  uint32_t total_trials_in_stage = 0;
+  
+  if (has_protocol) {
+    for (size_t i = 0; i < protocol->elements.size(); ++i) {
+      if (protocol->elements[i].type == ProtocolElement::Type::STAGE) {
+        if (i <= state.current_element_index) {
+          current_stage_index = total_stages;
+        }
+        total_stages++;
+      }
+    }
+    
+    if (state.current_element_index < protocol->elements.size()) {
+      const auto& element = protocol->elements[state.current_element_index];
+      if (element.type == ProtocolElement::Type::STAGE && element.stage.has_value()) {
+        msg.current_stage_name = element.stage->name;
+        total_trials_in_stage = element.stage->trials;
+      }
+    }
+  }
+  
+  msg.current_stage_index = static_cast<uint32_t>(current_stage_index);
+  msg.total_stages = static_cast<uint32_t>(total_stages);
+  msg.current_trial = state.current_trial;
+  msg.total_trials_in_stage = total_trials_in_stage;
+  
+  /* Stage timing */
+  double stage_start_experiment_time = 0.0;
+  if (!msg.current_stage_name.empty() && state.stage_start_times.count(msg.current_stage_name)) {
+    double stage_start_sample_time = state.stage_start_times[msg.current_stage_name];
+    stage_start_experiment_time = get_experiment_time(stage_start_sample_time);
+  }
+  msg.stage_start_time = stage_start_experiment_time;
+  msg.stage_elapsed_time = experiment_time - stage_start_experiment_time;
+  if (msg.stage_elapsed_time < 0.0) {
+    msg.stage_elapsed_time = 0.0;
+  }
+  
+  /* Rest info */
+  if (state.in_rest) {
+    double rest_duration = 0.0;
+    double rest_remaining = 0.0;
+    
+    if (state.rest_target_time.has_value()) {
+      rest_duration = state.rest_target_time.value() - state.rest_start_time;
+      rest_remaining = state.rest_target_time.value() - current_time;
+    }
+    
+    msg.rest_duration = rest_duration;
+    msg.rest_elapsed = current_time - state.rest_start_time;
+    msg.rest_remaining = std::max(0.0, rest_remaining);
+  } else {
+    msg.rest_duration = 0.0;
+    msg.rest_elapsed = 0.0;
+    msg.rest_remaining = 0.0;
+  }
+  
+  /* Next stage preview */
+  msg.next_is_rest = false;
+  msg.next_stage_name = "";
+  if (has_protocol && state.current_element_index + 1 < protocol->elements.size()) {
+    for (size_t idx = state.current_element_index + 1; idx < protocol->elements.size(); ++idx) {
+      const auto& next_elem = protocol->elements[idx];
+      if (next_elem.type == ProtocolElement::Type::STAGE && next_elem.stage.has_value()) {
+        msg.next_stage_name = next_elem.stage->name;
+        break;
+      } else if (next_elem.type == ProtocolElement::Type::REST) {
+        msg.next_is_rest = true;
+        break;
+      }
+    }
+  }
+  
+  this->experiment_state_publisher->publish(msg);
 }
 
 /* Time utilities */

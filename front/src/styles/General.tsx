@@ -1,23 +1,27 @@
 import styled from 'styled-components'
 
 export const Select = styled.select`
-  width: 175px;
-  padding: 8px;
+  width: 110px;
+  padding: 5px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 3px;
   outline: none;
   transition: background-color 0.2s;
   appearance: none;
-  margin-right: 30px;
+  margin-right: 17px;
 
   &:focus {
     background-color: transparent;
   }
 `
 
+/* Shared dashboard panel title offset (px). */
+export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 580
+export const DASHBOARD_PANEL_HEIGHT = 300
+
 export const StyledPanel = styled.div<{ isGrayedOut?: boolean }>`
-  padding: 25px 0px 40px 35px;
-  border-radius: 5px;
+  padding: 14px 0px 23px 21px;
+  border-radius: 3px;
   background-color: #f7f7f7;
   box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);/
   ${({ isGrayedOut }) =>
@@ -37,14 +41,14 @@ export interface ActiveProps {
 }
 
 export const StyledButton = styled.button<ActiveProps>`
-  width: 200px;
-  height: 50px;
+  width: 123px;
+  height: 31px;
 
-  font-size: 1rem;
-  padding: 0.8rem 0.5rem;
-  margin-bottom: 0.8rem;
+  font-size: 0.8rem;
+  padding: 0.48rem 0.35rem;
+  margin-bottom: 0.48rem;
   border: none;
-  border-radius: 5px;
+  border-radius: 3px;
   background-color: #007bff;
   color: white;
   cursor: pointer;
@@ -76,12 +80,12 @@ export const StyledRedButton = styled(StyledButton)`
 `
 
 export const TabBar = styled.div`
-  margin: 0.5rem;
+  margin: 0.31rem;
 
   a {
     text-decoration: none;
     color: #505050;
-    padding: 0.5rem;
+    padding: 0.31rem;
     display: inline-block;
     transition: color 0.3s ease;
 
@@ -100,8 +104,8 @@ export const ProjectRow = styled.div`
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 6px;
+  margin-bottom: 12px;
 `
 
 /* General config-related */
@@ -109,29 +113,29 @@ export const ConfigRow = styled.div`
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 5px;
+  margin-bottom: 5px;
   padding-right: 0px;
 `
 
 export const CloseConfigRow = styled(ConfigRow)`
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 `
 
 export const ConfigLabel = styled.label`
-  width: 300px;
-  font-size: 14px;
+  width: 185px;
+  font-size: 11px;
 `
 
 export const IndentedLabel = styled(ConfigLabel)`
-  padding-left: 15px;
+  padding-left: 10px;
 `
 
 export const SmallerTitle = styled.h2`
-  font-size: 18px;
+  font-size: 12px;
   text-align: center;
-  margin-bottom: 30px;
-  margin-right: 30px;
+  margin-bottom: 18px;
+  margin-right: 18px;
   font-weight: bold;
 `
 
@@ -140,22 +144,22 @@ export const StateRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
-  margin-right: 15px;
+  margin-bottom: 0.3rem;
+  margin-right: 9px;
 `
 
 export const StateTitle = styled.span`
   font-weight: bold;
-  margin-right: 1rem;
+  margin-right: 0.6rem;
 `
 
 export const IndentedStateTitle = styled(StateTitle)`
-  margin-left: 20px;
+  margin-left: 12px;
   font-weight: normal;
 `
 
 export const DoubleIndentedStateTitle = styled(StateTitle)`
-  margin-left: 40px;
+  margin-left: 25px;
   font-weight: normal;
 `
 

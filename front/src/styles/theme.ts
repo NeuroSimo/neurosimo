@@ -20,11 +20,11 @@ const theme = {
   },
   spacing: {},
   typography: {
-    large: pxToRem(24),
-    medium: pxToRem(18),
-    small: pxToRem(12),
+    large: pxToRem(15),
+    medium: pxToRem(11),
+    small: pxToRem(8),
   },
-  borderRadius: pxToRem(5),
+  borderRadius: pxToRem(3),
 }
 
 export type Theme = typeof theme

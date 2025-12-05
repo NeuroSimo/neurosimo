@@ -8,17 +8,19 @@ import {
   StateRow,
   StateTitle,
   StateValue,
+  DASHBOARD_PANEL_OFFSET_FROM_TOP,
+  DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
 import { PipelineContext } from 'providers/PipelineProvider'
 import { SessionContext, SessionState } from 'providers/SessionProvider'
 
 const LatencyPanel = styled(StyledPanel)`
-  width: 300px;
-  height: 406px;
+  width: 185px;
+  height: ${DASHBOARD_PANEL_HEIGHT}px;
   position: fixed;
-  top: 718px;
-  right: 5px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
+  right: 4px;
   z-index: 1000;
 `
 

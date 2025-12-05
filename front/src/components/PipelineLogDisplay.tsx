@@ -1,20 +1,20 @@
 import React, { useContext, useRef, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-import { StyledPanel } from 'styles/General'
+import { StyledPanel, DASHBOARD_PANEL_OFFSET_FROM_TOP } from 'styles/General'
 
 import { PipelineContext, LogMessage, LogLevel } from 'providers/PipelineProvider'
 
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
 const PipelineLogPanelTitle = styled.div`
-  width: 710px;
+  width: 437px;
   position: fixed;
-  top: 686px;
-  left: 55px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
+  left: 33px;
   z-index: 1001;
   text-align: left;
-  font-size: 20px;
+  font-size: 12px;
   font-weight: bold;
   display: flex;
   justify-content: space-between;
@@ -23,16 +23,16 @@ const PipelineLogPanelTitle = styled.div`
 
 const TitleGroup = styled.div`
   display: flex;
-  gap: 12px;
+  gap: 7px;
   align-items: center;
 `
 
 const LogSourceSelect = styled.select`
   background-color: #f5f5f5;
-  border: 2px solid #d46c0b;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 16px;
+  border: 1.3px solid #d46c0b;
+  border-radius: 3px;
+  padding: 3.5px 8px;
+  font-size: 11px;
   font-weight: bold;
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s;
@@ -50,16 +50,16 @@ const LogSourceSelect = styled.select`
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 5px;
 `
 
 const LogButton = styled.button`
   background-color: #d46c0b;
   color: white;
   border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 14px;
+  border-radius: 3px;
+  padding: 3.5px 8px;
+  font-size: 10px;
   cursor: pointer;
   transition: background-color 0.2s;
 
@@ -78,13 +78,13 @@ const LogButton = styled.button`
 `
 
 const PipelineLogPanel = styled(StyledPanel)`
-  width: 680px;
-  height: 406px;
+  width: 419px;
+  height: 250px;
   position: fixed;
-  top: 718px;
-  left: 55px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
+  left: 33px;
   z-index: 1000;
-  padding: 15px;
+  padding: 9px;
   display: flex;
   flex-direction: column;
 `
@@ -94,11 +94,11 @@ const LogContainer = styled.div`
   overflow-y: auto;
   background-color: #f9f9f9;
   border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 10px;
+  border-radius: 3px;
+  padding: 6px;
   font-family: 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 9px;
+  line-height: 1.25;
   white-space: pre-wrap;
   word-wrap: break-word;
   user-select: text;
@@ -108,10 +108,10 @@ const LogContainer = styled.div`
 `
 
 const LogEntry = styled.div`
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   color: #333;
   display: grid;
-  grid-template-columns: 80px 1fr;
+  grid-template-columns: 50px 1fr;
   gap: 0;
 `
 
@@ -129,7 +129,7 @@ const Timestamp = styled.span<{ $isInit: boolean; $level: number }>`
     if (props.$level === 1) return '#ffc107'  // WARNING - yellow
     return '#e8e8e8'  // INFO - light gray
   }};
-  padding: 2px 4px;
+  padding: 2px 3px;
   border-right: 2px solid ${props => {
     if (props.$isInit) return '#b85a09'  // INIT - darker orange
     if (props.$level === 2) return '#c82333'  // ERROR - darker red

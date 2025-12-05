@@ -5,25 +5,25 @@ import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProv
 import { StyledPanel } from 'styles/General'
 
 const HealthcheckMessagePanel = styled(StyledPanel)`
-  width: 400px;
-  height: 45px;
+  width: 246px;
+  height: 27px;
   position: fixed;
-  top: 122px;
-  right: 5px;
+  top: 75px;
+  right: 3px;
   z-index: 1000;
 `
 
 const Header = styled.div`
   color: #333;
   font-weight: bold;
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.31rem;
 `
 
 const Message = styled.div`
   color: #333;
-  font-size: 0.9rem;
-  padding: 5px;
+  font-size: 0.7rem;
+  padding: 3px;
   border-bottom: 0px;
   transition: opacity 0.3s;
 `

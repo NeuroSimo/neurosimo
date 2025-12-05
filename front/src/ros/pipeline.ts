@@ -172,7 +172,7 @@ export const setPresenterEnabledRos = (enabled: boolean, callback: () => void) =
 /* Set experiment protocol */
 const setExperimentProtocolService = new ROSLIB.Service({
   ros: ros,
-  name: '/experiment/protocol/set',
+  name: '/pipeline/protocol/set',
   serviceType: 'project_interfaces/SetProtocol',
 })
 

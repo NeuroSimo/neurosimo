@@ -1,22 +1,19 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { setPresenterEnabledRos, setPresenterModuleRos } from 'ros/pipeline'
-
-type Props = {
-  enabled: boolean
-  module: string
-  modules: string[]
-}
+import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
   width: 154px;
   height: 92px;
 `
 
-export const PresenterNode: React.FC<Props> = ({ enabled, module, modules }) => {
+export const PresenterNode: React.FC = () => {
+  const { presenterEnabled: enabled, presenterModule: module, presenterList: modules } = useContext(PipelineContext)
+
   const handleToggle = (next: boolean) => {
     setPresenterEnabledRos(next, () => {
       console.log('Presenter ' + (next ? 'enabled' : 'disabled'))

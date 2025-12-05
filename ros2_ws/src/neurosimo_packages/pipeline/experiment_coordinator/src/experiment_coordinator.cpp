@@ -95,6 +95,10 @@ ExperimentCoordinator::ExperimentCoordinator()
     "/experiment/protocol",
     qos_persist_latest);
   
+  /* Client for stopping session when protocol completes. */
+  this->stop_session_client = this->create_client<system_interfaces::srv::StopSession>(
+    "/system/session/stop");
+  
   /* Services for pause/resume. */
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
     "/experiment/pause",
@@ -319,8 +323,7 @@ void ExperimentCoordinator::update_experiment_state(double current_time) {
       if (state.current_element_index + 1 < protocol->elements.size()) {
         advance_to_next_element();
       } else {
-        state.protocol_complete = true;
-        RCLCPP_INFO(this->get_logger(), "Protocol complete!");
+        mark_protocol_complete();
       }
     }
   }
@@ -334,8 +337,7 @@ void ExperimentCoordinator::advance_to_next_element() {
   state.current_element_index++;
   
   if (state.current_element_index >= protocol->elements.size()) {
-    state.protocol_complete = true;
-    RCLCPP_INFO(this->get_logger(), "Protocol complete!");
+    mark_protocol_complete();
     return;
   }
   
@@ -347,6 +349,16 @@ void ExperimentCoordinator::advance_to_next_element() {
   } else if (element.type == ProtocolElement::Type::REST) {
     start_rest(element.rest.value(), current_time);
   }
+}
+
+void ExperimentCoordinator::mark_protocol_complete() {
+  if (state.protocol_complete) {
+    return;
+  }
+  
+  state.protocol_complete = true;
+  RCLCPP_INFO(this->get_logger(), "Protocol complete! Requesting session stop.");
+  request_stop_session();
 }
 
 void ExperimentCoordinator::start_rest(const Rest& rest, double current_time) {
@@ -640,6 +652,31 @@ void ExperimentCoordinator::inotify_timer_callback() {
     }
     i += sizeof(struct inotify_event) + event->len;
   }
+}
+
+void ExperimentCoordinator::request_stop_session() {
+  if (!this->stop_session_client) {
+    RCLCPP_ERROR(this->get_logger(), "Stop session client not initialized.");
+    return;
+  }
+  
+  if (!this->stop_session_client->service_is_ready()) {
+    RCLCPP_WARN(this->get_logger(), "Stop session service not available yet.");
+  }
+  
+  auto request = std::make_shared<system_interfaces::srv::StopSession::Request>();
+  this->stop_session_client->async_send_request(
+    request,
+    [this](rclcpp::Client<system_interfaces::srv::StopSession>::SharedFuture future) {
+      try {
+        auto response = future.get();
+        if (!response->success) {
+          RCLCPP_WARN(this->get_logger(), "Stop session service responded with failure.");
+        }
+      } catch (const std::exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "Error calling stop session service: %s", e.what());
+      }
+    });
 }
 
 /* Time utilities */

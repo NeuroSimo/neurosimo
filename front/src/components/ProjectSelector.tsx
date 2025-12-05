@@ -2,11 +2,11 @@ import React from 'react'
 import styled from 'styled-components'
 
 import { ProjectRow, Select } from 'styles/General'
+import { setActiveProject } from 'ros/project'
 
 type Props = {
   projects: string[]
   activeProject: string
-  onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void
 }
 
 const Label = styled.label`
@@ -17,11 +17,18 @@ const Label = styled.label`
   display: inline-block;
 `
 
-export const ProjectSelector: React.FC<Props> = ({ projects, activeProject, onChange }) => {
+export const ProjectSelector: React.FC<Props> = ({ projects, activeProject }) => {
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newActiveProject = event.target.value
+    setActiveProject(newActiveProject, () => {
+      console.log('Active project set to ' + newActiveProject)
+    })
+  }
+
   return (
     <ProjectRow>
       <Label>Project:</Label>
-      <Select onChange={onChange} value={activeProject}>
+      <Select onChange={handleChange} value={activeProject}>
         {projects.map((project, index) => (
           <option key={index} value={project}>
             {project}

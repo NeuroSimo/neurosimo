@@ -19,7 +19,7 @@ class LabJackManager {
 public:
   using ConnectionStatusCallback = std::function<void(bool connected, int error_code, int64_t connection_time_ms)>;
 
-  explicit LabJackManager(rclcpp::Logger logger);
+  explicit LabJackManager(rclcpp::Logger logger, bool simulation_mode = false);
   ~LabJackManager();
 
   // Connection management
@@ -36,6 +36,9 @@ public:
 
 private:
   rclcpp::Logger logger_;
+  
+  // Simulation mode flag
+  bool simulation_mode_;
   
   // LabJack handle and connection state
   std::atomic<int> labjack_handle_{-1};

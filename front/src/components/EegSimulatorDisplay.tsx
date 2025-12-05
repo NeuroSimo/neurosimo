@@ -12,6 +12,8 @@ import {
   StateValue,
   Select,
   GrayedOutPanel,
+  DASHBOARD_PANEL_OFFSET_FROM_TOP,
+  DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
@@ -20,32 +22,32 @@ import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
 const EegSimulatorPanelTitle = styled.div`
-  width: 340px;
+  width: 210px;
   position: fixed;
-  top: 686px;
-  right: 780px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
+  right: 480px;
   z-index: 1001;
   text-align: left;
-  font-size: 20px;
+  font-size: 12px;
   font-weight: bold;
 `
 
 const EegSimulatorPanel = styled(StyledPanel)`
-  width: 300px;
-  height: 406px;
+  width: 185px;
+  height: ${DASHBOARD_PANEL_HEIGHT}px;
   position: fixed;
-  top: 718px;
-  right: 780px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
+  right: 480px;
   z-index: 1000;
 `
 
 const DatasetSelect = styled(Select)`
-  margin-left: 10px;
-  width: 210px;
+  margin-left: 6px;
+  width: 129px;
 `
 
 const SwitchWrapper = styled.span`
-  width: 95px;
+  width: 59px;
 `
 
 export const EegSimulatorDisplay: React.FC = () => {

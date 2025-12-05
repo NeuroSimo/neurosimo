@@ -16,11 +16,11 @@ const getKeyByValue = (object: any, value: any) => {
 }
 
 const SessionPanel = styled(StyledPanel)`
-  width: 300px;
-  height: 150px;
+  width: 185px;
+  height: 110px;
   position: fixed;
-  top: 420px;
-  right: 5px;
+  top: 274px;
+  right: 4px;
   z-index: 1000;
 `
 

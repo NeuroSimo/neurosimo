@@ -9,20 +9,20 @@ interface StatusSquareProps {
 }
 
 const HealthcheckPanel = styled(StyledPanel)`
-  width: 300px;
-  height: 40px;
+  width: 200px;
+  height: 25px;
   position: fixed;
-  top: 10px;
-  right: 5px;
+  top: 6px;
+  right: 3px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-gap: 10px;
+  grid-gap: 6px;
   z-index: 1000;
 `
 
 const StatusSquare = styled.div<StatusSquareProps>`
-  width: 16px;
-  height: 16px;
+  width: 10px;
+  height: 10px;
   display: inline-block;
   vertical-align: middle;
   background-color: ${({ status }) => {
@@ -39,14 +39,14 @@ const StatusSquare = styled.div<StatusSquareProps>`
         return 'grey'
     }
   }};
-  border: 3px solid black;
-  margin-right: 10px;
+  border: 2px solid black;
+  margin-right: 6px;
 `
 
 const StatusLine = styled.div`
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 `
 
 export const HealthcheckStatusDisplay: React.FC = () => {

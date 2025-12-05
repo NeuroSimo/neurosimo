@@ -33,24 +33,24 @@ const InputRow = styled.div`
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 30px;
+  gap: 5px;
+  margin-bottom: 16px;
 `
 
 const Label = styled.label`
-  width: 150px;
+  width: 92px;
   text-align: left;
-  margin-right: 10px;
-  margin-left: 30px;
+  margin-right: 5px;
+  margin-left: 18px;
   display: inline-block;
 `
 
 const CoordinatorPanel = styled(StyledPanel)`
-  width: 300px;
+  width: 185px;
   position: relative;
-  margin-top: -190px;
-  margin-left: 130px;
-  left: 16px;
+  margin-top: -117px;
+  margin-left: 80px;
+  left: 10px;
 `
 
 /* Pipeline definition */
@@ -58,11 +58,11 @@ const PipelinePanel = styled.div`
   display: grid;
   grid-template-rows: repeat(2, 1fr);
   grid-template-columns: repeat(4, 1fr);
-  width: 600px;
-  height: 450px;
-  gap: 48px;
+  width: 370px;
+  height: 277px;
+  gap: 30px;
   position: relative;
-  margin-left: 30px;
+  margin-left: 18px;
 `
 
 const EegCircle = styled.div`
@@ -71,9 +71,9 @@ const EegCircle = styled.div`
   align-items: center;
   grid-row: 1 / 2;
   grid-column: 1 / 2;
-  width: 70px;
-  height: 70px;
-  margin-top: 74px;
+  width: 44px;
+  height: 44px;
+  margin-top: 46px;
   background-color: #d46c0b;
   border-radius: 50%;
   font-weight: bold;
@@ -82,34 +82,34 @@ const EegCircle = styled.div`
 const PreprocessorPanel = styled(StyledPanel)`
   grid-row: 1 / 2;
   grid-column: 2 / 3;
-  width: 250px;
-  height: 150px;
+  width: 154px;
+  height: 92px;
 `
 
 const DeciderPanel = styled(StyledPanel)`
   grid-row: 1 / 2;
   grid-column: 3 / 4;
-  width: 250px;
-  height: 150px;
+  width: 154px;
+  height: 92px;
 `
 
 const PresenterPanel = styled(StyledPanel)`
   grid-row: 1 / 2;
   grid-column: 4 / 5;
-  width: 250px;
-  height: 150px;
+  width: 154px;
+  height: 92px;
 `
 
 const TmsPanel = styled(StyledPanel)`
   grid-row: 2 / 3;
   grid-column: 4 / 5;
-  width: 250px;
-  height: 90px;
+  width: 154px;
+  height: 55px;
 `
 
 const Arrow = styled.div`
-  width: 30px; /* Arrow width */
-  height: 8px; /* Arrow thickness */
+  width: 18px; /* Arrow width */
+  height: 5px; /* Arrow thickness */
   background: #888;
   position: absolute;
   transform: translateY(-50%);
@@ -118,11 +118,11 @@ const Arrow = styled.div`
     content: '';
     position: absolute;
     top: 50%;
-    right: -9px;
+    right: -5px;
     transform: translateY(-50%);
-    border-top: 10px solid transparent;
-    border-bottom: 10px solid transparent;
-    border-left: 10px solid #888;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 6px solid #888;
   }
 `
 
@@ -260,10 +260,10 @@ export const PipelineView = () => {
       </ProjectRow>
 
       <PipelinePanel>
-        <Arrow style={{ left: '75px', top: '110px' }} />
-        <Arrow style={{ left: '408px', top: '110px' }} />
-        <Arrow style={{ left: '741px', top: '110px' }} />
-        <Arrow style={{ left: '734px', top: '234px', width: '44px', transform: 'rotate(45deg)' }} />
+        <Arrow style={{ left: '47px', top: '68px' }} />
+        <Arrow style={{ left: '252px', top: '68px' }} />
+        <Arrow style={{ left: '457px', top: '68px' }} />
+        <Arrow style={{ left: '453px', top: '146px', width: '27px', transform: 'rotate(45deg)' }} />
         <EegCircle>EEG</EegCircle>
         <PreprocessorPanel>
           <SmallerTitle>Preprocessor {preprocessorEnabled ? '' : '(bypass)'}</SmallerTitle>

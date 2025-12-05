@@ -4,15 +4,15 @@ import styled from 'styled-components'
 const StyledInput = styled.input<{ value: string }>`
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 20px;
-  padding: 4px 8px;
+  width: 32px;
+  height: 12px;
+  padding: 2.5px 5px;
   text-align: right;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 3px;
   background-color: transparent;
   color: #000;
-  font-size: 14px;
+  font-size: 10px;
 
   /* the “track” behind the text */
   &::before {
@@ -20,8 +20,8 @@ const StyledInput = styled.input<{ value: string }>`
     position: absolute;
     top: 50%;
     left: 0;
-    height: 6px;
-    border-radius: 3px;
+    height: 3.5px;
+    border-radius: 2px;
     background: #333;
     width: ${(p) => {
       const num = parseFloat(p.value) || 0

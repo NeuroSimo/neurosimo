@@ -17,6 +17,8 @@ const std::string HEALTHCHECK_TOPIC = "/experiment/coordinator/healthcheck";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
+const std::string DEFAULT_PROTOCOL_NAME = "example";
+
 /* XXX: Needs to match the values in session_bridge.cpp. */
 const milliseconds SESSION_PUBLISHING_INTERVAL = 20ms;
 const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 5ms;
@@ -25,9 +27,6 @@ ExperimentCoordinator::ExperimentCoordinator()
   : Node("experiment_coordinator"), 
     logger(rclcpp::get_logger("experiment_coordinator")),
     protocol_loader(rclcpp::get_logger("protocol_loader")) {
-  
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "Initializing Experiment Coordinator");
   
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(
@@ -124,8 +123,6 @@ ExperimentCoordinator::ExperimentCoordinator()
   this->healthcheck_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&ExperimentCoordinator::publish_healthcheck, this));
-  
-  RCLCPP_INFO(this->get_logger(), "Experiment Coordinator initialized");
 }
 
 void ExperimentCoordinator::publish_healthcheck() {
@@ -461,9 +458,6 @@ bool ExperimentCoordinator::load_protocol(const std::string& protocol_name) {
   
   this->protocol = result.protocol;
   this->coordinator_state = CoordinatorState::READY;
-  
-  RCLCPP_INFO(this->get_logger(), "Protocol loaded successfully: %s", 
-    this->protocol->name.c_str());
   
   return true;
 }

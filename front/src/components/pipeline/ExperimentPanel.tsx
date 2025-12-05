@@ -62,11 +62,11 @@ export const ExperimentPanel: React.FC<Props> = ({ protocolName, protocolList, e
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Experiment time:</ConfigLabel>
-        <ConfigLabel>{formatSeconds(experimentState?.experiment_time)}</ConfigLabel>
+        <ConfigLabel>{formatSeconds(experimentState?.experiment_time ?? undefined)}</ConfigLabel>
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Stage elapsed:</ConfigLabel>
-        <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
+        <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time ?? undefined)}</ConfigLabel>
       </ConfigRow>
     </Container>
   )

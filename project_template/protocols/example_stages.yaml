@@ -1,0 +1,28 @@
+name: "Example protocol with stages and rest periods"
+description: "An example protocol demonstrating stages and rest periods"
+
+stages:
+  - stage:
+      name: "baseline"
+      trials: 10
+      notes: "Baseline measurement"
+  
+  - rest:
+      duration: 30.0
+      notes: "Short rest after baseline"
+  
+  - stage:
+      name: "intervention"
+      trials: 10
+      notes: "Main intervention phase"
+  
+  - rest:
+      wait_until:
+        anchor: "intervention"
+        offset: 30.0  # 30 seconds after intervention started
+      notes: "Wait until 10 minutes after intervention start"
+  
+  - stage:
+      name: "post_test"
+      trials: 10
+      notes: "Post-intervention assessment"

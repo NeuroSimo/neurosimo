@@ -2,6 +2,7 @@ import React from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select } from 'styles/General'
+import { setExperimentProtocolRos } from 'ros/pipeline'
 
 type Props = {
   protocolName: string
@@ -16,8 +17,6 @@ type Props = {
     experiment_time?: number | null
     stage_elapsed_time?: number | null
   } | null
-  onProtocolChange: (event: React.ChangeEvent<HTMLSelectElement>) => void
-  formatSeconds: (value?: number) => string
 }
 
 const Container = styled(StyledPanel)`
@@ -28,13 +27,25 @@ const Container = styled(StyledPanel)`
   left: 10px;
 `
 
-export const ExperimentPanel: React.FC<Props> = ({ protocolName, protocolList, experimentState, onProtocolChange, formatSeconds }) => {
+export const ExperimentPanel: React.FC<Props> = ({ protocolName, protocolList, experimentState }) => {
+  const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const protocol = event.target.value
+    setExperimentProtocolRos(protocol, () => {
+      console.log('Protocol set to ' + protocol)
+    })
+  }
+
+  const formatSeconds = (value?: number) => {
+    if (value === undefined || value === null) return '—'
+    return `${value.toFixed(1)}s`
+  }
+
   return (
     <Container>
       <SmallerTitle>Experiment</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Protocol:</ConfigLabel>
-        <Select onChange={onProtocolChange} value={protocolName}>
+        <Select onChange={handleProtocolChange} value={protocolName}>
           {protocolList.map((protocol, index) => (
             <option key={index} value={protocol}>
               {protocol}

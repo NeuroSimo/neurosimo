@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useRef } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 import { TabBar } from 'styles/General'
@@ -15,19 +15,7 @@ import { PipelineConnections } from 'components/pipeline/PipelineConnections'
 
 import { StyledPanel, ProjectRow, ConfigRow, ConfigLabel, Select, SmallerTitle } from 'styles/General'
 
-import { ToggleSwitch } from 'components/ToggleSwitch'
-
-import {
-  setPreprocessorModuleRos,
-  setPreprocessorEnabledRos,
-  setDeciderModuleRos,
-  setDeciderEnabledRos,
-  setPresenterModuleRos,
-  setPresenterEnabledRos,
-  setExperimentProtocolRos,
-} from 'ros/pipeline'
-
-import { listProjects, setActiveProject } from 'ros/project'
+import { listProjects } from 'ros/project'
 
 import { PipelineContext } from 'providers/PipelineProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
@@ -124,68 +112,6 @@ export const PipelineView = () => {
 
   const [projects, setProjects] = useState<string[]>([])
 
-  const handleProjectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newActiveProject = event.target.value
-    setActiveProject(newActiveProject, () => {
-      console.log('Active project set to ' + newActiveProject)
-    })
-  }
-
-  /* Preprocessor */
-  const handlePreprocessorEnabled = (enabled: boolean) => {
-    setPreprocessorEnabledRos(enabled, () => {
-      console.log('Preprocessor ' + (enabled ? 'enabled' : 'disabled'))
-    })
-  }
-
-  const handlePreprocessorModuleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const module = event.target.value
-    setPreprocessorModuleRos(module, () => {
-      console.log('Preprocessor set to ' + module)
-    })
-  }
-
-  /* Decider */
-  const handleDeciderEnabled = (enabled: boolean) => {
-    setDeciderEnabledRos(enabled, () => {
-      console.log('Decider ' + (enabled ? 'enabled' : 'disabled'))
-    })
-  }
-
-  const handleDeciderModuleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const module = event.target.value
-    setDeciderModuleRos(module, () => {
-      console.log('Decider set to ' + module)
-    })
-  }
-
-  /* Presenter */
-  const handlePresenterEnabled = (enabled: boolean) => {
-    setPresenterEnabledRos(enabled, () => {
-      console.log('Presenter ' + (enabled ? 'enabled' : 'disabled'))
-    })
-  }
-
-  const handlePresenterModuleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const module = event.target.value
-    setPresenterModuleRos(module, () => {
-      console.log('Presenter set to ' + module)
-    })
-  }
-
-  /* Experiment coordinator */
-  const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const protocol = event.target.value
-    setExperimentProtocolRos(protocol, () => {
-      console.log('Protocol set to ' + protocol)
-    })
-  }
-
-  const formatSeconds = (value?: number) => {
-    if (value === undefined || value === null) return '—'
-    return `${value.toFixed(1)}s`
-  }
-
   /* Set list of projects. */
   useEffect(() => {
     listProjects((projects) => {
@@ -208,7 +134,7 @@ export const PipelineView = () => {
 
   return (
     <>
-      <ProjectSelector projects={projects} activeProject={activeProject} onChange={handleProjectChange} />
+      <ProjectSelector projects={projects} activeProject={activeProject} />
 
       <PipelinePanel>
         <PipelineConnections />
@@ -218,8 +144,6 @@ export const PipelineView = () => {
             enabled={preprocessorEnabled}
             module={preprocessorModule}
             modules={preprocessorList}
-            onToggle={handlePreprocessorEnabled}
-            onModuleChange={handlePreprocessorModuleChange}
           />
         </PreprocessorSlot>
         <DeciderSlot>
@@ -227,8 +151,6 @@ export const PipelineView = () => {
             enabled={deciderEnabled}
             module={deciderModule}
             modules={deciderList}
-            onToggle={handleDeciderEnabled}
-            onModuleChange={handleDeciderModuleChange}
           />
         </DeciderSlot>
         <PresenterSlot>
@@ -236,8 +158,6 @@ export const PipelineView = () => {
             enabled={presenterEnabled}
             module={presenterModule}
             modules={presenterList}
-            onToggle={handlePresenterEnabled}
-            onModuleChange={handlePresenterModuleChange}
           />
         </PresenterSlot>
         <TmsSlot>
@@ -248,8 +168,6 @@ export const PipelineView = () => {
         protocolName={protocolName}
         protocolList={protocolList}
         experimentState={experimentState}
-        onProtocolChange={handleProtocolChange}
-        formatSeconds={formatSeconds}
       />
       <EegSimulatorDisplay />
       <PipelineLogDisplay />

@@ -11,6 +11,7 @@ import { DeciderNode } from 'components/pipeline/DeciderNode'
 import { PresenterNode } from 'components/pipeline/PresenterNode'
 import { TmsNode } from 'components/pipeline/TmsNode'
 import { ExperimentPanel } from 'components/pipeline/ExperimentPanel'
+import { PipelineConnections } from 'components/pipeline/PipelineConnections'
 
 import { StyledPanel, ProjectRow, ConfigRow, ConfigLabel, Select, SmallerTitle } from 'styles/General'
 
@@ -83,25 +84,6 @@ const EegCircle = styled.div`
   background-color: #d46c0b;
   border-radius: 50%;
   font-weight: bold;
-`
-
-const Arrow = styled.div`
-  width: 18px; /* Arrow width */
-  height: 5px; /* Arrow thickness */
-  background: #888;
-  position: absolute;
-  transform: translateY(-50%);
-
-  &:after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: -5px;
-    transform: translateY(-50%);
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-    border-left: 6px solid #888;
-  }
 `
 
 /* Session storage utilities. */
@@ -229,10 +211,7 @@ export const PipelineView = () => {
       <ProjectSelector projects={projects} activeProject={activeProject} onChange={handleProjectChange} />
 
       <PipelinePanel>
-        <Arrow style={{ left: '47px', top: '68px' }} />
-        <Arrow style={{ left: '252px', top: '68px' }} />
-        <Arrow style={{ left: '457px', top: '68px' }} />
-        <Arrow style={{ left: '453px', top: '146px', width: '27px', transform: 'rotate(45deg)' }} />
+        <PipelineConnections />
         <EegCircle>EEG</EegCircle>
         <PreprocessorSlot>
           <PreprocessorNode

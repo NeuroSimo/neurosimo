@@ -1,22 +1,19 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { setDeciderEnabledRos, setDeciderModuleRos } from 'ros/pipeline'
-
-type Props = {
-  enabled: boolean
-  module: string
-  modules: string[]
-}
+import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
   width: 154px;
   height: 92px;
 `
 
-export const DeciderNode: React.FC<Props> = ({ enabled, module, modules }) => {
+export const DeciderNode: React.FC = () => {
+  const { deciderEnabled: enabled, deciderModule: module, deciderList: modules } = useContext(PipelineContext)
+
   const handleToggle = (next: boolean) => {
     setDeciderEnabledRos(next, () => {
       console.log('Decider ' + (next ? 'enabled' : 'disabled'))

@@ -1,22 +1,19 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { setPreprocessorEnabledRos, setPreprocessorModuleRos } from 'ros/pipeline'
-
-type Props = {
-  enabled: boolean
-  module: string
-  modules: string[]
-}
+import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
   width: 154px;
   height: 92px;
 `
 
-export const PreprocessorNode: React.FC<Props> = ({ enabled, module, modules }) => {
+export const PreprocessorNode: React.FC = () => {
+  const { preprocessorEnabled: enabled, preprocessorModule: module, preprocessorList: modules } = useContext(PipelineContext)
+
   const handleToggle = (next: boolean) => {
     setPreprocessorEnabledRos(next, () => {
       console.log('Preprocessor ' + (next ? 'enabled' : 'disabled'))

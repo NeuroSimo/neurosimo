@@ -26,4 +26,3 @@ stages:
       name: "post_test"
       trials: 20
       notes: "Post-intervention assessment"
-

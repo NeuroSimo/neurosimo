@@ -129,11 +129,6 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath) {
     
     result.success = true;
     result.protocol = protocol;
-    
-    RCLCPP_INFO(logger, "Successfully loaded protocol: %s", protocol.name.c_str());
-    RCLCPP_INFO(logger, "  Description: %s", protocol.description.c_str());
-    RCLCPP_INFO(logger, "  Elements: %zu", protocol.elements.size());
-    
   } catch (const YAML::Exception& e) {
     result.error_message = std::string("YAML parsing error: ") + e.what();
     RCLCPP_ERROR(logger, "%s", result.error_message.c_str());

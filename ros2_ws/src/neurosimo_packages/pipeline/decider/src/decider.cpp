@@ -224,6 +224,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/pipeline/decider/log",
     qos_keep_all_logs);
 
+  /* Publisher for pulse events. */
+  this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
+    "/experiment/pulse_events",
+    100);
+
   /* Action client for performing mTMS trials, only if mTMS device is available. */
   if (this->mtms_device_enabled) {
     this->perform_trial_client = rclcpp_action::create_client<mtms_trial_interfaces::action::PerformTrial>(
@@ -820,6 +825,10 @@ void EegDecider::trial_performed_callback(const rclcpp_action::ClientGoalHandle<
   msg.latency = time_difference;
 
   this->timing_latency_publisher->publish(msg);
+
+  /* Publish pulse event for experiment coordinator. */
+  auto pulse_event_msg = std_msgs::msg::Empty();
+  this->pulse_event_publisher->publish(pulse_event_msg);
 }
 
 /* Service clients */

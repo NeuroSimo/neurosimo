@@ -16,6 +16,7 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/int32.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 #include "eeg_msgs/msg/sample.hpp"
 
@@ -195,6 +196,7 @@ private:
   rclcpp::Publisher<targeting_msgs::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr dropped_sample_count_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
 
   rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;
 

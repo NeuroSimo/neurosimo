@@ -25,8 +25,8 @@ const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 5ms;
 
 ExperimentCoordinator::ExperimentCoordinator() 
   : Node("experiment_coordinator"), 
-    logger(rclcpp::get_logger("experiment_coordinator")),
-    protocol_loader(rclcpp::get_logger("protocol_loader")) {
+    protocol_loader(rclcpp::get_logger("protocol_loader")),
+    logger(rclcpp::get_logger("experiment_coordinator")) {
   
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(
@@ -54,6 +54,10 @@ ExperimentCoordinator::ExperimentCoordinator()
     std::bind(&ExperimentCoordinator::handle_session, this, _1),
     subscription_options);
   
+  auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
+        .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
+        .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+  
   /* Publisher for enriched EEG data. */
   this->enriched_eeg_publisher = this->create_publisher<eeg_msgs::msg::Sample>(
     EEG_ENRICHED_TOPIC, EEG_QUEUE_LENGTH);
@@ -75,10 +79,6 @@ ExperimentCoordinator::ExperimentCoordinator()
     std::bind(&ExperimentCoordinator::handle_pulse_event, this, _1));
   
   /* Subscriber for active project. */
-  auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
-        .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-        .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-  
   this->active_project_subscriber = this->create_subscription<std_msgs::msg::String>(
     "/projects/active",
     qos_persist_latest,
@@ -706,7 +706,31 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   pipeline_interfaces::msg::ExperimentState msg;
   
   const bool has_protocol = protocol.has_value();
+  const bool ongoing = state.session_started && !state.protocol_complete;
   const auto experiment_time = get_experiment_time(current_time);
+  
+  msg.ongoing = ongoing;
+  
+  /* If not ongoing, publish a clean, cleared state for UI consumers. */
+  if (!ongoing) {
+    msg.in_rest = false;
+    msg.paused = false;
+    msg.experiment_time = 0.0;
+    msg.current_stage_name = "";
+    msg.current_stage_index = 0;
+    msg.total_stages = 0;
+    msg.current_trial = 0;
+    msg.total_trials_in_stage = 0;
+    msg.stage_start_time = 0.0;
+    msg.stage_elapsed_time = 0.0;
+    msg.rest_duration = 0.0;
+    msg.rest_elapsed = 0.0;
+    msg.rest_remaining = 0.0;
+    msg.next_stage_name = "";
+    msg.next_is_rest = false;
+    this->experiment_state_publisher->publish(msg);
+    return;
+  }
   
   msg.in_rest = state.in_rest;
   msg.paused = state.paused;

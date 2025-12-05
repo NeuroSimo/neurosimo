@@ -32,6 +32,10 @@ interface PresenterList extends ROSLIB.Message {
   scripts: string[]
 }
 
+interface ProtocolList extends ROSLIB.Message {
+  protocols: string[]
+}
+
 interface RosBoolean extends ROSLIB.Message {
   data: boolean
 }
@@ -73,6 +77,9 @@ interface PipelineContextType {
   presenterEnabled: boolean
   presenterLogs: LogMessage[]
 
+  protocolList: string[]
+  protocolName: string
+
   timingLatency: TimingLatency | null
   timingError: TimingError | null
   decisionInfo: DecisionInfo | null
@@ -98,6 +105,9 @@ const defaultPipelineState: PipelineContextType = {
   presenterModule: '',
   presenterEnabled: false,
   presenterLogs: [],
+
+  protocolList: [],
+  protocolName: '',
 
   timingLatency: null,
   timingError: null,
@@ -138,6 +148,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [presenterModule, setPresenterModule] = useState<string>('')
   const [presenterEnabled, setPresenterEnabled] = useState<boolean>(false)
   const [presenterLogs, setPresenterLogs] = useState<LogMessage[]>([])
+
+  const [protocolList, setProtocolList] = useState<string[]>([])
+  const [protocolName, setProtocolName] = useState<string>('')
 
   const [timingLatency, setTimingLatency] = useState<TimingLatency | null>(null)
   const [timingError, setTimingError] = useState<TimingError | null>(null)
@@ -249,6 +262,28 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       setPresenterEnabled(message.data)
     })
 
+    /* Subscriber for available protocols. */
+    const protocolListSubscriber = new Topic<ProtocolList>({
+      ros: ros,
+      name: '/experiment/protocol/list',
+      messageType: 'project_interfaces/ProtocolList',
+    })
+
+    protocolListSubscriber.subscribe((message) => {
+      setProtocolList(message.protocols)
+    })
+
+    /* Subscriber for active protocol. */
+    const protocolSubscriber = new Topic<RosString>({
+      ros: ros,
+      name: '/experiment/protocol',
+      messageType: 'std_msgs/String',
+    })
+
+    protocolSubscriber.subscribe((message) => {
+      setProtocolName(message.data)
+    })
+
     /* Subscriber for timing latency. */
     const timingLatencySubscriber = new Topic<TimingLatency>({
       ros: ros,
@@ -332,6 +367,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       presenterModuleSubscriber.unsubscribe()
       presenterEnabledSubscriber.unsubscribe()
 
+      protocolListSubscriber.unsubscribe()
+      protocolSubscriber.unsubscribe()
+
       timingLatencySubscriber.unsubscribe()
       timingErrorSubscriber.unsubscribe()
       decisionInfoSubscriber.unsubscribe()
@@ -357,6 +395,8 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         presenterModule,
         presenterEnabled,
         presenterLogs,
+        protocolList,
+        protocolName,
         timingLatency,
         timingError,
         decisionInfo,

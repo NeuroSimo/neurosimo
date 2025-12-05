@@ -21,6 +21,7 @@ import {
   setDeciderEnabledRos,
   setPresenterModuleRos,
   setPresenterEnabledRos,
+  setExperimentProtocolRos,
 } from 'ros/pipeline'
 
 import { listProjects, setActiveProject } from 'ros/project'
@@ -42,6 +43,14 @@ const Label = styled.label`
   margin-right: 10px;
   margin-left: 30px;
   display: inline-block;
+`
+
+const CoordinatorPanel = styled(StyledPanel)`
+  width: 300px;
+  position: relative;
+  margin-top: -190px;
+  margin-left: 130px;
+  left: 16px;
 `
 
 /* Pipeline definition */
@@ -148,6 +157,8 @@ export const PipelineView = () => {
     presenterList,
     presenterModule,
     presenterEnabled,
+    protocolList,
+    protocolName,
   } = useContext(PipelineContext)
 
   const [projects, setProjects] = useState<string[]>([])
@@ -198,6 +209,14 @@ export const PipelineView = () => {
     const module = event.target.value
     setPresenterModuleRos(module, () => {
       console.log('Presenter set to ' + module)
+    })
+  }
+
+  /* Experiment coordinator */
+  const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const protocol = event.target.value
+    setExperimentProtocolRos(protocol, () => {
+      console.log('Protocol set to ' + protocol)
     })
   }
 
@@ -299,6 +318,19 @@ export const PipelineView = () => {
           </ConfigRow>
         </TmsPanel>
       </PipelinePanel>
+      <CoordinatorPanel>
+        <SmallerTitle>Experiment</SmallerTitle>
+        <ConfigRow>
+          <ConfigLabel>Protocol:</ConfigLabel>
+          <Select onChange={handleProtocolChange} value={protocolName}>
+            {protocolList.map((protocol, index) => (
+              <option key={index} value={protocol}>
+                {protocol}
+              </option>
+            ))}
+          </Select>
+        </ConfigRow>
+      </CoordinatorPanel>
       <SessionDisplay />
       <EegSimulatorDisplay />
       <EegStreamDisplay />

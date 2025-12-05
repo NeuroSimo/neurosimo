@@ -1,13 +1,9 @@
-import React from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 import { ProjectRow, Select } from 'styles/General'
-import { setActiveProject } from 'ros/project'
-
-type Props = {
-  projects: string[]
-  activeProject: string
-}
+import { listProjects, setActiveProject } from 'ros/project'
+import { ProjectContext } from 'providers/ProjectProvider'
 
 const Label = styled.label`
   width: 92px;
@@ -17,7 +13,14 @@ const Label = styled.label`
   display: inline-block;
 `
 
-export const ProjectSelector: React.FC<Props> = ({ projects, activeProject }) => {
+export const ProjectSelector: React.FC = () => {
+  const { activeProject } = useContext(ProjectContext)
+  const [projects, setProjects] = useState<string[]>([])
+
+  useEffect(() => {
+    listProjects(setProjects)
+  }, [])
+
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newActiveProject = event.target.value
     setActiveProject(newActiveProject, () => {

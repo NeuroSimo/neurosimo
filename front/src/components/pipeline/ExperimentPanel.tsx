@@ -1,23 +1,9 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select } from 'styles/General'
 import { setExperimentProtocolRos } from 'ros/pipeline'
-
-type Props = {
-  protocolName: string
-  protocolList: string[]
-  experimentState: {
-    ongoing?: boolean
-    current_stage_name?: string | null
-    current_stage_index?: number | null
-    total_stages?: number | null
-    current_trial?: number | null
-    total_trials_in_stage?: number | null
-    experiment_time?: number | null
-    stage_elapsed_time?: number | null
-  } | null
-}
+import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
   width: 185px;
@@ -27,7 +13,9 @@ const Container = styled(StyledPanel)`
   left: 10px;
 `
 
-export const ExperimentPanel: React.FC<Props> = ({ protocolName, protocolList, experimentState }) => {
+export const ExperimentPanel: React.FC = () => {
+  const { protocolName, protocolList, experimentState } = useContext(PipelineContext)
+
   const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const protocol = event.target.value
     setExperimentProtocolRos(protocol, () => {

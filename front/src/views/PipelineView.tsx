@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React from 'react'
 import styled from 'styled-components'
 
 import { TabBar } from 'styles/General'
@@ -13,12 +13,7 @@ import { TmsNode } from 'components/pipeline/TmsNode'
 import { ExperimentPanel } from 'components/pipeline/ExperimentPanel'
 import { PipelineConnections } from 'components/pipeline/PipelineConnections'
 
-import { StyledPanel, ProjectRow, ConfigRow, ConfigLabel, Select, SmallerTitle } from 'styles/General'
-
-import { listProjects } from 'ros/project'
-
-import { PipelineContext } from 'providers/PipelineProvider'
-import { ProjectContext } from 'providers/ProjectProvider'
+import { StyledPanel } from 'styles/General'
 
 const InputRow = styled.div`
   display: flex;
@@ -74,101 +69,28 @@ const EegCircle = styled.div`
   font-weight: bold;
 `
 
-/* Session storage utilities. */
-
-const getData = (): any => {
-  const data = sessionStorage.getItem('pipeline')
-  return data ? JSON.parse(data) : {}
-}
-
-const storeKey = (key: string, value: any) => {
-  const currentData = getData()
-  currentData[key] = value
-  sessionStorage.setItem('pipeline', JSON.stringify(currentData))
-}
-
-const getKey = (key: string, defaultValue: any): any => {
-  const data = getData()
-  return key in data ? data[key] : defaultValue
-}
-
 export const PipelineView = () => {
-  const { activeProject } = useContext(ProjectContext)
-
-  const {
-    preprocessorList,
-    preprocessorModule,
-    preprocessorEnabled,
-    deciderList,
-    deciderModule,
-    deciderEnabled,
-    presenterList,
-    presenterModule,
-    presenterEnabled,
-    protocolList,
-    protocolName,
-    experimentState,
-  } = useContext(PipelineContext)
-
-  const [projects, setProjects] = useState<string[]>([])
-
-  /* Set list of projects. */
-  useEffect(() => {
-    listProjects((projects) => {
-      setProjects(projects)
-    })
-  }, [])
-
-  /* Update session storage. */
-  useEffect(() => {
-    storeKey('preprocessorEnabled', preprocessorEnabled)
-  }, [preprocessorEnabled])
-
-  useEffect(() => {
-    storeKey('deciderEnabled', deciderEnabled)
-  }, [deciderEnabled])
-
-  useEffect(() => {
-    storeKey('presenterEnabled', presenterEnabled)
-  }, [presenterEnabled])
-
   return (
     <>
-      <ProjectSelector projects={projects} activeProject={activeProject} />
+      <ProjectSelector />
 
       <PipelinePanel>
         <PipelineConnections />
         <EegCircle>EEG</EegCircle>
         <PreprocessorSlot>
-          <PreprocessorNode
-            enabled={preprocessorEnabled}
-            module={preprocessorModule}
-            modules={preprocessorList}
-          />
+          <PreprocessorNode />
         </PreprocessorSlot>
         <DeciderSlot>
-          <DeciderNode
-            enabled={deciderEnabled}
-            module={deciderModule}
-            modules={deciderList}
-          />
+          <DeciderNode />
         </DeciderSlot>
         <PresenterSlot>
-          <PresenterNode
-            enabled={presenterEnabled}
-            module={presenterModule}
-            modules={presenterList}
-          />
+          <PresenterNode />
         </PresenterSlot>
         <TmsSlot>
           <TmsNode />
         </TmsSlot>
       </PipelinePanel>
-      <ExperimentPanel
-        protocolName={protocolName}
-        protocolList={protocolList}
-        experimentState={experimentState}
-      />
+      <ExperimentPanel />
       <EegSimulatorDisplay />
       <PipelineLogDisplay />
     </>

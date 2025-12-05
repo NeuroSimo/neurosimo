@@ -265,7 +265,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     /* Subscriber for available protocols. */
     const protocolListSubscriber = new Topic<ProtocolList>({
       ros: ros,
-      name: '/experiment/protocol/list',
+      name: '/pipeline/protocol/list',
       messageType: 'project_interfaces/ProtocolList',
     })
 
@@ -276,7 +276,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     /* Subscriber for active protocol. */
     const protocolSubscriber = new Topic<RosString>({
       ros: ros,
-      name: '/experiment/protocol',
+      name: '/pipeline/protocol',
       messageType: 'std_msgs/String',
     })
 

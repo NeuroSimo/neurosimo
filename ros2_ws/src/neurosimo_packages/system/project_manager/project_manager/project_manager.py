@@ -49,7 +49,7 @@ class ProjectManagerNode(Node):
         self.preprocessor_enabled_client = self.create_client(SetBool, "/pipeline/preprocessor/enabled/set", callback_group=self.callback_group)
         self.presenter_module_client = self.create_client(SetPresenterModule, "/pipeline/presenter/module/set", callback_group=self.callback_group)
         self.presenter_enabled_client = self.create_client(SetBool, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
-        self.experiment_protocol_client = self.create_client(SetProtocol, "/experiment/protocol/set", callback_group=self.callback_group)
+        self.protocol_client = self.create_client(SetProtocol, "/pipeline/protocol/set", callback_group=self.callback_group)
 
         self.set_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
         self.set_playback_service = self.create_client(SetBool, "/eeg_simulator/playback/set", callback_group=self.callback_group)
@@ -70,8 +70,8 @@ class ProjectManagerNode(Node):
         while not self.presenter_enabled_client.wait_for_service(timeout_sec=2.0):
             self.logger.error("Presenter enabled service not available, waiting...")
 
-        while not self.experiment_protocol_client.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Experiment protocol service not available, waiting...")
+        while not self.protocol_client.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Protocol service not available, waiting...")
 
         while not self.decider_module_client.wait_for_service(timeout_sec=2.0):
             self.logger.error("Decider module service not available, waiting...")
@@ -107,7 +107,7 @@ class ProjectManagerNode(Node):
         self.create_subscription(Bool, "/pipeline/preprocessor/enabled", self.preprocessor_enabled_callback, 10)
         self.create_subscription(String, "/pipeline/presenter/module", self.presenter_module_callback, 10)
         self.create_subscription(Bool, "/pipeline/presenter/enabled", self.presenter_enabled_callback, 10)
-        self.create_subscription(String, "/experiment/protocol", self.protocol_callback, 10)
+        self.create_subscription(String, "/pipeline/protocol", self.protocol_callback, 10)
 
         self.create_subscription(String, "/eeg_simulator/dataset", self.dataset_callback, 10)
         self.create_subscription(Bool, "/eeg_simulator/playback", self.playback_callback, 10)
@@ -437,7 +437,7 @@ class ProjectManagerNode(Node):
         request.protocol = protocol_name
 
         self.logger.info(f"Setting experiment protocol to {protocol_name}...")
-        future = self.experiment_protocol_client.call_async(request)
+        future = self.protocol_client.call_async(request)
 
         def callback(future):
             result = future.result()

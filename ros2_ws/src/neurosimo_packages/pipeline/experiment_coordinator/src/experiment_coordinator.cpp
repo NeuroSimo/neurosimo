@@ -12,8 +12,8 @@ using namespace experiment_coordinator;
 
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string PULSE_EVENT_TOPIC = "/experiment/pulse_events";
-const std::string HEALTHCHECK_TOPIC = "/experiment/coordinator/healthcheck";
+const std::string PULSE_EVENT_TOPIC = "/pipeline/pulse_events";
+const std::string HEALTHCHECK_TOPIC = "/pipeline/coordinator/healthcheck";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
@@ -60,7 +60,7 @@ ExperimentCoordinator::ExperimentCoordinator()
   
   /* Publisher for experiment UI state. */
   this->experiment_state_publisher = this->create_publisher<pipeline_interfaces::msg::ExperimentState>(
-    "/experiment/state", qos_persist_latest);
+    "/pipeline/experiment_state", qos_persist_latest);
   
   /* Subscriber for raw EEG data. */
   this->raw_eeg_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
@@ -86,17 +86,17 @@ ExperimentCoordinator::ExperimentCoordinator()
   
   /* Publisher for listing protocols. */
   this->protocol_list_publisher = this->create_publisher<project_interfaces::msg::ProtocolList>(
-    "/experiment/protocol/list",
+    "/pipeline/protocol/list",
     qos_persist_latest);
   
   /* Service for changing protocol. */
   this->set_protocol_service = this->create_service<project_interfaces::srv::SetProtocol>(
-    "/experiment/protocol/set",
+    "/pipeline/protocol/set",
     std::bind(&ExperimentCoordinator::handle_set_protocol, this, _1, _2));
   
   /* Publisher for protocol module. */
   this->protocol_module_publisher = this->create_publisher<std_msgs::msg::String>(
-    "/experiment/protocol",
+    "/pipeline/protocol",
     qos_persist_latest);
   
   /* Client for stopping session when protocol completes. */
@@ -105,11 +105,11 @@ ExperimentCoordinator::ExperimentCoordinator()
   
   /* Services for pause/resume. */
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
-    "/experiment/pause",
+    "/pipeline/pause",
     std::bind(&ExperimentCoordinator::handle_pause, this, _1, _2));
   
   this->resume_service = this->create_service<std_srvs::srv::Trigger>(
-    "/experiment/resume",
+    "/pipeline/resume",
     std::bind(&ExperimentCoordinator::handle_resume, this, _1, _2));
   
   /* Initialize inotify. */

@@ -114,7 +114,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
 
   /* Publisher for pulse events. */
   this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/experiment/pulse_events",
+    "/pipeline/pulse_events",
     100);
 
   /* Initialize LabJack manager. */

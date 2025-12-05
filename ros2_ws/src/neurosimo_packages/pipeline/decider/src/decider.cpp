@@ -226,7 +226,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Publisher for pulse events. */
   this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/experiment/pulse_events",
+    "/pipeline/pulse_events",
     100);
 
   /* Action client for performing mTMS trials, only if mTMS device is available. */

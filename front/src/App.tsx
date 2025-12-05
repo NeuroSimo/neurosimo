@@ -32,21 +32,21 @@ const App = () => {
 }
 
 const Header = styled(StyledHeader)`
-  font-size: 1.6rem;
+  font-size: 1.02rem;
   color: #333;
-  margin-bottom: 1rem;
-  padding: 0.5rem;
+  margin-bottom: 0.62rem;
+  padding: 0.31rem;
   background-color: #f2f2f2;
   border-bottom: 2px solid #ddd;
-  border-radius: 3px 3px 0 0;
+  border-radius: 2px 2px 0 0;
 `
 
 const Wrapper = styled.div`
-  padding: 2rem 0rem;
-  margin: 1rem;
+  padding: 1.23rem 0rem;
+  margin: 0.62rem;
   background-color: #e8e8e8;
-  border-radius: 25px;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1);
 `
 
 export default App

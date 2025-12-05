@@ -1,27 +1,35 @@
 import React, { useContext } from 'react'
 import styled from 'styled-components'
 
-import { StyledPanel, StateRow, StateTitle, IndentedStateTitle, StateValue } from 'styles/General'
+import {
+  StyledPanel,
+  StateRow,
+  StateTitle,
+  IndentedStateTitle,
+  StateValue,
+  DASHBOARD_PANEL_OFFSET_FROM_TOP,
+  DASHBOARD_PANEL_HEIGHT,
+} from 'styles/General'
 
 import { StatisticsContext } from 'providers/StatisticsProvider'
 
 const StatisticsPanelTitle = styled.div`
-  width: 340px;
+  width: 210px;
   position: fixed;
-  top: 686px;
-  right: 393px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
+  right: 242px;
   z-index: 1001;
   text-align: left;
-  font-size: 20px;
+  font-size: 12px;
   font-weight: bold;
 `
 
 const StatisticsPanel = styled(StyledPanel)`
-  width: 300px;
-  height: 406px;
+  width: 185px;
+  height: ${DASHBOARD_PANEL_HEIGHT}px;
   position: fixed;
-  top: 718px;
-  right: 393px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
+  right: 242px;
   z-index: 1000;
 `
 

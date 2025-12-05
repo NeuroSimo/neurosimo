@@ -9,11 +9,11 @@ import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProv
 import { formatFrequency } from 'utils/utils'
 
 const EegPanel = styled(StyledPanel)`
-  width: 300px;
-  height: 105px;
+  width: 185px;
+  height: 80px;
   position: fixed;
-  top: 240px;
-  right: 5px;
+  top: 148px;
+  right: 4px;
   z-index: 1000;
 `
 

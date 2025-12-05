@@ -5,15 +5,14 @@ import { ToggleSwitch } from 'components/ToggleSwitch'
 import { ValidatedInput } from 'components/ValidatedInput'
 
 import {
-  IndentedStateTitle,
   StyledPanel,
-  StateRow,
-  StateTitle,
-  StateValue,
   Select,
   GrayedOutPanel,
-  DASHBOARD_PANEL_OFFSET_FROM_TOP,
-  DASHBOARD_PANEL_HEIGHT,
+  SmallerTitle,
+  ConfigRow,
+  ConfigLabel,
+  ConfigValue,
+  CONFIG_PANEL_WIDTH,
 } from 'styles/General'
 
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
@@ -21,33 +20,28 @@ import { setDatasetRos, setPlaybackRos, setLoopRos, setStartTimeRos, setRecordDa
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
-const EegSimulatorPanelTitle = styled.div`
-  width: 210px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  right: 480px;
-  z-index: 1001;
-  text-align: left;
-  font-size: 12px;
-  font-weight: bold;
-`
-
 const EegSimulatorPanel = styled(StyledPanel)`
-  width: 185px;
-  height: ${DASHBOARD_PANEL_HEIGHT}px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
-  right: 480px;
-  z-index: 1000;
+  width: ${CONFIG_PANEL_WIDTH}px;
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `
 
 const DatasetSelect = styled(Select)`
   margin-left: 6px;
-  width: 129px;
+  width: 150px;
 `
 
 const SwitchWrapper = styled.span`
   width: 59px;
+  display: inline-flex;
+  justify-content: flex-end;
+`
+
+const CompactRow = styled(ConfigRow)`
+  margin-bottom: 2px;
+  gap: 4px;
 `
 
 export const EegSimulatorDisplay: React.FC = () => {
@@ -95,63 +89,61 @@ export const EegSimulatorDisplay: React.FC = () => {
   const selectedDataset = datasetList.find((d) => d.json_filename === dataset)
 
   return (
-    <>
-      <EegSimulatorPanelTitle>Simulator</EegSimulatorPanelTitle>
-      <EegSimulatorPanel isGrayedOut={!eegSimulatorHealthcheckOk}>
-        <StateRow>
-          <StateTitle>Dataset:</StateTitle>
-          <StateValue>
-            <DatasetSelect onChange={setDataset} value={dataset}>
-              {datasetList.map((dataset, index) => (
-                <option key={index} value={dataset.json_filename}>
-                  {dataset.name}
-                </option>
-              ))}
-            </DatasetSelect>
-          </StateValue>
-        </StateRow>
-        <br />
-        <StateRow>
-          <StateTitle>Duration:</StateTitle>
-          <StateValue>{formatTime(selectedDataset?.duration)}</StateValue>
-        </StateRow>
-        <StateRow>
-          <StateTitle>Sampling rate:</StateTitle>
-          <StateValue>{formatFrequency(selectedDataset?.sampling_frequency)}</StateValue>
-        </StateRow>
-        <StateRow>
-          <StateTitle>Channels:</StateTitle>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>EEG</IndentedStateTitle>
-          <StateValue>{selectedDataset?.num_of_eeg_channels}</StateValue>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>EMG</IndentedStateTitle>
-          <StateValue>{selectedDataset?.num_of_emg_channels}</StateValue>
-        </StateRow>
-        <br />
-        <StateRow>
-          <StateTitle>Playback:</StateTitle>
+    <EegSimulatorPanel isGrayedOut={!eegSimulatorHealthcheckOk}>
+      <SmallerTitle>Simulator</SmallerTitle>
+      <ConfigRow style={{ justifyContent: 'space-between' }}>
+        <ConfigLabel>Dataset:</ConfigLabel>
+        <DatasetSelect onChange={setDataset} value={dataset}>
+          {datasetList.map((dataset, index) => (
+            <option key={index} value={dataset.json_filename}>
+              {dataset.name}
+            </option>
+          ))}
+        </DatasetSelect>
+      </ConfigRow>
+      <br />
+      <CompactRow>
+        <ConfigLabel>Duration:</ConfigLabel>
+        <ConfigValue>{formatTime(selectedDataset?.duration)}</ConfigValue>
+      </CompactRow>
+      <CompactRow>
+        <ConfigLabel>Sampling rate:</ConfigLabel>
+        <ConfigValue>{formatFrequency(selectedDataset?.sampling_frequency)}</ConfigValue>
+      </CompactRow>
+      <CompactRow>
+        <ConfigLabel>Channels:</ConfigLabel>
+      </CompactRow>
+      <CompactRow>
+        <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
+        <ConfigValue>{selectedDataset?.num_of_eeg_channels}</ConfigValue>
+      </CompactRow>
+      <CompactRow>
+        <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
+        <ConfigValue>{selectedDataset?.num_of_emg_channels}</ConfigValue>
+      </CompactRow>
+      <br />
+      <CompactRow style={{ justifyContent: 'space-between' }}>
+        <ConfigLabel>Playback:</ConfigLabel>
+        <SwitchWrapper>
+          <ToggleSwitch type='flat' checked={playback} onChange={setPlayback} disabled={false} />
+        </SwitchWrapper>
+      </CompactRow>
+      <GrayedOutPanel isGrayedOut={!playback}>
+        <CompactRow style={{ justifyContent: 'space-between' }}>
+          <ConfigLabel style={{ paddingLeft: 10 }}>Loop</ConfigLabel>
           <SwitchWrapper>
-            <ToggleSwitch type='flat' checked={playback} onChange={setPlayback} disabled={false} />
+            <ToggleSwitch type='flat' checked={loop} onChange={setLoop} disabled={!playback} />
           </SwitchWrapper>
-        </StateRow>
-        <GrayedOutPanel isGrayedOut={!playback}>
-          <StateRow>
-            <IndentedStateTitle>Loop</IndentedStateTitle>
-            <SwitchWrapper>
-              <ToggleSwitch type='flat' checked={loop} onChange={setLoop} disabled={!playback} />
-            </SwitchWrapper>
-          </StateRow>
-          <StateRow>
-            <IndentedStateTitle>Record</IndentedStateTitle>
-            <SwitchWrapper>
-              <ToggleSwitch type='flat' checked={recordData} onChange={setRecordData} disabled={!playback} />
-            </SwitchWrapper>
-          </StateRow>
-          <StateRow>
-            <IndentedStateTitle>Start time (s)</IndentedStateTitle>
+        </CompactRow>
+        <CompactRow style={{ justifyContent: 'space-between' }}>
+          <ConfigLabel style={{ paddingLeft: 10 }}>Record</ConfigLabel>
+          <SwitchWrapper>
+            <ToggleSwitch type='flat' checked={recordData} onChange={setRecordData} disabled={!playback} />
+          </SwitchWrapper>
+        </CompactRow>
+        <CompactRow style={{ justifyContent: 'space-between' }}>
+          <ConfigLabel style={{ paddingLeft: 10 }}>Start time (s)</ConfigLabel>
+          <div style={{ marginRight: 20 }}>
             <ValidatedInput
               type='number'
               value={startTime}
@@ -160,15 +152,15 @@ export const EegSimulatorDisplay: React.FC = () => {
               onChange={setStartTime}
               disabled={!playback}
             />
-          </StateRow>
-        </GrayedOutPanel>
-        <br />
-        <br />
-        <StateRow>
-          <StateTitle>Status:</StateTitle>
-          <StateValue>{eegSimulatorHealthcheck?.status_message}</StateValue>
-        </StateRow>
-      </EegSimulatorPanel>
-    </>
+          </div>
+        </CompactRow>
+      </GrayedOutPanel>
+      <br />
+      <br />
+      <ConfigRow>
+        <ConfigLabel>Status:</ConfigLabel>
+        <ConfigValue>{eegSimulatorHealthcheck?.status_message}</ConfigValue>
+      </ConfigRow>
+    </EegSimulatorPanel>
   )
 }

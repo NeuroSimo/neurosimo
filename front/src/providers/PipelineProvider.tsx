@@ -36,6 +36,25 @@ interface ProtocolList extends ROSLIB.Message {
   protocols: string[]
 }
 
+export interface ExperimentState extends ROSLIB.Message {
+  current_stage_name: string
+  current_stage_index: number
+  total_stages: number
+  current_trial: number
+  total_trials_in_stage: number
+  ongoing: boolean
+  in_rest: boolean
+  paused: boolean
+  experiment_time: number
+  stage_start_time: number
+  stage_elapsed_time: number
+  rest_duration: number
+  rest_elapsed: number
+  rest_remaining: number
+  next_stage_name: string
+  next_is_rest: boolean
+}
+
 interface RosBoolean extends ROSLIB.Message {
   data: boolean
 }
@@ -83,10 +102,12 @@ interface PipelineContextType {
   timingLatency: TimingLatency | null
   timingError: TimingError | null
   decisionInfo: DecisionInfo | null
+  experimentState: ExperimentState | null
 
   setTimingLatency: React.Dispatch<React.SetStateAction<TimingLatency | null>>
   setTimingError: React.Dispatch<React.SetStateAction<TimingError | null>>
   setDecisionInfo: React.Dispatch<React.SetStateAction<DecisionInfo | null>>
+  setExperimentState: React.Dispatch<React.SetStateAction<ExperimentState | null>>
   clearAllLogs: () => void
 }
 
@@ -112,6 +133,7 @@ const defaultPipelineState: PipelineContextType = {
   timingLatency: null,
   timingError: null,
   decisionInfo: null,
+  experimentState: null,
 
   setTimingLatency: () => {
     console.warn('setTimingLatency is not yet initialized.')
@@ -121,6 +143,9 @@ const defaultPipelineState: PipelineContextType = {
   },
   setDecisionInfo: () => {
     console.warn('setDecisionInfo is not yet initialized.')
+  },
+  setExperimentState: () => {
+    console.warn('setExperimentState is not yet initialized.')
   },
   clearAllLogs: () => {
     console.warn('clearAllLogs is not yet initialized.')
@@ -155,6 +180,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [timingLatency, setTimingLatency] = useState<TimingLatency | null>(null)
   const [timingError, setTimingError] = useState<TimingError | null>(null)
   const [decisionInfo, setDecisionInfo] = useState<DecisionInfo | null>(null)
+  const [experimentState, setExperimentState] = useState<ExperimentState | null>(null)
 
   const clearAllLogs = () => {
     setPreprocessorLogs([])
@@ -353,6 +379,17 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       setPresenterLogs((prevLogs) => [...prevLogs, ...batch.messages])
     })
 
+    /* Subscriber for experiment state. */
+    const experimentStateSubscriber = new Topic<ExperimentState>({
+      ros: ros,
+      name: '/pipeline/experiment_state',
+      messageType: 'pipeline_interfaces/ExperimentState',
+    })
+
+    experimentStateSubscriber.subscribe((message) => {
+      setExperimentState(message)
+    })
+
     /* Unsubscribers */
     return () => {
       preprocessorListSubscriber.unsubscribe()
@@ -377,6 +414,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       preprocessorLogSubscriber.unsubscribe()
       deciderLogSubscriber.unsubscribe()
       presenterLogSubscriber.unsubscribe()
+      experimentStateSubscriber.unsubscribe()
     }
   }, [])
 
@@ -400,9 +438,11 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         timingLatency,
         timingError,
         decisionInfo,
+        experimentState,
         setTimingLatency,
         setTimingError,
         setDecisionInfo,
+        setExperimentState,
         clearAllLogs,
       }}
     >

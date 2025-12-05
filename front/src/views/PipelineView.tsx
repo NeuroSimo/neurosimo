@@ -159,6 +159,7 @@ export const PipelineView = () => {
     presenterEnabled,
     protocolList,
     protocolName,
+    experimentState,
   } = useContext(PipelineContext)
 
   const [projects, setProjects] = useState<string[]>([])
@@ -218,6 +219,11 @@ export const PipelineView = () => {
     setExperimentProtocolRos(protocol, () => {
       console.log('Protocol set to ' + protocol)
     })
+  }
+
+  const formatSeconds = (value?: number) => {
+    if (value === undefined || value === null) return '—'
+    return `${value.toFixed(1)}s`
   }
 
   /* Set list of projects. */
@@ -329,6 +335,34 @@ export const PipelineView = () => {
               </option>
             ))}
           </Select>
+        </ConfigRow>
+        <ConfigRow>
+          <ConfigLabel>Status:</ConfigLabel>
+          <ConfigLabel>{experimentState?.ongoing ? 'Running' : 'Idle'}</ConfigLabel>
+        </ConfigRow>
+        <ConfigRow>
+          <ConfigLabel>Stage:</ConfigLabel>
+          <ConfigLabel>
+            {experimentState?.current_stage_name
+              ? `${experimentState.current_stage_name} (${(experimentState.current_stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
+              : '—'}
+          </ConfigLabel>
+        </ConfigRow>
+        <ConfigRow>
+          <ConfigLabel>Trial:</ConfigLabel>
+          <ConfigLabel>
+            {experimentState
+              ? `${experimentState.current_trial}/${experimentState.total_trials_in_stage || 0}`
+              : '—'}
+          </ConfigLabel>
+        </ConfigRow>
+        <ConfigRow>
+          <ConfigLabel>Experiment time:</ConfigLabel>
+          <ConfigLabel>{formatSeconds(experimentState?.experiment_time)}</ConfigLabel>
+        </ConfigRow>
+        <ConfigRow>
+          <ConfigLabel>Stage elapsed:</ConfigLabel>
+          <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
         </ConfigRow>
       </CoordinatorPanel>
       <SessionDisplay />

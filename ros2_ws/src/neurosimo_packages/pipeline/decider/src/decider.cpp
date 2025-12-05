@@ -880,7 +880,7 @@ void EegDecider::handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg
     EEG_QUEUE_LENGTH,
     std::bind(&EegDecider::process_sample, this, _1));
 
-  RCLCPP_INFO(this->get_logger(), "Reading %s%s%s EEG data.", bold_on.c_str(), topic.c_str(), bold_off.c_str());
+  RCLCPP_DEBUG(this->get_logger(), "Reading %s EEG data.", this->is_preprocessor_enabled ? "preprocessed" : "raw");
 }
 
 /* Listing and setting EEG deciders. */

@@ -21,7 +21,7 @@ void LabJackManager::start() {
   
   // In simulation mode, skip the connection thread
   if (simulation_mode_) {
-    RCLCPP_INFO(logger_, "LabJackManager started in simulation mode");
+    RCLCPP_DEBUG(logger_, "LabJackManager started in simulation mode");
     return;
   }
   
@@ -29,7 +29,7 @@ void LabJackManager::start() {
   should_attempt_connection_.store(true);
   connection_thread_ = std::thread(&LabJackManager::connection_worker, this);
   
-  RCLCPP_INFO(logger_, "LabJackManager started");
+  RCLCPP_DEBUG(logger_, "LabJackManager started");
 }
 
 void LabJackManager::stop() {
@@ -47,7 +47,7 @@ void LabJackManager::stop() {
     labjack_handle_.store(-1);
   }
   
-  RCLCPP_INFO(logger_, "LabJackManager stopped");
+  RCLCPP_DEBUG(logger_, "LabJackManager stopped");
 }
 
 void LabJackManager::request_connection_attempt() {

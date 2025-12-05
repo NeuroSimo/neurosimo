@@ -11,6 +11,7 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
+#include "system_interfaces/srv/stop_session.hpp"
 #include "system_interfaces/msg/session.hpp"
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
@@ -40,6 +41,7 @@ private:
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<project_interfaces::msg::ProtocolList>::SharedPtr protocol_list_publisher;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr protocol_module_publisher;
+  rclcpp::Client<system_interfaces::srv::StopSession>::SharedPtr stop_session_client;
   
   // Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
@@ -94,6 +96,8 @@ private:
   void handle_resume(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void request_stop_session();
+  void mark_protocol_complete();
     
   void handle_set_protocol(
     const std::shared_ptr<project_interfaces::srv::SetProtocol::Request> request,

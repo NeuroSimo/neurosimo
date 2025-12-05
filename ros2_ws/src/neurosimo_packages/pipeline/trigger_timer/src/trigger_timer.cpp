@@ -104,6 +104,11 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     "/pipeline/decision_info",
     10);
 
+  /* Publisher for pulse events. */
+  this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
+    "/experiment/pulse_events",
+    100);
+
   /* Initialize LabJack manager. */
   labjack_manager = std::make_unique<LabJackManager>(this->get_logger());
   labjack_manager->start();
@@ -194,6 +199,10 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> m
     trigger_info_msg.latency_corrected_actual_time = this->current_latency_corrected_time;
 
     this->trigger_info_publisher->publish(trigger_info_msg);
+
+    /* Publish pulse event for experiment coordinator. */
+    auto pulse_event_msg = std_msgs::msg::Empty();
+    this->pulse_event_publisher->publish(pulse_event_msg);
   }
 
   /* Trigger latency measurement event at specific intervals. */

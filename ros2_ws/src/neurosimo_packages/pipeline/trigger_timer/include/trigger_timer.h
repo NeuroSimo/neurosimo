@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/empty.hpp"
 #include "labjack_manager.h"
 
 #include "eeg_msgs/msg/sample.hpp"
@@ -38,6 +39,7 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionInfo>::SharedPtr decision_info_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::TriggerInfo>::SharedPtr trigger_info_publisher;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
   rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
   rclcpp::Subscription<pipeline_interfaces::msg::TimedTrigger>::SharedPtr latency_measurement_trigger_subscriber;

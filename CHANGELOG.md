@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] – 2025-12-04
 
+### Deprecated
+- mTMS support is deprecated as of v0.2.0. Future versions will not maintain mTMS compatibility. Users requiring mTMS integration should fork from v0.2.0.
+
 ### Added
 - Added pulse lockout duration to decider configuration
 - Added `event_processors` and `stimulus_processors` mappings for custom event/stimulus handling.

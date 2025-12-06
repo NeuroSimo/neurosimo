@@ -2,6 +2,8 @@
 
 NeuroSimo is an open-source software platform for real-time EEG- and EMG-guided transcranial magnetic stimulation (TMS) [1].
 
+**Note:** mTMS integration is maintained until v0.2.0 only. Future versions focus on generic TMS device support. For mTMS integration, use v0.2.0.
+
 ## Installation
 
 Run this command to install NeuroSimo:

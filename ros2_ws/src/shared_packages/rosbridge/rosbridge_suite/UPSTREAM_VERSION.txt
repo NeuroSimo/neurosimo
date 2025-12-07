@@ -1,0 +1,33 @@
+Dependency: rosbridge_suite
+Upstream Repository: https://github.com/RobotWebTools/rosbridge_suite
+Vendored Location: shared_packages/rosbridge/rosbridge_suite
+
+Vendored Into Repository: NeuroSimo
+Vendored On: 2025-12-07
+
+Upstream Commit SHA: ffa267500eb1076f04b30bc52b6f350a5627f24f
+Upstream Commit Date: 2024-12-25
+Upstream Commit Author: Błażej Sowa <bsowa123@gmail.com>
+Upstream Commit Message: Fix infinite loop in QueueMessageHandler (#983)
+
+Included History:
+    ffa267500eb1  — Fix infinite loop in QueueMessageHandler
+    3b30f441144b  — Use monotonic clock for time measuring
+    5444d9b7e801  — Add ament_mypy test and fix mypy errors
+    25fe5705f1c2  — Various upstream updates (2024-12-25)
+
+Local Modifications:
+    None at time of vendoring.
+
+Update Procedure:
+    1. Clone or fetch the upstream repository:
+         git clone https://github.com/RobotWebTools/rosbridge_suite
+         cd rosbridge_suite
+         git checkout <desired commit or tag>
+
+    2. Review differences with the vendored copy using:
+         diff -ruN <vendored_path>/rosbridge_suite <fresh_upstream_checkout> > upstream_diff.patch
+
+    3. Apply updates selectively or overwrite files as appropriate.
+
+    4. Update the Upstream Commit SHA and date in this file after changes.

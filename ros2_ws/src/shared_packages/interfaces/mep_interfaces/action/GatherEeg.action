@@ -1,0 +1,5 @@
+TimeWindow time_window
+---
+eeg_msgs/Sample[] eeg_buffer
+GatherEegError error
+---

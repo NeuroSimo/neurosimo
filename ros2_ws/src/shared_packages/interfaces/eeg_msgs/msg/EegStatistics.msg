@@ -1,0 +1,11 @@
+# EEG sample statistics for last second
+
+uint16 num_of_raw_samples
+float64 max_time_between_raw_samples
+
+uint16 num_of_preprocessed_samples
+float64 max_time_between_preprocessed_samples
+
+float64 preprocessing_time_max
+float64 preprocessing_time_q95
+float64 preprocessing_time_median

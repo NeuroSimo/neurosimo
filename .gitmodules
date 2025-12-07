@@ -1,3 +1,0 @@
-[submodule "ros2_ws/src/shared_packages"]
-	path = ros2_ws/src/shared_packages
-	url = https://github.com/NeuroSimo/shared_packages

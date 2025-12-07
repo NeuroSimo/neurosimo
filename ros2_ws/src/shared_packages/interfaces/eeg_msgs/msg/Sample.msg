@@ -1,21 +1,34 @@
-# EEG and EMG data in microvolts
-
-float64[] eeg_data
-float64[] emg_data
+# ============================================================================
+# Core data (filled by EEG Bridge)
+# ============================================================================
+float64[] eeg_data  # in microvolts
+float64[] emg_data  # in microvolts
 float64 time
 uint64 index
 
-# The second trigger-in port of the EEG device (port B) is used for triggers
-# that indicate simultaneous pulses (at least in case of conventional
-# TMS devices for measuring the timing error - with mTMS device, it can be
-# used more flexibly). Use this field to indicate that case.
-#
-# TODO: Naming could be clearer. Maybe 'is_stimulation_trigger'? The problem is
-#   that it does not necessarily indicate simultaneous stimulation in case of
-#   mTMS device.
+# ============================================================================
+# Hardware triggers/events (filled by EEG Bridge)
+# ============================================================================
 bool is_trigger
-
 bool is_event
 string event_type
 
+# ============================================================================
+# Experiment state (filled by ExperimentCoordinator)
+# ============================================================================
+bool in_rest                    # Protocol-defined rest period
+bool paused                     # User-initiated pause
+float64 experiment_time         # Pause-adjusted experiment time (seconds)
+string current_stage_name       # Current stage name from protocol
+uint32 current_trial            # Current trial number within stage (0-based)
+uint32 pulse_count              # Total number of pulses given
+
+# ============================================================================
+# Preprocessing (filled by Preprocessor if enabled)
+# ============================================================================
+bool valid                      # Sample quality check passed
+
+# ============================================================================
+# Metadata
+# ============================================================================
 SampleMetadata metadata

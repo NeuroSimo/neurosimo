@@ -654,7 +654,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   double_t sample_time = triggering_sample->time;
   
   /* Determine if a pulse was given. */
-  bool pulse_given = is_pulse_feedback_received(sample_time) || triggering_sample->is_trigger;
+  bool pulse_given = is_pulse_feedback_received(sample_time) || triggering_sample->pulse_delivered;
   
   /* Process the sample. */
   bool success = this->preprocessor_wrapper->process(
@@ -679,7 +679,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     preprocessed_sample.metadata.passed_preprocessor = true;
 
     /* Copy event and trigger information. */
-    preprocessed_sample.is_trigger = triggering_sample->is_trigger;
+    preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
     preprocessed_sample.is_event = triggering_sample->is_event;
     preprocessed_sample.event_type = triggering_sample->event_type;
 
@@ -765,7 +765,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
     return;
   }
 
-  if (msg->is_trigger) {
+  if (msg->pulse_delivered) {
     RCLCPP_INFO(this->get_logger(), "Registered trigger at: %.1f (s).", sample_time);
   }
 

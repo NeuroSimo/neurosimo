@@ -14,7 +14,7 @@ bool valid
 # TODO: Naming could be clearer. Maybe 'is_stimulation_trigger'? The problem is
 #   that it does not necessarily indicate simultaneous stimulation in case of
 #   mTMS device.
-bool is_trigger
+bool pulse_delivered
 
 bool is_event
 string event_type

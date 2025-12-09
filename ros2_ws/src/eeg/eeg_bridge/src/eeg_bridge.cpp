@@ -227,7 +227,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.emg_data = adapter_sample.emg_data;
   sample.time = adapter_sample.time;
   sample.index = adapter_sample.index;
-  sample.is_trigger = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
+  sample.pulse_delivered = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
 
   sample.metadata.num_of_eeg_channels = eeg_info.num_of_eeg_channels;
   sample.metadata.num_of_emg_channels = eeg_info.num_of_emg_channels;

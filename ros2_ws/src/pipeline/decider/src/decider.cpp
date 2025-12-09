@@ -483,7 +483,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto start_time = std::chrono::high_resolution_clock::now();
   
   double_t sample_time = request.triggering_sample->time;
-  bool is_trigger = request.is_trigger;
+  bool pulse_delivered = request.pulse_delivered;
   bool has_event = request.has_event;
   std::string event_type = request.event_type;
 
@@ -492,7 +492,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
-    is_trigger,
+    pulse_delivered,
     has_event,
     event_type,
     this->event_queue,
@@ -1069,7 +1069,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   check_dropped_samples(sample_time);
 
   /* If the sample includes a trigger, handle it acoordingly. */
-  if (msg->is_trigger) {
+  if (msg->pulse_delivered) {
     handle_trigger_from_eeg_device(sample_time);
   }
 
@@ -1125,8 +1125,8 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   /* If the sample includes an EEG trigger, always trigger a Python call
      (irrespective of the lockout period). The Python-side handler can return None if it
      doesn't care about the trigger. */
-  bool is_trigger = msg->is_trigger;
-  if (is_trigger) {
+  bool pulse_delivered = msg->pulse_delivered;
+  if (pulse_delivered) {
     should_trigger_python_call = true;
   }
 
@@ -1164,7 +1164,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   /* Create a deferred processing request. */
   DeferredProcessingRequest request;
   request.triggering_sample = msg;
-  request.is_trigger = is_trigger;
+  request.pulse_delivered = pulse_delivered;
   request.has_event = has_event;
   request.event_type = event_type;
   

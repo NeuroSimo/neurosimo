@@ -131,7 +131,7 @@ private:
 
   void check_dropped_samples(double_t sample_time);
 
-  void handle_trigger_from_eeg_device(const double_t trigger_time);
+  void handle_pulse_delivered(const double_t pulse_delivered_time);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 

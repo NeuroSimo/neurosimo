@@ -990,16 +990,15 @@ void EegDecider::check_dropped_samples(double_t sample_time) {
   this->previous_time = sample_time;
 }
 
-/* Note: This method is only relevant in the non-mTMS context, where triggers are sent to the TMS device to deliver pulses. */
-void EegDecider::handle_trigger_from_eeg_device(const double_t actual_trigger_time) {
+void EegDecider::handle_pulse_delivered(const double_t pulse_delivered_time) {
   if (this->previous_stimulation_time == UNSET_PREVIOUS_TIME) {
     return;
   }
 
-  /* Calculate the time difference between the incoming EEG trigger and the trigger time. */
-  double_t timing_error = actual_trigger_time - previous_stimulation_time;
+  /* Calculate the time difference between the incoming pulse and the expected pulse time. */
+  double_t timing_error = pulse_delivered_time - previous_stimulation_time;
 
-  RCLCPP_INFO(this->get_logger(), "Actual trigger from EEG device at: %.4f (s), excepted trigger at: %.4f (s), timing error: %.1f (ms)", actual_trigger_time, previous_stimulation_time, 1000 * timing_error);
+  RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.4f (s), expected pulse at: %.4f (s), timing error: %.1f (ms)", pulse_delivered_time, previous_stimulation_time, 1000 * timing_error);
 
   /* Publish timing error ROS message. */
   auto msg = pipeline_interfaces::msg::TimingError();
@@ -1068,9 +1067,9 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   check_dropped_samples(sample_time);
 
-  /* If the sample includes a trigger, handle it acoordingly. */
+  /* If the sample includes a trigger, handle it accordingly. */
   if (msg->pulse_delivered) {
-    handle_trigger_from_eeg_device(sample_time);
+    handle_pulse_delivered(sample_time);
   }
 
   /* Append the sample to the buffer. */

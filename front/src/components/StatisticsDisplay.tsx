@@ -17,7 +17,7 @@ const StatisticsPanelTitle = styled.div`
   width: 210px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  right: 242px;
+  right: 262px;
   z-index: 1001;
   text-align: left;
   font-size: 12px;
@@ -29,7 +29,7 @@ const StatisticsPanel = styled(StyledPanel)`
   height: ${DASHBOARD_PANEL_HEIGHT}px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
-  right: 242px;
+  right: 262px;
   z-index: 1000;
 `
 

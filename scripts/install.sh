@@ -23,7 +23,7 @@ if [ -d "$INSTALL_DIR" ]; then
 fi
 
 # Clone to the canonical location
-git clone https://github.com/neurosimo/neurosimo --recurse-submodules "$INSTALL_DIR"
+git clone https://github.com/neurosimo/neurosimo "$INSTALL_DIR"
 
 # Run installer
 cd "$INSTALL_DIR"

@@ -7,7 +7,7 @@ RESET=$(tput sgr0)
 
 # Check that submodules are initialized and non-empty.
 SHARED_PACKAGES_DIR="$NEUROSIMO_ROOT/ros2_ws/src/shared_packages"
-ROSBRIDGE_DIR="$NEUROSIMO_ROOT/ros2_ws/src/shared_packages/rosbridge/rosbridge_suite"
+ROSBRIDGE_DIR="$NEUROSIMO_ROOT/ros2_ws/src/rosbridge/rosbridge_suite"
 
 check_dir_non_empty() {
     if [ ! -d "$1" ] || [ -z "$(ls -A "$1")" ]; then

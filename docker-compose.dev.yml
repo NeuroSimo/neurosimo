@@ -3,7 +3,7 @@ services:
   bag_exporter:
     build:
       context: .
-      dockerfile: ros2_ws/src/neurosimo_packages/utils/bag_exporter/Dockerfile
+      dockerfile: ros2_ws/src/utils/bag_exporter/Dockerfile
     environment:
       - PROJECT_NAME
       - BAG_ANALYSIS_BAG_NAME
@@ -18,7 +18,7 @@ services:
   bag_recorder:
     build:
       context: .
-      dockerfile: ros2_ws/src/neurosimo_packages/utils/bag_recorder/Dockerfile
+      dockerfile: ros2_ws/src/utils/bag_recorder/Dockerfile
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
@@ -29,7 +29,7 @@ services:
   eeg_batcher:
     build:
       context: .
-      dockerfile: ros2_ws/src/neurosimo_packages/eeg/eeg_batcher/Dockerfile
+      dockerfile: ros2_ws/src/eeg/eeg_batcher/Dockerfile
     env_file:
       - ${ENV_FILE}
     environment:

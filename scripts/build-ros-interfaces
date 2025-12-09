@@ -11,6 +11,5 @@ fi
 cd $NEUROSIMO_ROOT
 cd ros2_ws
 
-# Build packages in src/neurosimo_packages/interfaces directory
-colcon build --base-paths src/neurosimo_packages/interfaces
-colcon build --base-paths src/shared_packages/interfaces
+# Build packages in src/interfaces directory
+colcon build --base-paths src/interfaces

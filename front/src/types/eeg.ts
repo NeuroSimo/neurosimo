@@ -9,8 +9,8 @@ export const EventTypes = {
 
 /* TODO: Not up-to-date. */
 export interface Sample {
-  eeg_data: number[]
-  emg_data: number[]
+  eeg: number[]
+  emg: number[]
   time: number
 }
 
@@ -21,8 +21,8 @@ export interface SampleMetadata extends ROSLIB.Message {
 }
 
 export interface SampleMessage extends ROSLIB.Message {
-  eeg_data: number[]
-  emg_data: number[]
+  eeg: number[]
+  emg: number[]
   time: number
   metadata: SampleMetadata
 }

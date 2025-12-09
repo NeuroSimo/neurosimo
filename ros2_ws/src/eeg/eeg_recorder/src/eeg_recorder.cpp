@@ -15,8 +15,8 @@ const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
 
 const std::string PROJECTS_DIRECTORY = "projects";
-const std::string PREPROCESSED_EEG_DATA_SUBDIRECTORY = "/eeg_recorder/preprocessed";
-const std::string RAW_EEG_DATA_SUBDIRECTORY = "/eeg_recorder/raw";
+const std::string PREPROCESSED_EEG_SUBDIRECTORY = "/eeg_recorder/preprocessed";
+const std::string RAW_EEG_SUBDIRECTORY = "/eeg_recorder/raw";
 
 const milliseconds SESSION_PUBLISHING_INTERVAL = 1ms;
 const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 2ms;
@@ -81,8 +81,8 @@ EegRecorder::EegRecorder() : Node("eeg_recorder") {
 void EegRecorder::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
   this->active_project = msg->data;
 
-  this->raw_data_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/" + RAW_EEG_DATA_SUBDIRECTORY;
-  this->preprocessed_data_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/" + PREPROCESSED_EEG_DATA_SUBDIRECTORY;
+  this->raw_data_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/" + RAW_EEG_SUBDIRECTORY;
+  this->preprocessed_data_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/" + PREPROCESSED_EEG_SUBDIRECTORY;
 
   RCLCPP_INFO(this->get_logger(), "Active project set to: %s.", this->active_project.c_str());
 }
@@ -255,13 +255,13 @@ void EegRecorder::handle_raw_eeg_sample([[maybe_unused]] const std::shared_ptr<e
   };
 
   /* Add EEG data if available. */
-  if (!msg->eeg_data.empty()) {
-      std::for_each(msg->eeg_data.begin(), msg->eeg_data.end(), add_value_with_comma);
+  if (!msg->eeg.empty()) {
+      std::for_each(msg->eeg.begin(), msg->eeg.end(), add_value_with_comma);
   }
 
   /* Add EMG data if available. */
-  if (!msg->emg_data.empty()) {
-      std::for_each(msg->emg_data.begin(), msg->emg_data.end(), add_value_with_comma);
+  if (!msg->emg.empty()) {
+      std::for_each(msg->emg.begin(), msg->emg.end(), add_value_with_comma);
   }
 
   temp_buffer << "\n";
@@ -300,13 +300,13 @@ void EegRecorder::handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_inter
   };
 
   /* Add EEG data if available. */
-  if (!msg->eeg_data.empty()) {
-      std::for_each(msg->eeg_data.begin(), msg->eeg_data.end(), add_value_with_comma);
+  if (!msg->eeg.empty()) {
+      std::for_each(msg->eeg.begin(), msg->eeg.end(), add_value_with_comma);
   }
 
   /* Add EMG data if available. */
-  if (!msg->emg_data.empty()) {
-      std::for_each(msg->emg_data.begin(), msg->emg_data.end(), add_value_with_comma);
+  if (!msg->emg.empty()) {
+      std::for_each(msg->emg.begin(), msg->emg.end(), add_value_with_comma);
   }
 
   temp_buffer << "\n";

@@ -44,8 +44,8 @@ public:
   void initialize_module(
       const std::string& directory,
       const std::string& module_name,
-      const size_t eeg_data_size,
-      const size_t emg_data_size,
+      const size_t eeg_size,
+      const size_t emg_size,
       const uint16_t sampling_frequency);
 
   void reset_module_state();
@@ -86,16 +86,16 @@ private:
   std::unique_ptr<py::scoped_interpreter> guard;
 
   std::unique_ptr<py::array_t<double>> py_time_offsets;
-  std::unique_ptr<py::array_t<double>> py_eeg_data;
-  std::unique_ptr<py::array_t<double>> py_emg_data;
+  std::unique_ptr<py::array_t<double>> py_eeg;
+  std::unique_ptr<py::array_t<double>> py_emg;
 
   int look_back_samples;
   int look_ahead_samples;
   uint16_t sampling_frequency;
 
   std::size_t buffer_size = 0;
-  std::size_t eeg_data_size;
-  std::size_t emg_data_size;
+  std::size_t eeg_size;
+  std::size_t emg_size;
 };
 
 #endif

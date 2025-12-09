@@ -13,7 +13,7 @@ EegBatcher::EegBatcher() : Node("eeg_batcher") {
   this->declare_parameter<int>("downsample_ratio", 10);
   this->get_parameter("downsample_ratio", downsample_ratio);
 
-  auto eeg_data_subscription_callback = [this](
+  auto eeg_subscription_callback = [this](
       const std::shared_ptr<eeg_interfaces::msg::Sample> message) -> void {
     if (send_counter % downsample_ratio == 0) {
       batch[batch_index++] = *message;
@@ -37,7 +37,7 @@ EegBatcher::EegBatcher() : Node("eeg_batcher") {
 
   eeg_subscription = this->create_subscription<eeg_interfaces::msg::Sample>("/eeg/raw",
                                                                                    10,
-                                                                                   eeg_data_subscription_callback);
+                                                                                   eeg_subscription_callback);
   batch_publisher = this->create_publisher<eeg_interfaces::msg::EegBatch>("/eeg/batch_data", 10);
 }
 

@@ -8,7 +8,7 @@ The Preprocessor module handles real-time filtering, artifact removal, and signa
 
 No third-party libraries are currently available in the preprocessor environment.
 
-To add more libraries, modify `ros2_ws/src/neurosimo_packages/pipeline/preprocessor/Dockerfile` and run `build-neurosimo` from the command line.
+To add more libraries, modify `ros2_ws/src/pipeline/preprocessor/Dockerfile` and run `build-neurosimo` from the command line.
 
 ## Class Methods
 

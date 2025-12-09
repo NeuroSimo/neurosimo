@@ -239,7 +239,7 @@
     - name: Ensure CycloneDDS config is set
       lineinfile:
         dest: "{{ target_home }}/.bash_env"
-        line: "export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/src/shared_packages/resources/cyclonedds.xml"
+        line: "export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/src/resources/cyclonedds.xml"
         state: present
 
     - name: Ensure ROS is sourced

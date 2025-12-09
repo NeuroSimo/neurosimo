@@ -1,4 +1,0 @@
-uint8 emg_channel
-
-TimeWindow time_window
-PreactivationCheck preactivation_check

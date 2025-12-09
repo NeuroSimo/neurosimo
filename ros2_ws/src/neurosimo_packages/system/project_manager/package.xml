@@ -10,7 +10,6 @@
   <depend>rclpy</depend>
   <depend>std_srvs</depend>
 
-  <depend>mep_interfaces</depend>
   <depend>project_interfaces</depend>
   <depend>system_interfaces</depend>
 

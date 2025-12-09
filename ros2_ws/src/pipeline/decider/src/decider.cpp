@@ -522,8 +522,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* If the decision is negative, publish the decision info and return. */
   if (!is_decision_positive) {
     rclcpp::Time now = this->get_clock()->now();
-    rclcpp::Time sample_time_rcl(request.triggering_sample->metadata.system_time);
-    double_t total_latency = now.seconds() - sample_time_rcl.seconds();
+    double_t sample_absolute_time = request.triggering_sample->metadata.start_time + request.triggering_sample->time;
+    double_t total_latency = now.seconds() - sample_absolute_time;
 
     auto decision_info = pipeline_interfaces::msg::DecisionInfo();
     decision_info.stimulate = false;
@@ -561,7 +561,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
   request_msg->timed_trigger = *timed_trigger;
   request_msg->decision_time = sample_time;
-  request_msg->system_time_for_sample = request.triggering_sample->metadata.system_time;
+  request_msg->system_time_for_sample = request.triggering_sample->metadata.start_time + request.triggering_sample->time;
   request_msg->preprocessor_latency = request.triggering_sample->preprocessing_duration;
   request_msg->decider_latency = decider_processing_duration;
 

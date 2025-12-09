@@ -113,6 +113,8 @@ private:
   uint8_t num_emg_channels;
   uint8_t total_channels;
 
+  double_t session_start_time = UNSET_TIME;  // Unix timestamp when session started
+
   std::ifstream data_file;
 
   std::vector<std::vector<double_t>> dataset_buffer;

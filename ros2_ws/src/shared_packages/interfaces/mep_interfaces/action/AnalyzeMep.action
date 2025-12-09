@@ -1,7 +1,0 @@
-float64 time
-MepConfiguration mep_configuration
----
-bool success
-Mep mep
-AnalyzeMepErrors errors
----

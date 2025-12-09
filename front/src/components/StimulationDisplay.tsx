@@ -15,8 +15,19 @@ import {
 import { PipelineContext } from 'providers/PipelineProvider'
 import { SessionContext, SessionState } from 'providers/SessionProvider'
 
-const LatencyPanel = styled(StyledPanel)`
-  width: 185px;
+const StimulationPanelTitle = styled.div`
+  width: 220px;
+  position: fixed;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
+  right: 24px;
+  z-index: 1001;
+  text-align: left;
+  font-size: 12px;
+  font-weight: bold;
+`
+
+const StimulationPanel = styled(StyledPanel)`
+  width: 220px;
   height: ${DASHBOARD_PANEL_HEIGHT}px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
@@ -24,7 +35,7 @@ const LatencyPanel = styled(StyledPanel)`
   z-index: 1000;
 `
 
-export const LatencyDisplay: React.FC = () => {
+export const StimulationDisplay: React.FC = () => {
   const { timingLatency, setTimingLatency } = useContext(PipelineContext)
   const { timingError, setTimingError } = useContext(PipelineContext)
   const { decisionInfo } = useContext(PipelineContext)
@@ -102,9 +113,11 @@ export const LatencyDisplay: React.FC = () => {
     : '\u2013'
 
   return (
-    <LatencyPanel>
-      {/* Latest Decision Info */}
-      <StateRow>
+    <>
+      <StimulationPanelTitle>Stimulation</StimulationPanelTitle>
+      <StimulationPanel>
+        {/* Latest Decision Info */}
+        <StateRow>
         <StateTitle>Decisions:</StateTitle>
       </StateRow>
       <StateRow>
@@ -161,6 +174,7 @@ export const LatencyDisplay: React.FC = () => {
         <IndentedStateTitle>Error</IndentedStateTitle>
         <StateValue>{formattedError}</StateValue>
       </StateRow>
-    </LatencyPanel>
+      </StimulationPanel>
+    </>
   )
 }

@@ -15,7 +15,7 @@ const ExperimentStateTitle = styled.div`
   width: 210px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  right: 480px;
+  right: 485px;
   z-index: 1001;
   text-align: left;
   font-size: 12px;
@@ -27,7 +27,7 @@ const Panel = styled(StyledPanel)`
   height: ${DASHBOARD_PANEL_HEIGHT}px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
-  right: 480px;
+  right: 485px;
   z-index: 1000;
 `
 

@@ -26,7 +26,7 @@ RUN wget https://files.labjack.com/installers/LJM/Linux/x64/release/labjack_ljm_
     rm -rf labjack_ljm_software_2019_07_16_x86_64 labjack_ljm_software_2019_07_16_x86_64.tar.gz
 
 # Set the Cyclone DDS configuration
-COPY ros2_ws/src/resources/cyclonedds.xml /config/
+COPY ros2_ws/config/cyclonedds.xml /config/
 ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy ROS workspace and build packages

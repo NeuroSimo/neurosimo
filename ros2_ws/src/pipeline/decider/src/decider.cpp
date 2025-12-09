@@ -215,11 +215,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/pipeline/decider/log",
     qos_keep_all_logs);
 
-  /* Publisher for pulse events. */
-  this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/pipeline/pulse_events",
-    100);
-
   /* Service client for timed trigger. */
   this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>("/pipeline/timed_trigger");
 

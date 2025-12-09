@@ -29,12 +29,12 @@ public:
   TurboLinkAdapter(uint16_t port, uint32_t sampling_frequency, uint8_t eeg_channel_count);
   ~TurboLinkAdapter() noexcept override { close(socket_); }
 
-  AdapterPacket read_eeg_data_packet() override;
+  AdapterPacket read_eeg_packet() override;
 
 private:
   bool init_socket();
 
-  bool read_eeg_data_from_socket();
+  bool read_eeg_from_socket();
 
   std::tuple<AdapterSample, bool> handle_packet();
 

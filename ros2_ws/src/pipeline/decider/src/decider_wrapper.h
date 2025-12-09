@@ -59,8 +59,8 @@ public:
       const std::string& project_directory,
       const std::string& module_directory,
       const std::string& module_name,
-      const size_t eeg_data_size,
-      const size_t emg_data_size,
+      const size_t eeg_size,
+      const size_t emg_size,
       const uint16_t sampling_frequency,
       std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
       std::priority_queue<std::pair<double, std::string>,
@@ -133,15 +133,15 @@ private:
   /* Preallocated numpy arrays for default sample window */
   std::unique_ptr<py::array_t<double>> py_time_offsets;
   std::unique_ptr<py::array_t<bool>> py_valid;
-  std::unique_ptr<py::array_t<double>> py_eeg_data;
-  std::unique_ptr<py::array_t<double>> py_emg_data;
+  std::unique_ptr<py::array_t<double>> py_eeg;
+  std::unique_ptr<py::array_t<double>> py_emg;
 
   /* Preallocated numpy arrays for custom event windows */
   struct EventArrays {
     std::unique_ptr<py::array_t<double>> time_offsets;
     std::unique_ptr<py::array_t<bool>> valid;
-    std::unique_ptr<py::array_t<double>> eeg_data;
-    std::unique_ptr<py::array_t<double>> emg_data;
+    std::unique_ptr<py::array_t<double>> eeg;
+    std::unique_ptr<py::array_t<double>> emg;
     size_t buffer_size;
     int reference_index;
   };
@@ -164,8 +164,8 @@ private:
   std::vector<std::string> internal_imports;
 
   std::size_t buffer_size = 0;
-  std::size_t eeg_data_size;
-  std::size_t emg_data_size;
+  std::size_t eeg_size;
+  std::size_t emg_size;
 
   bool process_sensory_stimuli_list(
     const py::list& py_sensory_stimuli,
@@ -176,8 +176,8 @@ private:
     double_t sample_window_base_time,
     py::array_t<double>& timestamps,
     py::array_t<bool>& valid,
-    py::array_t<double>& eeg_data,
-    py::array_t<double>& emg_data,
+    py::array_t<double>& eeg,
+    py::array_t<double>& emg,
     size_t start_offset,
     size_t num_samples);
 };

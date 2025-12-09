@@ -85,7 +85,7 @@ bool TurboLinkAdapter::init_socket() {
   return true;
 }
 
-bool TurboLinkAdapter::read_eeg_data_from_socket() {
+bool TurboLinkAdapter::read_eeg_from_socket() {
   auto success = recvfrom(this->socket_, this->buffer, BUFFER_SIZE, 0, nullptr, nullptr);
   if (success == -1) {
     RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "No data received, reason: %s", strerror(errno));
@@ -113,12 +113,12 @@ std::tuple<AdapterSample, bool> TurboLinkAdapter::handle_packet() {
   for (uint8_t i = 0; i < this->num_of_emg_channels; i++) {
     uint8_t *data = buffer + SamplePacketFieldIndex::AUX_CHANNELS + 4 * i;
     float_t value = *reinterpret_cast<float *>(data);
-    adapter_sample.emg_data.push_back(value);
+    adapter_sample.emg.push_back(value);
   }
   for (uint8_t i = 0; i < this->num_of_eeg_channels; i++) {
     uint8_t *data = buffer + SamplePacketFieldIndex::EEG_CHANNELS + 4 * i;
     float_t value = *reinterpret_cast<float *>(data);
-    adapter_sample.eeg_data.push_back(value);
+    adapter_sample.eeg.push_back(value);
   }
 
   auto triggers = std::bitset<32>(trigger_bits);
@@ -131,13 +131,13 @@ std::tuple<AdapterSample, bool> TurboLinkAdapter::handle_packet() {
 
   /* Turbolink has no timestamp so interpret time from sampling frequency */
   adapter_sample.time = (double)sample_index / this->sampling_frequency;
-  adapter_sample.index = sample_index;
-  adapter_sample.trigger_a = false;  // Will be set in read_eeg_data_packet
+  adapter_sample.sample_index = sample_index;
+  adapter_sample.trigger_a = false;  // Will be set in read_eeg_packet
 
   return {adapter_sample, trigger_a};
 }
 
-AdapterPacket TurboLinkAdapter::read_eeg_data_packet() {
+AdapterPacket TurboLinkAdapter::read_eeg_packet() {
   /* Return variables */
   AdapterPacket packet;
   packet.result = INTERNAL;
@@ -146,7 +146,7 @@ AdapterPacket TurboLinkAdapter::read_eeg_data_packet() {
 
   bool trigger_a = false;
 
-  bool success = read_eeg_data_from_socket();
+  bool success = read_eeg_from_socket();
   if (!success) {
     RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), "Timeout while reading EEG data");
     packet.result = ERROR;

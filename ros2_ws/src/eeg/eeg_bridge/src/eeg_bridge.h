@@ -65,7 +65,7 @@ public:
   void spin();
 
 private:
-  void process_eeg_data_packet();
+  void process_eeg_packet();
   void update_healthcheck(uint8_t status, std::string status_message,
                           std::string actionable_message);
 

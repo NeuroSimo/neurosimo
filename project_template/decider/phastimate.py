@@ -150,7 +150,7 @@ class Decider:
             return None
 
         # Preprocess the data
-        preprocessed_data = self._preprocess_eeg_data(c3_referenced_data)
+        preprocessed_data = self._preprocess_eeg(c3_referenced_data)
 
         # Estimate future phases using Phastimate algorithm
         estimated_phases = self._estimate_phases(preprocessed_data)
@@ -180,7 +180,7 @@ class Decider:
             print("Error: EEG buffer does not have expected number of channels")
             return None
 
-    def _preprocess_eeg_data(self, data: np.ndarray) -> np.ndarray:
+    def _preprocess_eeg(self, data: np.ndarray) -> np.ndarray:
         """
         Preprocess EEG data by demeaning and downsampling.
         

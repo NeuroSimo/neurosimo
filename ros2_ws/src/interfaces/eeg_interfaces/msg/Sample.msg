@@ -1,10 +1,10 @@
 # ============================================================================
 # Core data (filled by EEG Bridge)
 # ============================================================================
-float64[] eeg_data  # in microvolts
-float64[] emg_data  # in microvolts
-float64 time
-uint64 index
+float64[] eeg                   # Length = num_eeg_channels, in microvolts
+float64[] emg                   # Length = num_emg_channels, in microvolts
+float64 time                    # Sample time, seconds since recording start
+uint64 sample_index             # Sample count (0-based)
 
 # ============================================================================
 # Hardware triggers/events (filled by EEG Bridge)

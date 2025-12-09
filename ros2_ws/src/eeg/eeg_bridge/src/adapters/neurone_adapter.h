@@ -92,7 +92,7 @@ public:
 
   ~NeurOneAdapter() noexcept override { close(socket_); }
 
-  AdapterPacket read_eeg_data_packet() override;
+  AdapterPacket read_eeg_packet() override;
 
 private:
   bool init_socket();
@@ -101,7 +101,7 @@ private:
 
   AdapterSample handle_sample_packet();
 
-  bool read_eeg_data_from_socket();
+  bool read_eeg_from_socket();
 
   /** Convert big-endian int24 represented as 3 uint8_t bytes to int32_t.
 

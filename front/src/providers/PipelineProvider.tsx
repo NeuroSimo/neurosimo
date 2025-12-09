@@ -38,7 +38,7 @@ interface ProtocolList extends ROSLIB.Message {
 
 export interface ExperimentState extends ROSLIB.Message {
   stage_name: string
-  current_stage_index: number
+  stage_index: number
   total_stages: number
   trial: number
   total_trials_in_stage: number

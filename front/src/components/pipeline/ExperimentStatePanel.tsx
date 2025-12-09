@@ -51,7 +51,7 @@ export const ExperimentStatePanel: React.FC = () => {
           <ConfigLabel>Stage:</ConfigLabel>
           <ConfigLabel>
             {experimentState?.stage_name
-              ? `${experimentState.stage_name} (${(experimentState.current_stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
+              ? `${experimentState.stage_name} (${(experimentState.stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
               : '—'}
           </ConfigLabel>
         </ConfigRow>

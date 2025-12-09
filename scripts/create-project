@@ -45,7 +45,6 @@ python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 
 python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 4 kHz, 10 s" --duration 10 --sampling_frequency 4000 --output_filename random_data_4_khz_10_s --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
 python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 5 kHz" --sampling_frequency 5000 --output_filename random_data_5_khz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
 python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 5 kHz, 10 s" --duration 10 --sampling_frequency 5000 --output_filename random_data_5_khz_10_s --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
-python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 5 kHz, 10 s, no events" --duration 10 --sampling_frequency 5000 --output_filename random_data_5_khz_10_s_no_events --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator --no_events > /dev/null
 
 echo ""
 echo "Project successfully created: ${BOLD}$PROJECT_NAME${RESET}"

@@ -1,6 +1,6 @@
 # Current stage
 string stage_name
-uint32 current_stage_index
+uint32 stage_index
 uint32 total_stages
 
 # Trial progress

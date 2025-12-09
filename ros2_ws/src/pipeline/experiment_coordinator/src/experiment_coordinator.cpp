@@ -717,7 +717,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
     msg.paused = false;
     msg.experiment_time = 0.0;
     msg.stage_name = "";
-    msg.current_stage_index = 0;
+    msg.stage_index = 0;
     msg.total_stages = 0;
     msg.trial = 0;
     msg.total_trials_in_stage = 0;
@@ -738,14 +738,14 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   
   /* Stage info */
   size_t total_stages = 0;
-  size_t current_stage_index = 0;
+  size_t stage_index = 0;
   uint32_t total_trials_in_stage = 0;
   
   if (has_protocol) {
     for (size_t i = 0; i < protocol->elements.size(); ++i) {
       if (protocol->elements[i].type == ProtocolElement::Type::STAGE) {
         if (i <= state.current_element_index) {
-          current_stage_index = total_stages;
+          stage_index = total_stages;
         }
         total_stages++;
       }
@@ -760,7 +760,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
     }
   }
   
-  msg.current_stage_index = static_cast<uint32_t>(current_stage_index);
+  msg.stage_index = static_cast<uint32_t>(stage_index);
   msg.total_stages = static_cast<uint32_t>(total_stages);
   msg.trial = state.trial;
   msg.total_trials_in_stage = total_trials_in_stage;

@@ -8,6 +8,3 @@ builtin_interfaces/Time system_time
 # Pipeline tracking
 bool passed_experiment_coordinator
 bool passed_preprocessor
-
-# Performance metrics
-float64 preprocessing_duration      # Time spent in preprocessing (seconds)

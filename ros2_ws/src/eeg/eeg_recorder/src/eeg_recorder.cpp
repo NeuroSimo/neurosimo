@@ -291,7 +291,7 @@ void EegRecorder::handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_inter
   temp_buffer.clear();
 
   temp_buffer << std::fixed << std::setprecision(4) << msg->time
-              << "," << std::setprecision(6) << msg->metadata.preprocessing_duration
+              << "," << std::setprecision(6) << msg->preprocessing_duration
               << std::setprecision(4) << "," << msg->valid;
 
   /* Helper function to concatenate with comma. */

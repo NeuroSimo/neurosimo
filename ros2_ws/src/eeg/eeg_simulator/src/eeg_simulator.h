@@ -83,8 +83,6 @@ private:
      Returns true if the samples were published successfully. */
   bool publish_until(double_t until_time);
 
-  void read_next_event();
-
   void update_inotify_watch();
   void inotify_timer_callback();
 
@@ -104,7 +102,6 @@ private:
   size_t current_index = 0;
 
   bool session_started = false;
-  bool events_left = false;
 
   bool is_streaming = false;
   std::string error_message = UNSET_STRING;
@@ -114,9 +111,6 @@ private:
   double_t session_time;
 
   double_t sampling_period;
-
-  double_t next_event_time;
-  std::string next_event_type;
 
   uint16_t sampling_frequency;
   uint8_t num_of_eeg_channels;
@@ -130,13 +124,6 @@ private:
   
   double_t latest_sample_time = 0.0;
   double_t time_offset = 0.0;
-
-  struct Event {
-    double_t time;
-    std::string type;
-  };
-  std::vector<Event> events;
-  size_t current_event_index = 0;
 
   std::string active_project;
   std::string data_directory;

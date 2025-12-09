@@ -1100,19 +1100,6 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     RCLCPP_INFO(this->get_logger(), "Received decider-defined event at time %.4f (s), event type: %s", sample_time, event_type.c_str());
   }
 
-  /* Fallback: check if the sample includes an external event. */
-  if (msg->is_event) {
-    RCLCPP_INFO(this->get_logger(), "Received external event at time %.4f (s), event type: %s", sample_time, msg->event_type.c_str());
-
-    if (!has_event) {
-      has_event = true;
-      event_time = sample_time;
-      event_type = msg->event_type;
-    } else {
-      RCLCPP_WARN(this->get_logger(), "Received both decider-defined and external event at time %.4f (s), using decider-defined event.", sample_time);
-    }
-  }
-
   /* Check if we're in the pulse lockout period. */
   bool in_lockout_period = false;
   if (!std::isnan(this->pulse_lockout_end_time) && sample_time < this->pulse_lockout_end_time) {

@@ -10,8 +10,6 @@ uint64 index
 # Hardware triggers/events (filled by EEG Bridge)
 # ============================================================================
 bool pulse_delivered
-bool is_event
-string event_type
 
 # ============================================================================
 # Experiment state (filled by ExperimentCoordinator)

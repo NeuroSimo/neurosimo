@@ -678,10 +678,8 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     /* Mark the sample as passed the preprocessor. */
     preprocessed_sample.metadata.passed_preprocessor = true;
 
-    /* Copy event and trigger information. */
+    /* Copy trigger information. */
     preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
-    preprocessed_sample.is_event = triggering_sample->is_event;
-    preprocessed_sample.event_type = triggering_sample->event_type;
 
     /* Calculate preprocessing duration. */
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -767,10 +765,6 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   if (msg->pulse_delivered) {
     RCLCPP_INFO(this->get_logger(), "Registered trigger at: %.1f (s).", sample_time);
-  }
-
-  if (msg->is_event) {
-    RCLCPP_INFO(this->get_logger(), "Registered event at: %.1f (s).", sample_time);
   }
 
   this->sample_buffer.append(msg);

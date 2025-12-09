@@ -188,7 +188,7 @@ void EegRecorder::write_buffers() {
   }
 }
 
-void EegRecorder::update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg) {
+void EegRecorder::update_eeg_info(const eeg_interfaces::msg::SessionMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
   this->num_eeg_channels = msg.num_eeg_channels;
   this->num_emg_channels = msg.num_emg_channels;
@@ -225,7 +225,7 @@ void EegRecorder::handle_raw_eeg_sample([[maybe_unused]] const std::shared_ptr<e
   this->previous_clock_time_raw = std::chrono::system_clock::now();
 
   /* XXX: Not sure if EEG info should be updated every sample. */
-  update_eeg_info(msg->metadata);
+  update_eeg_info(msg->session);
 
   double_t sample_time = msg->time;
 

@@ -68,7 +68,7 @@ private:
 
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
 
-  void update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg);
+  void update_session_info(const eeg_interfaces::msg::SessionMetadata& msg);
   void initialize_module();
   void publish_python_logs(double sample_time, bool is_initialization);
 
@@ -153,7 +153,7 @@ private:
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
   uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
   uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
-
+  double_t session_start_time = UNSET_PREVIOUS_TIME;
   double_t sampling_period;
 
   double_t previous_time = UNSET_PREVIOUS_TIME;

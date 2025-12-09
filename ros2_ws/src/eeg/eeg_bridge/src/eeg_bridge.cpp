@@ -231,11 +231,10 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.sample_index = adapter_sample.sample_index;
   sample.pulse_delivered = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
 
-  sample.metadata.num_eeg_channels = eeg_info.num_eeg_channels;
-  sample.metadata.num_emg_channels = eeg_info.num_emg_channels;
-  sample.metadata.sampling_frequency = eeg_info.sampling_frequency;
-  sample.metadata.is_simulation = false;
-  sample.metadata.start_time = this->session_start_time;
+  sample.session.sampling_frequency = eeg_info.sampling_frequency;
+  sample.session.num_eeg_channels = eeg_info.num_eeg_channels;
+  sample.session.num_emg_channels = eeg_info.num_emg_channels;
+  sample.session.start_time = this->session_start_time;
 
   return sample;
 }

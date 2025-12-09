@@ -200,7 +200,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     qos_keep_all);
 
   /* Publisher for coil target. */
-  this->coil_target_publisher = this->create_publisher<targeting_msgs::msg::CoilTarget>(
+  this->coil_target_publisher = this->create_publisher<pipeline_interfaces::msg::CoilTarget>(
     "/neuronavigation/coil_target",
     10);
 
@@ -588,7 +588,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   
   /* Publish coil target if it is set. */
   if (!coil_target.empty()) {
-    auto coil_target_msg = targeting_msgs::msg::CoilTarget();
+    auto coil_target_msg = pipeline_interfaces::msg::CoilTarget();
     coil_target_msg.target_name = coil_target;
     RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
     this->coil_target_publisher->publish(coil_target_msg);

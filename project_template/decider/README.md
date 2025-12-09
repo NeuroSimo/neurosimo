@@ -26,13 +26,13 @@ To add more libraries, modify `ros2_ws/src/pipeline/decider/Dockerfile` and run 
 
 ## Class Methods
 
-### `__init__(num_of_eeg_channels, num_of_emg_channels, sampling_frequency)`
+### `__init__(num_eeg_channels, num_emg_channels, sampling_frequency)`
 
 Initializes the decider with device configuration parameters automatically provided by the pipeline.
 
 **Parameters:**
-- `num_of_eeg_channels` (int): Number of EEG channels
-- `num_of_emg_channels` (int): Number of EMG channels  
+- `num_eeg_channels` (int): Number of EEG channels
+- `num_emg_channels` (int): Number of EMG channels  
 - `sampling_frequency` (int): Sampling frequency in Hz
 
 ### `get_configuration()`

@@ -82,8 +82,8 @@ private:
   uint8_t current_session_state;
 
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
-  uint8_t num_of_eeg_channels = UNSET_NUM_OF_CHANNELS;
-  uint8_t num_of_emg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
   bool is_simulation = false;
 
   bool record_simulation_data = false;

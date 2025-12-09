@@ -312,14 +312,14 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
         /* Validate "channels" object and its fields "eeg" and "emg". */
         if (json_data.contains("channels") && json_data["channels"].is_object()) {
           if (json_data["channels"].contains("eeg") && json_data["channels"]["eeg"].is_number_integer()) {
-            dataset_msg.num_of_eeg_channels = json_data["channels"]["eeg"];
+            dataset_msg.num_eeg_channels = json_data["channels"]["eeg"];
           } else {
             RCLCPP_ERROR(this->get_logger(), "  • Mandatory field 'channels.eeg' is missing or invalid");
             continue;
           }
 
           if (json_data["channels"].contains("emg") && json_data["channels"]["emg"].is_number_integer()) {
-            dataset_msg.num_of_emg_channels = json_data["channels"]["emg"];
+            dataset_msg.num_emg_channels = json_data["channels"]["emg"];
           } else {
             RCLCPP_ERROR(this->get_logger(), "  • Mandatory field 'channels.emg' is missing or invalid");
             continue;
@@ -494,11 +494,11 @@ void EegSimulator::handle_set_start_time(
 
 void EegSimulator::initialize_streaming() {
   this->sampling_frequency = this->dataset.sampling_frequency;
-  this->num_of_eeg_channels = this->dataset.num_of_eeg_channels;
-  this->num_of_emg_channels = this->dataset.num_of_emg_channels;
+  this->num_eeg_channels = this->dataset.num_eeg_channels;
+  this->num_emg_channels = this->dataset.num_emg_channels;
 
   /* Initialize variables. */
-  this->total_channels = this->num_of_eeg_channels + this->num_of_emg_channels;
+  this->total_channels = this->num_eeg_channels + this->num_emg_channels;
   this->sampling_period = 1.0 / this->sampling_frequency;
 
   /* Open and read data file. */
@@ -625,12 +625,12 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   eeg_interfaces::msg::Sample msg;
 
   /* Note: + 1 below is to skip the time column. */
-  msg.eeg.insert(msg.eeg.end(), data.begin() + 1, data.begin() + 1 + num_of_eeg_channels);
-  msg.emg.insert(msg.emg.end(), data.begin() + 1 + num_of_eeg_channels, data.end());
+  msg.eeg.insert(msg.eeg.end(), data.begin() + 1, data.begin() + 1 + num_eeg_channels);
+  msg.emg.insert(msg.emg.end(), data.begin() + 1 + num_eeg_channels, data.end());
 
   msg.metadata.sampling_frequency = this->sampling_frequency;
-  msg.metadata.num_of_eeg_channels = this->num_of_eeg_channels;
-  msg.metadata.num_of_emg_channels = this->num_of_emg_channels;
+  msg.metadata.num_eeg_channels = this->num_eeg_channels;
+  msg.metadata.num_emg_channels = this->num_emg_channels;
   msg.metadata.is_simulation = true;
   msg.metadata.system_time = this->get_clock()->now();
 

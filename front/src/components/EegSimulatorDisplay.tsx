@@ -109,11 +109,11 @@ export const EegSimulatorDisplay: React.FC = () => {
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
-        <ConfigValue>{selectedDataset?.num_of_eeg_channels}</ConfigValue>
+        <ConfigValue>{selectedDataset?.num_eeg_channels}</ConfigValue>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
-        <ConfigValue>{selectedDataset?.num_of_emg_channels}</ConfigValue>
+        <ConfigValue>{selectedDataset?.num_emg_channels}</ConfigValue>
       </CompactRow>
       <br />
       <CompactRow style={{ justifyContent: 'space-between' }}>

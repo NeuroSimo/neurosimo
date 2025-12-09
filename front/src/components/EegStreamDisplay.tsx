@@ -22,8 +22,8 @@ export const EegStreamDisplay: React.FC = () => {
   const { eegHealthcheck } = useContext(HealthcheckContext)
 
   const eegHealthcheckOk = eegHealthcheck?.status.value === HealthcheckStatus.READY
-  const numOfEegChannels = eegInfo?.num_of_eeg_channels || 0
-  const numOfEmgChannels = eegInfo?.num_of_emg_channels || 0
+  const numOfEegChannels = eegInfo?.num_eeg_channels || 0
+  const numOfEmgChannels = eegInfo?.num_emg_channels || 0
 
   return (
     <EegPanel isGrayedOut={!eegHealthcheckOk}>

@@ -21,8 +21,8 @@ TurboLinkAdapter::TurboLinkAdapter(uint16_t port, uint32_t sampling_frequency,
     throw std::runtime_error("Failed to initialise socket");
   }
 
-  this->num_of_emg_channels = AUX_CHANNEL_COUNT;
-  this->num_of_eeg_channels = eeg_channel_count;
+  this->num_emg_channels = AUX_CHANNEL_COUNT;
+  this->num_eeg_channels = eeg_channel_count;
   this->sampling_frequency = sampling_frequency;
 }
 
@@ -110,12 +110,12 @@ std::tuple<AdapterSample, bool> TurboLinkAdapter::handle_packet() {
 
   uint32_t trigger_bits = *reinterpret_cast<uint32_t *>(buffer + SamplePacketFieldIndex::TRIGGER_BITS);
 
-  for (uint8_t i = 0; i < this->num_of_emg_channels; i++) {
+  for (uint8_t i = 0; i < this->num_emg_channels; i++) {
     uint8_t *data = buffer + SamplePacketFieldIndex::AUX_CHANNELS + 4 * i;
     float_t value = *reinterpret_cast<float *>(data);
     adapter_sample.emg.push_back(value);
   }
-  for (uint8_t i = 0; i < this->num_of_eeg_channels; i++) {
+  for (uint8_t i = 0; i < this->num_eeg_channels; i++) {
     uint8_t *data = buffer + SamplePacketFieldIndex::EEG_CHANNELS + 4 * i;
     float_t value = *reinterpret_cast<float *>(data);
     adapter_sample.eeg.push_back(value);

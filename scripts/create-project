@@ -38,13 +38,10 @@ mkdir $PROJECTS_ROOT/$PROJECT_NAME
 # Copy project template to the new project directory.
 cp -r $NEUROSIMO_ROOT/project_template/* $PROJECTS_ROOT/$PROJECT_NAME
 
-python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 1 kHz" --sampling_frequency 1000 --output_filename random_data_1_khz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
-python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 2 kHz, 10 s" --duration 10 --sampling_frequency 2000 --output_filename random_data_2_khz_10_s --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
-python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 3 kHz, 10 s" --duration 10 --sampling_frequency 3000 --output_filename random_data_3_khz_10_s --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
+python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 2 kHz" --sampling_frequency 2000 --output_filename random_data_2_khz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
+python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 3 kHz" --sampling_frequency 3000 --output_filename random_data_3_khz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
 python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 4 kHz" --sampling_frequency 4000 --output_filename random_data_4_khz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
-python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 4 kHz, 10 s" --duration 10 --sampling_frequency 4000 --output_filename random_data_4_khz_10_s --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
 python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 5 kHz" --sampling_frequency 5000 --output_filename random_data_5_khz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
-python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 5 kHz, 10 s" --duration 10 --sampling_frequency 5000 --output_filename random_data_5_khz_10_s --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator > /dev/null
 
 echo ""
 echo "Project successfully created: ${BOLD}$PROJECT_NAME${RESET}"

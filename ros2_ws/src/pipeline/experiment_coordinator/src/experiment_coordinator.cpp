@@ -13,7 +13,7 @@ using namespace experiment_coordinator;
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string PULSE_EVENT_TOPIC = "/pipeline/pulse_events";
-const std::string HEALTHCHECK_TOPIC = "/pipeline/coordinator/healthcheck";
+const std::string HEALTHCHECK_TOPIC = "/experiment/coordinator/healthcheck";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
@@ -86,17 +86,17 @@ ExperimentCoordinator::ExperimentCoordinator()
   
   /* Publisher for listing protocols. */
   this->protocol_list_publisher = this->create_publisher<project_interfaces::msg::ProtocolList>(
-    "/pipeline/protocol/list",
+    "/experiment/protocol/list",
     qos_persist_latest);
   
   /* Service for changing protocol. */
   this->set_protocol_service = this->create_service<project_interfaces::srv::SetProtocol>(
-    "/pipeline/protocol/set",
+    "/experiment/protocol/set",
     std::bind(&ExperimentCoordinator::handle_set_protocol, this, _1, _2));
   
   /* Publisher for protocol module. */
   this->protocol_module_publisher = this->create_publisher<std_msgs::msg::String>(
-    "/pipeline/protocol",
+    "/experiment/protocol",
     qos_persist_latest);
   
   /* Client for stopping session when protocol completes. */
@@ -105,11 +105,11 @@ ExperimentCoordinator::ExperimentCoordinator()
   
   /* Services for pause/resume. */
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
-    "/pipeline/pause",
+    "/experiment/pause",
     std::bind(&ExperimentCoordinator::handle_pause, this, _1, _2));
   
   this->resume_service = this->create_service<std_srvs::srv::Trigger>(
-    "/pipeline/resume",
+    "/experiment/resume",
     std::bind(&ExperimentCoordinator::handle_resume, this, _1, _2));
   
   /* Initialize inotify. */

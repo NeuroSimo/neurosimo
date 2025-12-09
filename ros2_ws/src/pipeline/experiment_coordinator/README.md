@@ -15,21 +15,21 @@ This node:
 
 ### Subscribed
 - `/eeg/raw` (eeg_interfaces/Sample) - Raw EEG samples from EEG Bridge
-- `/pipeline/pulse_events` (std_msgs/Empty) - Pulse events from Decider
+- `/pipeline/pulse_events` (std_msgs/Empty) - Pulse events from Trigger Timer
 - `/system/session` (system_interfaces/Session) - Session state
 - `/projects/active` (std_msgs/String) - Active project name
 
 ### Published
 - `/eeg/enriched` (eeg_interfaces/Sample) - EEG samples enriched with experiment state
-- `/pipeline/coordinator/healthcheck` (system_interfaces/Healthcheck) - Health status
-- `/pipeline/protocol/list` (project_interfaces/ProtocolList) - Available protocols
-- `/pipeline/protocol` (std_msgs/String) - Currently loaded protocol
+- `/experiment/coordinator/healthcheck` (system_interfaces/Healthcheck) - Health status
+- `/experiment/protocol/list` (project_interfaces/ProtocolList) - Available protocols
+- `/experiment/protocol` (std_msgs/String) - Currently loaded protocol
 
 ## Services
 
-- `/pipeline/protocol/set` (project_interfaces/SetProtocol) - Load a protocol
-- `/pipeline/pause` (std_srvs/Trigger) - Pause the experiment
-- `/pipeline/resume` (std_srvs/Trigger) - Resume the experiment
+- `/experiment/protocol/set` (project_interfaces/SetProtocol) - Load a protocol
+- `/experiment/pause` (std_srvs/Trigger) - Pause the experiment
+- `/experiment/resume` (std_srvs/Trigger) - Resume the experiment
 
 ## Protocol Format
 

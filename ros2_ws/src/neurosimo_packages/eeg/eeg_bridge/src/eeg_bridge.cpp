@@ -57,14 +57,6 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   std::string eeg_device_type;
   this->get_parameter("eeg-device", eeg_device_type);
 
-  /* Is mTMS device enabled. */
-  auto mtms_device_enabled_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  mtms_device_enabled_descriptor.description = "Is mTMS device enabled";
-  mtms_device_enabled_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
-  this->declare_parameter("mtms-device-enabled", false, mtms_device_enabled_descriptor);
-
-  this->get_parameter("mtms-device-enabled", this->mtms_device_enabled);
-
   /* The number of tolerated dropped samples */
   auto num_of_tolerated_dropped_samples_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
   num_of_tolerated_dropped_samples_descriptor.description = "The number of tolerated dropped samples";
@@ -289,22 +281,6 @@ void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
     return;
   }
 
-  /* Check for out of sync condition; a similar is needed both here and when an actual sync trigger is received
-     to detect both cases where the sync trigger is not received at all and where it is received too frequently
-     or infrequently. */
-  if (this->mtms_device_enabled) {
-    auto sampling_frequency = this->eeg_adapter->get_eeg_info().sampling_frequency;
-
-    if (sampling_frequency != UNSET_SAMPLING_FREQUENCY && this->sample_packets_received_since_last_sync > 2 * sampling_frequency) {
-      RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                            "No sync trigger received within two seconds. Please ensure: 1) 'Sync' port in the mTMS "
-                            "device is connected to 'Trigger A in' in the EEG device, and 2) sending "
-                            "triggers is enabled in the EEG software.");
-
-      this->error_state = ErrorState::ERROR_OUT_OF_SYNC;
-      return;
-    }
-  }
 
   /* Warn if the sample index wraps around. */
   if (previous_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
@@ -331,60 +307,25 @@ void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
   }
   this->previous_sample_index = sample.index;
 
-  /* If mTMS device is not available, offset samples by the timestamp of the first sample. */
-  if (!this->mtms_device_enabled) {
-
-    /* If this is the first sample of the session, set the time offset. */
-    if (this->first_sample_of_session) {
-      this->first_sample_of_session = false;
-      this->time_offset = sample.time;
-    }
-
-    sample.time -= this->time_offset;
-
-    /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
-    sample.valid = true;
-
-    this->eeg_sample_publisher->publish(sample);
-
-    /* If the mTMS device is not available, return early. */
-    return;
+  /* If this is the first sample of the session, set the time offset. */
+  if (this->first_sample_of_session) {
+    this->first_sample_of_session = false;
+    this->time_offset = sample.time;
   }
 
-  /* Only start publishing samples after the first sync trigger timestamp is set. */
-  if (std::isnan(this->first_sync_trigger_timestamp)) {
-    return;
-  }
+  sample.time -= this->time_offset;
 
-  /* Only start publishing samples after sample times exceed the first sync trigger timestamp. */
-  if (!std::isnan(this->first_sync_trigger_timestamp) &&
-      sample.time < this->first_sync_trigger_timestamp) {
+  /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
+  sample.valid = true;
 
-    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                         "Sample packet arrived %.4f s before first sync trigger. First sync "
-                         "trigger timestamp: %.4f, sample timestamp: %.4f.",
-                         this->first_sync_trigger_timestamp - sample.time,
-                         this->first_sync_trigger_timestamp, sample.time);
-    return;
-  }
-  RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
-                       "Streaming...");
-
-  sample.time = sample.time - this->first_sync_trigger_timestamp - time_correction;
-
-  eeg_sample_publisher->publish(sample);
+  this->eeg_sample_publisher->publish(sample);
 }
 
 void EegBridge::process_eeg_data_packet() {
   auto [result_type, sample, sync_time] = this->eeg_adapter->read_eeg_data_packet();
 
-  /* Ignore the packets if session has not started. Exception: sync trigger packets are always processed if
-     mTMS device is available, as they are used for drift correction.
-
-     XXX: This is a bit of a hack, done because the first sync trigger can arrive before the session starts. */
-  bool is_sync_trigger = result_type == PacketResult::SYNC_TRIGGER || result_type == PacketResult::SAMPLE_WITH_SYNC;
-  bool ignore_packet = this->session_state.value != system_interfaces::msg::SessionState::STARTED &&
-                       !(is_sync_trigger && this->mtms_device_enabled);
+  /* Ignore the packets if session has not started. */
+  bool ignore_packet = this->session_state.value != system_interfaces::msg::SessionState::STARTED;
 
   if (ignore_packet) {
     return;
@@ -402,15 +343,10 @@ void EegBridge::process_eeg_data_packet() {
 
   switch (result_type) {
 
-  /* XXX: Misnomer, "sync" refers to sync trigger when mTMS device is enabled, but the same trigger
-     is used for automatic latency correction. */
   case PacketResult::SAMPLE_WITH_SYNC:
-    if (this->mtms_device_enabled) {
-      /* Handle sync before sample, as sync will update time_correction */
-      handle_sync_trigger(sync_time);
-    } else {
-      RCLCPP_INFO(this->get_logger(), "Received latency measurement trigger at %.4f s.", sync_time);
+    RCLCPP_INFO(this->get_logger(), "Received latency measurement trigger at %.4f s.", sync_time);
 
+    {
       auto msg = pipeline_interfaces::msg::TimedTrigger();
       msg.time = sync_time - this->time_offset;
       this->latency_measurement_trigger_publisher->publish(msg);
@@ -423,15 +359,7 @@ void EegBridge::process_eeg_data_packet() {
     break;
 
   case PacketResult::SYNC_TRIGGER:
-    if (this->mtms_device_enabled) {
-      handle_sync_trigger(sync_time);
-    } else {
-      /* Without mTMS device, "sync trigger" (i.e., the trigger that comes to input port A in the EEG device) is
-         used for automatic latency correction.
-
-         TODO: Implement better abstractions so that it can be renamed properly (such as "trigger_port_a") and used
-          for both mTMS and non-mTMS devices. Currently, the problem is that neurone_adapter.cpp knows about the
-          "sync trigger" concept, which is specific to mTMS devices. */
+    {
       auto msg = pipeline_interfaces::msg::TimedTrigger();
       msg.time = sync_time - this->time_offset;
       this->latency_measurement_trigger_publisher->publish(msg);

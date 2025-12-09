@@ -72,21 +72,12 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->declare_parameter("timing-latency-threshold", 0.005, timing_latency_threshold_descriptor);
   this->get_parameter("timing-latency-threshold", this->timing_latency_threshold);
 
-  /* Is mTMS device enabled. */
-  auto mtms_device_enabled_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  mtms_device_enabled_descriptor.description = "Is mTMS device enabled";
-  mtms_device_enabled_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
-  this->declare_parameter("mtms-device-enabled", false, mtms_device_enabled_descriptor);
-
-  this->get_parameter("mtms-device-enabled", this->mtms_device_enabled);
-
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Minimum pulse interval: %.1f (s)", this->minimum_intertrial_interval);
   RCLCPP_INFO(this->get_logger(), "  Dropped samples per second threshold: %d", this->dropped_sample_threshold);
   RCLCPP_INFO(this->get_logger(), "  Timing latency threshold: %.1f (ms)", 1000 * this->timing_latency_threshold);
-  RCLCPP_INFO(this->get_logger(), "  mTMS device %s", this->mtms_device_enabled ? "enabled" : "not enabled");
 
   /* Validate the minimum pulse interval. */
   if (this->minimum_intertrial_interval <= 0) {
@@ -228,16 +219,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
     "/pipeline/pulse_events",
     100);
-
-  /* Action client for performing mTMS trials, only if mTMS device is available. */
-  if (this->mtms_device_enabled) {
-    this->perform_trial_client = rclcpp_action::create_client<mtms_trial_interfaces::action::PerformTrial>(
-      this, "/trial/perform");
-
-    while (!perform_trial_client->wait_for_action_server(2s)) {
-      RCLCPP_INFO(get_logger(), "Action /trial/perform not available, waiting...");
-    }
-  }
 
   /* Service client for timed trigger. */
   this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>("/pipeline/timed_trigger");
@@ -506,17 +487,11 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   bool has_event = request.has_event;
   std::string event_type = request.event_type;
 
-  /* Determine if we are ready for a trial. */
-  auto ready_for_trial = !is_performing_trial &&
-                         !is_processing_timed_trigger &&
-                         this->trial_queue.empty();
-
   /* Process the sample. */
-  auto [success, trial, timed_trigger, coil_target] = this->decider_wrapper->process(
+  auto [success, timed_trigger, coil_target] = this->decider_wrapper->process(
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
-    ready_for_trial,
     is_trigger,
     has_event,
     event_type,
@@ -541,127 +516,64 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto end_time = std::chrono::high_resolution_clock::now();
   double_t decider_processing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
-  /* Combine both trials (for mTMS device) and timed triggers (for other TMS devices). */
-  bool is_decision_positive = trial || timed_trigger;
+  /* Check if the decision is positive. */
+  bool is_decision_positive = (timed_trigger != nullptr);
 
-  /* Create decision info, but only publish in Decider if the pathway doesn't reach the Trigger Timer.
+  /* If the decision is negative, publish the decision info and return. */
+  if (!is_decision_positive) {
+    rclcpp::Time now = this->get_clock()->now();
+    rclcpp::Time sample_time_rcl(request.triggering_sample->metadata.system_time);
+    double_t total_latency = now.seconds() - sample_time_rcl.seconds();
 
-  XXX: The logic related to when to publish the decision info is quite messy. */
-  auto decision_info = pipeline_interfaces::msg::DecisionInfo();
-  decision_info.stimulate = is_decision_positive;
+    auto decision_info = pipeline_interfaces::msg::DecisionInfo();
+    decision_info.stimulate = false;
+    decision_info.feasible = false;
+    decision_info.decision_time = sample_time;
+    decision_info.decider_latency = decider_processing_duration;
+    decision_info.preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
+    decision_info.total_latency = total_latency;
 
-  /* If Decider publishes the decision info, stimulation is typically not feasible; the only exception is when the mTMS device is enabled,
-     handle that case separately. */
-  decision_info.feasible = false;
-
-  decision_info.decision_time = sample_time;
-  decision_info.decider_latency = decider_processing_duration;
-  decision_info.preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
-
-  rclcpp::Time now = this->get_clock()->now();
-  rclcpp::Time sample_time_rcl(request.triggering_sample->metadata.system_time);
-  double_t total_latency = now.seconds() - sample_time_rcl.seconds();
-
-  decision_info.total_latency = total_latency;
-
-  /* Check timing latency threshold.
-
-     XXX: Enabled only when using NeuroSimo without the mTMS device. The reason is that without the mTMS device,
-       latency is periodically and automatically measured by the pipeline (as described in the NeuroSimo article),
-       hence it is feasible to disable stimulation when it exceeds a threshold.
-
-       However, when the mTMS device is enabled, latency is measured only when a pulse is delivered. Even though
-       the latest measured latency is also in that case propagated into this->timing_latency, it won't be updated
-       before a new pulse is delivered, and therefore this check, when failing, prevents all future pulses. */
-  if (this->timing_latency > this->timing_latency_threshold && !this->mtms_device_enabled) {
     this->decision_info_publisher->publish(decision_info);
+    return;
+  }
 
+  /* Check that timing latency is within threshold. */
+  if (this->timing_latency > this->timing_latency_threshold) {
     RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms), ignoring stimulation request.", this->timing_latency * 1000, this->timing_latency_threshold * 1000);
     return;
   }
 
-  /* Check if a trial or timed trigger has already been requested. */
-  bool is_already_stimulating = this->is_performing_trial || this->is_processing_timed_trigger;
+  /* Check that the minimum intertrial interval is respected. */
+  auto time_since_previous_trial = timed_trigger->time - this->previous_stimulation_time;
+  auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                                time_since_previous_trial >= this->minimum_intertrial_interval;
 
-  /* Check that the decider is not already stimulating. */
-  if (is_decision_positive && is_already_stimulating) {
-    this->decision_info_publisher->publish(decision_info);
-
-    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but already performing trial or timed trigger, ignoring request.");
+  if (!has_minimum_intertrial_interval_passed) {
+    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) not respected (time since previous stimulation: %.3f s), ignoring request.",
+                  this->minimum_intertrial_interval,
+                  time_since_previous_trial);
     return;
   }
 
-  /* Check that the minimum pulse interval is respected. */
-  if (is_decision_positive) {
-    double_t actual_stimulation_time = UNSET_PREVIOUS_TIME;
-
-    if (timed_trigger) {
-      actual_stimulation_time = timed_trigger->time;
-    } else if (trial) {
-      /* For trials, we need to get the desired start time from the trial. */
-      actual_stimulation_time = trial->timing.desired_start_time;
-    }
-
-    auto time_since_previous_trial = actual_stimulation_time - this->previous_stimulation_time;
-    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
-
-    if (!has_minimum_intertrial_interval_passed) {
-      this->decision_info_publisher->publish(decision_info);
-
-      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) not respected (time since previous stimulation: %.3f s), ignoring request.",
-                   this->minimum_intertrial_interval,
-                   time_since_previous_trial);
-      return;
-    }
-  }
-
-  /* Only publish the decision info for a decision that passes the above checks here if it is not a timed trigger, that is,
-     the mTMS device is used. In that case, the decision is feasible. (If the decision is a timed trigger, it is published
-     by Trigger Timer and not by Decider.) */
-  if (!timed_trigger) {
-    decision_info.feasible = true;
-    this->decision_info_publisher->publish(decision_info);
-  }
-
-  /* Add trial to the queue if requested. */
-  if (trial) {
-    this->trial_queue.push({*trial, sample_time});
-
-    /* Update the previous stimulation time. */
-    this->previous_stimulation_time = trial->timing.desired_start_time;
-    
-    /* Set the pulse lockout end time. */
-    double lockout_duration = this->decider_wrapper->get_pulse_lockout_duration();
-    if (lockout_duration > 0.0) {
-      this->pulse_lockout_end_time = trial->timing.desired_start_time + lockout_duration;
-    }
-  }
-
   /* Send timed trigger if requested. */
-  if (timed_trigger) {
-    double_t trigger_time = timed_trigger->time;
+  double_t trigger_time = timed_trigger->time;
 
-    auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
-    request_msg->timed_trigger = *timed_trigger;
-    request_msg->decision_time = sample_time;
-    request_msg->system_time_for_sample = request.triggering_sample->metadata.system_time;
-    request_msg->preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
-    request_msg->decider_latency = decider_processing_duration;
+  auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
+  request_msg->timed_trigger = *timed_trigger;
+  request_msg->decision_time = sample_time;
+  request_msg->system_time_for_sample = request.triggering_sample->metadata.system_time;
+  request_msg->preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
+  request_msg->decider_latency = decider_processing_duration;
 
-    this->request_timed_trigger(request_msg);
+  this->request_timed_trigger(request_msg);
 
-    RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", trigger_time);
+  RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", timed_trigger->time);
 
-    /* Update the previous stimulation time. */
-    this->previous_stimulation_time = trigger_time;
-    
-    /* Set the pulse lockout end time. */
-    double lockout_duration = this->decider_wrapper->get_pulse_lockout_duration();
-    if (lockout_duration > 0.0) {
-      this->pulse_lockout_end_time = trigger_time + lockout_duration;
-    }
-  }
+  /* Update the previous stimulation time. */
+  this->previous_stimulation_time = timed_trigger->time;
+  
+  /* Set the pulse lockout end time. */
+  this->pulse_lockout_end_time = timed_trigger->time + this->decider_wrapper->get_pulse_lockout_duration();
 
   /* Publish sensory stimuli if the vector is not empty. */
   if (!this->sensory_stimuli.empty()) {
@@ -674,161 +586,13 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     this->sensory_stimuli.clear();
   }
   
-  /* Send coil target. */
+  /* Publish coil target if it is set. */
   if (!coil_target.empty()) {
     auto coil_target_msg = targeting_msgs::msg::CoilTarget();
     coil_target_msg.target_name = coil_target;
     RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
     this->coil_target_publisher->publish(coil_target_msg);
   }
-}
-
-/* Note: This method is only relevant in the mTMS context. */
-void EegDecider::precompute_trials() {
-  /* XXX: Naming is a bit confusing here. */
-  auto trials = this->decider_wrapper->get_targets();
-  auto num_of_trials = trials.size();
-
-  if (num_of_trials == 0) {
-    RCLCPP_INFO(this->get_logger(), "No trials to pre-compute.");
-    return;
-  }
-
-  RCLCPP_INFO(this->get_logger(), "Pre-computing %s%zu%s trials.", bold_on.c_str(), num_of_trials, bold_off.c_str());
-
-  for (auto targets : trials) {
-    auto trial = mtms_trial_interfaces::msg::Trial();
-
-    trial.targets = targets;
-
-    auto num_of_targets = targets.size();
-    trial.pulse_times_since_trial_start = std::vector<double_t>(num_of_targets, 0.0);
-
-    trial.analyze_mep = false;
-
-    auto timing = mtms_trial_interfaces::msg::TrialTiming();
-
-    timing.desired_start_time = 0.0;
-    timing.allow_late = true;
-
-    auto config = mtms_trial_interfaces::msg::TrialConfig();
-
-    config.voltage_tolerance_proportion_for_precharging = 0.0;
-    config.recharge_after_trial = true;
-    config.use_pulse_width_modulation_approximation = true;
-
-    config.dry_run = true;
-
-    trial.timing = timing;
-    trial.config = config;
-
-    /* Use a dummy decision time for pre-computed trials. */
-    double_t decision_time = 0.0;
-
-    this->trial_queue.push({trial, decision_time});
-  }
-}
-
-/* Helpers */
-
-std::string EegDecider::goal_id_to_string(const rclcpp_action::GoalUUID &uuid) {
-  std::ostringstream oss;
-  for (auto byte : uuid) {
-    oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
-  }
-  return oss.str();
-}
-
-/* Action clients */
-
-/* Note: This method is only called in the mTMS context. */
-void EegDecider::perform_trial(const mtms_trial_interfaces::msg::Trial& trial, double decision_time) {
-  if (!this->mtms_device_enabled) {
-    RCLCPP_ERROR(this->get_logger(), "mTMS device not enabled, cannot perform trial.");
-  }
-  auto goal = mtms_trial_interfaces::action::PerformTrial::Goal();
-  goal.trial = trial;
-
-  auto send_goal_options = rclcpp_action::Client<mtms_trial_interfaces::action::PerformTrial>::SendGoalOptions();
-  send_goal_options.goal_response_callback = [this, trial, decision_time](std::shared_ptr<rclcpp_action::ClientGoalHandle<mtms_trial_interfaces::action::PerformTrial>> goal_handle) {
-    this->goal_response_callback(goal_handle, trial, decision_time);
-  };
-  send_goal_options.result_callback = std::bind(&EegDecider::trial_performed_callback, this, std::placeholders::_1);
-
-  perform_trial_client->async_send_goal(goal, send_goal_options);
-
-  this->is_performing_trial = true;
-}
-
-void EegDecider::goal_response_callback(std::shared_ptr<rclcpp_action::ClientGoalHandle<mtms_trial_interfaces::action::PerformTrial>> goal_handle, const mtms_trial_interfaces::msg::Trial& trial, double decision_time) {
-  if (goal_handle) {
-    GoalMetadata metadata = {trial, decision_time};
-    auto goal_id_str = goal_id_to_string(goal_handle->get_goal_id());
-    this->goal_to_metadata_map[goal_id_str] = metadata;
-  } else {
-    RCLCPP_ERROR(this->get_logger(), "Failed to send goal");
-  }
-}
-
-/* Note: This method is only called in the mTMS context. */
-void EegDecider::trial_performed_callback(const rclcpp_action::ClientGoalHandle<mtms_trial_interfaces::action::PerformTrial>::WrappedResult &result) {
-  this->is_performing_trial = false;
-
-  auto trial_result = result.result->trial_result;
-  auto actual_start_time = trial_result.actual_start_time;
-
-  RCLCPP_INFO(this->get_logger(), "Trial performed at: %.5f (s)", actual_start_time);
-  /* TODO: Send the actual start time to the preprocessor. */
-
-  auto goal_id_str = goal_id_to_string(result.goal_id);
-  auto map_entry = this->goal_to_metadata_map.find(goal_id_str);
-
-  if (map_entry == this->goal_to_metadata_map.end()) {
-    RCLCPP_ERROR(this->get_logger(), "Could not find the corresponding metadata for the goal handle");
-    return;
-  }
-
-  GoalMetadata metadata = map_entry->second;
-  this->goal_to_metadata_map.erase(map_entry);
-
-  bool success = result.code == rclcpp_action::ResultCode::SUCCEEDED && result.result->success;
-
-  RCLCPP_INFO(this->get_logger(), " ");
-  if (!success) {
-    RCLCPP_ERROR(this->get_logger(), "Trial %sfailed%s", bold_on.c_str(), bold_off.c_str());
-    RCLCPP_INFO(this->get_logger(), " ");
-
-    /* If the trial failed, return early without computing the latency. */
-    return;
-  }
-  RCLCPP_INFO(this->get_logger(), "Trial %ssucceeded%s", bold_on.c_str(), bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), " ");
-
-  /* If the trial was a dry run, return early without computing the latency. */
-  auto trial_config = metadata.trial.config;
-  if (trial_config.dry_run) {
-    RCLCPP_INFO(this->get_logger(), " ");
-    return;
-  }
-
-  auto decision_time = metadata.decision_time;
-  auto earliest_start_time = result.result->trial_result.earliest_start_time;
-
-  /* Calculate the time difference between the earliest possible start time for the trial and the time based on which
-     the decision was made. */
-  double_t time_difference = earliest_start_time - decision_time;
-  RCLCPP_INFO(this->get_logger(), "  - End-to-end latency of the trial: %s%.1f%s (ms)", bold_on.c_str(), time_difference * 1000, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), " ");
-
-  /* Publish latency ROS message. */
-  auto msg = pipeline_interfaces::msg::TimingLatency();
-  msg.latency = time_difference;
-
-  this->timing_latency_publisher->publish(msg);
-
-  /* Publish pulse event for experiment coordinator. */
-  auto pulse_event_msg = std_msgs::msg::Empty();
-  this->pulse_event_publisher->publish(pulse_event_msg);
 }
 
 /* Service clients */
@@ -841,8 +605,6 @@ void EegDecider::request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv:
   };
 
   auto future_result = this->timed_trigger_client->async_send_request(request, response_received_callback);
-
-  this->is_processing_timed_trigger = true;
 }
 
 void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future) {
@@ -850,7 +612,6 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
   if (!result->success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to send timed trigger.");
   }
-  this->is_processing_timed_trigger = false;
 }
 
 /* Initialization and reset functions */
@@ -860,11 +621,6 @@ void EegDecider::reset_decider_state() {
   this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
 }
 
-void EegDecider::empty_trial_queue() {
-  while (!this->trial_queue.empty()) {
-    this->trial_queue.pop();
-  }
-}
 
 void EegDecider::handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg::Bool> msg) {
   this->is_preprocessor_enabled = msg->data;
@@ -1295,8 +1051,6 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg
 
     initialize_module();
     reset_decider_state();
-    empty_trial_queue();
-    precompute_trials();
 
     this->reinitialize = false;
   }
@@ -1439,49 +1193,9 @@ void EegDecider::spin() {
 
   while (rclcpp::ok()) {
     rclcpp::spin_some(base_interface);
-
-    if (!this->trial_queue.empty() && !this->is_performing_trial) {
-      auto num_of_remaining_trials = this->trial_queue.size();
-
-      auto [trial, decision_time] = this->trial_queue.front();
-      this->trial_queue.pop();
-
-      this->perform_trial(trial, decision_time);
-      this->log_trial(trial, num_of_remaining_trials);
-    }
   }
 }
 
-void EegDecider::log_trial(const mtms_trial_interfaces::msg::Trial& trial, size_t num_of_remaining_trials) {
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "%s trial (remaining: %zu)", trial.config.dry_run ? "Pre-computing" : "Performing", num_of_remaining_trials);
-  RCLCPP_INFO(this->get_logger(), "  - Targets:");
-
-  auto targets = trial.targets;
-  auto num_of_targets = targets.size();
-
-  if (num_of_targets == 1) {
-    RCLCPP_INFO(this->get_logger(), "      Single pulse: x = %d (mm), y = %d (mm), rotation angle = %d (deg), intensity = %d (V/m)",
-                targets[0].displacement_x, targets[0].displacement_y, targets[0].rotation_angle, targets[0].intensity);
-
-  } else if (num_of_targets == 2) {
-    RCLCPP_INFO(this->get_logger(), "      Paired-pulse:");
-    RCLCPP_INFO(this->get_logger(), "        Pulse #1: x = %d (mm), y = %d (mm), rotation angle = %d (deg), intensity = %d (V/m)",
-                targets[0].displacement_x, targets[0].displacement_y, targets[0].rotation_angle, targets[0].intensity);
-    RCLCPP_INFO(this->get_logger(), "        Pulse #2: x = %d (mm), y = %d (mm), rotation angle = %d (deg), intensity = %d (V/m)",
-                targets[1].displacement_x, targets[1].displacement_y, targets[1].rotation_angle, targets[1].intensity);
-
-  } else {
-    RCLCPP_ERROR(this->get_logger(), "      Invalid number of pulses: %zu", num_of_targets);
-  }
-
-  if (!trial.config.dry_run) {
-    RCLCPP_INFO(this->get_logger(), "  - Pulse times:");
-    for (const auto& pulse_time : trial.pulse_times_since_trial_start) {
-      RCLCPP_INFO(this->get_logger(), "    - %.3f (s)", pulse_time + trial.timing.desired_start_time);
-    }
-  }
-}
 
 int main(int argc, char *argv[]) {
   // Install signal handlers for crash debugging

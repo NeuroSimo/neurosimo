@@ -11,9 +11,6 @@ class Decider:
         self.num_of_emg_channels = num_of_emg_channels
         self.sampling_frequency = sampling_frequency
         
-        # Leave empty when mTMS device is not used
-        self.targets = []
-        
         # Initialize multiprocessing pool for background computations
         self.pool = multiprocessing.Pool(processes=1)
 

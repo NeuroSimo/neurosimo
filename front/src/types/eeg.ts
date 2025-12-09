@@ -44,15 +44,3 @@ export interface EegTriggerMessage extends ROSLIB.Message {
   index: number
   time: number
 }
-
-export interface MTMSEvent {
-  whenToExecute: number
-  processingStartTime: number
-  eventType: number
-}
-
-export interface MTMSEventMessage extends ROSLIB.Message {
-  when_to_execute: number
-  processing_start_time: number
-  event_type: number
-}

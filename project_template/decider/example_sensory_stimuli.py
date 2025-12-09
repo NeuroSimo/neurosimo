@@ -7,9 +7,6 @@ class Decider:
         self.num_of_eeg_channels = num_of_eeg_channels
         self.num_of_emg_channels = num_of_emg_channels
         self.sampling_frequency = sampling_frequency
-        
-        # Leave empty when mTMS device is not used
-        self.targets = []
 
         # Number of warm-up rounds to prevent first-call delays (see README.md for details)
         self.warm_up_rounds = 2

@@ -9,8 +9,6 @@ Includes ROS 2 packages shared across NeuroSimo projects.
     - `eeg_msgs`: Messages for the EEG data, such as raw sample data and information about the EEG stream.
     - `mep_interfaces`: Messages, services, and actions for analyzing MEP based on the EEG data.
     - `system_interfaces`: Session and healthcheck messages and services (e.g., start and stop session).
-    - `targeting_msgs`: Messages for electric targeting, including ElectricTarget, which defines x- and y-coordinates of the
-      target, rotation angle, intensity, and targeting algorithm.
 
 - `realtime_utils`: Real-time utilities for ROS 2, including methods for setting the priority and optimizing memory allocation
     for real-time tasks.

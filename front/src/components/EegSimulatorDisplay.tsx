@@ -16,7 +16,7 @@ import {
 } from 'styles/General'
 
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
-import { setDatasetRos, setPlaybackRos, setLoopRos, setStartTimeRos, setRecordDataRos } from 'ros/eeg_simulator'
+import { setDatasetRos, setPlaybackRos, setStartTimeRos, setRecordDataRos } from 'ros/eeg_simulator'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
@@ -46,7 +46,7 @@ const CompactRow = styled(ConfigRow)`
 
 export const EegSimulatorDisplay: React.FC = () => {
   const { eegSimulatorHealthcheck } = useContext(HealthcheckContext)
-  const { datasetList, dataset, playback, loop, recordData, startTime } = useContext(EegSimulatorContext)
+  const { datasetList, dataset, playback, recordData, startTime } = useContext(EegSimulatorContext)
 
   const eegSimulatorHealthcheckOk = eegSimulatorHealthcheck?.status.value === HealthcheckStatus.READY
 
@@ -61,12 +61,6 @@ export const EegSimulatorDisplay: React.FC = () => {
   const setPlayback = (playback: boolean) => {
     setPlaybackRos(playback, () => {
       console.log('Playback set to ' + playback)
-    })
-  }
-
-  const setLoop = (loop: boolean) => {
-    setLoopRos(loop, () => {
-      console.log('Loop set to ' + loop)
     })
   }
 
@@ -129,12 +123,6 @@ export const EegSimulatorDisplay: React.FC = () => {
         </SwitchWrapper>
       </CompactRow>
       <GrayedOutPanel isGrayedOut={!playback}>
-        <CompactRow style={{ justifyContent: 'space-between' }}>
-          <ConfigLabel style={{ paddingLeft: 10 }}>Loop</ConfigLabel>
-          <SwitchWrapper>
-            <ToggleSwitch type='flat' checked={loop} onChange={setLoop} disabled={!playback} />
-          </SwitchWrapper>
-        </CompactRow>
         <CompactRow style={{ justifyContent: 'space-between' }}>
           <ConfigLabel style={{ paddingLeft: 10 }}>Record</ConfigLabel>
           <SwitchWrapper>

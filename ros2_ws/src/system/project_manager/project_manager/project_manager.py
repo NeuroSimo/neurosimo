@@ -53,7 +53,6 @@ class ProjectManagerNode(Node):
 
         self.set_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
         self.set_playback_service = self.create_client(SetBool, "/eeg_simulator/playback/set", callback_group=self.callback_group)
-        self.set_loop_service = self.create_client(SetBool, "/eeg_simulator/loop/set", callback_group=self.callback_group)
         self.set_start_time_service = self.create_client(SetStartTime, "/eeg_simulator/start_time/set", callback_group=self.callback_group)
         self.record_data_service = self.create_client(SetBool, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
 
@@ -84,9 +83,6 @@ class ProjectManagerNode(Node):
 
         while not self.set_playback_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set playback service not available, waiting...")
-        
-        while not self.set_loop_service.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Set loop service not available, waiting...")
 
         while not self.set_start_time_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set start time service not available, waiting...")
@@ -111,7 +107,6 @@ class ProjectManagerNode(Node):
 
         self.create_subscription(String, "/eeg_simulator/dataset", self.dataset_callback, 10)
         self.create_subscription(Bool, "/eeg_simulator/playback", self.playback_callback, 10)
-        self.create_subscription(Bool, "/eeg_simulator/loop", self.loop_callback, 10)
         self.create_subscription(Float64, "/eeg_simulator/start_time", self.start_time_callback, 10)
         self.create_subscription(Bool, "/eeg_recorder/record_data", self.record_data_callback, 10)
 
@@ -186,7 +181,6 @@ class ProjectManagerNode(Node):
             "simulator": {
                 "dataset_filename": 'random_data_1_khz.json',
                 "playback": False,
-                "loop": False,
                 "start_time": 0.0
             },
             "experiment": {
@@ -224,7 +218,7 @@ class ProjectManagerNode(Node):
             self.logger.error("State file is missing required keys in presenter.")
             return False
     
-        if not all(key in state["simulator"] for key in ["dataset_filename", "playback", "loop", "start_time"]):
+        if not all(key in state["simulator"] for key in ["dataset_filename", "playback", "start_time"]):
             self.logger.error("State file is missing required keys in simulator.")
             return False
     
@@ -302,13 +296,11 @@ class ProjectManagerNode(Node):
         # Set the state for the simulator
         dataset_filename = self.project_state["simulator"]["dataset_filename"]
         playback = self.project_state["simulator"]["playback"]
-        loop = self.project_state["simulator"]["loop"]
         start_time = self.project_state["simulator"]["start_time"]
         record_data = self.project_state["recorder"]["record_data"]
 
         self.set_dataset(dataset_filename)
         self.set_playback(playback)
-        self.set_loop(loop)
         self.set_start_time(start_time)
         self.set_record_data(record_data)
 
@@ -469,20 +461,7 @@ class ProjectManagerNode(Node):
             result = future.result()
             if result is None or not result.success:
                 self.logger.error(f"Failed to set playback to {playback}.")
-        
-        future.add_done_callback(callback)
-    
-    def set_loop(self, loop):
-        request = SetBool.Request()
-        request.data = loop
 
-        future = self.set_loop_service.call_async(request)
-
-        def callback(future):
-            result = future.result()
-            if result is None or not result.success:
-                self.logger.error(f"Failed to set loop to {loop}.")
-        
         future.add_done_callback(callback)
 
     def set_start_time(self, start_time):
@@ -578,14 +557,6 @@ class ProjectManagerNode(Node):
         flag = msg.data
         with self.project_state_lock:
             self.project_state["simulator"]["playback"] = flag
-            self.save_project_state(self.project_state)
-
-    def loop_callback(self, msg: Bool):
-        if self.project_state is None:
-            return
-        flag = msg.data
-        with self.project_state_lock:
-            self.project_state["simulator"]["loop"] = flag
             self.save_project_state(self.project_state)
 
     def start_time_callback(self, msg: Float64):

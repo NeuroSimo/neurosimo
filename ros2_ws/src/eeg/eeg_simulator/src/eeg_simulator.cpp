@@ -87,13 +87,6 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     rmw_qos_profile_services_default,
     callback_group);
 
-  /* Service for changing loop. */
-  this->set_loop_service = this->create_service<std_srvs::srv::SetBool>(
-    "/eeg_simulator/loop/set",
-    std::bind(&EegSimulator::handle_set_loop, this, std::placeholders::_1, std::placeholders::_2),
-    rmw_qos_profile_services_default,
-    callback_group);
-
   /* Service for start time. */
   this->start_time_service = this->create_service<project_interfaces::srv::SetStartTime>(
     "/eeg_simulator/start_time/set",
@@ -109,11 +102,6 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   /* Publisher for playback. */
   this->playback_publisher = this->create_publisher<std_msgs::msg::Bool>(
     "/eeg_simulator/playback",
-    qos_persist_latest);
-
-  /* Publisher for loop. */
-  this->loop_publisher = this->create_publisher<std_msgs::msg::Bool>(
-    "/eeg_simulator/loop",
     qos_persist_latest);
 
   /* Publisher for start time. */
@@ -487,24 +475,6 @@ void EegSimulator::handle_set_playback(
   response->message = "";
 }
 
-void EegSimulator::handle_set_loop(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
-
-  this->loop = request->data;
-
-  RCLCPP_INFO(this->get_logger(), "Loop %s.", this->loop ? "enabled" : "disabled");
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::Bool();
-  msg.data = this->loop;
-
-  this->loop_publisher->publish(msg);
-
-  response->success = true;
-  response->message = "";
-}
-
 void EegSimulator::handle_set_start_time(
       const std::shared_ptr<project_interfaces::srv::SetStartTime::Request> request,
       std::shared_ptr<project_interfaces::srv::SetStartTime::Response> response) {
@@ -708,27 +678,27 @@ bool EegSimulator::publish_until(double_t until_time) {
     }
 
     samples_published++;
-    
+
     // Move to next sample
     this->current_index = (this->current_index + 1) % dataset_buffer.size();
-    
-    // If we've wrapped around and are using loop mode, update time offset
-    if (loop && this->current_index == 0) {
+
+    // If we've wrapped around and LOOP is enabled, update time offset
+    if (LOOP && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset, looping back to beginning.");
       this->time_offset = this->time_offset + dataset_buffer.back().front() + sampling_period;
     }
-    
+
     // Safety check: prevent infinite loops if not in loop mode
-    if (!loop && this->current_index == 0) {
+    if (!LOOP && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset without loop mode. Stopping session.");
-      
+
       // Call the stop session service
       auto request = std::make_shared<system_interfaces::srv::StopSession::Request>();
       auto result = stop_session_client->async_send_request(request);
-      
+
       break;
     }
-    
+
     // Prevent infinite loops in case of edge cases
     if (samples_published > dataset_buffer.size() * 2) {
       RCLCPP_WARN(this->get_logger(), "Published too many samples, breaking to prevent infinite loop.");

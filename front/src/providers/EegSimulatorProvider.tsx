@@ -33,7 +33,6 @@ interface EegSimulatorContextType {
   datasetList: Dataset[]
   dataset: string
   playback: boolean
-  loop: boolean
   recordData: boolean
   startTime: number
 }
@@ -42,7 +41,6 @@ const defaultDatasetState: EegSimulatorContextType = {
   datasetList: [],
   dataset: '',
   playback: false,
-  loop: false,
   recordData: false,
   startTime: 0,
 }
@@ -58,7 +56,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const [dataset, setDataset] = useState<string>('')
 
   const [playback, setPlayback] = useState<boolean>(false)
-  const [loop, setLoop] = useState<boolean>(false)
   const [startTime, setStartTime] = useState<number>(0)
   const [recordData, setRecordData] = useState<boolean>(false)
 
@@ -96,17 +93,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       setPlayback(message.data)
     })
 
-    /* Subscriber for loop. */
-    const loopSubscriber = new Topic<RosBoolean>({
-      ros: ros,
-      name: '/eeg_simulator/loop',
-      messageType: 'std_msgs/Bool',
-    })
-
-    loopSubscriber.subscribe((message) => {
-      setLoop(message.data)
-    })
-
     /* Subscriber for start time. */
     const startTimeSubscriber = new Topic<RosFloat64>({
       ros: ros,
@@ -135,7 +121,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       datasetSubscriber.unsubscribe()
 
       playbackSubscriber.unsubscribe()
-      loopSubscriber.unsubscribe()
       startTimeSubscriber.unsubscribe()
       recordDataSubscriber.unsubscribe()
     }
@@ -147,7 +132,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
         datasetList,
         dataset,
         playback,
-        loop,
         startTime,
         recordData,
       }}

@@ -16,7 +16,4 @@ bool valid
 #   mTMS device.
 bool pulse_delivered
 
-bool is_event
-string event_type
-
 PreprocessedSampleMetadata metadata

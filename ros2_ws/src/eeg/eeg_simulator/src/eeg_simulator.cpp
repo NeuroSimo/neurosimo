@@ -342,14 +342,6 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
         }
 
 
-        /* Parse "event_file" field if it exists */
-        if (json_data.contains("event_file") && json_data["event_file"].is_string()) {
-          dataset_msg.event_filename = json_data["event_file"];
-          RCLCPP_INFO(this->get_logger(), "  • Event file: %s", dataset_msg.event_filename.c_str());
-        } else {
-          dataset_msg.event_filename = ""; // Set to empty string if not present
-          RCLCPP_WARN(this->get_logger(), "  • No events");
-        }
 
         /* Calculate the sampling frequency and duration from the data file. */
         std::string data_file_path = entry.path().parent_path().string() + "/" + dataset_msg.data_filename;
@@ -593,58 +585,6 @@ void EegSimulator::initialize_streaming() {
 
   data_file.close();
 
-  /* Open and read event file. */
-  std::string event_filename = this->dataset.event_filename;
-  std::string event_file_path = data_directory + event_filename;
-
-  this->events.clear();
-  this->current_event_index = 0;
-
-  if (!event_filename.empty()) {
-    std::ifstream event_file(event_file_path, std::ios::in);
-
-    if (!event_file.is_open()) {
-      RCLCPP_ERROR(this->get_logger(), "Error opening event file: %s", event_file_path.c_str());
-    } else {
-      RCLCPP_INFO(this->get_logger(), "Reading events from file: %s", event_file_path.c_str());
-
-      std::string line;
-      while (std::getline(event_file, line)) {
-        try {
-          /* Split the line at the comma. */
-          size_t comma_pos = line.find(',');
-          if (comma_pos == std::string::npos) {
-            throw std::invalid_argument("Missing comma in event file.");
-          }
-
-          /* Extract and convert the first and second columns. */
-          double_t event_time = std::stod(line.substr(0, comma_pos));
-          std::string event_type = line.substr(comma_pos + 1);
-          
-          /* Trim whitespace from event_type */
-          event_type.erase(event_type.find_last_not_of(" \t\r\n") + 1);
-          event_type.erase(0, event_type.find_first_not_of(" \t\r\n"));
-
-          events.push_back({event_time, event_type});
-
-        } catch (const std::invalid_argument& e) {
-          RCLCPP_ERROR(this->get_logger(), "Invalid data in event file: %s", e.what());
-        } catch (const std::out_of_range& e) {
-          RCLCPP_ERROR(this->get_logger(), "Number out of range in event file: %s", e.what());
-        }
-      }
-
-      event_file.close();
-
-      if (!events.empty()) {
-        RCLCPP_INFO(this->get_logger(), "Read %zu events from file.", events.size());
-        const Event& first_event = events[0];
-        RCLCPP_INFO(this->get_logger(), "First event (type '%s') due at %.4f s.", first_event.type.c_str(), first_event.time);
-      } else {
-        RCLCPP_WARN(this->get_logger(), "No valid events found in file.");
-      }
-    }
-  }
   this->eeg_simulator_state = EegSimulatorState::READY;
 }
 
@@ -729,25 +669,6 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   msg.valid = true;
 
-  if (!events.empty() && current_event_index < events.size()) {
-    const Event& next_event = events[current_event_index];
-    msg.is_event = next_event.time <= sample_time;
-    if (msg.is_event) {
-      msg.event_type = next_event.type;
-      current_event_index++;
-
-      RCLCPP_INFO(this->get_logger(), "Published event of type %s with timestamp %.4f s.", msg.event_type.c_str(), time);
-
-      /* Print information about the next event if there is one */
-      if (current_event_index < events.size()) {
-        const Event& next = events[current_event_index];
-        RCLCPP_INFO(this->get_logger(), "Next event (type '%s') due at %.4f s.", next.type.c_str(), next.time);
-      } else {
-        RCLCPP_INFO(this->get_logger(), "No more events in this dataset.");
-      }
-    }
-  }
-
   eeg_publisher->publish(msg);
 
   RCLCPP_INFO_THROTTLE(this->get_logger(),
@@ -795,11 +716,6 @@ bool EegSimulator::publish_until(double_t until_time) {
     if (loop && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset, looping back to beginning.");
       this->time_offset = this->time_offset + dataset_buffer.back().front() + sampling_period;
-      
-      // Reset event index when looping
-      if (!events.empty()) {
-        this->current_event_index = 0;
-      }
     }
     
     // Safety check: prevent infinite loops if not in loop mode

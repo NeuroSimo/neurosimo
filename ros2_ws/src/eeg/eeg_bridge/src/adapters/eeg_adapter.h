@@ -28,10 +28,10 @@ enum AdapterPacketResult {
     The distinction between trigger_a (latency measurement) and trigger_b
     (pulse trigger) is explicit in field names. */
 struct AdapterSample {
-  std::vector<double> eeg;  // EEG channels in μV
-  std::vector<double> emg;  // EMG channels in μV
+  std::vector<double> eeg;       // EEG channels in μV
+  std::vector<double> emg;       // EMG channels in μV
   double time;                   // Sample timestamp in seconds
-  uint64_t index;                // Sample index
+  uint64_t sample_index;         // Sample index
   bool trigger_a;                // Latency measurement trigger (Port A)
   bool trigger_b;                // Pulse trigger (Port B)
 };

@@ -1,8 +1,8 @@
 # Used in the real-time pipeline for timed trigger using LabJack.
 TimedTrigger timed_trigger
 
-# System time when the sample was taken.
-builtin_interfaces/Time system_time_for_sample
+# Unix timestamp (seconds since epoch) when the sample was taken.
+float64 system_time_for_sample
 
 float64 preprocessor_latency
 float64 decider_latency

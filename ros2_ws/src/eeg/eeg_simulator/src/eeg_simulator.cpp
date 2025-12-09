@@ -571,6 +571,7 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
 
     this->session_started = false;
     this->is_streaming = false;
+    this->session_start_time = UNSET_TIME;
     return;
   }
 
@@ -578,6 +579,7 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
   if (!this->session_started) {
     RCLCPP_INFO(this->get_logger(), "Session started, starting streaming.");
     this->session_started = true;
+    this->session_start_time = this->get_clock()->now().seconds();
   }
 
   /* Return if the simulator is not set to playback dataset. */
@@ -632,7 +634,7 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   msg.metadata.num_eeg_channels = this->num_eeg_channels;
   msg.metadata.num_emg_channels = this->num_emg_channels;
   msg.metadata.is_simulation = true;
-  msg.metadata.system_time = this->get_clock()->now();
+  msg.metadata.start_time = this->session_start_time;
 
   msg.time = time;
 

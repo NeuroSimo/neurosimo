@@ -18,6 +18,7 @@ export interface SampleMetadata extends ROSLIB.Message {
   sampling_frequency: number
   num_eeg_channels: number
   num_emg_channels: number
+  start_time: number
 }
 
 export interface SampleMessage extends ROSLIB.Message {

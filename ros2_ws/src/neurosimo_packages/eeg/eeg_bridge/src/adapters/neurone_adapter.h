@@ -102,14 +102,14 @@ public:
 
   ~NeurOneAdapter() noexcept override { close(socket_); }
 
-  std::tuple<PacketResult, eeg_msgs::msg::Sample, double> read_eeg_data_packet() override;
+  AdapterPacket read_eeg_data_packet() override;
 
 private:
   bool init_socket();
   bool request_measurement_start_packet() const;
   void handle_measurement_start_packet();
 
-  std::tuple<eeg_msgs::msg::Sample, bool> handle_sample_packet();
+  std::tuple<AdapterSample, bool> handle_sample_packet();
 
   /** Parse and process the trigger packet.
 
@@ -118,8 +118,8 @@ private:
       will be set to true. Trigger in isolated trigger port A are used for
       synchronisation. Other triggers are ignored.
 
-      @return tuple of sync_trigger and sync_trigger_time, where sync_trigger is true if
-      sync trigger is present and false otherwise. sync_trigger_time is the time of the
+      @return tuple of trigger and trigger_time, where trigger is true if
+      trigger is present and false otherwise. trigger_time is the time of the
       trigger given in the packet in seconds since session start.
    */
   std::tuple<bool, double> handle_trigger_packet();

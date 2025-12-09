@@ -30,7 +30,6 @@ enum EegDeviceState {
 
 enum ErrorState {
   NO_ERROR,
-  ERROR_OUT_OF_SYNC,
   ERROR_SAMPLES_DROPPED
 };
 
@@ -70,7 +69,9 @@ private:
   void update_healthcheck(uint8_t status, std::string status_message,
                           std::string actionable_message);
 
-  void handle_sync_trigger(double_t sync_time);
+  eeg_msgs::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
+                                          const eeg_msgs::msg::EegInfo& eeg_info);
+
   void handle_sample(eeg_msgs::msg::Sample sample);
 
   void create_publishers();
@@ -110,24 +111,16 @@ private:
   bool first_sample_of_session = true;
   uint64_t previous_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
 
-  double_t time_correction = UNSET_TIME; // in seconds
   double_t time_offset = UNSET_TIME;     // in seconds
 
   bool session_been_stopped = true;
   bool session_received = false;
   system_interfaces::msg::SessionState session_state;
 
-  /* Time synchronisation */
-  uint16_t num_of_sync_triggers_received;
-  double_t first_sync_trigger_timestamp = UNSET_TIME;
-
-  uint32_t sample_packets_received_since_last_sync = 0;
-
   /* Session management */
 
   /* Initialize 'wait_for_session_to_stop' to true to avoid starting streaming when EEG bridge is restarted in the middle
-     of a session, while EEG device is already streaming (in which case we should wait for the session to stop before
-     starting to stream because there is no way the session and the EEG device can be in sync). */
+     of a session, while EEG device is already streaming. TODO: Is this required now that mTMS device is not supported? */
   bool wait_for_session_to_stop = true;
 
   /* Healthcheck */

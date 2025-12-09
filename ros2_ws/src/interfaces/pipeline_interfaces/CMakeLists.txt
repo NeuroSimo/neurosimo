@@ -23,6 +23,7 @@ endif()
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/CoilTarget.msg"
   "msg/TimedTrigger.msg"
   "msg/LatencyMeasurementTrigger.msg"
   "msg/TimingError.msg"

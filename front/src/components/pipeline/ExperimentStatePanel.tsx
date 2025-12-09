@@ -50,15 +50,15 @@ export const ExperimentStatePanel: React.FC = () => {
         <ConfigRow>
           <ConfigLabel>Stage:</ConfigLabel>
           <ConfigLabel>
-            {experimentState?.current_stage_name
-              ? `${experimentState.current_stage_name} (${(experimentState.current_stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
+            {experimentState?.stage_name
+              ? `${experimentState.stage_name} (${(experimentState.current_stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
               : '—'}
           </ConfigLabel>
         </ConfigRow>
         <ConfigRow>
           <ConfigLabel>Trial:</ConfigLabel>
           <ConfigLabel>
-            {experimentState ? `${experimentState.current_trial}/${experimentState.total_trials_in_stage || 0}` : '—'}
+            {experimentState ? `${experimentState.trial}/${experimentState.total_trials_in_stage || 0}` : '—'}
           </ConfigLabel>
         </ConfigRow>
         <ConfigRow>

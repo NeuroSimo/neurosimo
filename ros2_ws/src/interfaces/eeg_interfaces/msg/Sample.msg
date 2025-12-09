@@ -17,9 +17,10 @@ bool pulse_delivered
 bool in_rest                    # Protocol-defined rest period
 bool paused                     # User-initiated pause
 float64 experiment_time         # Pause-adjusted experiment time (seconds)
-string current_stage_name       # Current stage name from protocol
-uint32 current_trial            # Current trial number within stage (0-based)
-uint32 pulse_count              # Total number of pulses given
+string stage_name               # Current stage name from protocol
+uint32 stage_index              # Current stage index (0-based)
+uint32 trial                    # Current trial within stage (0-based)
+uint64 pulse_count              # Total pulses delivered
 
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)

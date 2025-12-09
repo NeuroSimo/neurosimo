@@ -205,14 +205,14 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
   enriched.in_rest = state.in_rest;
   enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
-  enriched.current_trial = state.current_trial;
+  enriched.trial = state.trial;
   enriched.pulse_count = state.total_pulses;
   
   /* Add stage information. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
     const auto& element = protocol->elements[state.current_element_index];
     if (element.type == ProtocolElement::Type::STAGE) {
-      enriched.current_stage_name = element.stage->name;
+      enriched.stage_name = element.stage->name;
     }
   }
   
@@ -258,13 +258,13 @@ void ExperimentCoordinator::handle_pulse_event(const std::shared_ptr<std_msgs::m
   }
   
   const auto& stage = element.stage.value();
-  state.current_trial++;
+  state.trial++;
   
   RCLCPP_INFO(this->get_logger(), "Pulse %u: Stage '%s' trial %u/%u",
-    state.total_pulses, stage.name.c_str(), state.current_trial, stage.trials);
+    state.total_pulses, stage.name.c_str(), state.trial, stage.trials);
   
   /* Check if stage is complete. */
-  if (state.current_trial >= stage.trials) {
+  if (state.trial >= stage.trials) {
     RCLCPP_INFO(this->get_logger(), "Stage '%s' complete (%u trials)",
       stage.name.c_str(), stage.trials);
     
@@ -417,8 +417,8 @@ void ExperimentCoordinator::end_rest() {
 }
 
 void ExperimentCoordinator::start_stage(const Stage& stage, double current_time) {
-  state.current_stage_name = stage.name;
-  state.current_trial = 0;
+  state.stage_name = stage.name;
+  state.trial = 0;
   state.stage_start_times[stage.name] = current_time;
   
   RCLCPP_INFO(this->get_logger(), "Stage '%s' started (%u trials)", 
@@ -716,10 +716,10 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
     msg.in_rest = false;
     msg.paused = false;
     msg.experiment_time = 0.0;
-    msg.current_stage_name = "";
+    msg.stage_name = "";
     msg.current_stage_index = 0;
     msg.total_stages = 0;
-    msg.current_trial = 0;
+    msg.trial = 0;
     msg.total_trials_in_stage = 0;
     msg.stage_start_time = 0.0;
     msg.stage_elapsed_time = 0.0;
@@ -754,7 +754,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
     if (state.current_element_index < protocol->elements.size()) {
       const auto& element = protocol->elements[state.current_element_index];
       if (element.type == ProtocolElement::Type::STAGE && element.stage.has_value()) {
-        msg.current_stage_name = element.stage->name;
+        msg.stage_name = element.stage->name;
         total_trials_in_stage = element.stage->trials;
       }
     }
@@ -762,13 +762,13 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   
   msg.current_stage_index = static_cast<uint32_t>(current_stage_index);
   msg.total_stages = static_cast<uint32_t>(total_stages);
-  msg.current_trial = state.current_trial;
+  msg.trial = state.trial;
   msg.total_trials_in_stage = total_trials_in_stage;
   
   /* Stage timing */
   double stage_start_experiment_time = 0.0;
-  if (!msg.current_stage_name.empty() && state.stage_start_times.count(msg.current_stage_name)) {
-    double stage_start_sample_time = state.stage_start_times[msg.current_stage_name];
+  if (!msg.stage_name.empty() && state.stage_start_times.count(msg.stage_name)) {
+    double stage_start_sample_time = state.stage_start_times[msg.stage_name];
     stage_start_experiment_time = get_experiment_time(stage_start_sample_time);
   }
   msg.stage_start_time = stage_start_experiment_time;

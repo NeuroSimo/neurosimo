@@ -4,8 +4,8 @@ import { ros } from 'ros/ros'
 
 interface EegInfo extends Message {
   sampling_frequency: number
-  num_of_eeg_channels: number
-  num_of_emg_channels: number
+  num_eeg_channels: number
+  num_emg_channels: number
 }
 
 interface EegStreamContextType {

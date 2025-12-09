@@ -217,8 +217,8 @@ private:
 
   /* Information about the EEG device configuration. */
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
-  uint8_t num_of_eeg_channels = UNSET_NUM_OF_CHANNELS;
-  uint8_t num_of_emg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
   double_t sampling_period;
 
   /* For checking if samples have been dropped, store the time of the previous sample received. */

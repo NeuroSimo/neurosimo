@@ -190,8 +190,8 @@ void EegRecorder::write_buffers() {
 
 void EegRecorder::update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
-  this->num_of_eeg_channels = msg.num_of_eeg_channels;
-  this->num_of_emg_channels = msg.num_of_emg_channels;
+  this->num_eeg_channels = msg.num_eeg_channels;
+  this->num_emg_channels = msg.num_emg_channels;
   this->is_simulation = msg.is_simulation;
 
   this->sampling_period = 1.0 / this->sampling_frequency;

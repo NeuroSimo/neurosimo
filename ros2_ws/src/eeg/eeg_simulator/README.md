@@ -13,14 +13,14 @@ import numpy as np
 
 sampling_frequency = 5000
 duration = 10
-num_of_eeg_channels = 63
-num_of_emg_channels = 10
+num_eeg_channels = 63
+num_emg_channels = 10
 
 num_of_samples = int(duration * sampling_frequency)
 
 timestamps = np.linspace(0, duration, num_of_samples, endpoint=False)
 
-data = 2 * np.random.rand(num_of_samples, num_of_eeg_channels + num_of_emg_channels) - 1
+data = 2 * np.random.rand(num_of_samples, num_eeg_channels + num_emg_channels) - 1
 data_with_timestamps = np.column_stack((timestamps, data))
 
 np.savetxt("random_data.csv", data_with_timestamps, delimiter=",", fmt='%.4f')

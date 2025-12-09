@@ -8,8 +8,8 @@ interface Dataset extends ROSLIB.Message {
   json_filename: string
   data_filename: string
   sampling_frequency: number
-  num_of_eeg_channels: number
-  num_of_emg_channels: number
+  num_eeg_channels: number
+  num_emg_channels: number
   duration: number
 }
 

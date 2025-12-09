@@ -320,8 +320,8 @@ void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces
 
 void EegDecider::update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
-  this->num_of_eeg_channels = msg.num_of_eeg_channels;
-  this->num_of_emg_channels = msg.num_of_emg_channels;
+  this->num_eeg_channels = msg.num_eeg_channels;
+  this->num_emg_channels = msg.num_emg_channels;
 
   this->sampling_period = 1.0 / this->sampling_frequency;
 }
@@ -386,8 +386,8 @@ void EegDecider::initialize_module() {
     PROJECTS_DIRECTORY,
     this->working_directory,
     this->module_name,
-    this->num_of_eeg_channels,
-    this->num_of_emg_channels,
+    this->num_eeg_channels,
+    this->num_emg_channels,
     this->sampling_frequency,
     this->sensory_stimuli,
     this->event_queue,
@@ -407,8 +407,8 @@ void EegDecider::initialize_module() {
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->sampling_frequency, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->num_of_eeg_channels, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->num_of_emg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->num_eeg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->num_emg_channels, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Perform warm-up if requested by the Python module */

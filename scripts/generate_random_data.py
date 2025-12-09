@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("--eeg_channels", type=int, default=63, help="Number of EEG channels")
     parser.add_argument("--emg_channels", type=int, default=10, help="Number of EMG channels")
     parser.add_argument("--sampling_frequency", type=int, default=5000, help="Sampling frequency in Hz")
-    parser.add_argument("--duration", type=int, default=1, help="Duration in seconds")
+    parser.add_argument("--duration", type=int, default=10, help="Duration in seconds")
     parser.add_argument("--output_directory", type=str, default=".", help="Output directory for files")
     parser.add_argument("--output_filename", type=str, default="random_data", help="Output base filename without extension")
     parser.add_argument("--dataset_name", type=str, default="Random data", help="Name of the dataset")

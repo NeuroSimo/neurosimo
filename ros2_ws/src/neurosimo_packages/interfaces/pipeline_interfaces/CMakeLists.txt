@@ -24,6 +24,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TimedTrigger.msg"
+  "msg/LatencyMeasurementTrigger.msg"
   "msg/TimingError.msg"
   "msg/TimingLatency.msg"
   "msg/TriggerInfo.msg"

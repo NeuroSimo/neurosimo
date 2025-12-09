@@ -24,6 +24,7 @@
 #include "system_interfaces/msg/session.hpp"
 
 #include "pipeline_interfaces/msg/timed_trigger.hpp"
+#include "pipeline_interfaces/msg/latency_measurement_trigger.hpp"
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
 
@@ -41,7 +42,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
   rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
-  rclcpp::Subscription<pipeline_interfaces::msg::TimedTrigger>::SharedPtr latency_measurement_trigger_subscriber;
+  rclcpp::Subscription<pipeline_interfaces::msg::LatencyMeasurementTrigger>::SharedPtr latency_measurement_trigger_subscriber;
   rclcpp::Subscription<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
 
@@ -65,7 +66,7 @@ private:
   void handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
-  void handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> msg);
+  void handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::LatencyMeasurementTrigger> msg);
   void handle_timing_error(const std::shared_ptr<pipeline_interfaces::msg::TimingError> msg);
 
   /* Session management */

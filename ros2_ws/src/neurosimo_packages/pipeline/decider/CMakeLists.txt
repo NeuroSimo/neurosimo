@@ -19,7 +19,6 @@ find_package(eeg_msgs REQUIRED)
 find_package(pipeline_interfaces REQUIRED)
 find_package(project_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
-find_package(targeting_msgs REQUIRED)
 find_package(realtime_utils REQUIRED)
 
 add_executable(
@@ -49,7 +48,6 @@ ament_target_dependencies(
   pipeline_interfaces
   project_interfaces
   system_interfaces
-  targeting_msgs
   realtime_utils
 )
 
@@ -91,7 +89,6 @@ ament_target_dependencies(
   pipeline_interfaces
   project_interfaces
   system_interfaces
-  targeting_msgs
 )
 
 # Find the user's local site-packages directory

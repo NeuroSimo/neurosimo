@@ -692,57 +692,6 @@ std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
   return logs;
 }
 
-std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> DeciderWrapper::get_targets() {
-  std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> targets;
-
-  if (state != WrapperState::READY) {
-    return targets;
-  }
-
-  try {
-    py::list py_targets = decider_instance->attr("targets").cast<py::list>();
-
-    for (const auto& py_target : py_targets) {
-      std::vector<targeting_msgs::msg::ElectricTarget> target;
-      py::list py_target_list = py_target.cast<py::list>();
-
-      for (const auto& py_target_item : py_target_list) {
-        py::dict py_target_dict = py_target_item.cast<py::dict>();
-
-        targeting_msgs::msg::ElectricTarget electric_target;
-        electric_target.displacement_x = py_target_dict["displacement_x"].cast<uint8_t>();
-        electric_target.displacement_y = py_target_dict["displacement_y"].cast<uint8_t>();
-        electric_target.rotation_angle = py_target_dict["rotation_angle"].cast<uint16_t>();
-        electric_target.intensity = py_target_dict["intensity"].cast<uint8_t>();
-
-        std::string algorithm = py_target_dict["algorithm"].cast<std::string>();
-        if (algorithm == "least_squares") {
-          electric_target.algorithm.value = targeting_msgs::msg::TargetingAlgorithm::LEAST_SQUARES;
-        } else if (algorithm == "genetic") {
-          electric_target.algorithm.value = targeting_msgs::msg::TargetingAlgorithm::GENETIC;
-        } else {
-          RCLCPP_WARN(*logger_ptr, "Unknown targeting algorithm: %s, defaulting to 'least squares'.", algorithm.c_str());
-          electric_target.algorithm.value = targeting_msgs::msg::TargetingAlgorithm::LEAST_SQUARES;
-        }
-
-        target.push_back(electric_target);
-      }
-      targets.push_back(target);
-    }
-
-  } catch(const py::error_already_set& e) {
-    RCLCPP_ERROR(*logger_ptr, "Python error: %s", e.what());
-    state = WrapperState::ERROR;
-    return targets;
-
-  } catch(const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "C++ error: %s", e.what());
-    state = WrapperState::ERROR;
-    return targets;
-  }
-  return targets;
-}
-
 std::vector<std::string> DeciderWrapper::get_internal_imports() const {
   return this->internal_imports;
 }

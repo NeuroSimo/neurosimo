@@ -51,7 +51,6 @@ COPY ros2_ws/src/neurosimo_packages/interfaces/project_interfaces src/interfaces
 COPY ros2_ws/src/shared_packages/interfaces/eeg_msgs src/shared_packages/interfaces/eeg_msgs/
 COPY ros2_ws/src/shared_packages/interfaces/mep_interfaces src/shared_packages/interfaces/mep_interfaces/
 COPY ros2_ws/src/shared_packages/interfaces/system_interfaces src/shared_packages/interfaces/system_interfaces/
-COPY ros2_ws/src/shared_packages/interfaces/targeting_msgs src/shared_packages/interfaces/targeting_msgs/
 COPY ros2_ws/src/shared_packages/realtime_utils src/shared_packages/realtime_utils/
 
 RUN source /opt/ros/iron/setup.bash && colcon build

@@ -72,8 +72,6 @@ public:
 
   void warm_up();
 
-  std::vector<std::vector<targeting_msgs::msg::ElectricTarget>> get_targets();
-
   bool parse_sensory_stimulus_dict(
     const py::dict& py_sensory_stimulus,
     pipeline_interfaces::msg::SensoryStimulus& out_msg);

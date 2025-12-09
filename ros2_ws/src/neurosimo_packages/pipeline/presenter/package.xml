@@ -17,7 +17,6 @@
   <depend>pipeline_interfaces</depend>
   <depend>project_interfaces</depend>
   <depend>system_interfaces</depend>
-  <depend>targeting_msgs</depend>
   <depend>realtime_utils</depend>
 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>

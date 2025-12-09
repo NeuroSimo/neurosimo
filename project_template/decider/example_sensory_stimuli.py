@@ -3,9 +3,9 @@ import numpy as np
 
 
 class Decider:
-    def __init__(self, num_of_eeg_channels: int, num_of_emg_channels: int, sampling_frequency: float):
-        self.num_of_eeg_channels = num_of_eeg_channels
-        self.num_of_emg_channels = num_of_emg_channels
+    def __init__(self, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: float):
+        self.num_eeg_channels = num_eeg_channels
+        self.num_emg_channels = num_emg_channels
         self.sampling_frequency = sampling_frequency
 
         # Number of warm-up rounds to prevent first-call delays (see README.md for details)

@@ -109,8 +109,8 @@ private:
   double_t sampling_period;
 
   uint16_t sampling_frequency;
-  uint8_t num_of_eeg_channels;
-  uint8_t num_of_emg_channels;
+  uint8_t num_eeg_channels;
+  uint8_t num_emg_channels;
   uint8_t total_channels;
 
   std::ifstream data_file;

@@ -151,8 +151,8 @@ private:
   uint16_t dropped_sample_threshold;
 
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
-  uint8_t num_of_eeg_channels = UNSET_NUM_OF_CHANNELS;
-  uint8_t num_of_emg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
 
   double_t sampling_period;
 

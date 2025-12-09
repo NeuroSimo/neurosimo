@@ -212,8 +212,8 @@ void EegPreprocessor::handle_session(const std::shared_ptr<system_interfaces::ms
 
 void EegPreprocessor::update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
-  this->num_of_eeg_channels = msg.num_of_eeg_channels;
-  this->num_of_emg_channels = msg.num_of_emg_channels;
+  this->num_eeg_channels = msg.num_eeg_channels;
+  this->num_emg_channels = msg.num_emg_channels;
 
   this->sampling_period = 1.0 / this->sampling_frequency;
 }
@@ -271,8 +271,8 @@ void EegPreprocessor::initialize_module() {
   this->preprocessor_wrapper->initialize_module(
     this->working_directory,
     this->module_name,
-    this->num_of_eeg_channels,
-    this->num_of_emg_channels,
+    this->num_eeg_channels,
+    this->num_emg_channels,
     this->sampling_frequency);
 
   /* Publish initialization logs from Python constructor */
@@ -289,8 +289,8 @@ void EegPreprocessor::initialize_module() {
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", this->sampling_frequency);
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->num_of_eeg_channels);
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->num_of_emg_channels);
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->num_eeg_channels);
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->num_emg_channels);
   RCLCPP_INFO(this->get_logger(), " ");
 }
 
@@ -669,8 +669,8 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   if (success) {
     /* Copy metadata from the triggering sample. */
     preprocessed_sample.metadata.sampling_frequency = triggering_sample->metadata.sampling_frequency;
-    preprocessed_sample.metadata.num_of_eeg_channels = triggering_sample->metadata.num_of_eeg_channels;
-    preprocessed_sample.metadata.num_of_emg_channels = triggering_sample->metadata.num_of_emg_channels;
+    preprocessed_sample.metadata.num_eeg_channels = triggering_sample->metadata.num_eeg_channels;
+    preprocessed_sample.metadata.num_emg_channels = triggering_sample->metadata.num_emg_channels;
     preprocessed_sample.metadata.is_simulation = triggering_sample->metadata.is_simulation;
     preprocessed_sample.metadata.system_time = triggering_sample->metadata.system_time;
     preprocessed_sample.metadata.passed_experiment_coordinator = triggering_sample->metadata.passed_experiment_coordinator;

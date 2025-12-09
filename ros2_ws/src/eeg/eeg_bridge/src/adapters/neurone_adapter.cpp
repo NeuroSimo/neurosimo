@@ -128,8 +128,8 @@ void NeurOneAdapter::handle_measurement_start_packet() {
   uint16_t channel_count =
       ntohs(*reinterpret_cast<uint16_t *>(buffer + StartPacketFieldIndex::NUM_CHANNELS));
 
-  this->num_of_eeg_channels = 0;
-  this->num_of_emg_channels = 0;
+  this->num_eeg_channels = 0;
+  this->num_emg_channels = 0;
 
   for (uint16_t i = 0; i < channel_count; i++) {
     uint16_t source_channel = ntohs(
@@ -149,16 +149,16 @@ void NeurOneAdapter::handle_measurement_start_packet() {
         (source_channel >= 73 && source_channel <= 80) ||
         (source_channel >= 113 && source_channel <= 120) ||
         (source_channel >= 153 && source_channel <= 160)) {
-      this->num_of_emg_channels++;
+      this->num_emg_channels++;
       this->channel_types[i] = ChannelType::BIPOLAR_CHANNEL;
     } else {
-      this->num_of_eeg_channels++;
+      this->num_eeg_channels++;
       this->channel_types[i] = ChannelType::EEG_CHANNEL;
     }
   }
 
-  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "  Number of EEG channels: %u", this->num_of_eeg_channels);
-  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "  Number of EMG channels: %u", this->num_of_emg_channels);
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "  Number of EEG channels: %u", this->num_eeg_channels);
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "  Number of EMG channels: %u", this->num_emg_channels);
 }
 
 AdapterSample NeurOneAdapter::handle_sample_packet() {

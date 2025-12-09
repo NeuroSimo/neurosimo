@@ -61,8 +61,8 @@ public:
   eeg_interfaces::msg::EegInfo get_eeg_info() const {
     auto eeg_info_msg = eeg_interfaces::msg::EegInfo();
     eeg_info_msg.sampling_frequency = sampling_frequency;
-    eeg_info_msg.num_of_eeg_channels = num_of_eeg_channels;
-    eeg_info_msg.num_of_emg_channels = num_of_emg_channels;
+    eeg_info_msg.num_eeg_channels = num_eeg_channels;
+    eeg_info_msg.num_emg_channels = num_emg_channels;
 
     return eeg_info_msg;
   }
@@ -72,12 +72,12 @@ protected:
   uint32_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
 
   /// Number of channel dedicated to EEG.
-  uint8_t num_of_eeg_channels = UNSET_CHANNEL_COUNT;
+  uint8_t num_eeg_channels = UNSET_CHANNEL_COUNT;
 
   /** Refers to bipolar channels that can be used for ECG, EOG etc., in addition
       to EMG. Named kept for consistency with other parts of the system, should
       probably be renamed at some point. */
-  uint8_t num_of_emg_channels = UNSET_CHANNEL_COUNT;
+  uint8_t num_emg_channels = UNSET_CHANNEL_COUNT;
 };
 
 #endif // EEG_ADAPTER_H

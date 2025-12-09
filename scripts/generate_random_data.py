@@ -16,7 +16,7 @@ def save_to_csv(output_directory, filename, data, fmt='%.5f'):
     output_path = os.path.join(output_directory, filename)
     np.savetxt(output_path, data, delimiter=",", fmt=fmt)
 
-def save_to_json(output_directory, base_filename, name, num_eeg_channels, num_emg_channels, data_filename, event_filename=None):
+def save_to_json(output_directory, base_filename, name, num_eeg_channels, num_emg_channels, data_filename):
     json_filename = base_filename + ".json"
     json_data = {
         "name": name,
@@ -26,8 +26,6 @@ def save_to_json(output_directory, base_filename, name, num_eeg_channels, num_em
         },
         "data_file": data_filename,
     }
-    if event_filename:
-        json_data["event_file"] = event_filename
 
     output_path = os.path.join(output_directory, json_filename)
     with open(output_path, 'w') as json_file:
@@ -43,7 +41,6 @@ if __name__ == "__main__":
     parser.add_argument("--output_directory", type=str, default=".", help="Output directory for files")
     parser.add_argument("--output_filename", type=str, default="random_data", help="Output base filename without extension")
     parser.add_argument("--dataset_name", type=str, default="Random data", help="Name of the dataset")
-    parser.add_argument("--no_events", action="store_true", help="Do not generate events")
 
     args = parser.parse_args()
 
@@ -56,22 +53,6 @@ if __name__ == "__main__":
         data=data,
     )
 
-    event_filename = None
-    if not args.no_events:
-        # Define events with string-based event types
-        # Times chosen to avoid coinciding with common periodic processing intervals
-        events = [
-            [1.5, "pulse"],
-            [2.5, "pulse"],
-            [5.5, "pulse"],
-        ]
-        event_filename = args.output_filename + "_events.csv" if not args.no_events else None
-
-        output_path = os.path.join(args.output_directory, event_filename)
-        with open(output_path, 'w') as f:
-            for event in events:
-                f.write(f"{event[0]:.5f},{event[1]}\n")
-
     save_to_json(
         output_directory=args.output_directory,
         base_filename=args.output_filename,
@@ -79,7 +60,6 @@ if __name__ == "__main__":
         num_eeg_channels=args.eeg_channels,
         num_emg_channels=args.emg_channels,
         data_filename=data_filename,
-        event_filename=event_filename,
     )
 
     print("Random data with {} EEG channels and {} EMG channels saved to {}/{}.csv".format(

@@ -4,18 +4,46 @@
 #include <cmath>
 #include <cstdlib>
 #include <netinet/in.h>
+#include <vector>
 
 #include "eeg_msgs/msg/eeg_info.hpp"
-#include "eeg_msgs/msg/sample.hpp"
 
-/** UDP datagram length is limited by Ethernet MTU (IP layer fragmentation isn’t
+/** UDP datagram length is limited by Ethernet MTU (IP layer fragmentation isn't
     supported). */
 const int BUFFER_SIZE = 1472;
 
 const uint32_t UNSET_SAMPLING_FREQUENCY = 0;
 const uint8_t UNSET_CHANNEL_COUNT = 0;
 
-enum PacketResult { SAMPLE, SAMPLE_WITH_SYNC, SYNC_TRIGGER, INTERNAL, ERROR, END };
+/** Result type for adapter packet processing. */
+enum AdapterPacketResult {
+  SAMPLE,       // Sample data (may include trigger_a and/or trigger_b)
+  TRIGGER_ONLY, // Standalone trigger_a packet (NeurOne only)
+  INTERNAL,     // Internal/configuration packet
+  ERROR,        // Error reading packet
+  END           // Measurement ended
+};
+
+/** Internal data structure representing raw sample from EEG device adapter.
+    This keeps the adapter layer independent of ROS message types.
+    The distinction between trigger_a (latency measurement) and trigger_b
+    (pulse trigger) is explicit in field names. */
+struct AdapterSample {
+  std::vector<double> eeg_data;  // EEG channels in μV
+  std::vector<double> emg_data;  // EMG channels in μV
+  double time;                   // Sample timestamp in seconds
+  uint64_t index;                // Sample index
+  bool trigger_a;                // Latency measurement trigger (Port A / SYNC)
+  bool trigger_b;                // Pulse trigger (Port B / PULSE)
+};
+
+/** Packet returned from adapter read_eeg_data_packet().
+    Contains both the result type and the sample data (when applicable). */
+struct AdapterPacket {
+  AdapterPacketResult result;
+  AdapterSample sample;           // Valid when result == ADAPTER_SAMPLE
+  double trigger_a_timestamp;     // Valid when result contains trigger_a
+};
 
 class EegAdapter {
 public:
@@ -26,10 +54,9 @@ public:
       Process the next packet received from the device. The packet can update
       the adapter configuration and state or return a sample.
 
-      @return type of the packet read, sample packet if packet was a sample and
-      sync trigger timestamp in seconds, if sync trigger was in the sample or sync trigger in
-      the packet. */
-  virtual std::tuple<PacketResult, eeg_msgs::msg::Sample, double> read_eeg_data_packet() = 0;
+      @return AdapterPacket containing the result type, sample data (when applicable),
+      and trigger_a timestamp for latency measurement triggers. */
+  virtual AdapterPacket read_eeg_data_packet() = 0;
 
   /// Get EEG device configuration info
   eeg_msgs::msg::EegInfo get_eeg_info() const {

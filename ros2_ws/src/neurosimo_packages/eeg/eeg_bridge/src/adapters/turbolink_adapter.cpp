@@ -95,9 +95,9 @@ bool TurboLinkAdapter::read_eeg_data_from_socket() {
   return true;
 }
 
-std::tuple<eeg_msgs::msg::Sample, bool> TurboLinkAdapter::handle_packet() {
-  auto sample = eeg_msgs::msg::Sample();
-  bool sync_trigger_received = false;
+std::tuple<AdapterSample, bool> TurboLinkAdapter::handle_packet() {
+  auto adapter_sample = AdapterSample();
+  bool trigger_a = false;
 
   uint32_t token = *reinterpret_cast<uint32_t *>(buffer + SamplePacketFieldIndex::TOKEN);
 
@@ -113,56 +113,53 @@ std::tuple<eeg_msgs::msg::Sample, bool> TurboLinkAdapter::handle_packet() {
   for (uint8_t i = 0; i < this->num_of_emg_channels; i++) {
     uint8_t *data = buffer + SamplePacketFieldIndex::AUX_CHANNELS + 4 * i;
     float_t value = *reinterpret_cast<float *>(data);
-    sample.emg_data.push_back(value);
+    adapter_sample.emg_data.push_back(value);
   }
   for (uint8_t i = 0; i < this->num_of_eeg_channels; i++) {
     uint8_t *data = buffer + SamplePacketFieldIndex::EEG_CHANNELS + 4 * i;
     float_t value = *reinterpret_cast<float *>(data);
-    sample.eeg_data.push_back(value);
+    adapter_sample.eeg_data.push_back(value);
   }
 
   auto triggers = std::bitset<32>(trigger_bits);
-  sample.is_trigger = triggers[TriggerBitPosition::PULSE_TRIGGER_BIT];
-  sync_trigger_received = triggers[TriggerBitPosition::SYNC_TRIGGER_BIT];
+  adapter_sample.trigger_b = triggers[TriggerBitPosition::PULSE_TRIGGER_BIT];
+  trigger_a = triggers[TriggerBitPosition::SYNC_TRIGGER_BIT];
 
-  if (sample.is_trigger) {
+  if (adapter_sample.trigger_b) {
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Trigger received with sample %d", sample_index);
   }
 
   /* Turbolink has no timestamp so interpret time from sampling frequency */
-  sample.time = (double)sample_index / this->sampling_frequency;
-  sample.index = sample_index;
+  adapter_sample.time = (double)sample_index / this->sampling_frequency;
+  adapter_sample.index = sample_index;
+  adapter_sample.trigger_a = false;  // Will be set in read_eeg_data_packet
 
-  sample.metadata.num_of_eeg_channels = this->num_of_eeg_channels;
-  sample.metadata.num_of_emg_channels = this->num_of_emg_channels;
-  sample.metadata.sampling_frequency = this->sampling_frequency;
-  sample.metadata.is_simulation = false;
-
-  return {sample, sync_trigger_received};
+  return {adapter_sample, trigger_a};
 }
 
-std::tuple<PacketResult, eeg_msgs::msg::Sample, double>
-TurboLinkAdapter::read_eeg_data_packet() {
+AdapterPacket TurboLinkAdapter::read_eeg_data_packet() {
   /* Return variables */
-  PacketResult result_type = PacketResult::INTERNAL;
-  auto sample = eeg_msgs::msg::Sample();
-  double sync_trigger_time = -1.0; // in seconds
+  AdapterPacket packet;
+  packet.result = INTERNAL;
+  packet.sample = AdapterSample();
+  packet.trigger_a_timestamp = -1.0; // in seconds
 
-  bool sync_trigger = false;
+  bool trigger_a = false;
 
   bool success = read_eeg_data_from_socket();
   if (!success) {
     RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), "Timeout while reading EEG data");
-    return {PacketResult::ERROR, sample, -1.0};
+    packet.result = ERROR;
+    return packet;
   }
-  std::tie(sample, sync_trigger) = handle_packet();
-  result_type = PacketResult::SAMPLE;
-  if (sync_trigger) {
-    sync_trigger_time = sample.time;
-    result_type = PacketResult::SAMPLE_WITH_SYNC;
+  std::tie(packet.sample, trigger_a) = handle_packet();
+  packet.result = SAMPLE;
+  if (trigger_a) {
+    packet.trigger_a_timestamp = packet.sample.time;
+    packet.sample.trigger_a = true;
   }
 
-  return {result_type, sample, sync_trigger_time};
+  return packet;
 }
 
 float_t TurboLinkAdapter::convert_be_float_to_host(uint8_t *buffer) {

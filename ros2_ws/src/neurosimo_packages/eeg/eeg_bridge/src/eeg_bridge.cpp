@@ -34,9 +34,6 @@ const uint16_t EEG_QUEUE_LENGTH = 65535;
 const milliseconds SESSION_PUBLISHING_INTERVAL = 20ms;
 const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 5ms;
 
-const double_t SYNC_INTERVAL = 1.0;
-const double_t MAXIMUM_TIME_CORRECTION_ADJUSTMENT_PER_SYNC_TRIGGER = 0.001;
-
 EegBridge::EegBridge() : Node("eeg_bridge") {
 
   /* Port parameter */
@@ -209,22 +206,11 @@ void EegBridge::subscribe_to_session() {
 }
 
 void EegBridge::stop_session() {
-  /* Reset error state when session is stopped. */
   this->error_state = ErrorState::NO_ERROR;
-
   this->wait_for_session_to_stop = false;
-
   this->first_sample_of_session = true;
-
-  this->first_sync_trigger_timestamp = UNSET_TIME;
   this->previous_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
-
-  this->time_correction = UNSET_TIME;
   this->time_offset = UNSET_TIME;
-  this->num_of_sync_triggers_received = 0;
-
-  /* Reset number of sample packets received. */
-  this->sample_packets_received_since_last_sync = 0;
 }
 
 void EegBridge::update_healthcheck(uint8_t status, std::string status_message,
@@ -234,29 +220,22 @@ void EegBridge::update_healthcheck(uint8_t status, std::string status_message,
   this->actionable_message = actionable_message;
 }
 
-void EegBridge::handle_sync_trigger(double_t sync_time) {
-  this->sample_packets_received_since_last_sync = 0;
+eeg_msgs::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
+                                                    const eeg_msgs::msg::EegInfo& eeg_info) {
+  auto sample = eeg_msgs::msg::Sample();
+  sample.eeg_data = adapter_sample.eeg_data;
+  sample.emg_data = adapter_sample.emg_data;
+  sample.time = adapter_sample.time;
+  sample.index = adapter_sample.index;
+  sample.is_trigger = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
 
-  if (std::isnan(first_sync_trigger_timestamp)) {
-    RCLCPP_INFO(this->get_logger(), "First sync trigger received at %.4f s.", sync_time);
-    first_sync_trigger_timestamp = sync_time;
-  }
+  sample.metadata.num_of_eeg_channels = eeg_info.num_of_eeg_channels;
+  sample.metadata.num_of_emg_channels = eeg_info.num_of_emg_channels;
+  sample.metadata.sampling_frequency = eeg_info.sampling_frequency;
+  sample.metadata.is_simulation = false;
+  sample.metadata.system_time = this->get_clock()->now();
 
-  double_t new_time_correction =
-      (sync_time - first_sync_trigger_timestamp) - num_of_sync_triggers_received * SYNC_INTERVAL;
-
-  this->num_of_sync_triggers_received++;
-
-  if (abs(new_time_correction - this->time_correction) >
-      MAXIMUM_TIME_CORRECTION_ADJUSTMENT_PER_SYNC_TRIGGER) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Sync triggers received too frequently or infrequently. Check the BNC cable and "
-                 "EEG software configuration for double triggers.");
-
-    this->error_state = ERROR_OUT_OF_SYNC;
-  }
-
-  this->time_correction = new_time_correction;
+  return sample;
 }
 
 void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
@@ -273,8 +252,6 @@ void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
                           "Waiting for session to start...");
     return;
   }
-
-  this->sample_packets_received_since_last_sync++;
 
   /* Ignore sample packets if in an error state, preventing streaming. */
   if (this->error_state != ErrorState::NO_ERROR) {
@@ -322,7 +299,7 @@ void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
 }
 
 void EegBridge::process_eeg_data_packet() {
-  auto [result_type, sample, sync_time] = this->eeg_adapter->read_eeg_data_packet();
+  AdapterPacket packet = this->eeg_adapter->read_eeg_data_packet();
 
   /* Ignore the packets if session has not started. */
   bool ignore_packet = this->session_state.value != system_interfaces::msg::SessionState::STARTED;
@@ -331,9 +308,6 @@ void EegBridge::process_eeg_data_packet() {
     return;
   }
 
-  /* TODO: Could timestamp even earlier. */
-  sample.metadata.system_time = this->get_clock()->now();
-
   auto eeg_info = this->eeg_adapter->get_eeg_info();
 
   if (eeg_info.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
@@ -341,41 +315,45 @@ void EegBridge::process_eeg_data_packet() {
     return;
   }
 
-  switch (result_type) {
+  switch (packet.result) {
 
-  case PacketResult::SAMPLE_WITH_SYNC:
-    RCLCPP_INFO(this->get_logger(), "Received latency measurement trigger at %.4f s.", sync_time);
+  case SAMPLE: {
+    auto ros_sample = create_ros_sample(packet.sample, eeg_info);
 
-    {
+    // Handle trigger_a (latency measurement) if present
+    if (packet.sample.trigger_a) {
+      RCLCPP_INFO(this->get_logger(), "Received latency measurement trigger at %.4f s.",
+                 packet.trigger_a_timestamp);
       auto msg = pipeline_interfaces::msg::TimedTrigger();
-      msg.time = sync_time - this->time_offset;
+      msg.time = packet.trigger_a_timestamp - this->time_offset;
       this->latency_measurement_trigger_publisher->publish(msg);
     }
-    handle_sample(sample);
-    break;
 
-  case PacketResult::SAMPLE:
-    handle_sample(sample);
+    // Always handle the sample
+    handle_sample(ros_sample);
     break;
+  }
 
-  case PacketResult::SYNC_TRIGGER:
-    {
-      auto msg = pipeline_interfaces::msg::TimedTrigger();
-      msg.time = sync_time - this->time_offset;
-      this->latency_measurement_trigger_publisher->publish(msg);
-    }
+  case TRIGGER_ONLY: {
+    // Standalone trigger packet (NeurOne only)
+    RCLCPP_INFO(this->get_logger(), "Received latency measurement trigger at %.4f s.",
+               packet.trigger_a_timestamp);
+    auto msg = pipeline_interfaces::msg::TimedTrigger();
+    msg.time = packet.trigger_a_timestamp - this->time_offset;
+    this->latency_measurement_trigger_publisher->publish(msg);
     break;
+  }
 
-  case PacketResult::INTERNAL:
+  case INTERNAL:
     RCLCPP_DEBUG(this->get_logger(), "Internal adapter packet received.");
     break;
 
-  case PacketResult::ERROR:
+  case ERROR:
     RCLCPP_ERROR(this->get_logger(), "Error reading data packet.");
     this->eeg_device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
     break;
 
-  case PacketResult::END:
+  case END:
     RCLCPP_INFO(this->get_logger(), "EEG device measurement stopped.");
     this->eeg_device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
     break;
@@ -478,19 +456,6 @@ void EegBridge::spin() {
         this->update_healthcheck(system_interfaces::msg::HealthcheckStatus::READY,
                                  "Streaming data",
                                  "Streaming data");
-      }
-
-      /* Case: Explicit error case: out of sync. */
-      if (this->error_state == ErrorState::ERROR_OUT_OF_SYNC) {
-        this->update_healthcheck(
-            system_interfaces::msg::HealthcheckStatus::ERROR,
-            "Out of sync between EEG and mTMS devices",
-            /* XXX: Not really an actionable message at this stage; as long as we don't
-            actually show the cause of the error in the UI, it is more useful to have the
-            error as the 'actionable' message than not to display it at all. Once the causes
-            come to the UI, this could be changed to "Please stop the session"
-            or similar. */
-            "Out of sync between EEG and mTMS devices.");
       }
 
       /* Case: Explicit error case: samples dropped. */

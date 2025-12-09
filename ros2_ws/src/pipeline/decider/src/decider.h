@@ -66,7 +66,7 @@ struct DeferredProcessingRequest {
   std::shared_ptr<eeg_interfaces::msg::Sample> triggering_sample;
   
   /* Whether this was triggered by a trigger signal. */
-  bool is_trigger;
+  bool pulse_delivered;
   
   /* Whether this has an event. */
   bool has_event;

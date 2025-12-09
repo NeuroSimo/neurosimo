@@ -79,7 +79,7 @@ public:
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
-    bool is_trigger,
+    bool pulse_delivered,
     bool has_event,
     std::string event_type,
     std::priority_queue<std::pair<double, std::string>,

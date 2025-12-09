@@ -9,7 +9,7 @@ uint64 index
 # ============================================================================
 # Hardware triggers/events (filled by EEG Bridge)
 # ============================================================================
-bool is_trigger
+bool pulse_delivered
 bool is_event
 string event_type
 

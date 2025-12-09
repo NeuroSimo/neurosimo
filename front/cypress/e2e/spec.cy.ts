@@ -17,7 +17,7 @@ describe('Target table', () => {
   })
 
   it('can be opened', () => {
-    cy.contains('mTMS control panel')
+    cy.contains('NeuroSimo')
   })
 /* XXX: The following tests have bitrotten: #add-target-button element cannot be found. Before fixing and re-enabling,
      ensure that the targeting table is actually something we want to do. For now, comment them out so that they won't be

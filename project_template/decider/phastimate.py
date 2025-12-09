@@ -93,9 +93,6 @@ class Decider:
         # Maximum number of future samples to consider for trigger scheduling
         self.max_future_samples = int(self.edge_samples / 2)
 
-        # Leave empty when mTMS device is not used
-        self.targets = []
-
         # Number of warm-up rounds to prevent first-call delays (see README.md for details)
         self.warm_up_rounds = 2
 

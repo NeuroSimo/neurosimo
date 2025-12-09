@@ -26,16 +26,10 @@ def generate_launch_description():
         description="Maximum timing latency, above which stimulation is prevented",
     )
 
-    mtms_device_enabled_arg = DeclareLaunchArgument(
-        "mtms-device-enabled",
-        description="Is mTMS device enabled (boolean)",
-    )
-
     logger = LaunchConfiguration("log-level")
     minimum_intertrial_interval = LaunchConfiguration("minimum-intertrial-interval")
     dropped_sample_threshold = LaunchConfiguration("dropped-sample-threshold")
     timing_latency_threshold = LaunchConfiguration("timing-latency-threshold")
-    mtms_device_enabled =LaunchConfiguration("mtms-device-enabled")
 
     # Ensure that the value of the minimum_intertrial_interval argument is a float.
     #
@@ -51,7 +45,6 @@ def generate_launch_description():
                 "minimum-intertrial-interval": minimum_intertrial_interval_float,
                 "dropped-sample-threshold": dropped_sample_threshold,
                 "timing-latency-threshold": timing_latency_threshold,
-                "mtms-device-enabled": mtms_device_enabled,
             }
         ],
         arguments=['--ros-args', '--log-level', logger]
@@ -62,6 +55,5 @@ def generate_launch_description():
         minimum_intertrial_interval_arg,
         dropped_sample_threshold_arg,
         timing_latency_threshold_arg,
-        mtms_device_enabled_arg,
         node
     ])

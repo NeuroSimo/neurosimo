@@ -30,9 +30,9 @@ After that, there are two options for streaming the EEG/EMG data to the pipeline
 
 1) Turn on streaming in the EEG/EMG device. The status bar in the top-right
 corner should indicate that the device is connected and streaming. After that,
-press "Start session" on the mTMS panel.
+press "Start session" on the control panel.
 
-2) Using simulated data: in the bottom-right corner of the mTMS panel, there is
+2) Using simulated data: in the bottom-right corner of the control panel, there is
 a dropdown menu for selecting the data set to use. Select "Random data, 1 kHz",
 enable "Playback" and "Loop", and press "Start session". The "Loop" option
 will restart the data set after it has been played through.

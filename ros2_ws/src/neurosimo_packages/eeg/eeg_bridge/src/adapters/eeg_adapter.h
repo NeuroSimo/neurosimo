@@ -1,5 +1,5 @@
-#ifndef MTMS_EEG_ADAPTER_H
-#define MTMS_EEG_ADAPTER_H
+#ifndef EEG_ADAPTER_H
+#define EEG_ADAPTER_H
 
 #include <cmath>
 #include <cstdlib>
@@ -54,4 +54,4 @@ protected:
   uint8_t num_of_emg_channels = UNSET_CHANNEL_COUNT;
 };
 
-#endif // MTMS_EEG_ADAPTER_H
+#endif // EEG_ADAPTER_H

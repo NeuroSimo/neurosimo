@@ -49,12 +49,6 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 
-  /* Subscriber for mTMS device healthcheck. */
-  this->mtms_device_healthcheck_subscriber = create_subscription<system_interfaces::msg::Healthcheck>(
-    "/mtms_device/healthcheck",
-    10,
-    std::bind(&TriggerTimer::handle_mtms_device_healthcheck, this, _1));
-
   /* Subscriber for EEG raw data. */
   this->eeg_raw_subscriber = create_subscription<eeg_msgs::msg::Sample>(
     EEG_RAW_TOPIC,
@@ -168,10 +162,6 @@ void TriggerTimer::attempt_labjack_connection() {
   }
 }
 
-
-void TriggerTimer::handle_mtms_device_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg) {
-  this->mtms_device_available = msg->status.value == system_interfaces::msg::HealthcheckStatus::READY;
-}
 
 void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
   /* Ignore EEG sample if session has not started. */

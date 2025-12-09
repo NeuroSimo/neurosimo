@@ -35,11 +35,6 @@ def generate_launch_description():
         description="EEG channel count of Turbolink device",
     )
 
-    mtms_device_enabled_arg = DeclareLaunchArgument(
-        "mtms-device-enabled",
-        description="Is mTMS device enabled (boolean)",
-    )
-
     logger = LaunchConfiguration("log-level")
     node = Node(
             package="eeg_bridge",
@@ -52,7 +47,6 @@ def generate_launch_description():
                     "eeg-device": LaunchConfiguration("eeg-device"),
                     "turbolink-sampling-frequency": LaunchConfiguration("turbolink-sampling-frequency"),
                     "turbolink-eeg-channel-count": LaunchConfiguration("turbolink-eeg-channel-count"),
-                    "mtms-device-enabled": LaunchConfiguration("mtms-device-enabled"),
                 }
             ],
             output="screen",
@@ -67,6 +61,5 @@ def generate_launch_description():
         eeg_device_arg,
         turbolink_sampling_frequency_arg,
         turbolink_eeg_channel_count_arg,
-        mtms_device_enabled_arg,
         node
     ])

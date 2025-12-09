@@ -16,7 +16,6 @@
 
 #include "eeg_msgs/msg/sample.hpp"
 
-#include "mtms_trial_interfaces/msg/trial.hpp"
 #include "targeting_msgs/msg/electric_target.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
@@ -78,11 +77,10 @@ public:
   bool parse_sensory_stimulus_dict(
     const py::dict& py_sensory_stimulus,
     pipeline_interfaces::msg::SensoryStimulus& out_msg);
-  std::tuple<bool, std::shared_ptr<mtms_trial_interfaces::msg::Trial>, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> process(
+  std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
     double_t sample_window_base_time,
-    bool ready_for_trial,
     bool is_trigger,
     bool has_event,
     std::string event_type,

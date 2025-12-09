@@ -1,5 +1,5 @@
-#ifndef MTMS_EEG_BRIDGE_H
-#define MTMS_EEG_BRIDGE_H
+#ifndef EEG_BRIDGE_H
+#define EEG_BRIDGE_H
 
 #include <cstdlib>
 #include <netinet/in.h>
@@ -85,7 +85,6 @@ private:
   void wait_for_session();
 
   /* Configuration */
-  bool mtms_device_enabled = false;
   uint16_t port = 0;
   uint8_t num_of_tolerated_dropped_samples = 0;
   EegDevice eeg_device;

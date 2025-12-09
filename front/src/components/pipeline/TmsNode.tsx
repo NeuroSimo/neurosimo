@@ -14,7 +14,7 @@ const Container = styled(StyledPanel)`
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 3px 10px rgba(0, 0, 0, 0.14);
 `
 
-export const TmsNode: React.FC<Props> = ({ typeLabel = 'Multi-locus' }) => {
+export const TmsNode: React.FC<Props> = ({ typeLabel = 'Single-coil' }) => {
   return (
     <Container>
       <SmallerTitle>TMS device</SmallerTitle>

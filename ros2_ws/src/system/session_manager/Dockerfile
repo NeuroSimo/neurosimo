@@ -20,7 +20,7 @@ WORKDIR /app/ros2_ws
 
 # ROS interfaces
 COPY ros2_ws/src/interfaces/system_interfaces src/interfaces/system_interfaces/
-COPY ros2_ws/src/realtime_utils src/realtime_utils/
+COPY ros2_ws/src/utils/realtime src/utils/realtime/
 
 RUN source /opt/ros/iron/setup.bash && colcon build
 

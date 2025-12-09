@@ -34,16 +34,16 @@ COPY ${INTERFACES_PATH} src/interfaces
 RUN source /opt/ros/iron/setup.bash && colcon build
 
 # Copy the rosbridge node
-COPY ros2_ws/src/rosbridge/rosbridge_suite src/rosbridge/rosbridge_suite
+COPY ros2_ws/src/utils/rosbridge/rosbridge_suite src/utils/rosbridge/rosbridge_suite
 
 # Change line endings for rosbridge files
-RUN find src/rosbridge -type f -exec dos2unix {} +
+RUN find src/utils/rosbridge -type f -exec dos2unix {} +
 
 # Build the rosbridge node after building interfaces
 RUN source /opt/ros/iron/setup.bash && colcon build --packages-up-to rosbridge_server
 
 # Copy ROS entrypoint
-COPY ros2_ws/src/rosbridge/ros_entrypoint.sh .
+COPY ros2_ws/src/utils/rosbridge/ros_entrypoint.sh .
 RUN chmod +x ros_entrypoint.sh
 
 # XXX: Hack around the symlink issue, allows fail with || : as this isn't needed on linux

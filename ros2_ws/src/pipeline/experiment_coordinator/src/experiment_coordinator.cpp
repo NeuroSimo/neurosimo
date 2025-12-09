@@ -59,7 +59,7 @@ ExperimentCoordinator::ExperimentCoordinator()
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
   
   /* Publisher for enriched EEG data. */
-  this->enriched_eeg_publisher = this->create_publisher<eeg_msgs::msg::Sample>(
+  this->enriched_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(
     EEG_ENRICHED_TOPIC, EEG_QUEUE_LENGTH);
   
   /* Publisher for experiment UI state. */
@@ -67,7 +67,7 @@ ExperimentCoordinator::ExperimentCoordinator()
     "/pipeline/experiment_state", qos_persist_latest);
   
   /* Subscriber for raw EEG data. */
-  this->raw_eeg_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
+  this->raw_eeg_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     EEG_QUEUE_LENGTH,
     std::bind(&ExperimentCoordinator::handle_raw_sample, this, _1));
@@ -177,7 +177,7 @@ void ExperimentCoordinator::handle_session(const std::shared_ptr<system_interfac
   }
 }
 
-void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
+void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   /* Only process samples during an active session. */
   if (this->session_state.value != system_interfaces::msg::SessionState::STARTED) {
     return;

@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include <vector>
 
-#include "eeg_msgs/msg/eeg_info.hpp"
+#include "eeg_interfaces/msg/eeg_info.hpp"
 
 /** UDP datagram length is limited by Ethernet MTU (IP layer fragmentation isn't
     supported). */
@@ -58,8 +58,8 @@ public:
   virtual AdapterPacket read_eeg_data_packet() = 0;
 
   /// Get EEG device configuration info
-  eeg_msgs::msg::EegInfo get_eeg_info() const {
-    auto eeg_info_msg = eeg_msgs::msg::EegInfo();
+  eeg_interfaces::msg::EegInfo get_eeg_info() const {
+    auto eeg_info_msg = eeg_interfaces::msg::EegInfo();
     eeg_info_msg.sampling_frequency = sampling_frequency;
     eeg_info_msg.num_of_eeg_channels = num_of_eeg_channels;
     eeg_info_msg.num_of_emg_channels = num_of_emg_channels;

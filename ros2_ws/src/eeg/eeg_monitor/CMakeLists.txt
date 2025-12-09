@@ -8,12 +8,12 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(eeg_msgs REQUIRED)
+find_package(eeg_interfaces REQUIRED)
 
 add_executable(eeg_monitor
         src/eeg_monitor.cpp
 )
-ament_target_dependencies(eeg_monitor rclcpp std_msgs eeg_msgs)
+ament_target_dependencies(eeg_monitor rclcpp std_msgs eeg_interfaces)
 
 
 install(TARGETS

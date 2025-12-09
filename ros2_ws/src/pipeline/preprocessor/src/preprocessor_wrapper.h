@@ -9,7 +9,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "eeg_msgs/msg/sample.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
 
 #include "ring_buffer.h"
@@ -51,8 +51,8 @@ public:
   void reset_module_state();
 
   bool process(
-      eeg_msgs::msg::Sample& output_sample,
-      const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
+      eeg_interfaces::msg::Sample& output_sample,
+      const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
       double_t sample_window_base_time,
       bool pulse_given);
 

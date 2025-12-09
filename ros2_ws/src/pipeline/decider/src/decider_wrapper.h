@@ -14,7 +14,7 @@
 
 #include <diagnostic_msgs/msg/key_value.hpp>
 
-#include "eeg_msgs/msg/sample.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
 
 #include "pipeline_interfaces/msg/coil_target.hpp"
 
@@ -77,7 +77,7 @@ public:
     pipeline_interfaces::msg::SensoryStimulus& out_msg);
   std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
+    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     bool is_trigger,
     bool has_event,
@@ -172,7 +172,7 @@ private:
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
 
   void fill_arrays_from_buffer(
-    const RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>>& buffer,
+    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     py::array_t<double>& timestamps,
     py::array_t<bool>& valid,

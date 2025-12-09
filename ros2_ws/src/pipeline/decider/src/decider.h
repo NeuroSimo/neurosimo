@@ -18,7 +18,7 @@
 #include "std_msgs/msg/int32.hpp"
 #include "std_msgs/msg/empty.hpp"
 
-#include "eeg_msgs/msg/sample.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
 
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
@@ -63,7 +63,7 @@ struct DeferredProcessingRequest {
   double_t scheduled_time;
   
   /* The sample that triggered the processing request. */
-  std::shared_ptr<eeg_msgs::msg::Sample> triggering_sample;
+  std::shared_ptr<eeg_interfaces::msg::Sample> triggering_sample;
   
   /* Whether this was triggered by a trigger signal. */
   bool is_trigger;
@@ -104,7 +104,7 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
-  void update_eeg_info(const eeg_msgs::msg::SampleMetadata& msg);
+  void update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg);
   void initialize_module();
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
@@ -133,7 +133,7 @@ private:
 
   void handle_trigger_from_eeg_device(const double_t trigger_time);
 
-  void process_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
+  void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
   std::tuple<bool, double, std::string> consume_next_event(double_t current_time);
   void pop_event();
@@ -157,7 +157,7 @@ private:
 
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
 
-  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_subscriber;
+  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
@@ -224,7 +224,7 @@ private:
   /* For checking if samples have been dropped, store the time of the previous sample received. */
   double_t previous_time = UNSET_PREVIOUS_TIME;
 
-  RingBuffer<std::shared_ptr<eeg_msgs::msg::Sample>> sample_buffer;
+  RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;
   std::vector<pipeline_interfaces::msg::SensoryStimulus> sensory_stimuli;
 
   std::unique_ptr<DeciderWrapper> decider_wrapper;

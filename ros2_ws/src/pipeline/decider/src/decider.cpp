@@ -318,10 +318,11 @@ void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces
   this->timing_latency = msg->latency;
 }
 
-void EegDecider::update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg) {
+void EegDecider::update_session_info(const eeg_interfaces::msg::SessionMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
   this->num_eeg_channels = msg.num_eeg_channels;
   this->num_emg_channels = msg.num_emg_channels;
+  this->session_start_time = msg.start_time;
 
   this->sampling_period = 1.0 / this->sampling_frequency;
 }
@@ -522,7 +523,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* If the decision is negative, publish the decision info and return. */
   if (!is_decision_positive) {
     rclcpp::Time now = this->get_clock()->now();
-    double_t sample_absolute_time = request.triggering_sample->metadata.start_time + request.triggering_sample->time;
+    double_t sample_absolute_time = this->session_start_time + request.triggering_sample->time;
     double_t total_latency = now.seconds() - sample_absolute_time;
 
     auto decision_info = pipeline_interfaces::msg::DecisionInfo();
@@ -561,7 +562,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
   request_msg->timed_trigger = *timed_trigger;
   request_msg->decision_time = sample_time;
-  request_msg->system_time_for_sample = request.triggering_sample->metadata.start_time + request.triggering_sample->time;
+  request_msg->system_time_for_sample = this->session_start_time + request.triggering_sample->time;
   request_msg->preprocessor_latency = request.triggering_sample->preprocessing_duration;
   request_msg->decider_latency = decider_processing_duration;
 
@@ -1024,7 +1025,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Update EEG info with every new session OR if this is the first EEG sample received. */
   if (this->first_sample_of_session || this->first_sample_ever) {
-    update_eeg_info(msg->metadata);
+    update_session_info(msg->session);
 
     /* Avoid checking for dropped samples on the first sample. */
     this->previous_time = UNSET_PREVIOUS_TIME;

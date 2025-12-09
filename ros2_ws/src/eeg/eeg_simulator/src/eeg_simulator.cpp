@@ -630,11 +630,11 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   msg.eeg.insert(msg.eeg.end(), data.begin() + 1, data.begin() + 1 + num_eeg_channels);
   msg.emg.insert(msg.emg.end(), data.begin() + 1 + num_eeg_channels, data.end());
 
-  msg.metadata.sampling_frequency = this->sampling_frequency;
-  msg.metadata.num_eeg_channels = this->num_eeg_channels;
-  msg.metadata.num_emg_channels = this->num_emg_channels;
-  msg.metadata.is_simulation = true;
-  msg.metadata.start_time = this->session_start_time;
+  msg.session.sampling_frequency = this->sampling_frequency;
+  msg.session.num_eeg_channels = this->num_eeg_channels;
+  msg.session.num_emg_channels = this->num_emg_channels;
+  msg.session.is_simulation = true;
+  msg.session.start_time = this->session_start_time;
 
   msg.time = time;
 

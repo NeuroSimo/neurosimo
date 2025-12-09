@@ -31,4 +31,4 @@ float64 preprocessing_duration  # Time spent in preprocessing (seconds)
 # ============================================================================
 # Metadata
 # ============================================================================
-SampleMetadata metadata
+SessionMetadata session

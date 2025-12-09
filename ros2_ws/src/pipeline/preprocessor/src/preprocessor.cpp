@@ -210,10 +210,11 @@ void EegPreprocessor::handle_session(const std::shared_ptr<system_interfaces::ms
   }
 }
 
-void EegPreprocessor::update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg) {
+void EegPreprocessor::update_session_info(const eeg_interfaces::msg::SessionMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
   this->num_eeg_channels = msg.num_eeg_channels;
   this->num_emg_channels = msg.num_emg_channels;
+  this->session_start_time = msg.start_time;
 
   this->sampling_period = 1.0 / this->sampling_frequency;
 }
@@ -642,14 +643,14 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   publish_python_logs(sample_time, false);
 
   if (success) {
-    /* Copy metadata from the triggering sample. */
-    preprocessed_sample.metadata.sampling_frequency = triggering_sample->metadata.sampling_frequency;
-    preprocessed_sample.metadata.num_eeg_channels = triggering_sample->metadata.num_eeg_channels;
-    preprocessed_sample.metadata.num_emg_channels = triggering_sample->metadata.num_emg_channels;
-    preprocessed_sample.metadata.is_simulation = triggering_sample->metadata.is_simulation;
-    preprocessed_sample.metadata.start_time = triggering_sample->metadata.start_time;
+    /* Copy session information from the triggering sample. */
+    preprocessed_sample.session.sampling_frequency = triggering_sample->session.sampling_frequency;
+    preprocessed_sample.session.num_eeg_channels = triggering_sample->session.num_eeg_channels;
+    preprocessed_sample.session.num_emg_channels = triggering_sample->session.num_emg_channels;
+    preprocessed_sample.session.is_simulation = triggering_sample->session.is_simulation;
+    preprocessed_sample.session.start_time = triggering_sample->session.start_time;
 
-    /* Copy trigger information. */
+    /* Copy hardware trigger information. */
     preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
 
     /* Calculate preprocessing duration. */
@@ -689,7 +690,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   /* Update EEG info with every new session OR if this is the first EEG sample received ever. */
   if (this->first_sample_of_session || this->first_sample_ever) {
-    update_eeg_info(msg->metadata);
+    update_session_info(msg->session);
 
     /* Avoid checking for dropped samples on the first sample. */
     this->previous_time = UNSET_PREVIOUS_TIME;

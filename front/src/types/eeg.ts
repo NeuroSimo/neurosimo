@@ -14,7 +14,7 @@ export interface Sample {
   time: number
 }
 
-export interface SampleMetadata extends ROSLIB.Message {
+export interface SessionMetadata extends ROSLIB.Message {
   sampling_frequency: number
   num_eeg_channels: number
   num_emg_channels: number
@@ -25,7 +25,7 @@ export interface SampleMessage extends ROSLIB.Message {
   eeg: number[]
   emg: number[]
   time: number
-  metadata: SampleMetadata
+  session: SessionMetadata
 }
 
 export interface EegBatch extends ROSLIB.Message {

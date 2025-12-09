@@ -41,7 +41,7 @@ private:
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
 
-  void update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg);
+  void update_eeg_info(const eeg_interfaces::msg::SessionMetadata& msg);
   void check_dropped_samples(double_t sample_time, double_t previous_time);
 
   void handle_raw_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);

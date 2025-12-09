@@ -104,7 +104,7 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
-  void update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg);
+  void update_session_info(const eeg_interfaces::msg::SessionMetadata& msg);
   void initialize_module();
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
@@ -215,10 +215,11 @@ private:
   uint16_t dropped_sample_threshold;
   double_t timing_latency_threshold;
 
-  /* Information about the EEG device configuration. */
+  /* Information about the session. */
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
   uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
   uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
+  double_t session_start_time = UNSET_PREVIOUS_TIME;
   double_t sampling_period;
 
   /* For checking if samples have been dropped, store the time of the previous sample received. */

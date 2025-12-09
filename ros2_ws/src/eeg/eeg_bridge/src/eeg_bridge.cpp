@@ -178,6 +178,7 @@ void EegBridge::subscribe_to_session() {
 
     if (session_started) {
       RCLCPP_INFO(this->get_logger(), "Session started.");
+      this->session_start_time = this->get_clock()->now().seconds();
       publish_eeg_info();
     }
 
@@ -211,6 +212,7 @@ void EegBridge::stop_session() {
   this->first_sample_of_session = true;
   this->previous_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   this->time_offset = UNSET_TIME;
+  this->session_start_time = UNSET_TIME;
 }
 
 void EegBridge::update_healthcheck(uint8_t status, std::string status_message,
@@ -233,7 +235,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.metadata.num_emg_channels = eeg_info.num_emg_channels;
   sample.metadata.sampling_frequency = eeg_info.sampling_frequency;
   sample.metadata.is_simulation = false;
-  sample.metadata.system_time = this->get_clock()->now();
+  sample.metadata.start_time = this->session_start_time;
 
   return sample;
 }

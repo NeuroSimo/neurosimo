@@ -112,6 +112,7 @@ private:
   uint64_t previous_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
 
   double_t time_offset = UNSET_TIME;     // in seconds
+  double_t session_start_time = UNSET_TIME;  // Unix timestamp when session started
 
   bool session_been_stopped = true;
   bool session_received = false;

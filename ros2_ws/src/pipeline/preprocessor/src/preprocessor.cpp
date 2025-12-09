@@ -672,7 +672,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     preprocessed_sample.metadata.num_eeg_channels = triggering_sample->metadata.num_eeg_channels;
     preprocessed_sample.metadata.num_emg_channels = triggering_sample->metadata.num_emg_channels;
     preprocessed_sample.metadata.is_simulation = triggering_sample->metadata.is_simulation;
-    preprocessed_sample.metadata.system_time = triggering_sample->metadata.system_time;
+    preprocessed_sample.metadata.start_time = triggering_sample->metadata.start_time;
     preprocessed_sample.metadata.passed_experiment_coordinator = triggering_sample->metadata.passed_experiment_coordinator;
   
     /* Mark the sample as passed the preprocessor. */

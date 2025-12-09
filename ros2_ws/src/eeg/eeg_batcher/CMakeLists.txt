@@ -8,7 +8,7 @@ endif ()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(eeg_msgs REQUIRED)
+find_package(eeg_interfaces REQUIRED)
 
 add_executable(
         eeg_batcher
@@ -22,7 +22,7 @@ target_include_directories(eeg_batcher
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib>
         $<INSTALL_INTERFACE:lib>)
 
-ament_target_dependencies(eeg_batcher rclcpp std_msgs eeg_msgs)
+ament_target_dependencies(eeg_batcher rclcpp std_msgs eeg_interfaces)
 
 
 install(TARGETS

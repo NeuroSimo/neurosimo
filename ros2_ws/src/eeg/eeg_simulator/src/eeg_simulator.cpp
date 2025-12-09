@@ -149,7 +149,7 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
 
      NB: It is crucial to not use the shared, re-entrant callback group for this publisher, as EEG sample messages
        are time-critical and using the shared callback group seems to hinder the performance. */
-  eeg_publisher = this->create_publisher<eeg_msgs::msg::Sample>(
+  eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     EEG_QUEUE_LENGTH);
 
@@ -712,7 +712,7 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   double_t time = sample_time + this->time_offset;
 
   /* Create the sample message. */
-  eeg_msgs::msg::Sample msg;
+  eeg_interfaces::msg::Sample msg;
 
   /* Note: + 1 below is to skip the time column. */
   msg.eeg_data.insert(msg.eeg_data.end(), data.begin() + 1, data.begin() + 1 + num_of_eeg_channels);

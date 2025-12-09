@@ -7,8 +7,8 @@
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
 #include "rcl_interfaces/msg/parameter_type.hpp"
 
-#include "eeg_msgs/msg/sample.hpp"
-#include "eeg_msgs/msg/eeg_info.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
+#include "eeg_interfaces/msg/eeg_info.hpp"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -164,8 +164,8 @@ private:
   rclcpp::Service<project_interfaces::srv::SetStartTime>::SharedPtr start_time_service;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr start_time_publisher;
 
-  rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr eeg_publisher;
-  rclcpp::Publisher<eeg_msgs::msg::EegInfo>::SharedPtr eeg_info_publisher;
+  rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_publisher;
+  rclcpp::Publisher<eeg_interfaces::msg::EegInfo>::SharedPtr eeg_info_publisher;
 
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
   rclcpp::Client<system_interfaces::srv::StopSession>::SharedPtr stop_session_client;

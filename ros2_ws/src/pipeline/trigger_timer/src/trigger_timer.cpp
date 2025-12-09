@@ -50,7 +50,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Subscriber for EEG raw data. */
-  this->eeg_raw_subscriber = create_subscription<eeg_msgs::msg::Sample>(
+  this->eeg_raw_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     10,
     std::bind(&TriggerTimer::handle_eeg_raw, this, _1));
@@ -163,7 +163,7 @@ void TriggerTimer::attempt_labjack_connection() {
 }
 
 
-void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
+void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   /* Ignore EEG sample if session has not started. */
   if (this->session_state.value != system_interfaces::msg::SessionState::STARTED) {
     return;

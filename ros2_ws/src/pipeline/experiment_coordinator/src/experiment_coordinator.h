@@ -7,7 +7,7 @@
 #include <filesystem>
 
 #include "rclcpp/rclcpp.hpp"
-#include "eeg_msgs/msg/sample.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
@@ -32,13 +32,13 @@ public:
 private:
   /* ROS2 interfaces */
   // Subscribers
-  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr raw_eeg_subscriber;
+  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr raw_eeg_subscriber;
   rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr pulse_event_subscriber;
   rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   
   // Publishers
-  rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr enriched_eeg_publisher;
+  rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
   rclcpp::Publisher<project_interfaces::msg::ProtocolList>::SharedPtr protocol_list_publisher;
@@ -86,7 +86,7 @@ private:
   CoordinatorState coordinator_state = CoordinatorState::WAITING_FOR_PROTOCOL;
   
   /* Callbacks */
-  void handle_raw_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
+  void handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg);
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);

@@ -113,10 +113,10 @@ void EegBridge::create_publishers() {
                                 .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
   this->eeg_sample_publisher =
-      this->create_publisher<eeg_msgs::msg::Sample>(EEG_RAW_TOPIC, EEG_QUEUE_LENGTH);
+      this->create_publisher<eeg_interfaces::msg::Sample>(EEG_RAW_TOPIC, EEG_QUEUE_LENGTH);
 
   this->eeg_info_publisher =
-      this->create_publisher<eeg_msgs::msg::EegInfo>(EEG_INFO_TOPIC, qos_persist_latest);
+      this->create_publisher<eeg_interfaces::msg::EegInfo>(EEG_INFO_TOPIC, qos_persist_latest);
 
   this->latency_measurement_trigger_publisher =
       this->create_publisher<pipeline_interfaces::msg::LatencyMeasurementTrigger>(LATENCY_MEASUREMENT_TRIGGER_TOPIC, 10);
@@ -220,9 +220,9 @@ void EegBridge::update_healthcheck(uint8_t status, std::string status_message,
   this->actionable_message = actionable_message;
 }
 
-eeg_msgs::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
-                                                    const eeg_msgs::msg::EegInfo& eeg_info) {
-  auto sample = eeg_msgs::msg::Sample();
+eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
+                                                    const eeg_interfaces::msg::EegInfo& eeg_info) {
+  auto sample = eeg_interfaces::msg::Sample();
   sample.eeg_data = adapter_sample.eeg_data;
   sample.emg_data = adapter_sample.emg_data;
   sample.time = adapter_sample.time;
@@ -238,7 +238,7 @@ eeg_msgs::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_
   return sample;
 }
 
-void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
+void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   this->eeg_device_state = EegDeviceState::EEG_DEVICE_STREAMING;
 
   if (this->wait_for_session_to_stop) {

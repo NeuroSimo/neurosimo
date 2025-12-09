@@ -48,7 +48,7 @@ WORKDIR /app/ros2_ws
 COPY ros2_ws/src/interfaces/pipeline_interfaces src/interfaces/pipeline_interfaces/
 COPY ros2_ws/src/interfaces/project_interfaces src/interfaces/project_interfaces/
 
-COPY ros2_ws/src/interfaces/eeg_msgs src/interfaces/eeg_msgs/
+COPY ros2_ws/src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 COPY ros2_ws/src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY ros2_ws/src/realtime_utils src/realtime_utils/
 

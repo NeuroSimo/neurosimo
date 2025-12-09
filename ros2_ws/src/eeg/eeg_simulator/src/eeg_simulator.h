@@ -64,10 +64,6 @@ private:
       const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
       std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
-  void handle_set_loop(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
-
   void handle_set_start_time(
       const std::shared_ptr<project_interfaces::srv::SetStartTime::Request> request,
       std::shared_ptr<project_interfaces::srv::SetStartTime::Response> response);
@@ -96,7 +92,7 @@ private:
   bool eeg_bridge_available = false;
 
   bool playback = false;
-  bool loop = false;
+  static constexpr bool LOOP = true;  // Loop is always enabled
   double_t play_dataset_from = 0.0;
 
   size_t current_index = 0;
@@ -144,9 +140,6 @@ private:
 
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_playback_service;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr playback_publisher;
-
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_loop_service;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr loop_publisher;
 
   rclcpp::Service<project_interfaces::srv::SetStartTime>::SharedPtr start_time_service;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr start_time_publisher;

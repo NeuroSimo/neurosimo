@@ -320,27 +320,23 @@ void EegBridge::process_eeg_data_packet() {
   case SAMPLE: {
     auto ros_sample = create_ros_sample(packet.sample, eeg_info);
 
-    // Handle trigger_a (latency measurement) if present
+    // Handle trigger_a (latency measurement trigger) if present
     if (packet.sample.trigger_a) {
-      RCLCPP_INFO(this->get_logger(), "Received latency measurement trigger at %.4f s.",
-                 packet.trigger_a_timestamp);
+      RCLCPP_DEBUG(this->get_logger(), "Received latency measurement trigger at %.4f s.",
+                   packet.trigger_a_timestamp);
       auto msg = pipeline_interfaces::msg::TimedTrigger();
       msg.time = packet.trigger_a_timestamp - this->time_offset;
       this->latency_measurement_trigger_publisher->publish(msg);
     }
 
+    // Log pulse trigger (trigger_b) when present
+    if (packet.sample.trigger_b) {
+      RCLCPP_INFO(this->get_logger(), "Received TMS pulse at sample %lu (time: %.4f s)",
+                  packet.sample.index, packet.sample.time);
+    }
+
     // Always handle the sample
     handle_sample(ros_sample);
-    break;
-  }
-
-  case TRIGGER_ONLY: {
-    // Standalone trigger packet (NeurOne only)
-    RCLCPP_INFO(this->get_logger(), "Received latency measurement trigger at %.4f s.",
-               packet.trigger_a_timestamp);
-    auto msg = pipeline_interfaces::msg::TimedTrigger();
-    msg.time = packet.trigger_a_timestamp - this->time_offset;
-    this->latency_measurement_trigger_publisher->publish(msg);
     break;
   }
 

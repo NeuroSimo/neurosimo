@@ -85,16 +85,6 @@ enum ChannelType {
   TRIGGER_CHANNEL,
 };
 
-struct Trigger {
-  double timestamp;
-};
-
-struct TriggerComparator {
-  bool operator()(const Trigger& lhs, const Trigger& rhs) const {
-    return lhs.timestamp > rhs.timestamp;
-  }
-};
-
 class NeurOneAdapter : public EegAdapter {
 
 public:
@@ -109,20 +99,7 @@ private:
   bool request_measurement_start_packet() const;
   void handle_measurement_start_packet();
 
-  std::tuple<AdapterSample, bool> handle_sample_packet();
-
-  /** Parse and process the trigger packet.
-
-      Process all the trigger events in the packet. If trigger in isolated trigger
-      port B is present, the bool value indicating to include trigger in the next sample
-      will be set to true. Trigger in isolated trigger port A are used for
-      synchronisation. Other triggers are ignored.
-
-      @return tuple of trigger and trigger_time, where trigger is true if
-      trigger is present and false otherwise. trigger_time is the time of the
-      trigger given in the packet in seconds since session start.
-   */
-  std::tuple<bool, double> handle_trigger_packet();
+  AdapterSample handle_sample_packet();
 
   bool read_eeg_data_from_socket();
 
@@ -146,8 +123,6 @@ private:
 
   bool measurement_start_packet_received = false;
   uint16_t packets_since_measurement_start_packet_requested = 0;
-
-  std::priority_queue<Trigger, std::vector<Trigger>, TriggerComparator> trigger_queue;
 };
 
 #endif // EEG_BRIDGE_SRC_ADAPTERS_NEURONE_ADAPTER_H

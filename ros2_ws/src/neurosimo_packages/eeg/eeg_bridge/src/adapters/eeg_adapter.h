@@ -17,11 +17,10 @@ const uint8_t UNSET_CHANNEL_COUNT = 0;
 
 /** Result type for adapter packet processing. */
 enum AdapterPacketResult {
-  SAMPLE,       // Sample data (may include trigger_a and/or trigger_b)
-  TRIGGER_ONLY, // Standalone trigger_a packet (NeurOne only)
-  INTERNAL,     // Internal/configuration packet
-  ERROR,        // Error reading packet
-  END           // Measurement ended
+  SAMPLE,    // Sample data (may include trigger_a and/or trigger_b)
+  INTERNAL,  // Internal/configuration packet
+  ERROR,     // Error reading packet
+  END        // Measurement ended
 };
 
 /** Internal data structure representing raw sample from EEG device adapter.
@@ -33,8 +32,8 @@ struct AdapterSample {
   std::vector<double> emg_data;  // EMG channels in μV
   double time;                   // Sample timestamp in seconds
   uint64_t index;                // Sample index
-  bool trigger_a;                // Latency measurement trigger (Port A / SYNC)
-  bool trigger_b;                // Pulse trigger (Port B / PULSE)
+  bool trigger_a;                // Latency measurement trigger (Port A)
+  bool trigger_b;                // Pulse trigger (Port B)
 };
 
 /** Packet returned from adapter read_eeg_data_packet().

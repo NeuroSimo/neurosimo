@@ -37,7 +37,7 @@ RUN pip3 install --no-cache-dir psychopy==2025.1.1
 RUN pip3 install --no-cache-dir attrdict3 numpy==1.26.4 scipy==1.8.0
 
 # Set the Cyclone DDS configuration
-COPY ros2_ws/src/resources/cyclonedds.xml /config/
+COPY ros2_ws/config/cyclonedds.xml /config/
 ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy ROS workspace and build packages

@@ -78,10 +78,10 @@ struct Protocol {
 struct ExperimentState {
   // Current position in protocol
   size_t current_element_index = 0;
-  uint32_t current_trial = 0;
+  uint32_t trial = 0;
   
   // Stage tracking
-  std::string current_stage_name;
+  std::string stage_name;
   std::map<std::string, double> stage_start_times;  // Map stage name -> start time
   
   // Rest tracking

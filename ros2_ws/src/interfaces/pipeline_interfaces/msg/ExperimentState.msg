@@ -1,10 +1,10 @@
 # Current stage
-string current_stage_name
+string stage_name
 uint32 current_stage_index
 uint32 total_stages
 
 # Trial progress
-uint32 current_trial
+uint32 trial
 uint32 total_trials_in_stage
 
 # State flags

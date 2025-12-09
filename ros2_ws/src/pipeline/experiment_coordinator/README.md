@@ -60,8 +60,8 @@ The coordinator adds the following fields to EEG samples:
 - `in_rest` - Whether currently in a rest period
 - `paused` - Whether the experiment is paused
 - `experiment_time` - Pause-adjusted time (sample.time - total_pause_duration)
-- `current_trial` - Current trial within stage
-- `current_stage_name` - Name of current stage
+- `trial` - Current trial within stage
+- `stage_name` - Name of current stage
 - `pulse_count` - Total number of pulses
 
 ## Behavior

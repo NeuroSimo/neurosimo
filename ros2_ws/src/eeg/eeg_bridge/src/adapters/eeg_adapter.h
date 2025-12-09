@@ -28,15 +28,15 @@ enum AdapterPacketResult {
     The distinction between trigger_a (latency measurement) and trigger_b
     (pulse trigger) is explicit in field names. */
 struct AdapterSample {
-  std::vector<double> eeg_data;  // EEG channels in μV
-  std::vector<double> emg_data;  // EMG channels in μV
+  std::vector<double> eeg;  // EEG channels in μV
+  std::vector<double> emg;  // EMG channels in μV
   double time;                   // Sample timestamp in seconds
   uint64_t index;                // Sample index
   bool trigger_a;                // Latency measurement trigger (Port A)
   bool trigger_b;                // Pulse trigger (Port B)
 };
 
-/** Packet returned from adapter read_eeg_data_packet().
+/** Packet returned from adapter read_eeg_packet().
     Contains both the result type and the sample data (when applicable). */
 struct AdapterPacket {
   AdapterPacketResult result;
@@ -55,7 +55,7 @@ public:
 
       @return AdapterPacket containing the result type, sample data (when applicable),
       and trigger_a timestamp for latency measurement triggers. */
-  virtual AdapterPacket read_eeg_data_packet() = 0;
+  virtual AdapterPacket read_eeg_packet() = 0;
 
   /// Get EEG device configuration info
   eeg_interfaces::msg::EegInfo get_eeg_info() const {

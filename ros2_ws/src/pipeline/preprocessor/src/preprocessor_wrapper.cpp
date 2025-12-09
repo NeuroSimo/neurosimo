@@ -45,8 +45,8 @@ builtins.print_throttle = print_throttle
 void PreprocessorWrapper::initialize_module(
     const std::string& directory,
     const std::string& module_name,
-    const size_t eeg_data_size,
-    const size_t emg_data_size,
+    const size_t eeg_size,
+    const size_t emg_size,
     const uint16_t sampling_frequency) {
 
   this->sampling_frequency = sampling_frequency;
@@ -71,7 +71,7 @@ void PreprocessorWrapper::initialize_module(
   try {
     auto imported_module = py::module::import(module_name.c_str());
     preprocessor_module = std::make_unique<py::module>(imported_module);
-    auto instance = preprocessor_module->attr("Preprocessor")(eeg_data_size, emg_data_size, sampling_frequency);
+    auto instance = preprocessor_module->attr("Preprocessor")(eeg_size, emg_size, sampling_frequency);
     preprocessor_instance = std::make_unique<py::object>(instance);
 
   } catch(const py::error_already_set& e) {
@@ -124,14 +124,14 @@ void PreprocessorWrapper::initialize_module(
   /* Initialize numpy arrays. */
   py_time_offsets = std::make_unique<py::array_t<double>>(buffer_size);
 
-  std::vector<size_t> eeg_data_shape = {buffer_size, eeg_data_size};
-  py_eeg_data = std::make_unique<py::array_t<double>>(eeg_data_shape);
+  std::vector<size_t> eeg_shape = {buffer_size, eeg_size};
+  py_eeg = std::make_unique<py::array_t<double>>(eeg_shape);
 
-  std::vector<size_t> emg_data_shape = {buffer_size, emg_data_size};
-  py_emg_data = std::make_unique<py::array_t<double>>(emg_data_shape);
+  std::vector<size_t> emg_shape = {buffer_size, emg_size};
+  py_emg = std::make_unique<py::array_t<double>>(emg_shape);
 
-  this->eeg_data_size = eeg_data_size;
-  this->emg_data_size = emg_data_size;
+  this->eeg_size = eeg_size;
+  this->emg_size = emg_size;
 
   state = WrapperState::READY;
 
@@ -147,8 +147,8 @@ void PreprocessorWrapper::reset_module_state() {
   preprocessor_instance = nullptr;
 
   py_time_offsets.reset();
-  py_eeg_data.reset();
-  py_emg_data.reset();
+  py_eeg.reset();
+  py_emg.reset();
 
   state = WrapperState::UNINITIALIZED;
 
@@ -157,8 +157,8 @@ void PreprocessorWrapper::reset_module_state() {
 
 PreprocessorWrapper::~PreprocessorWrapper() {
   py_time_offsets.reset();
-  py_eeg_data.reset();
-  py_emg_data.reset();
+  py_eeg.reset();
+  py_emg.reset();
 }
 
 WrapperState PreprocessorWrapper::get_state() const {
@@ -187,23 +187,23 @@ bool PreprocessorWrapper::process(
 
   /* Fill the numpy arrays. */
   auto time_offsets_ptr = py_time_offsets->mutable_data();
-  auto eeg_data_ptr = py_eeg_data->mutable_data();
-  auto emg_data_ptr = py_emg_data->mutable_data();
+  auto eeg_ptr = py_eeg->mutable_data();
+  auto emg_ptr = py_emg->mutable_data();
 
   buffer.process_elements([&](const auto& sample_ptr) {
     const auto& sample = *sample_ptr;
 
     *time_offsets_ptr++ = sample.time - reference_time;
-    std::memcpy(eeg_data_ptr, sample.eeg_data.data(), eeg_data_size * sizeof(double));
-    eeg_data_ptr += eeg_data_size;
-    std::memcpy(emg_data_ptr, sample.emg_data.data(), emg_data_size * sizeof(double));
-    emg_data_ptr += emg_data_size;
+    std::memcpy(eeg_ptr, sample.eeg.data(), eeg_size * sizeof(double));
+    eeg_ptr += eeg_size;
+    std::memcpy(emg_ptr, sample.emg.data(), emg_size * sizeof(double));
+    emg_ptr += emg_size;
   });
 
   /* Call the Python function. */
   py::object result;
   try {
-    result = preprocessor_instance->attr("process")(reference_time, reference_index, *py_time_offsets, *py_eeg_data, *py_emg_data, pulse_given);
+    result = preprocessor_instance->attr("process")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, pulse_given);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
@@ -260,8 +260,8 @@ bool PreprocessorWrapper::process(
   }
 
   /* Convert the Python dictionary to a ROS message. */
-  output_sample.eeg_data = dict_result["eeg_sample"].cast<std::vector<double>>();
-  output_sample.emg_data = dict_result["emg_sample"].cast<std::vector<double>>();
+  output_sample.eeg = dict_result["eeg_sample"].cast<std::vector<double>>();
+  output_sample.emg = dict_result["emg_sample"].cast<std::vector<double>>();
   output_sample.valid = dict_result["valid"].cast<bool>();
 
   output_sample.time = reference_time;

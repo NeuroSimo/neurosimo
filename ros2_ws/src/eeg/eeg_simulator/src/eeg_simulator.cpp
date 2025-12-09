@@ -625,8 +625,8 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   eeg_interfaces::msg::Sample msg;
 
   /* Note: + 1 below is to skip the time column. */
-  msg.eeg_data.insert(msg.eeg_data.end(), data.begin() + 1, data.begin() + 1 + num_of_eeg_channels);
-  msg.emg_data.insert(msg.emg_data.end(), data.begin() + 1 + num_of_eeg_channels, data.end());
+  msg.eeg.insert(msg.eeg.end(), data.begin() + 1, data.begin() + 1 + num_of_eeg_channels);
+  msg.emg.insert(msg.emg.end(), data.begin() + 1 + num_of_eeg_channels, data.end());
 
   msg.metadata.sampling_frequency = this->sampling_frequency;
   msg.metadata.num_of_eeg_channels = this->num_of_eeg_channels;

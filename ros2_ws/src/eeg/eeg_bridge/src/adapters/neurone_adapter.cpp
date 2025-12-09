@@ -79,7 +79,7 @@ bool NeurOneAdapter::init_socket() {
   return true;
 }
 
-bool NeurOneAdapter::read_eeg_data_from_socket() {
+bool NeurOneAdapter::read_eeg_from_socket() {
   auto success = recvfrom(this->socket_, this->buffer, BUFFER_SIZE, 0, nullptr, nullptr);
   if (success == -1) {
     RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "No data received, reason: %s", strerror(errno));
@@ -198,11 +198,11 @@ AdapterSample NeurOneAdapter::handle_sample_packet() {
     switch (channel_type) {
 
     case ChannelType::EEG_CHANNEL:
-      adapter_sample.eeg_data.push_back(result_uV);
+      adapter_sample.eeg.push_back(result_uV);
       break;
 
     case ChannelType::BIPOLAR_CHANNEL:
-      adapter_sample.emg_data.push_back(result_uV);
+      adapter_sample.emg.push_back(result_uV);
       break;
 
     case ChannelType::TRIGGER_CHANNEL: {
@@ -218,20 +218,20 @@ AdapterSample NeurOneAdapter::handle_sample_packet() {
   }
 
   adapter_sample.time = sample_time_s;
-  adapter_sample.index = sample_index;
+  adapter_sample.sample_index = sample_index;
 
   return adapter_sample;
 }
 
 
-AdapterPacket NeurOneAdapter::read_eeg_data_packet() {
+AdapterPacket NeurOneAdapter::read_eeg_packet() {
   /* Return variables */
   AdapterPacket packet;
   packet.result = INTERNAL;
   packet.sample = AdapterSample();
   packet.trigger_a_timestamp = -1.0; // in seconds
 
-  bool success = read_eeg_data_from_socket();
+  bool success = read_eeg_from_socket();
   if (!success) {
     RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), "Timeout while reading EEG data");
     packet.result = ERROR;

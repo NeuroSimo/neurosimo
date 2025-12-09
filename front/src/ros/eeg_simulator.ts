@@ -57,34 +57,6 @@ export const setPlaybackRos = (playback: boolean, callback: () => void) => {
   )
 }
 
-/* Set loop service */
-const setLoopService = new ROSLIB.Service({
-  ros: ros,
-  name: '/eeg_simulator/loop/set',
-  serviceType: 'std_srvs/SetBool',
-})
-
-export const setLoopRos = (loop: boolean, callback: () => void) => {
-  const request = new ROSLIB.ServiceRequest({
-    data: loop,
-  }) as any
-
-  setLoopService.callService(
-    request,
-    (response) => {
-      if (!response.success) {
-        console.log('ERROR: Failed to set loop: success field was false.')
-      } else {
-        callback()
-      }
-    },
-    (error) => {
-      console.log('ERROR: Failed to set loop, error:')
-      console.log(error)
-    }
-  )
-}
-
 /* Set start time service */
 const setStartTimeService = new ROSLIB.Service({
   ros: ros,

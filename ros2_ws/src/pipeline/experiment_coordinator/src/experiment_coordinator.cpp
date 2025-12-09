@@ -216,9 +216,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
     }
   }
   
-  /* Mark as passed experiment coordinator. */
-  enriched.metadata.passed_experiment_coordinator = true;
-  
   /* Publish enriched sample. */
   this->enriched_eeg_publisher->publish(enriched);
   

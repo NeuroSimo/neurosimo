@@ -9,8 +9,8 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/string.hpp"
 
-#include "eeg_msgs/msg/eeg_info.hpp"
-#include "eeg_msgs/msg/sample.hpp"
+#include "eeg_interfaces/msg/eeg_info.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
 
 #include "pipeline_interfaces/msg/latency_measurement_trigger.hpp"
 
@@ -69,10 +69,10 @@ private:
   void update_healthcheck(uint8_t status, std::string status_message,
                           std::string actionable_message);
 
-  eeg_msgs::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
-                                          const eeg_msgs::msg::EegInfo& eeg_info);
+  eeg_interfaces::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
+                                          const eeg_interfaces::msg::EegInfo& eeg_info);
 
-  void handle_sample(eeg_msgs::msg::Sample sample);
+  void handle_sample(eeg_interfaces::msg::Sample sample);
 
   void create_publishers();
   void create_subscribers();
@@ -97,8 +97,8 @@ private:
   ErrorState error_state = ErrorState::NO_ERROR;
 
   /* Publishers */
-  rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr eeg_sample_publisher;
-  rclcpp::Publisher<eeg_msgs::msg::EegInfo>::SharedPtr eeg_info_publisher;
+  rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;
+  rclcpp::Publisher<eeg_interfaces::msg::EegInfo>::SharedPtr eeg_info_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LatencyMeasurementTrigger>::SharedPtr latency_measurement_trigger_publisher;
 

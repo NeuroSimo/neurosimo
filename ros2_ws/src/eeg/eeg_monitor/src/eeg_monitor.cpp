@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "eeg_msgs/msg/sample.hpp"
-#include "eeg_msgs/msg/eeg_statistics.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
+#include "eeg_interfaces/msg/eeg_statistics.hpp"
 
 using namespace std::chrono_literals;
 
@@ -24,7 +24,7 @@ public:
     num_of_raw_eeg_samples = 0;
 
     /* Subscriber for raw EEG. */
-    auto eeg_raw_subscriber_callback = [this](const std::shared_ptr<eeg_msgs::msg::Sample> msg) -> void {
+    auto eeg_raw_subscriber_callback = [this](const std::shared_ptr<eeg_interfaces::msg::Sample> msg) -> void {
       /* Update the maximum time between two consecutive samples. */
       auto now = this->now();
 
@@ -40,13 +40,13 @@ public:
       num_of_raw_eeg_samples++;
     };
 
-    eeg_raw_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
+    eeg_raw_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
       EEG_RAW_TOPIC,
       10,
       eeg_raw_subscriber_callback);
 
     /* Subscriber for preprocessed EEG. */
-    auto eeg_preprocessed_subscriber_callback = [this](const std::shared_ptr<eeg_msgs::msg::Sample> msg) -> void {
+    auto eeg_preprocessed_subscriber_callback = [this](const std::shared_ptr<eeg_interfaces::msg::Sample> msg) -> void {
       /* Update the maximum time between two consecutive samples. */
       auto now = this->now();
 
@@ -65,13 +65,13 @@ public:
       preprocessing_durations.push_back(msg->metadata.preprocessing_duration);
     };
 
-    eeg_preprocessed_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
+    eeg_preprocessed_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
       EEG_PREPROCESSED_TOPIC,
       10,
       eeg_preprocessed_subscriber_callback);
 
     /* Publisher for statistics. */
-    eeg_statistics_publisher = this->create_publisher<eeg_msgs::msg::EegStatistics>(
+    eeg_statistics_publisher = this->create_publisher<eeg_interfaces::msg::EegStatistics>(
       EEG_STATISTICS_TOPIC,
       10);
 
@@ -110,7 +110,7 @@ public:
     }
 
     /* Publish the statistics. */
-    auto msg = eeg_msgs::msg::EegStatistics();
+    auto msg = eeg_interfaces::msg::EegStatistics();
 
     msg.num_of_raw_samples = num_of_raw_eeg_samples;
     msg.max_interval_between_raw_samples = max_interval_between_raw_samples;
@@ -142,9 +142,9 @@ public:
 
 
 private:
-  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_raw_subscriber;
-  rclcpp::Subscription<eeg_msgs::msg::Sample>::SharedPtr eeg_preprocessed_subscriber;
-  rclcpp::Publisher<eeg_msgs::msg::EegStatistics>::SharedPtr eeg_statistics_publisher;
+  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
+  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_preprocessed_subscriber;
+  rclcpp::Publisher<eeg_interfaces::msg::EegStatistics>::SharedPtr eeg_statistics_publisher;
 
   rclcpp::TimerBase::SharedPtr timer;
 

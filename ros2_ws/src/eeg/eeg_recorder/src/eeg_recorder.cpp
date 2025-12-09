@@ -53,13 +53,13 @@ EegRecorder::EegRecorder() : Node("eeg_recorder") {
     std::bind(&EegRecorder::handle_session, this, _1));
 
   /* Subscriber for raw EEG. */
-  eeg_raw_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
+  eeg_raw_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     EEG_QUEUE_LENGTH,
     std::bind(&EegRecorder::handle_raw_eeg_sample, this, _1));
 
   /* Subscriber for preprocessed EEG. */
-  eeg_preprocessed_subscriber = this->create_subscription<eeg_msgs::msg::Sample>(
+  eeg_preprocessed_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
     EEG_PREPROCESSED_TOPIC,
     EEG_QUEUE_LENGTH,
     std::bind(&EegRecorder::handle_preprocessed_eeg_sample, this, _1));
@@ -188,7 +188,7 @@ void EegRecorder::write_buffers() {
   }
 }
 
-void EegRecorder::update_eeg_info(const eeg_msgs::msg::SampleMetadata& msg) {
+void EegRecorder::update_eeg_info(const eeg_interfaces::msg::SampleMetadata& msg) {
   this->sampling_frequency = msg.sampling_frequency;
   this->num_of_eeg_channels = msg.num_of_eeg_channels;
   this->num_of_emg_channels = msg.num_of_emg_channels;
@@ -221,7 +221,7 @@ void EegRecorder::check_dropped_samples(double_t sample_time, double_t previous_
   }
 }
 
-void EegRecorder::handle_raw_eeg_sample([[maybe_unused]] const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
+void EegRecorder::handle_raw_eeg_sample([[maybe_unused]] const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   this->previous_clock_time_raw = std::chrono::system_clock::now();
 
   /* XXX: Not sure if EEG info should be updated every sample. */
@@ -268,7 +268,7 @@ void EegRecorder::handle_raw_eeg_sample([[maybe_unused]] const std::shared_ptr<e
   raw_buffer << temp_buffer.str();
 }
 
-void EegRecorder::handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg) {
+void EegRecorder::handle_preprocessed_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   this->previous_clock_time_preprocessed = std::chrono::system_clock::now();
 
   double_t sample_time = msg->time;

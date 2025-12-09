@@ -14,13 +14,13 @@ This node:
 ## Topics
 
 ### Subscribed
-- `/eeg/raw` (eeg_msgs/Sample) - Raw EEG samples from EEG Bridge
+- `/eeg/raw` (eeg_interfaces/Sample) - Raw EEG samples from EEG Bridge
 - `/pipeline/pulse_events` (std_msgs/Empty) - Pulse events from Decider
 - `/system/session` (system_interfaces/Session) - Session state
 - `/projects/active` (std_msgs/String) - Active project name
 
 ### Published
-- `/eeg/enriched` (eeg_msgs/Sample) - EEG samples enriched with experiment state
+- `/eeg/enriched` (eeg_interfaces/Sample) - EEG samples enriched with experiment state
 - `/pipeline/coordinator/healthcheck` (system_interfaces/Healthcheck) - Health status
 - `/pipeline/protocol/list` (project_interfaces/ProtocolList) - Available protocols
 - `/pipeline/protocol` (std_msgs/String) - Currently loaded protocol

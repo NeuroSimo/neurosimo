@@ -7,7 +7,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
-#include "eeg_msgs/msg/sample.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
 
 using namespace std::chrono_literals;
 
@@ -31,7 +31,7 @@ class MockEegBridge : public rclcpp::Node {
 
         auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
-        publisher_data_ = this->create_publisher<eeg_msgs::msg::Sample>("/eeg/raw", 10);
+        publisher_data_ = this->create_publisher<eeg_interfaces::msg::Sample>("/eeg/raw", 10);
         publisher_streaming_ = this->create_publisher<std_msgs::msg::Bool>("/eeg/is_streaming", qos);
 
         this->declare_parameter<float>("sampling_frequency", DEFAULT_FREQUENCY_VALUE);
@@ -51,7 +51,7 @@ class MockEegBridge : public rclcpp::Node {
 
     void timer_callback() {
 
-        auto message = eeg_msgs::msg::Sample();
+        auto message = eeg_interfaces::msg::Sample();
 
         for (int channel = 1; channel <= NUMBER_OF_CHANNELS; channel++) {
 
@@ -76,7 +76,7 @@ class MockEegBridge : public rclcpp::Node {
 
   private:
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<eeg_msgs::msg::Sample>::SharedPtr publisher_data_;
+    rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr publisher_data_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher_streaming_;
     float sampling_frequency_;
     double_t sampling_interval_;

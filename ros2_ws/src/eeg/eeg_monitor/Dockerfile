@@ -19,7 +19,7 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 WORKDIR /app/ros2_ws
 
 # ROS interfaces
-COPY ros2_ws/src/interfaces/eeg_msgs src/interfaces/eeg_msgs/
+COPY ros2_ws/src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 RUN source /opt/ros/iron/setup.bash && colcon build
 
 # ROS node

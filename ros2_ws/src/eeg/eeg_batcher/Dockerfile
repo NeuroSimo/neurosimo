@@ -18,7 +18,7 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 WORKDIR /app
 COPY ros2_ws/src/eeg/eeg_batcher ros2_ws/src/eeg/eeg_batcher/
-COPY ros2_ws/src/interfaces/eeg_msgs ros2_ws/src/interfaces/eeg_msgs/
+COPY ros2_ws/src/interfaces/eeg_interfaces ros2_ws/src/interfaces/eeg_interfaces/
 
 # Build ROS packages
 

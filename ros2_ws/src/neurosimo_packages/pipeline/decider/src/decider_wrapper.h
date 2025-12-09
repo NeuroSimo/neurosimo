@@ -16,7 +16,7 @@
 
 #include "eeg_msgs/msg/sample.hpp"
 
-#include "targeting_msgs/msg/electric_target.hpp"
+#include "pipeline_interfaces/msg/coil_target.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/timed_trigger.hpp"

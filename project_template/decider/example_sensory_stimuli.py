@@ -69,7 +69,7 @@ class Decider:
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG buffer periodically."""
         print(f"Periodic processing at time {reference_time:.1f}s")
 
@@ -110,7 +110,7 @@ class Decider:
     def process_eeg_trigger(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG trigger from the EEG device."""
         print(f"EEG trigger received at time {reference_time}.")
         # This example doesn't process EEG triggers, just log them
@@ -119,7 +119,7 @@ class Decider:
     def process_pulse(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-            ready_for_trial: bool, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process pulse event."""
         print(f"Pulse event received at time {reference_time}.")
         

@@ -141,7 +141,7 @@ When an event occurs, its corresponding processor method is called instead of th
 def process_pulse(
         self, reference_time, reference_index, time_offsets, 
         eeg_buffer, emg_buffer, valid_samples, 
-        ready_for_trial, is_coil_at_target):
+        is_coil_at_target):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process pulse-specific logic
@@ -201,12 +201,6 @@ Boolean array indicating sample validity. Shape: `(num_samples,)`.
 - Sample validity determined by pipeline preprocessor
 - Default preprocessor marks samples invalid for 1 second after each pulse
 
-#### `ready_for_trial` (bool)
-Whether pipeline can accept new trial requests.
-- `False` during ongoing trials or target precomputation
-- Decider should not trigger trials when `False` (warnings issued if attempted)
-- Other processing (logging, filtering, training) can continue regardless
-
 #### `is_coil_at_target` (bool)
 Whether the coil is currently positioned at the target location (for neuronavigation systems).
 
@@ -254,7 +248,6 @@ Same as `process_periodic()` method:
 - `eeg_buffer` (numpy.ndarray)
 - `emg_buffer` (numpy.ndarray)
 - `valid_samples` (numpy.ndarray)
-- `ready_for_trial` (bool)
 - `is_coil_at_target` (bool)
 
 **Return Value:**
@@ -265,7 +258,7 @@ Same format as `process_periodic()` method.
 def process_eeg_trigger(
         self, reference_time, reference_index, time_offsets,
         eeg_buffer, emg_buffer, valid_samples,
-        ready_for_trial, is_coil_at_target):
+        is_coil_at_target):
     """Process EEG trigger from the EEG device."""
     print(f"EEG trigger received at {reference_time}")
     # Return None if you don't care about EEG triggers
@@ -283,7 +276,7 @@ Event processor methods are called when events occur (defined in `event_processo
 def process_pulse(
         self, reference_time, reference_index, time_offsets,
         eeg_buffer, emg_buffer, valid_samples,
-        ready_for_trial, is_coil_at_target):
+        is_coil_at_target):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process event-specific logic
@@ -396,7 +389,7 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 def process_periodic(
         self, reference_time, reference_index, time_offsets, 
         eeg_buffer, emg_buffer, valid_samples,
-        ready_for_trial, is_coil_at_target):
+        is_coil_at_target):
     # Generate stimuli based on current time or data
     return {
         'sensory_stimuli': [
@@ -457,7 +450,7 @@ If your decider maintains internal state that depends on real EEG/EMG data patte
 def process_periodic(
         self, reference_time, reference_index, time_offsets, 
         eeg_buffer, emg_buffer, valid_samples,
-        ready_for_trial, is_coil_at_target):
+        is_coil_at_target):
     
     # Skip state updates during warm-up (dummy data)
     is_warmup = (reference_time == 0.0)
@@ -475,9 +468,7 @@ def process_periodic(
 
 ## Best Practices
 
-1. **Check `ready_for_trial`** before scheduling triggers
-2. **Validate samples** using `valid_samples` array before processing
-3. **Configure warm-up** with `self.warm_up_rounds = 2` for consistent performance
-4. **Skip state updates during warm-up** by checking `reference_time == 0.0` for stateful deciders
-5. **Use multiprocessing pool** for computationally intensive tasks to avoid blocking the pipeline
-
+1. **Validate samples** using `valid_samples` array before processing
+2. **Configure warm-up** with `self.warm_up_rounds = 2` for consistent performance
+3. **Skip state updates during warm-up** by checking `reference_time == 0.0` for stateful deciders
+4. **Use multiprocessing pool** for computationally intensive tasks to avoid blocking the pipeline

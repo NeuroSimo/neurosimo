@@ -76,7 +76,7 @@ After installing Ubuntu, clone the NeuroSimo repository to the home directory:
 
 ```bash
 cd ~
-git clone https://github.com/neurosimo/neurosimo --recurse-submodules
+git clone https://github.com/neurosimo/neurosimo
 ```
 
 Navigate to the repository directory and run the installation script:

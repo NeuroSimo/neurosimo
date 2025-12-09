@@ -10,7 +10,7 @@ WORKDIR /app
 ENV PATH /app/node_modules/.bin:$PATH
 
 # Set the Cyclone DDS configuration
-COPY ros2_ws/src/resources/cyclonedds.xml /config/
+COPY ros2_ws/config/cyclonedds.xml /config/
 ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Install Git

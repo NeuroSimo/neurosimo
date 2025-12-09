@@ -34,7 +34,6 @@ public:
 
 private:
   rclcpp::Logger logger;
-  rclcpp::Subscription<system_interfaces::msg::Healthcheck>::SharedPtr mtms_device_healthcheck_subscriber;
   rclcpp::Service<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
   rclcpp::Publisher<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionInfo>::SharedPtr decision_info_publisher;
@@ -47,7 +46,6 @@ private:
   rclcpp::TimerBase::SharedPtr timer;
 
   std::unique_ptr<LabJackManager> labjack_manager;
-  bool mtms_device_available = false;
 
   double_t latest_timing_error = 0.0;
   double_t latest_latency_measurement_time = 0.0;
@@ -63,7 +61,6 @@ private:
 
   void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
   void attempt_labjack_connection();
-  void handle_mtms_device_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg);
   void handle_eeg_raw(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
   void handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,

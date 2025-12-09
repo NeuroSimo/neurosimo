@@ -22,8 +22,6 @@
 
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
-#include "mtms_trial_interfaces/msg/trial.hpp"
-#include "mtms_trial_interfaces/action/perform_trial.hpp"
 
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
@@ -59,12 +57,6 @@ enum class DeciderState {
   MODULE_ERROR
 };
 
-struct GoalMetadata {
-  mtms_trial_interfaces::msg::Trial trial;
-
-  /* The time of the sample based on which the decision to perform a trial was made. */
-  double decision_time;
-};
 
 struct DeferredProcessingRequest {
   /* The time when processing should actually occur (after look-ahead samples have arrived). */
@@ -99,7 +91,6 @@ public:
   void spin();
 
 private:
-  rclcpp_action::Client<mtms_trial_interfaces::action::PerformTrial>::SharedPtr perform_trial_client;
   rclcpp::CallbackGroup::SharedPtr callback_group;
 
   void publish_healthcheck();
@@ -108,15 +99,8 @@ private:
   void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
-  std::string goal_id_to_string(const rclcpp_action::GoalUUID &uuid);
-
-  void empty_trial_queue();
-  void precompute_trials();
   void update_dropped_sample_count();
 
-  void perform_trial(const mtms_trial_interfaces::msg::Trial& trial, double decision_time);
-  void goal_response_callback(std::shared_ptr<rclcpp_action::ClientGoalHandle<mtms_trial_interfaces::action::PerformTrial>> goal_handle, const mtms_trial_interfaces::msg::Trial& trial, double decision_time);
-  void trial_performed_callback(const rclcpp_action::ClientGoalHandle<mtms_trial_interfaces::action::PerformTrial>::WrappedResult &result);
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
@@ -150,8 +134,6 @@ private:
   void handle_trigger_from_eeg_device(const double_t trigger_time);
 
   void process_sample(const std::shared_ptr<eeg_msgs::msg::Sample> msg);
-
-  void log_trial(const mtms_trial_interfaces::msg::Trial& trial, size_t num_of_remaining_trials);
 
   std::tuple<bool, double, std::string> consume_next_event(double_t current_time);
   void pop_event();
@@ -247,10 +229,6 @@ private:
 
   std::unique_ptr<DeciderWrapper> decider_wrapper;
 
-  std::queue<std::pair<mtms_trial_interfaces::msg::Trial, double>> trial_queue;
-  std::map<std::string, GoalMetadata> goal_to_metadata_map;
-
-  bool is_performing_trial = false;
   bool is_processing_timed_trigger = false;
 
   bool is_preprocessor_enabled = false;
@@ -267,9 +245,6 @@ private:
   uint8_t status;
   std::string status_message;
   std::string actionable_message;
-
-  /* mTMS device */
-  bool mtms_device_enabled = false;
 
   /* Inotify variables */
   rclcpp::TimerBase::SharedPtr inotify_timer;

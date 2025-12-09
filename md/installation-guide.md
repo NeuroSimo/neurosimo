@@ -72,23 +72,18 @@ Ubuntu Pro can be configured to enable real-time kernel support. The following s
 
 ## Software installation
 
-After installing Ubuntu, clone the NeuroSimo repository to the home directory:
+After installing Ubuntu, run the following command to download and install NeuroSimo:
 
 ```bash
-cd ~
-git clone https://github.com/neurosimo/neurosimo
+curl -fsSL https://raw.githubusercontent.com/neurosimo/neurosimo/main/scripts/install.sh | bash
 ```
 
-Navigate to the repository directory and run the installation script:
+This command will:
+1. Install required dependencies
+2. Clone the NeuroSimo repository to `~/neurosimo`
+3. Run the installation script with Ansible playbooks to install necessary software packages and dependencies
 
-```bash
-cd neurosimo
-scripts/install-neurosimo
-```
-
-The script will run the Ansible playbooks to install the necessary software packages and dependencies for NeuroSimo.
-
-After the installation is complete, reboot the computer.
+After the installation is complete, the script will prompt you to reboot the computer.
 
 After reboot, NeuroSimo should be installed and ready to use via the web interface at
 [http://localhost:3000](http://localhost:3000).

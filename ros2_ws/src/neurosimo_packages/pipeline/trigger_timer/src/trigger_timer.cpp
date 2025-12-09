@@ -81,7 +81,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     std::bind(&TriggerTimer::handle_session, this, _1),
     subscription_options);
 
-  this->latency_measurement_trigger_subscriber = create_subscription<pipeline_interfaces::msg::TimedTrigger>(
+  this->latency_measurement_trigger_subscriber = create_subscription<pipeline_interfaces::msg::LatencyMeasurementTrigger>(
     "/pipeline/latency_measurement_trigger",
     10,
     std::bind(&TriggerTimer::handle_latency_measurement_trigger, this, _1));
@@ -140,7 +140,7 @@ void TriggerTimer::handle_session(const std::shared_ptr<system_interfaces::msg::
   }
 }
 
-void TriggerTimer::handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> msg) {
+void TriggerTimer::handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::LatencyMeasurementTrigger> msg) {
   double_t trigger_time = msg->time;
 
   current_latency = trigger_time - latest_latency_measurement_time;

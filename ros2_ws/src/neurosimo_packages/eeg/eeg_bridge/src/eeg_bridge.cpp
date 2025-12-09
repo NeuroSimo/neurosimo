@@ -119,7 +119,7 @@ void EegBridge::create_publishers() {
       this->create_publisher<eeg_msgs::msg::EegInfo>(EEG_INFO_TOPIC, qos_persist_latest);
 
   this->latency_measurement_trigger_publisher =
-      this->create_publisher<pipeline_interfaces::msg::TimedTrigger>(LATENCY_MEASUREMENT_TRIGGER_TOPIC, 10);
+      this->create_publisher<pipeline_interfaces::msg::LatencyMeasurementTrigger>(LATENCY_MEASUREMENT_TRIGGER_TOPIC, 10);
 
   this->healthcheck_publisher =
       this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
@@ -253,11 +253,10 @@ void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
     return;
   }
 
-  /* Ignore sample packets if in an error state, preventing streaming. */
+  /* Ignore the sample if in an error state, preventing streaming. */
   if (this->error_state != ErrorState::NO_ERROR) {
     return;
   }
-
 
   /* Warn if the sample index wraps around. */
   if (previous_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
@@ -301,10 +300,10 @@ void EegBridge::handle_sample(eeg_msgs::msg::Sample sample) {
 void EegBridge::process_eeg_data_packet() {
   AdapterPacket packet = this->eeg_adapter->read_eeg_data_packet();
 
-  /* Ignore the packets if session has not started. */
-  bool ignore_packet = this->session_state.value != system_interfaces::msg::SessionState::STARTED;
+  /* Ignore the packet if session has not started. */
+  bool session_not_started = this->session_state.value != system_interfaces::msg::SessionState::STARTED;
 
-  if (ignore_packet) {
+  if (session_not_started) {
     return;
   }
 
@@ -324,7 +323,7 @@ void EegBridge::process_eeg_data_packet() {
     if (packet.sample.trigger_a) {
       RCLCPP_DEBUG(this->get_logger(), "Received latency measurement trigger at %.4f s.",
                    packet.trigger_a_timestamp);
-      auto msg = pipeline_interfaces::msg::TimedTrigger();
+      auto msg = pipeline_interfaces::msg::LatencyMeasurementTrigger();
       msg.time = packet.trigger_a_timestamp - this->time_offset;
       this->latency_measurement_trigger_publisher->publish(msg);
     }

@@ -62,7 +62,7 @@ public:
       num_of_preprocessed_eeg_samples++;
 
       /* Update the preprocessing durations. */
-      preprocessing_durations.push_back(msg->metadata.preprocessing_duration);
+      preprocessing_durations.push_back(msg->preprocessing_duration);
     };
 
     eeg_preprocessed_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(

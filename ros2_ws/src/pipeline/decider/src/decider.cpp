@@ -530,7 +530,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     decision_info.feasible = false;
     decision_info.decision_time = sample_time;
     decision_info.decider_latency = decider_processing_duration;
-    decision_info.preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
+    decision_info.preprocessor_latency = request.triggering_sample->preprocessing_duration;
     decision_info.total_latency = total_latency;
 
     this->decision_info_publisher->publish(decision_info);
@@ -562,7 +562,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   request_msg->timed_trigger = *timed_trigger;
   request_msg->decision_time = sample_time;
   request_msg->system_time_for_sample = request.triggering_sample->metadata.system_time;
-  request_msg->preprocessor_latency = request.triggering_sample->metadata.preprocessing_duration;
+  request_msg->preprocessor_latency = request.triggering_sample->preprocessing_duration;
   request_msg->decider_latency = decider_processing_duration;
 
   this->request_timed_trigger(request_msg);

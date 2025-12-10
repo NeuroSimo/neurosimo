@@ -11,6 +11,8 @@ interface Dataset extends ROSLIB.Message {
   num_eeg_channels: number
   num_emg_channels: number
   duration: number
+  loop: boolean
+  pulse_count: number
 }
 
 interface DatasetList extends ROSLIB.Message {

@@ -15,43 +15,15 @@ export const setDatasetRos = (filename: string, callback: () => void) => {
 
   setDatasetService.callService(
     request,
-    (response) => {
+    (response: any) => {
       if (!response.success) {
         console.log('ERROR: Failed to set dataset: success field was false.')
       } else {
         callback()
       }
     },
-    (error) => {
+    (error: any) => {
       console.log('ERROR: Failed to set dataset, error:')
-      console.log(error)
-    }
-  )
-}
-
-/* Set enabled service */
-const setEnabledService = new ROSLIB.Service({
-  ros: ros,
-  name: '/eeg_simulator/enabled/set',
-  serviceType: 'std_srvs/SetBool',
-})
-
-export const setEnabledRos = (enabled: boolean, callback: () => void) => {
-  const request = new ROSLIB.ServiceRequest({
-    data: enabled,
-  }) as any
-
-  setEnabledService.callService(
-    request,
-    (response) => {
-      if (!response.success) {
-        console.log('ERROR: Failed to set enabled: success field was false.')
-      } else {
-        callback()
-      }
-    },
-    (error) => {
-      console.log('ERROR: Failed to set enabled, error:')
       console.log(error)
     }
   )
@@ -71,14 +43,14 @@ export const setStartTimeRos = (startTime: number, callback: () => void) => {
 
   setStartTimeService.callService(
     request,
-    (response) => {
+    (response: any) => {
       if (!response.success) {
         console.log('ERROR: Failed to set start time: success field was false.')
       } else {
         callback()
       }
     },
-    (error) => {
+    (error: any) => {
       console.log('ERROR: Failed to set start time, error:')
       console.log(error)
     }
@@ -99,15 +71,67 @@ export const setRecordDataRos = (recordData: boolean, callback: () => void) => {
 
   setRecordDataService.callService(
     request,
-    (response) => {
+    (response: any) => {
       if (!response.success) {
         console.log('ERROR: Failed to set loop: success field was false.')
       } else {
         callback()
       }
     },
-    (error) => {
+    (error: any) => {
       console.log('ERROR: Failed to set loop, error:')
+      console.log(error)
+    }
+  )
+}
+
+/* Start simulator service */
+const startSimulatorService = new ROSLIB.Service({
+  ros: ros,
+  name: '/eeg_simulator/start',
+  serviceType: 'std_srvs/Trigger',
+})
+
+export const startSimulatorRos = (callback: () => void) => {
+  const request = new ROSLIB.ServiceRequest({}) as any
+
+  startSimulatorService.callService(
+    request,
+    (response: any) => {
+      if (!response.success) {
+        console.log('ERROR: Failed to start simulator: success field was false.')
+      } else {
+        callback()
+      }
+    },
+    (error: any) => {
+      console.log('ERROR: Failed to start simulator, error:')
+      console.log(error)
+    }
+  )
+}
+
+/* Stop simulator service */
+const stopSimulatorService = new ROSLIB.Service({
+  ros: ros,
+  name: '/eeg_simulator/stop',
+  serviceType: 'std_srvs/Trigger',
+})
+
+export const stopSimulatorRos = (callback: () => void) => {
+  const request = new ROSLIB.ServiceRequest({}) as any
+
+  stopSimulatorService.callService(
+    request,
+    (response: any) => {
+      if (!response.success) {
+        console.log('ERROR: Failed to stop simulator: success field was false.')
+      } else {
+        callback()
+      }
+    },
+    (error: any) => {
+      console.log('ERROR: Failed to stop simulator, error:')
       console.log(error)
     }
   )

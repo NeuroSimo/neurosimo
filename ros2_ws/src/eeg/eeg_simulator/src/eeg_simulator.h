@@ -19,23 +19,11 @@
 #include "project_interfaces/srv/set_dataset.hpp"
 #include "project_interfaces/srv/set_start_time.hpp"
 
-#include "std_srvs/srv/set_bool.hpp"
+#include "std_srvs/srv/trigger.hpp"
 
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
-
-#include "system_interfaces/msg/session.hpp"
-#include "system_interfaces/msg/session_state.hpp"
-#include "system_interfaces/srv/stop_session.hpp"
-
-
-enum class EegSimulatorState {
-  READY,
-  LOADING,
-  ERROR_LOADING
-  // TODO: Maybe add STREAMING here. Unsure if it is somewhat orthogonal to READY/LOADING or not,
-  //   hence keep it separate for now.
-};
+#include "system_interfaces/msg/streamer_state.hpp"
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
@@ -59,16 +47,9 @@ private:
       const std::shared_ptr<project_interfaces::srv::SetDataset::Request> request,
       std::shared_ptr<project_interfaces::srv::SetDataset::Response> response);
 
-  void set_enabled(bool enabled);
-  void handle_set_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
-
   void handle_set_start_time(
       const std::shared_ptr<project_interfaces::srv::SetStartTime::Request> request,
       std::shared_ptr<project_interfaces::srv::SetStartTime::Response> response);
-
-  void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
 
   void initialize_streaming();
 
@@ -81,6 +62,14 @@ private:
 
   void update_inotify_watch();
   void inotify_timer_callback();
+  void publish_streamer_state();
+  void stream_timer_callback();
+  void handle_start_streamer(
+      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+      std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void handle_stop_streamer(
+      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+      std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
   std::unordered_map<std::string, project_interfaces::msg::Dataset> dataset_map;
   std::unordered_map<std::string, std::vector<double_t>> pulse_times_map;
@@ -88,24 +77,18 @@ private:
 
   project_interfaces::msg::Dataset dataset;
 
-  EegSimulatorState eeg_simulator_state = EegSimulatorState::READY;
+  system_interfaces::msg::StreamerState::_state_type streamer_state = system_interfaces::msg::StreamerState::READY;
 
   bool eeg_bridge_available = false;
 
-  bool enabled = false;
   double_t play_dataset_from = 0.0;
 
   size_t current_index = 0;
   size_t current_pulse_index = 0;
 
-  bool session_started = false;
-
-  bool is_streaming = false;
   std::string error_message = UNSET_STRING;
 
   std::mutex dataset_mutex;
-
-  double_t session_time;
 
   double_t sampling_period;
 
@@ -114,7 +97,7 @@ private:
   uint8_t num_emg_channels;
   uint8_t total_channels;
 
-  double_t session_start_time = UNSET_TIME;  // Unix timestamp when session started
+  double_t streaming_start_time = UNSET_TIME;  // Unix timestamp when streaming started
 
   std::ifstream data_file;
 
@@ -144,17 +127,16 @@ private:
   rclcpp::Service<project_interfaces::srv::SetDataset>::SharedPtr set_dataset_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr dataset_publisher;
 
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_enabled_service;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr enabled_publisher;
-
   rclcpp::Service<project_interfaces::srv::SetStartTime>::SharedPtr start_time_service;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr start_time_publisher;
 
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_publisher;
   rclcpp::Publisher<eeg_interfaces::msg::EegInfo>::SharedPtr eeg_info_publisher;
 
-  rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
-  rclcpp::Client<system_interfaces::srv::StopSession>::SharedPtr stop_session_client;
+  rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streamer_service;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streamer_service;
+  rclcpp::TimerBase::SharedPtr stream_timer;
 
   /* Inotify variables */
   rclcpp::TimerBase::SharedPtr inotify_timer;

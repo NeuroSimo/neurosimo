@@ -336,6 +336,28 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
           dataset_msg.loop = false;
         }
 
+        /* Read optional "pulse_times" array. */
+        std::vector<double_t> parsed_pulse_times;
+        if (json_data.contains("pulse_times") && json_data["pulse_times"].is_array()) {
+          for (const auto& pulse_time : json_data["pulse_times"]) {
+            if (pulse_time.is_number()) {
+              parsed_pulse_times.push_back(pulse_time.get<double>());
+            } else {
+              RCLCPP_WARN(this->get_logger(), "  • Non-numeric value in pulse_times array, skipping");
+            }
+          }
+
+          /* Warn if loop is enabled with pulse_times - this combination is not supported. */
+          if (dataset_msg.loop && !parsed_pulse_times.empty()) {
+            RCLCPP_WARN(this->get_logger(), "  • Warning: pulse_times with loop=true is not supported, pulse_times will be ignored");
+            parsed_pulse_times.clear();
+          } else if (!parsed_pulse_times.empty()) {
+            RCLCPP_INFO(this->get_logger(), "  • Loaded %zu pulse times", parsed_pulse_times.size());
+          }
+        }
+        dataset_msg.pulse_count = parsed_pulse_times.size();
+        pulse_times_map[filename] = parsed_pulse_times;
+
         /* Calculate the sampling frequency and duration from the data file. */
         std::string data_file_path = entry.path().parent_path().string() + "/" + dataset_msg.data_filename;
         auto [success, sampling_frequency, duration, samples_dropped] = get_dataset_info(data_file_path);
@@ -433,6 +455,7 @@ bool EegSimulator::set_dataset(std::string json_filename) {
 
   /* Update dataset internally. */
   this->dataset = dataset_map[json_filename];
+  this->pulse_times = pulse_times_map[json_filename];
 
   RCLCPP_INFO(this->get_logger(), "Dataset selected: %s", json_filename.c_str());
 
@@ -552,11 +575,18 @@ void EegSimulator::initialize_streaming() {
     }
   }
   this->current_index = 0;
+  this->current_pulse_index = 0;
   this->time_offset = 0.0;
 
   this->current_data_file_path = data_file_path;
 
   RCLCPP_INFO(this->get_logger(), "Finished loading data.");
+
+  /* Log pulse times info if present. */
+  if (!this->pulse_times.empty()) {
+    RCLCPP_INFO(this->get_logger(), "Dataset has %zu pulse times. First pulse at %.4f s.",
+                this->pulse_times.size(), this->pulse_times[0]);
+  }
 
   data_file.close();
 
@@ -645,6 +675,27 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
 
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   msg.valid = true;
+
+  /* Check if a pulse should be delivered at this sample time. */
+  msg.pulse_delivered = false;
+  if (!this->pulse_times.empty() && this->current_pulse_index < this->pulse_times.size()) {
+    double_t next_pulse_time = this->pulse_times[this->current_pulse_index];
+    if (sample_time >= next_pulse_time) {
+      msg.pulse_delivered = true;
+      this->current_pulse_index++;
+
+      RCLCPP_INFO(this->get_logger(), "Pulse delivered at %.4f s (pulse %zu/%zu).",
+                  sample_time, this->current_pulse_index, this->pulse_times.size());
+
+      /* Log next pulse time if there is one. */
+      if (this->current_pulse_index < this->pulse_times.size()) {
+        RCLCPP_INFO(this->get_logger(), "Next pulse at %.4f s.",
+                    this->pulse_times[this->current_pulse_index]);
+      } else {
+        RCLCPP_INFO(this->get_logger(), "No more pulses in this dataset.");
+      }
+    }
+  }
 
   eeg_publisher->publish(msg);
 

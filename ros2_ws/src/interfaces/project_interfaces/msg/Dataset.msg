@@ -12,3 +12,6 @@ float64 duration
 
 # Whether to loop the dataset when reaching the end
 bool loop
+
+# Number of pulses defined in the dataset
+uint32 pulse_count

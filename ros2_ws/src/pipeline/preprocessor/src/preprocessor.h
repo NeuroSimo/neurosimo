@@ -17,9 +17,6 @@
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
 
-#include "system_interfaces/msg/session.hpp"
-#include "system_interfaces/msg/session_state.hpp"
-
 #include "project_interfaces/msg/preprocessor_list.hpp"
 #include "project_interfaces/srv/set_preprocessor_module.hpp"
 
@@ -66,7 +63,8 @@ public:
 private:
   void publish_healthcheck();
 
-  void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
+  void handle_session_start();
+  void handle_session_end();
 
   void update_session_info(const eeg_interfaces::msg::SessionMetadata& msg);
   void initialize_module();
@@ -108,8 +106,6 @@ private:
 
   rclcpp::Logger logger;
 
-  rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
-
   rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
 
@@ -130,8 +126,8 @@ private:
   bool enabled = false;
 
   PreprocessorState preprocessor_state = PreprocessorState::WAITING_FOR_ENABLED;
-  system_interfaces::msg::SessionState session_state;
 
+  bool session_started = false;
   bool first_sample_ever = true;
   bool first_sample_of_session = false;
 

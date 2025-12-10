@@ -12,7 +12,6 @@
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "system_interfaces/srv/stop_session.hpp"
-#include "system_interfaces/msg/session.hpp"
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
 #include "project_interfaces/msg/protocol_list.hpp"
@@ -34,7 +33,6 @@ private:
   // Subscribers
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr raw_eeg_subscriber;
   rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr pulse_event_subscriber;
-  rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   
   // Publishers
@@ -65,10 +63,7 @@ private:
   std::string protocol_name = UNSET_STRING;
   std::vector<std::string> available_protocols;
   bool is_working_directory_set = false;
-  
-  /* Session state */
-  system_interfaces::msg::SessionState session_state;
-  
+
   /* Inotify for file watching */
   int inotify_descriptor;
   int watch_descriptor;
@@ -88,7 +83,6 @@ private:
   /* Callbacks */
   void handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg);
-  void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
   
   void handle_pause(

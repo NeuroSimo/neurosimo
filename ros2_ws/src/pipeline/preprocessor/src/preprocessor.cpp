@@ -27,11 +27,6 @@ const std::string DEFAULT_PREPROCESSOR_NAME = "example";
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
-/* XXX: Needs to match the values in session_bridge.cpp. */
-const milliseconds SESSION_PUBLISHING_INTERVAL = 20ms;
-const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 5ms;
-
-
 EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_logger("preprocessor")) {
   /* Read ROS parameter: dropped sample threshold */
   auto dropped_sample_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
@@ -47,26 +42,6 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
 
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
-
-  /* Subscriber for session. */
-  const auto DEADLINE_NS = std::chrono::nanoseconds(SESSION_PUBLISHING_INTERVAL + SESSION_PUBLISHING_INTERVAL_TOLERANCE);
-
-  auto qos_session = rclcpp::QoS(rclcpp::KeepLast(1))
-      .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-      .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)
-      .deadline(DEADLINE_NS)
-      .lifespan(DEADLINE_NS);
-
-  rclcpp::SubscriptionOptions subscription_options;
-  subscription_options.event_callbacks.deadline_callback = [this]([[maybe_unused]] rclcpp::QOSDeadlineRequestedInfo & event) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Session not received within deadline.");
-  };
-
-  this->session_subscriber = this->create_subscription<system_interfaces::msg::Session>(
-    "/system/session",
-    qos_session,
-    std::bind(&EegPreprocessor::handle_session, this, _1),
-    subscription_options);
 
   /* Publisher for preprocessed EEG data. */
   this->preprocessed_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
@@ -191,23 +166,26 @@ void EegPreprocessor::publish_healthcheck() {
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void EegPreprocessor::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
-  bool state_changed = this->session_state.value != msg->state.value;
-  this->session_state = msg->state;
+void EegPreprocessor::handle_session_start() {
+  RCLCPP_INFO(this->get_logger(), "Session started");
+  this->session_started = true;
+  this->first_sample_of_session = true;
+}
 
-  if (state_changed && this->session_state.value == system_interfaces::msg::SessionState::STOPPED) {
-    this->first_sample_of_session = true;
-    this->total_dropped_samples = 0;
-    this->reinitialize = true;
+void EegPreprocessor::handle_session_end() {
+  RCLCPP_INFO(this->get_logger(), "Session stopped");
+  this->session_started = false;
+  this->first_sample_of_session = true;
+  this->total_dropped_samples = 0;
+  this->reinitialize = true;
 
-    /* Clear deferred processing queue when session stops. */
-    while (!this->deferred_processing_queue.empty()) {
-      this->deferred_processing_queue.pop();
-    }
-
-    /* Reset the preprocessor state when the session is stopped. */
-    reset_preprocessor_state();
+  /* Clear deferred processing queue when session stops. */
+  while (!this->deferred_processing_queue.empty()) {
+    this->deferred_processing_queue.pop();
   }
+
+  /* Reset the preprocessor state when the session is stopped. */
+  reset_preprocessor_state();
 }
 
 void EegPreprocessor::update_session_info(const eeg_interfaces::msg::SessionMetadata& msg) {
@@ -678,8 +656,13 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   double_t sample_time = msg->time;
 
+  /* Handle session start marker from upstream. */
+  if (msg->is_session_start) {
+    handle_session_start();
+  }
+
   /* Check that session has started. */
-  if (this->session_state.value != system_interfaces::msg::SessionState::STARTED) {
+  if (!this->session_started) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
@@ -770,9 +753,15 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   
   /* Add to deferred processing queue. */
   this->deferred_processing_queue.push(request);
-  
+
   /* Check requests once more so that a new request that was just added can be processed immediately if needed. */
   process_ready_deferred_requests(sample_time);
+
+  /* Handle session end marker from upstream (after processing the sample)
+     TODO: Early returns make this not work correctly in all cases. Please fix. */
+  if (msg->is_session_end) {
+    handle_session_end();
+  }
 }
 
 int main(int argc, char *argv[]) {

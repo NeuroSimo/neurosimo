@@ -37,7 +37,8 @@ enum class PreprocessorState {
   READY,
   SAMPLES_DROPPED,
   DROPPED_SAMPLE_THRESHOLD_EXCEEDED,
-  MODULE_ERROR
+  MODULE_ERROR,
+  INCONSISTENT_SESSION_METADATA
 };
 
 struct DeferredProcessingRequest {
@@ -53,6 +54,29 @@ struct DeferredProcessingRequest {
   }
 };
 
+struct SessionMetadataState {
+  uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
+  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
+  double_t session_start_time = UNSET_PREVIOUS_TIME;
+  double_t sampling_period = 0.0;
+
+  void update(const eeg_interfaces::msg::SessionMetadata& msg) {
+    sampling_frequency = msg.sampling_frequency;
+    num_eeg_channels = msg.num_eeg_channels;
+    num_emg_channels = msg.num_emg_channels;
+    session_start_time = msg.start_time;
+    sampling_period = sampling_frequency ? 1.0 / sampling_frequency : 0.0;
+  }
+
+  bool matches(const eeg_interfaces::msg::SessionMetadata& msg) const {
+    return msg.sampling_frequency == sampling_frequency &&
+           msg.num_eeg_channels == num_eeg_channels &&
+           msg.num_emg_channels == num_emg_channels &&
+           msg.start_time == session_start_time;
+  }
+};
+
 class PreprocessorWrapper;
 
 class EegPreprocessor : public rclcpp::Node {
@@ -63,10 +87,9 @@ public:
 private:
   void publish_healthcheck();
 
-  void handle_session_start();
+  void handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata);
   void handle_session_end();
 
-  void update_session_info(const eeg_interfaces::msg::SessionMetadata& msg);
   void initialize_module();
   void publish_python_logs(double sample_time, bool is_initialization);
 
@@ -127,9 +150,7 @@ private:
 
   PreprocessorState preprocessor_state = PreprocessorState::WAITING_FOR_ENABLED;
 
-  bool session_started = false;
-  bool first_sample_ever = true;
-  bool first_sample_of_session = false;
+  bool is_session_ongoing = false;
 
   bool reinitialize = true;
 
@@ -146,11 +167,7 @@ private:
   uint16_t total_dropped_samples = 0;
   uint16_t dropped_sample_threshold;
 
-  uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
-  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
-  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
-  double_t session_start_time = UNSET_PREVIOUS_TIME;
-  double_t sampling_period;
+  SessionMetadataState session_metadata;
 
   double_t previous_time = UNSET_PREVIOUS_TIME;
 

@@ -257,20 +257,28 @@ void EegDecider::publish_healthcheck() {
       healthcheck.status_message = "Module error";
       healthcheck.actionable_message = "Decider has encountered an error.";
       break;
+
+    case DeciderState::INCONSISTENT_SESSION_METADATA:
+      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
+      healthcheck.status_message = "Session metadata changed mid-session";
+      healthcheck.actionable_message = "Check EEG session metadata consistency.";
+      break;
   }
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void EegDecider::handle_session_start() {
+void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
   RCLCPP_INFO(this->get_logger(), "Session started");
   this->session_started = true;
-  this->first_sample_of_session = true;
+  this->reinitialize = true;
+  this->previous_time = UNSET_PREVIOUS_TIME;
+
+  this->session_metadata.update(metadata);
 }
 
 void EegDecider::handle_session_end() {
   RCLCPP_INFO(this->get_logger(), "Session stopped");
   this->session_started = false;
-  this->first_sample_of_session = true;
   this->total_dropped_samples = 0;
   update_dropped_sample_count();
 
@@ -289,15 +297,6 @@ void EegDecider::handle_session_end() {
 
 void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg) {
   this->timing_latency = msg->latency;
-}
-
-void EegDecider::update_session_info(const eeg_interfaces::msg::SessionMetadata& msg) {
-  this->sampling_frequency = msg.sampling_frequency;
-  this->num_eeg_channels = msg.num_eeg_channels;
-  this->num_emg_channels = msg.num_emg_channels;
-  this->session_start_time = msg.start_time;
-
-  this->sampling_period = 1.0 / this->sampling_frequency;
 }
 
 void EegDecider::log_section_header(const std::string& title) {
@@ -360,9 +359,9 @@ void EegDecider::initialize_module() {
     PROJECTS_DIRECTORY,
     this->working_directory,
     this->module_name,
-    this->num_eeg_channels,
-    this->num_emg_channels,
-    this->sampling_frequency,
+    this->session_metadata.num_eeg_channels,
+    this->session_metadata.num_emg_channels,
+    this->session_metadata.sampling_frequency,
     this->sensory_stimuli,
     this->event_queue,
     this->event_queue_mutex);
@@ -380,9 +379,9 @@ void EegDecider::initialize_module() {
 
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->sampling_frequency, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->num_eeg_channels, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->num_emg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->session_metadata.sampling_frequency, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_eeg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_emg_channels, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Perform warm-up if requested by the Python module */
@@ -411,7 +410,7 @@ std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t cu
     event_time = event.first;
     event_type = event.second;
 
-    if (event_time - this->TOLERANCE_S >= current_time - this->sampling_period) {
+    if (event_time - this->TOLERANCE_S >= current_time - this->session_metadata.sampling_period) {
       break;
     }
     this->event_queue.pop();
@@ -496,7 +495,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* If the decision is negative, publish the decision info and return. */
   if (!is_decision_positive) {
     rclcpp::Time now = this->get_clock()->now();
-    double_t sample_absolute_time = this->session_start_time + request.triggering_sample->time;
+    double_t sample_absolute_time = this->session_metadata.session_start_time + request.triggering_sample->time;
     double_t total_latency = now.seconds() - sample_absolute_time;
 
     auto decision_info = pipeline_interfaces::msg::DecisionInfo();
@@ -535,7 +534,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
   request_msg->timed_trigger = *timed_trigger;
   request_msg->decision_time = sample_time;
-  request_msg->system_time_for_sample = this->session_start_time + request.triggering_sample->time;
+  request_msg->system_time_for_sample = this->session_metadata.session_start_time + request.triggering_sample->time;
   request_msg->preprocessor_latency = request.triggering_sample->preprocessing_duration;
   request_msg->decider_latency = decider_processing_duration;
 
@@ -913,17 +912,21 @@ void EegDecider::update_dropped_sample_count() {
 }
 
 void EegDecider::check_dropped_samples(double_t sample_time) {
-  if (this->sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
+  const auto& metadata = this->session_metadata;
+
+  if (metadata.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
     RCLCPP_WARN(this->get_logger(), "Sampling frequency not received, cannot check for dropped samples.");
     return;
   }
 
   if (this->previous_time) {
     auto time_diff = sample_time - this->previous_time;
-    auto threshold = this->sampling_period + this->TOLERANCE_S;
+    auto threshold = metadata.sampling_period + this->TOLERANCE_S;
 
     /* Calculate number of dropped samples. */
-    int dropped_samples = std::max(0, static_cast<int>(std::round((time_diff - this->sampling_period) * this->sampling_frequency)));
+    int dropped_samples = std::max(
+        0,
+        static_cast<int>(std::round((time_diff - metadata.sampling_period) * metadata.sampling_frequency)));
 
     if (time_diff > threshold) {
       /* Accumulate dropped samples. */
@@ -988,7 +991,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Handle session start marker from upstream. */
   if (msg->is_session_start) {
-    handle_session_start();
+    handle_session_start(msg->session);
   }
 
   /* Handle session end marker from upstream. */
@@ -1006,14 +1009,13 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     return;
   }
 
-  /* Update EEG info with every new session OR if this is the first EEG sample received. */
-  if (this->first_sample_of_session || this->first_sample_ever) {
-    update_session_info(msg->session);
-
-    /* Avoid checking for dropped samples on the first sample. */
-    this->previous_time = UNSET_PREVIOUS_TIME;
-
-    this->first_sample_ever = false;
+  /* Ensure session metadata stays constant within a session. */
+  if (!this->session_metadata.matches(msg->session)) {
+    this->decider_state = DeciderState::INCONSISTENT_SESSION_METADATA;
+    RCLCPP_ERROR(this->get_logger(),
+                 "Session metadata changed mid-session. Rejecting sample at %.3f (s).",
+                 sample_time);
+    return;
   }
 
   /* Check that the decider is enabled. */
@@ -1029,15 +1031,13 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   assert(this->module_name != UNSET_STRING);
 
   if (this->reinitialize ||
-      this->decider_wrapper->get_state() == WrapperState::UNINITIALIZED ||
-      this->first_sample_of_session) {
+      this->decider_wrapper->get_state() == WrapperState::UNINITIALIZED) {
 
     initialize_module();
     reset_decider_state();
 
     this->reinitialize = false;
   }
-  this->first_sample_of_session = false;
 
   /* Check that the decider module has not encountered an error. */
   if (this->decider_wrapper->get_state() == WrapperState::ERROR) {
@@ -1142,7 +1142,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
       If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
       Each sample takes sampling_period time. */
   if (look_ahead_samples > 0) {
-    request.scheduled_time = sample_time + (look_ahead_samples * this->sampling_period);
+    request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
     RCLCPP_DEBUG(this->get_logger(), 
                   "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
                   sample_time, request.scheduled_time, look_ahead_samples);

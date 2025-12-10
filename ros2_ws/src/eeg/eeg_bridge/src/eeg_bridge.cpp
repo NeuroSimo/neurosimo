@@ -210,7 +210,8 @@ void EegBridge::stop_session() {
   this->error_state = ErrorState::NO_ERROR;
   this->wait_for_session_to_stop = false;
   this->first_sample_of_session = true;
-  this->previous_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
+  this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
+  this->session_sample_index = 0;
   this->time_offset = UNSET_TIME;
   this->session_start_time = UNSET_TIME;
 }
@@ -222,13 +223,43 @@ void EegBridge::update_healthcheck(uint8_t status, std::string status_message,
   this->actionable_message = actionable_message;
 }
 
+bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
+  /* Warn if the device sample index wraps around. */
+  if (previous_device_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
+      device_sample_index == 0 &&
+      previous_device_sample_index > 0) {
+
+    RCLCPP_WARN(this->get_logger(), 
+                "Device sample index wrapped around. Previous: %lu, current: %lu.",
+                previous_device_sample_index,
+                device_sample_index);
+  }
+
+  /* Check for dropped samples using device indices. */
+  if (previous_device_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
+      device_sample_index > previous_device_sample_index + 1 + this->num_of_tolerated_dropped_samples &&
+      /* Ignore the case where the sample index wraps around. */
+      device_sample_index != 0) {
+
+    this->error_state = ErrorState::ERROR_SAMPLES_DROPPED;
+
+    RCLCPP_ERROR(this->get_logger(), 
+                 "Samples dropped. Previous device sample index: %lu, current: %lu.",
+                 previous_device_sample_index,
+                 device_sample_index);
+    return false;  // Samples were dropped
+  }
+  
+  this->previous_device_sample_index = device_sample_index;
+  return true;  // No samples dropped
+}
+
 eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
                                                     const eeg_interfaces::msg::EegInfo& eeg_info) {
   auto sample = eeg_interfaces::msg::Sample();
   sample.eeg = adapter_sample.eeg;
   sample.emg = adapter_sample.emg;
   sample.time = adapter_sample.time;
-  sample.sample_index = adapter_sample.sample_index;
   sample.pulse_delivered = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
 
   sample.session.sampling_frequency = eeg_info.sampling_frequency;
@@ -259,31 +290,6 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
     return;
   }
 
-  /* Warn if the sample index wraps around. */
-  if (previous_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
-      sample.sample_index == 0 &&
-      previous_sample_index > 0) {
-
-    RCLCPP_WARN(this->get_logger(), "Sample index wrapped around. Previous sample index: %d, current sample index: %d.",
-                previous_sample_index,
-                sample.sample_index);
-  }
-
-  /* Check for dropped samples */
-  if (previous_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
-      sample.sample_index > previous_sample_index + 1 + this->num_of_tolerated_dropped_samples &&
-      /* Ignore the case where the sample index wraps around. */
-      sample.sample_index != 0) {
-
-    this->error_state = ErrorState::ERROR_SAMPLES_DROPPED;
-
-    RCLCPP_ERROR(this->get_logger(), "Samples dropped. Previous sample index: %d, current sample index: %d.",
-                 previous_sample_index,
-                 sample.sample_index);
-    return;
-  }
-  this->previous_sample_index = sample.sample_index;
-
   /* If this is the first sample of the session, set the time offset. */
   if (this->first_sample_of_session) {
     this->first_sample_of_session = false;
@@ -292,10 +298,17 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 
   sample.time -= this->time_offset;
 
+  /* Set the session sample index. */
+  sample.sample_index = this->session_sample_index;
+
+  /* Increment session sample index for the next sample. */
+  this->session_sample_index++;
+
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   sample.valid = true;
 
   this->eeg_sample_publisher->publish(sample);
+  
 }
 
 void EegBridge::process_eeg_packet() {
@@ -318,6 +331,12 @@ void EegBridge::process_eeg_packet() {
   switch (packet.result) {
 
   case SAMPLE: {
+    // Check for dropped samples using device sample index
+    if (!check_for_dropped_samples(packet.sample.sample_index)) {
+      // Dropped samples detected, don't process this sample
+      break;
+    }
+
     auto ros_sample = create_ros_sample(packet.sample, eeg_info);
 
     // Handle trigger_a (latency measurement trigger) if present
@@ -331,8 +350,8 @@ void EegBridge::process_eeg_packet() {
 
     // Log pulse trigger (trigger_b) when present
     if (packet.sample.trigger_b) {
-      RCLCPP_INFO(this->get_logger(), "Received TMS pulse at sample %lu (time: %.4f s)",
-                  packet.sample.sample_index, packet.sample.time);
+      RCLCPP_INFO(this->get_logger(), "Received TMS pulse at time: %.4f s)",
+                  packet.sample.time - this->time_offset);
     }
 
     // Always handle the sample

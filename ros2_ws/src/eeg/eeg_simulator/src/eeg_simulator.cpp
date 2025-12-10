@@ -407,9 +407,6 @@ bool EegSimulator::set_dataset(std::string json_filename) {
 
   RCLCPP_INFO(this->get_logger(), "Dataset selected: %s", json_filename.c_str());
 
-  /* Reset the simulator state. */
-  this->eeg_simulator_state = EegSimulatorState::READY;
-
   /* Re-initialize streaming. */
   initialize_streaming();
 
@@ -447,6 +444,8 @@ void EegSimulator::handle_start_streamer(
   initialize_streaming();
   this->streaming_start_time = this->get_clock()->now().seconds();
   this->streaming_sample_index = 0;
+  this->is_session_start = true;
+  this->is_session_end = false;
   this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
   response->success = true;
   response->message = "EEG simulator streaming started.";
@@ -457,15 +456,16 @@ void EegSimulator::handle_stop_streamer(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void) request;
-  this->streamer_state = system_interfaces::msg::StreamerState::READY;
-  this->streaming_start_time = UNSET_TIME;
-  this->streaming_sample_index = 0;
-  this->current_index = 0;
-  this->current_pulse_index = 0;
-  this->time_offset = 0.0;
+
+  if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
+    response->success = true;
+    response->message = "EEG simulator is not running.";
+    return;
+  }
+
+  this->is_session_end = true;
   response->success = true;
-  response->message = "EEG simulator streaming stopped.";
-  publish_streamer_state();
+  response->message = "EEG simulator streaming will stop after next sample.";
 }
 
 void EegSimulator::initialize_streaming() {
@@ -588,6 +588,9 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   msg.eeg.insert(msg.eeg.end(), data.begin(), data.begin() + num_eeg_channels);
   msg.emg.insert(msg.emg.end(), data.begin() + num_eeg_channels, data.end());
 
+  msg.is_session_start = this->is_session_start;
+  msg.is_session_end = this->is_session_end;
+
   msg.session.sampling_frequency = this->sampling_frequency;
   msg.session.num_eeg_channels = this->num_eeg_channels;
   msg.session.num_emg_channels = this->num_emg_channels;
@@ -654,6 +657,14 @@ bool EegSimulator::publish_until(double_t until_time) {
       break;
     }
 
+    // Check if this is the last sample in the dataset (non-looping mode)
+    bool is_last_sample = !this->dataset.loop && 
+                          (this->current_index == dataset_buffer.size() - 1);
+    if (is_last_sample) {
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session stop.");
+      this->is_session_end = true;
+    }
+
     // Publish this sample
     bool success = publish_single_sample(this->current_index);
     if (!success) {
@@ -661,7 +672,17 @@ bool EegSimulator::publish_until(double_t until_time) {
       break;
     }
 
-    samples_published++;
+    // Clear the session start marker after publishing.
+    this->is_session_start = false;
+
+    // If session end was requested, stop streaming.
+    if (this->is_session_end) {
+      this->is_session_end = false;
+      this->streamer_state = system_interfaces::msg::StreamerState::READY;
+      publish_streamer_state();
+      return true;
+    }
+
 
     // Move to next sample
     this->current_index = (this->current_index + 1) % dataset_buffer.size();
@@ -673,17 +694,9 @@ bool EegSimulator::publish_until(double_t until_time) {
       this->time_offset = this->time_offset + dataset_duration;
     }
 
-    // If not in loop mode and we've reached the end, stop streaming
-    if (!this->dataset.loop && this->current_index == 0) {
-      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Stopping session.");
+    samples_published++;
 
-      this->streamer_state = system_interfaces::msg::StreamerState::READY;
-      publish_streamer_state();
-
-      break;
-    }
-
-    // Prevent infinite loops in case of edge cases
+    // Prevent infinite loops in case of edge cases. TODO: What is this for?
     if (samples_published > dataset_buffer.size() * 2) {
       RCLCPP_WARN(this->get_logger(), "Published too many samples, breaking to prevent infinite loop.");
       break;

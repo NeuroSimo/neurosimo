@@ -99,6 +99,8 @@ private:
 
   double_t streaming_start_time = UNSET_TIME;  // Unix timestamp when streaming started
   uint64_t streaming_sample_index = 0;         // Monotonic sample index within a streaming run
+  bool is_session_start = false;
+  bool is_session_end = false;
 
   std::ifstream data_file;
 

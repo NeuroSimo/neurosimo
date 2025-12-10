@@ -25,7 +25,7 @@ const EegSimulatorPanel = styled(StyledPanel)`
   position: static;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 `
 
 const DatasetSelect = styled(Select)`
@@ -42,6 +42,10 @@ const SwitchWrapper = styled.span`
 const CompactRow = styled(ConfigRow)`
   margin-bottom: 2px;
   gap: 4px;
+`
+
+const SectionStartRow = styled(CompactRow)`
+  margin-top: 6px;
 `
 
 export const EegSimulatorDisplay: React.FC = () => {
@@ -95,7 +99,6 @@ export const EegSimulatorDisplay: React.FC = () => {
           ))}
         </DatasetSelect>
       </ConfigRow>
-      <br />
       <CompactRow>
         <ConfigLabel>Length:</ConfigLabel>
         <ConfigValue>
@@ -104,10 +107,10 @@ export const EegSimulatorDisplay: React.FC = () => {
             : `${formatTime(selectedDataset?.duration)}${selectedDataset?.pulse_count ? `, ${selectedDataset.pulse_count} pulses` : ''}`}
         </ConfigValue>
       </CompactRow>
-      <CompactRow>
+      <SectionStartRow>
         <ConfigLabel>Sampling rate:</ConfigLabel>
         <ConfigValue>{formatFrequency(selectedDataset?.sampling_frequency)}</ConfigValue>
-      </CompactRow>
+      </SectionStartRow>
       <CompactRow>
         <ConfigLabel>Channels:</ConfigLabel>
       </CompactRow>
@@ -119,13 +122,12 @@ export const EegSimulatorDisplay: React.FC = () => {
         <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
         <ConfigValue>{selectedDataset?.num_emg_channels}</ConfigValue>
       </CompactRow>
-      <br />
-      <CompactRow style={{ justifyContent: 'space-between' }}>
+      <SectionStartRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Enabled:</ConfigLabel>
         <SwitchWrapper>
           <ToggleSwitch type='flat' checked={enabled} onChange={setEnabled} disabled={false} />
         </SwitchWrapper>
-      </CompactRow>
+      </SectionStartRow>
       <GrayedOutPanel isGrayedOut={!enabled}>
         <CompactRow style={{ justifyContent: 'space-between' }}>
           <ConfigLabel style={{ paddingLeft: 10 }}>Record</ConfigLabel>
@@ -147,12 +149,10 @@ export const EegSimulatorDisplay: React.FC = () => {
           </div>
         </CompactRow>
       </GrayedOutPanel>
-      <br />
-      <br />
-      <ConfigRow>
+      <SectionStartRow>
         <ConfigLabel>Status:</ConfigLabel>
         <ConfigValue>{eegSimulatorHealthcheck?.status_message}</ConfigValue>
-      </ConfigRow>
+      </SectionStartRow>
     </EegSimulatorPanel>
   )
 }

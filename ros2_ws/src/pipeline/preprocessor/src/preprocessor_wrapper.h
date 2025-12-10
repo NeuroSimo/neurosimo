@@ -19,12 +19,6 @@ namespace py = pybind11;
 const std::string bold_on = "\033[1m";
 const std::string bold_off = "\033[0m";
 
-enum class WrapperState {
-  UNINITIALIZED,
-  READY,
-  ERROR
-};
-
 enum class LogLevel : uint8_t {
   INFO = 0,
   WARNING = 1,
@@ -41,7 +35,7 @@ public:
   PreprocessorWrapper(rclcpp::Logger& logger);
   ~PreprocessorWrapper();
 
-  void initialize_module(
+  bool initialize_module(
       const std::string& directory,
       const std::string& module_name,
       const size_t eeg_size,
@@ -56,7 +50,6 @@ public:
       double_t sample_window_base_time,
       bool pulse_given);
 
-  WrapperState get_state() const;
   std::size_t get_buffer_size() const;
   int get_look_ahead_samples() const;
 
@@ -77,8 +70,6 @@ private:
   /* Buffer for Python logs - static to be accessible from static log functions */
   static std::vector<LogEntry> log_buffer;
   static std::mutex log_buffer_mutex;
-
-  WrapperState state;
 
   std::unique_ptr<py::module> preprocessor_module;
   std::unique_ptr<py::object> preprocessor_instance;

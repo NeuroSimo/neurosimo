@@ -13,7 +13,6 @@ import {
 } from 'styles/General'
 
 import { PipelineContext } from 'providers/PipelineProvider'
-import { SessionContext, SessionState } from 'providers/SessionProvider'
 
 const StimulationPanelTitle = styled.div`
   width: 220px;
@@ -40,10 +39,6 @@ export const StimulationDisplay: React.FC = () => {
   const { timingError, setTimingError } = useContext(PipelineContext)
   const { decisionInfo } = useContext(PipelineContext)
 
-  const { session } = useContext(SessionContext)
-
-  const sessionState = session?.state
-
   const [positiveDecision, setPositiveDecision] = useState<any>(null)
   const [latestDecision, setLatestDecision] = useState<any>(null)
 
@@ -59,24 +54,9 @@ export const StimulationDisplay: React.FC = () => {
     }
   }, [decisionInfo])
 
-  useEffect(() => {
-    if (sessionState?.value === SessionState.STOPPED) {
-      setTimingLatency(null)
-      setTimingError(null)
-      setPositiveDecision(null)
-      setLatestDecision(null)
-    }
-  }, [sessionState])
+  const formattedLatency = timingLatency ? (timingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
 
-  const formattedLatency =
-    timingLatency && sessionState?.value === SessionState.STARTED
-      ? (timingLatency.latency * 1000).toFixed(1) + ' ms'
-      : '\u2013'
-
-  const formattedError =
-    timingError && sessionState?.value === SessionState.STARTED
-      ? (timingError.error * 1000).toFixed(1) + ' ms'
-      : '\u2013'
+  const formattedError = timingError ? (timingError.error * 1000).toFixed(1) + ' ms' : '\u2013'
 
   // Latest Decision Stats
   const formattedLatestDecisionTime = latestDecision?.decision_time

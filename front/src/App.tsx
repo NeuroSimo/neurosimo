@@ -10,7 +10,6 @@ import { HealthcheckProvider } from './providers/HealthcheckProvider'
 import { PipelineProvider } from './providers/PipelineProvider'
 import { EegStreamProvider } from './providers/EegStreamProvider'
 import { StatisticsProvider } from './providers/StatisticsProvider'
-import { SessionProvider } from './providers/SessionProvider'
 
 import { HealthcheckMessageDisplay } from 'components/HealthcheckMessageDisplay'
 import { HealthcheckStatusDisplay } from 'components/HealthcheckStatusDisplay'

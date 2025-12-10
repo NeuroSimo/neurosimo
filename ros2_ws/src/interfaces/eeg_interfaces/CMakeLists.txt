@@ -30,8 +30,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   "msg/EegStatistics.msg"
 
-  "msg/EegBatch.msg"
-
   DEPENDENCIES builtin_interfaces
 )
 

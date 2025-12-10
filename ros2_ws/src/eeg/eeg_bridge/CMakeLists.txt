@@ -8,6 +8,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(eeg_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(pipeline_interfaces REQUIRED)
@@ -28,8 +29,8 @@ target_link_libraries(eeg_bridge
 )
 
 add_executable(mock_eeg_bridge src/mock_eeg_bridge.cpp)
-ament_target_dependencies(eeg_bridge rclcpp std_msgs eeg_interfaces system_interfaces pipeline_interfaces realtime_utils)
-ament_target_dependencies(mock_eeg_bridge rclcpp std_msgs eeg_interfaces system_interfaces pipeline_interfaces realtime_utils)
+ament_target_dependencies(eeg_bridge rclcpp std_msgs std_srvs eeg_interfaces system_interfaces pipeline_interfaces realtime_utils)
+ament_target_dependencies(mock_eeg_bridge rclcpp std_msgs std_srvs eeg_interfaces system_interfaces pipeline_interfaces realtime_utils)
 
 
 install(TARGETS

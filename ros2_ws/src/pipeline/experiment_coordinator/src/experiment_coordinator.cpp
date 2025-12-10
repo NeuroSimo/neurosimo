@@ -73,9 +73,12 @@ ExperimentCoordinator::ExperimentCoordinator()
     "/experiment/protocol",
     qos_persist_latest);
   
-  /* Client for stopping session when protocol completes. */
-  this->stop_session_client = this->create_client<system_interfaces::srv::StopSession>(
-    "/system/session/stop");
+  /* Clients for stopping EEG simulator or bridge when protocol completes. */
+  this->stop_simulator_client = this->create_client<std_srvs::srv::Trigger>(
+    "/eeg_simulator/stop");
+  
+  this->stop_bridge_client = this->create_client<std_srvs::srv::Trigger>(
+    "/eeg_bridge/stop");
   
   /* Services for pause/resume. */
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
@@ -139,6 +142,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
     RCLCPP_INFO(this->get_logger(), "Session started, resetting experiment state");
     reset_experiment_state();
     state.session_started = true;
+    this->is_simulation = msg->session.is_simulation;
     publish_experiment_state(0.0);
   }
 
@@ -642,26 +646,37 @@ void ExperimentCoordinator::inotify_timer_callback() {
 }
 
 void ExperimentCoordinator::request_stop_session() {
-  if (!this->stop_session_client) {
-    RCLCPP_ERROR(this->get_logger(), "Stop session client not initialized.");
+  /* Choose the appropriate stop service based on whether we're in simulation mode. */
+  auto stop_client = this->is_simulation ? this->stop_simulator_client : this->stop_bridge_client;
+  const char* service_name = this->is_simulation ? "EEG simulator" : "EEG bridge";
+  
+  if (!stop_client) {
+    RCLCPP_ERROR(this->get_logger(), "%s stop client not initialized.", service_name);
     return;
   }
   
-  if (!this->stop_session_client->service_is_ready()) {
-    RCLCPP_WARN(this->get_logger(), "Stop session service not available yet.");
+  if (!stop_client->service_is_ready()) {
+    RCLCPP_WARN(this->get_logger(), "%s stop service not available yet.", service_name);
   }
   
-  auto request = std::make_shared<system_interfaces::srv::StopSession::Request>();
-  this->stop_session_client->async_send_request(
+  RCLCPP_INFO(this->get_logger(), "Requesting %s to stop streaming...", service_name);
+  
+  auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+  stop_client->async_send_request(
     request,
-    [this](rclcpp::Client<system_interfaces::srv::StopSession>::SharedFuture future) {
+    [this, service_name](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
       try {
         auto response = future.get();
         if (!response->success) {
-          RCLCPP_WARN(this->get_logger(), "Stop session service responded with failure.");
+          RCLCPP_WARN(this->get_logger(), "%s stop service responded with failure: %s", 
+            service_name, response->message.c_str());
+        } else {
+          RCLCPP_INFO(this->get_logger(), "%s stop requested successfully: %s",
+            service_name, response->message.c_str());
         }
       } catch (const std::exception& e) {
-        RCLCPP_ERROR(this->get_logger(), "Error calling stop session service: %s", e.what());
+        RCLCPP_ERROR(this->get_logger(), "Error calling %s stop service: %s", 
+          service_name, e.what());
       }
     });
 }

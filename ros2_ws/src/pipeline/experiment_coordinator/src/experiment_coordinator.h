@@ -11,7 +11,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
-#include "system_interfaces/srv/stop_session.hpp"
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
 #include "project_interfaces/msg/protocol_list.hpp"
@@ -41,7 +40,8 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
   rclcpp::Publisher<project_interfaces::msg::ProtocolList>::SharedPtr protocol_list_publisher;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr protocol_module_publisher;
-  rclcpp::Client<system_interfaces::srv::StopSession>::SharedPtr stop_session_client;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_simulator_client;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_bridge_client;
   
   // Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
@@ -79,6 +79,9 @@ private:
     PROTOCOL_ERROR
   };
   CoordinatorState coordinator_state = CoordinatorState::WAITING_FOR_PROTOCOL;
+  
+  /* Track whether we're in simulation mode (from session metadata) */
+  bool is_simulation = false;
   
   /* Callbacks */
   void handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);

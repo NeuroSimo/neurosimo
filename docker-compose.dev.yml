@@ -25,15 +25,3 @@ services:
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
-
-  eeg_batcher:
-    build:
-      context: .
-      dockerfile: ros2_ws/src/eeg/eeg_batcher/Dockerfile
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - ROS_DOMAIN_ID
-    privileged: true
-    network_mode: host

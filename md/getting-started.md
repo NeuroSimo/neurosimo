@@ -95,12 +95,17 @@ For instance, the data set `test_data` would be defined by the files `test_data.
 {
     "name": "Test data from experiment 1",
     "data_file": "test_data.csv",
-    "channels": {
-        "eeg": 3,
-        "emg": 1
+    "session": {
+        "sampling_frequency": 1000,
+        "num_eeg_channels": 3,
+        "num_emg_channels": 1
     }
 }
 ```
+
+Optional fields:
+- `loop`: Set to `true` to loop the dataset continuously (default: `false`)
+- `pulse_times`: Array of timestamps (in seconds) when pulses should be delivered, e.g., `[10.5, 25.3, 41.7]`. Not supported when `loop` is `true`.
 
 The data CSV file should contain the data in the following format:
 

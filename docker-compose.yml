@@ -24,19 +24,6 @@ services:
     privileged: true
     network_mode: host
 
-  eeg_recorder:
-    build:
-      context: .
-      dockerfile: ros2_ws/src/eeg/eeg_recorder/Dockerfile
-    env_file:
-      - .env
-    environment:
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - ROS_DOMAIN_ID
-    network_mode: host
-    volumes:
-      - '$PROJECTS_ROOT:/app/projects'
-
   eeg_simulator:
     build:
       context: .

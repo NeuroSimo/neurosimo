@@ -162,20 +162,29 @@ void EegPreprocessor::publish_healthcheck() {
       healthcheck.status_message = "Module error";
       healthcheck.actionable_message = "Preprocessor has encountered an error.";
       break;
+
+    case PreprocessorState::INCONSISTENT_SESSION_METADATA:
+      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
+      healthcheck.status_message = "Session metadata changed mid-session";
+      healthcheck.actionable_message = "Check EEG session metadata consistency.";
+      break;
   }
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void EegPreprocessor::handle_session_start() {
+void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
   RCLCPP_INFO(this->get_logger(), "Session started");
-  this->session_started = true;
-  this->first_sample_of_session = true;
+  this->is_session_ongoing = true;
+
+  this->session_metadata.update(metadata);
+
+  /* Avoid checking for dropped samples on the first sample. */
+  this->previous_time = UNSET_PREVIOUS_TIME;
 }
 
 void EegPreprocessor::handle_session_end() {
   RCLCPP_INFO(this->get_logger(), "Session stopped");
-  this->session_started = false;
-  this->first_sample_of_session = true;
+  this->is_session_ongoing = false;
   this->total_dropped_samples = 0;
   this->reinitialize = true;
 
@@ -186,15 +195,6 @@ void EegPreprocessor::handle_session_end() {
 
   /* Reset the preprocessor state when the session is stopped. */
   reset_preprocessor_state();
-}
-
-void EegPreprocessor::update_session_info(const eeg_interfaces::msg::SessionMetadata& msg) {
-  this->sampling_frequency = msg.sampling_frequency;
-  this->num_eeg_channels = msg.num_eeg_channels;
-  this->num_emg_channels = msg.num_emg_channels;
-  this->session_start_time = msg.start_time;
-
-  this->sampling_period = 1.0 / this->sampling_frequency;
 }
 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {
@@ -250,9 +250,9 @@ void EegPreprocessor::initialize_module() {
   this->preprocessor_wrapper->initialize_module(
     this->working_directory,
     this->module_name,
-    this->num_eeg_channels,
-    this->num_emg_channels,
-    this->sampling_frequency);
+    this->session_metadata.num_eeg_channels,
+    this->session_metadata.num_emg_channels,
+    this->session_metadata.sampling_frequency);
 
   /* Publish initialization logs from Python constructor */
   publish_python_logs(0.0, true);
@@ -267,9 +267,9 @@ void EegPreprocessor::initialize_module() {
 
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", this->sampling_frequency);
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->num_eeg_channels);
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->num_emg_channels);
+  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", this->session_metadata.sampling_frequency);
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->session_metadata.num_eeg_channels);
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->session_metadata.num_emg_channels);
   RCLCPP_INFO(this->get_logger(), " ");
 }
 
@@ -533,17 +533,21 @@ void EegPreprocessor::update_preprocessor_list() {
 
 /* XXX: Very close to a similar check in other pipeline stages. Unify? */
 void EegPreprocessor::check_dropped_samples(double_t sample_time) {
-  if (this->sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
+  const auto& metadata = this->session_metadata;
+
+  if (metadata.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
     RCLCPP_WARN(this->get_logger(), "Sampling frequency not received, cannot check for dropped samples.");
     return;
   }
 
   if (this->previous_time) {
     auto time_diff = sample_time - this->previous_time;
-    auto threshold = this->sampling_period + this->TOLERANCE_S;
+    auto threshold = metadata.sampling_period + this->TOLERANCE_S;
 
     /* Calculate number of dropped samples. */
-    int dropped_samples = std::max(0, static_cast<int>(std::round((time_diff - this->sampling_period) * this->sampling_frequency)));
+    int dropped_samples = std::max(
+        0,
+        static_cast<int>(std::round((time_diff - metadata.sampling_period) * metadata.sampling_frequency)));
 
     if (time_diff > threshold) {
       /* Accumulate dropped samples. */
@@ -658,11 +662,11 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   /* Handle session start marker from upstream. */
   if (msg->is_session_start) {
-    handle_session_start();
+    handle_session_start(msg->session);
   }
 
   /* Check that session has started. */
-  if (!this->session_started) {
+  if (!this->is_session_ongoing) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
@@ -671,14 +675,13 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
     return;
   }
 
-  /* Update EEG info with every new session OR if this is the first EEG sample received ever. */
-  if (this->first_sample_of_session || this->first_sample_ever) {
-    update_session_info(msg->session);
-
-    /* Avoid checking for dropped samples on the first sample. */
-    this->previous_time = UNSET_PREVIOUS_TIME;
-
-    this->first_sample_ever = false;
+  /* Check that session metadata stays constant within a session. */
+  if (!this->session_metadata.matches(msg->session)) {
+    RCLCPP_ERROR(this->get_logger(),
+                 "Session metadata changed mid-session. Rejecting sample at %.3f (s).",
+                 sample_time);
+    this->preprocessor_state = PreprocessorState::INCONSISTENT_SESSION_METADATA;
+    return;
   }
 
   /* Check that the preprocessor is enabled. */
@@ -697,15 +700,13 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   assert(this->module_name != UNSET_STRING);
 
   if (this->reinitialize ||
-      this->preprocessor_wrapper->get_state() == WrapperState::UNINITIALIZED ||
-      this->first_sample_of_session) {
+      this->preprocessor_wrapper->get_state() == WrapperState::UNINITIALIZED) {
 
     initialize_module();
     reset_preprocessor_state();
 
     this->reinitialize = false;
   }
-  this->first_sample_of_session = false;
 
   /* Check that the preprocessor module has not encountered an error. */
   if (this->preprocessor_wrapper->get_state() == WrapperState::ERROR) {
@@ -740,9 +741,9 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   
   /* Calculate the time when we'll have enough look-ahead samples.
      If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
-     Each sample takes sampling_period time. */
+     Each sample takes sampling period time. */
   if (look_ahead_samples > 0) {
-    request.scheduled_time = sample_time + (look_ahead_samples * this->sampling_period);
+    request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
     RCLCPP_DEBUG(this->get_logger(), 
                  "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
                  sample_time, request.scheduled_time, look_ahead_samples);

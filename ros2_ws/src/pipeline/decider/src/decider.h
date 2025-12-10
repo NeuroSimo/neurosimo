@@ -51,7 +51,31 @@ enum class DeciderState {
   WAITING_FOR_ENABLED,
   READY,
   DROPPED_SAMPLE_THRESHOLD_EXCEEDED,
-  MODULE_ERROR
+  MODULE_ERROR,
+  INCONSISTENT_SESSION_METADATA
+};
+
+struct SessionMetadataState {
+  uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
+  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
+  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
+  double_t session_start_time = UNSET_PREVIOUS_TIME;
+  double_t sampling_period = 0.0;
+
+  void update(const eeg_interfaces::msg::SessionMetadata& msg) {
+    sampling_frequency = msg.sampling_frequency;
+    num_eeg_channels = msg.num_eeg_channels;
+    num_emg_channels = msg.num_emg_channels;
+    session_start_time = msg.start_time;
+    sampling_period = sampling_frequency ? 1.0 / sampling_frequency : 0.0;
+  }
+
+  bool matches(const eeg_interfaces::msg::SessionMetadata& msg) const {
+    return msg.sampling_frequency == sampling_frequency &&
+           msg.num_eeg_channels == num_eeg_channels &&
+           msg.num_emg_channels == num_emg_channels &&
+           msg.start_time == session_start_time;
+  }
 };
 
 
@@ -92,7 +116,7 @@ private:
 
   void publish_healthcheck();
 
-  void handle_session_start();
+  void handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata);
   void handle_session_end();
 
   void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
@@ -103,7 +127,6 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
-  void update_session_info(const eeg_interfaces::msg::SessionMetadata& msg);
   void initialize_module();
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
@@ -183,8 +206,6 @@ private:
   DeciderState decider_state = DeciderState::WAITING_FOR_ENABLED;
 
   bool session_started = false;
-  bool first_sample_ever = true;
-  bool first_sample_of_session = false;
 
   double_t next_periodic_processing_time = UNSET_PREVIOUS_TIME;
 
@@ -211,12 +232,7 @@ private:
   uint16_t dropped_sample_threshold;
   double_t timing_latency_threshold;
 
-  /* Information about the session. */
-  uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
-  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
-  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
-  double_t session_start_time = UNSET_PREVIOUS_TIME;
-  double_t sampling_period;
+  SessionMetadataState session_metadata;
 
   /* For checking if samples have been dropped, store the time of the previous sample received. */
   double_t previous_time = UNSET_PREVIOUS_TIME;

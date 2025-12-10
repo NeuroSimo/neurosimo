@@ -166,9 +166,18 @@ void DeciderWrapper::initialize_module(
     std::mutex& event_queue_mutex) {
 
   this->sampling_frequency = sampling_frequency;
+  if (this->sampling_frequency == 0) {
+    RCLCPP_ERROR(*logger_ptr, "Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
+    state = WrapperState::ERROR;
+    return;
+  }
 
   /* Reset the module state. */
   reset_module_state();
+  /* Local storage for logging */
+  double default_window_earliest_seconds = 0.0;
+  double default_window_latest_seconds = 0.0;
+  std::unordered_map<std::string, std::pair<double, double>> event_window_seconds;
 
   /* Set up the Python environment. */
   py::module sys_module = py::module::import("sys");
@@ -263,6 +272,18 @@ void DeciderWrapper::initialize_module(
   if (py::hasattr(*decider_instance, "get_configuration")) {
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
 
+    /* Helper lambdas to convert seconds to non-negative sample counts. */
+    const auto to_look_back_samples = [this](double earliest_seconds) -> int {
+      /* earliest_seconds is expected to be negative or zero. */
+      double seconds = std::max(0.0, -earliest_seconds);
+      return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
+    };
+    const auto to_look_ahead_samples = [this](double latest_seconds) -> int {
+      /* latest_seconds is expected to be positive or zero. */
+      double seconds = std::max(0.0, latest_seconds);
+      return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
+    };
+
     /* Validate that only allowed keys are present */
     std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "event_processors"};
     for (const auto& item : config) {
@@ -278,14 +299,28 @@ void DeciderWrapper::initialize_module(
     if (config.contains("sample_window")) {
       py::list sample_window = config["sample_window"].cast<py::list>();
       if (sample_window.size() == 2) {
-        int earliest_sample_index = sample_window[0].cast<int>();
-        int latest_sample_index = sample_window[1].cast<int>();
+        double earliest_seconds = sample_window[0].cast<double>();
+        double latest_seconds = sample_window[1].cast<double>();
         
-        /* Convert from indices to positive sample counts.
-           For window [-10, 5]: look_back_samples = 10, look_ahead_samples = 5 */
-        this->look_back_samples = -earliest_sample_index;
-        this->look_ahead_samples = latest_sample_index;
+        /* Convert seconds to sample counts (ceil to ensure coverage). */
+        this->look_back_samples = to_look_back_samples(earliest_seconds);
+        this->look_ahead_samples = to_look_ahead_samples(latest_seconds);
         this->buffer_size = this->look_back_samples + this->look_ahead_samples + 1;
+
+        /* Store window in seconds for later logging. */
+        default_window_earliest_seconds = earliest_seconds;
+        default_window_latest_seconds = latest_seconds;
+
+        /* Store original seconds for logging. */
+        this->max_look_back_samples = this->look_back_samples;
+        this->max_look_ahead_samples = this->look_ahead_samples;
+
+        RCLCPP_DEBUG(*logger_ptr,
+          "Configured default sample window: [%.6f s, %.6f s] -> look_back=%d samples, look_ahead=%d samples",
+          earliest_seconds,
+          latest_seconds,
+          this->look_back_samples,
+          this->look_ahead_samples);
       } else {
         RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
         state = WrapperState::ERROR;
@@ -448,17 +483,26 @@ void DeciderWrapper::initialize_module(
               state = WrapperState::ERROR;
               return;
             }
-            int earliest = sample_window[0].cast<int>();
-            int latest = sample_window[1].cast<int>();
+            double earliest_seconds = sample_window[0].cast<double>();
+            double latest_seconds = sample_window[1].cast<double>();
+            int earliest_samples = -to_look_back_samples(earliest_seconds);  // negative or zero
+            int latest_samples = to_look_ahead_samples(latest_seconds);       // positive or zero
             
             /* Update maximum envelope to cover this window */
-            int event_look_back = -earliest;
-            int event_look_ahead = latest;
+            int event_look_back = -earliest_samples;
+            int event_look_ahead = latest_samples;
             this->max_look_back_samples = std::max(this->max_look_back_samples, event_look_back);
             this->max_look_ahead_samples = std::max(this->max_look_ahead_samples, event_look_ahead);
             
-            this->event_sample_windows[event_type] = std::make_pair(earliest, latest);
-            RCLCPP_DEBUG(*logger_ptr, "Registered custom sample window [%d, %d] for event: %s", earliest, latest, event_type.c_str());
+            this->event_sample_windows[event_type] = std::make_pair(earliest_samples, latest_samples);
+            event_window_seconds[event_type] = std::make_pair(earliest_seconds, latest_seconds);
+            RCLCPP_DEBUG(*logger_ptr,
+              "Registered custom sample window [%.6f s, %.6f s] -> [%d, %d] samples for event: %s",
+              earliest_seconds,
+              latest_seconds,
+              earliest_samples,
+              latest_samples,
+              event_type.c_str());
           }
         } else {
           /* Simple format: value is the processor directly */
@@ -538,13 +582,24 @@ void DeciderWrapper::initialize_module(
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "  - Default sample window: %s[%d, %d]%s", bold_on.c_str(), -this->look_back_samples, this->look_ahead_samples, bold_off.c_str());
+  RCLCPP_INFO(*logger_ptr, "  - Default sample window: %s[%.6f s, %.6f s]%s",
+              bold_on.c_str(),
+              default_window_earliest_seconds,
+              default_window_latest_seconds,
+              bold_off.c_str());
   
   /* Log custom event windows if any */
-  if (!event_sample_windows.empty()) {
+  if (!event_window_seconds.empty()) {
     RCLCPP_INFO(*logger_ptr, "  - Event-specific windows:");
-    for (const auto& [event_type, window] : event_sample_windows) {
-      RCLCPP_INFO(*logger_ptr, "      '%s': %s[%d, %d]%s", event_type.c_str(), bold_on.c_str(), window.first, window.second, bold_off.c_str());
+    for (const auto& [event_type, window_seconds] : event_window_seconds) {
+      double earliest_seconds = window_seconds.first;
+      double latest_seconds = window_seconds.second;
+      RCLCPP_INFO(*logger_ptr, "      '%s': %s[%.6f s, %.6f s]%s",
+                  event_type.c_str(),
+                  bold_on.c_str(),
+                  earliest_seconds,
+                  latest_seconds,
+                  bold_off.c_str());
     }
   }
   

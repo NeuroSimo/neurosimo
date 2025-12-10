@@ -1118,8 +1118,8 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   /* Defer processing based on the number of look-ahead samples.
   
      Calculate when processing should actually occur based on the look-ahead window. 
-     For a sample window like [-10, 5], we need 5 samples of look-ahead after the
-     triggering sample before we can process it.
+     For a sample window like [-0.010, 0.005], we need 5 ms (converted to samples)
+     of look-ahead after the triggering sample before we can process it.
       
      The look-ahead depends on what's being processed:
        - Events with custom sample windows: use event-specific look-ahead

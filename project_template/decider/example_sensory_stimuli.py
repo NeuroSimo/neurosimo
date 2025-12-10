@@ -17,7 +17,7 @@ class Decider:
         """Return configuration dictionary for the pipeline."""
         return {
             # Data configuration
-            'sample_window': [-1000, 0],
+            'sample_window': [-1.0, 0.0],
             
             # Periodic processing
             'periodic_processing_enabled': True,

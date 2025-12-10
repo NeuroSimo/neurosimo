@@ -70,16 +70,16 @@ Time of the first periodic processing call in seconds (relative to session start
 **Note:** Only relevant when `periodic_processing_enabled` is `True`. This parameter is optional and primarily exists for precise timing control. Most users should omit it and use the default behavior.
 
 #### `sample_window` (list)
-Two-element list `[earliest_sample, latest_sample]` defining the buffer size relative to current sample.
-- Current sample is always `0`
-- Earliest sample is always negative or zero
-- Values are in samples, not seconds
+Two-element list `[earliest_seconds, latest_seconds]` defining the buffer size relative to current sample, expressed in **seconds**.
+- Current sample is always at `0.0`
+- Earliest time is negative or zero
+- Values are in seconds; they are converted to samples using the provided sampling frequency
 
 **Examples:**
-- `[-5, 0]`: Keep last 5 samples + current (6 total)
-- `[-999, 0]`: Keep last second at 1000 Hz
-- `[0, 0]`: Keep only current sample
-- `[-5, 5]`: Look 5 samples back and 5 ahead (introduces 5-sample delay)
+- `[-0.005, 0.0]`: Keep last 5 ms + current
+- `[-1.0, 0.0]`: Keep last second (at any sampling rate)
+- `[0.0, 0.0]`: Keep only current sample
+- `[-0.005, 0.005]`: Look 5 ms back and 5 ms ahead (introduces 5 ms delay)
 
 #### `pulse_lockout_duration` (float)
 Duration in seconds during which periodic processing is disabled after a pulse is delivered.
@@ -122,7 +122,7 @@ Dictionary mapping event types to processor methods. Each event type must have a
 'event_processors': {
     'pulse': {
         'processor': self.process_pulse,
-        'sample_window': [-500, 100],  # Custom window just for pulse events
+        'sample_window': [-0.500, 0.100],  # Custom window just for pulse events (seconds)
     },
     'baseline_start': self.process_baseline_start,  # Uses default window
 }
@@ -183,7 +183,7 @@ Main processing method called by the pipeline for periodic processing of EEG/EMG
 Reference time point in seconds. Other times in the buffer are relative to this.
 
 #### `reference_index` (int)
-Index in the buffer where `time_offsets[reference_index] == 0`. Points to last sample when `sample_window` is `[-n, 0]`.
+Index in the buffer where `time_offsets[reference_index] == 0`. Points to last sample when `sample_window` is `[-t, 0]`.
 
 #### `time_offsets` (numpy.ndarray)
 Time offsets relative to `reference_time`. Shape: `(num_samples,)` where `num_samples` matches the sample window size.
@@ -316,7 +316,7 @@ In this example, even though events occurred at 2.0s and 5.0s, the periodic proc
 ```python
 def get_configuration(self):
     return {
-        'sample_window': [-100, 0],  # Last 100ms at 1kHz
+        'sample_window': [-0.100, 0.0],  # Last 100 ms
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
         'event_processors': {},
@@ -328,7 +328,7 @@ def get_configuration(self):
 ```python
 def get_configuration(self):
     return {
-        'sample_window': [-500, 0],
+        'sample_window': [-0.500, 0.0],
         'periodic_processing_enabled': False,  # No periodic processing
         'predefined_events': [
             {'type': 'trial_start', 'time': 10.0}
@@ -343,7 +343,7 @@ def get_configuration(self):
 ```python
 def get_configuration(self):
     return {
-        'sample_window': [-1000, 0],  # Last second
+        'sample_window': [-1.000, 0.0],  # Last second
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.1,  # 10 times per second
         'event_processors': {},

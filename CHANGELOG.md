@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Define looping behavior in the EEG simulator dataset JSON configuration instead of the user interface.
 - Change format of the EEG simulator dataset JSON configuration.
 - Remove timestamp column from EEG simulator dataset CSV file.
+- Express sample window in seconds in decider and preprocessor configuration.
 
 ## [0.2.0] – 2025-12-04
 

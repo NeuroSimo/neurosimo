@@ -2,6 +2,7 @@
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <cmath>
 
 #include "preprocessor_wrapper.h"
 #include <eeg_interfaces/msg/sample.hpp>
@@ -50,6 +51,11 @@ void PreprocessorWrapper::initialize_module(
     const uint16_t sampling_frequency) {
 
   this->sampling_frequency = sampling_frequency;
+  if (this->sampling_frequency == 0) {
+    RCLCPP_ERROR(*logger_ptr, "Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
+    state = WrapperState::ERROR;
+    return;
+  }
 
   /* If we have an existing preprocessor instance, release it which will call the destructor. */
   preprocessor_instance = nullptr;
@@ -101,18 +107,27 @@ void PreprocessorWrapper::initialize_module(
     return;
   }
 
-  /* Extract the sample_window from preprocessor_instance. */
+  /* Helpers to convert seconds to samples (ceil to guarantee coverage). */
+  const auto to_look_back_samples = [this](double earliest_seconds) -> int {
+    double seconds = std::max(0.0, -earliest_seconds);
+    return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
+  };
+  const auto to_look_ahead_samples = [this](double latest_seconds) -> int {
+    double seconds = std::max(0.0, latest_seconds);
+    return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
+  };
+
+  /* Extract the sample_window from preprocessor_instance (now in seconds). */
+  double window_earliest_seconds = 0.0;
+  double window_latest_seconds = 0.0;
   if (py::hasattr(*preprocessor_instance, "sample_window")) {
     py::list sample_window = preprocessor_instance->attr("sample_window").cast<py::list>();
     if (sample_window.size() == 2) {
-      int earliest_sample_index = sample_window[0].cast<int>();
-      int latest_sample_index = sample_window[1].cast<int>();
-      
-      /* Convert from indices to positive sample counts.
-         For window [-10, 5]: look_back_samples = 10, look_ahead_samples = 5 */
-      this->look_back_samples = -earliest_sample_index;
-      this->look_ahead_samples = latest_sample_index;
-      
+      window_earliest_seconds = sample_window[0].cast<double>();
+      window_latest_seconds = sample_window[1].cast<double>();
+
+      this->look_back_samples = to_look_back_samples(window_earliest_seconds);
+      this->look_ahead_samples = to_look_ahead_samples(window_latest_seconds);
       this->buffer_size = this->look_back_samples + this->look_ahead_samples + 1;
     } else {
       RCLCPP_WARN(*logger_ptr, "sample_window class attribute is of incorrect length (should be two elements).");
@@ -138,7 +153,11 @@ void PreprocessorWrapper::initialize_module(
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%d, %d]%s", bold_on.c_str(), -this->look_back_samples, this->look_ahead_samples, bold_off.c_str());
+  RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%.6f s, %.6f s]%s",
+              bold_on.c_str(),
+              window_earliest_seconds,
+              window_latest_seconds,
+              bold_off.c_str());
   RCLCPP_INFO(*logger_ptr, " ");
 }
 

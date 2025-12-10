@@ -29,7 +29,7 @@
 
 const uint16_t UNSET_SAMPLING_FREQUENCY = 0;
 const uint8_t UNSET_NUM_OF_CHANNELS = 255;
-const double_t UNSET_PREVIOUS_TIME = std::numeric_limits<double_t>::quiet_NaN();
+const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
 
 struct DeferredProcessingRequest {
@@ -49,7 +49,7 @@ struct SessionMetadataState {
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
   uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
   uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
-  double_t session_start_time = UNSET_PREVIOUS_TIME;
+  double_t session_start_time = UNSET_TIME;
   double_t sampling_period = 0.0;
 
   void update(const eeg_interfaces::msg::SessionMetadata& msg) {
@@ -144,16 +144,9 @@ private:
 
   std::vector<std::string> modules;
 
-  std::deque<std::pair<double_t, int>> dropped_samples_window;
-
-  uint16_t total_dropped_samples = 0;
-  uint16_t dropped_sample_threshold;
-
   bool error_occurred = false;
 
   SessionMetadataState session_metadata;
-
-  double_t previous_time = UNSET_PREVIOUS_TIME;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;
   eeg_interfaces::msg::Sample preprocessed_sample;
@@ -176,8 +169,8 @@ private:
   int watch_descriptor;
   char inotify_buffer[1024];
 
-  /* When determining if samples have been dropped by comparing the timestamps of two consecutive
-     samples, allow some tolerance to account for finite precision of floating point numbers. */
+  /* When determining if a sample is ready to be processed, allow some tolerance to account
+     for finite precision of floating point numbers. */
   static constexpr double_t TOLERANCE_S = 2 * pow(10, -5);
 };
 

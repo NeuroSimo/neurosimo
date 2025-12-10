@@ -54,13 +54,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->declare_parameter("minimum-intertrial-interval", 0.0, minimum_intertrial_interval_descriptor);
   this->get_parameter("minimum-intertrial-interval", this->minimum_intertrial_interval);
 
-  /* Read ROS parameter: dropped sample threshold */
-  auto dropped_sample_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  dropped_sample_threshold_descriptor.description = "The threshold for the number of dropped samples before the decider enters an error state";
-  dropped_sample_threshold_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
-  this->declare_parameter("dropped-sample-threshold", 4, dropped_sample_threshold_descriptor);
-  this->get_parameter("dropped-sample-threshold", this->dropped_sample_threshold);
-
   /* Read ROS parameter: timing latency threshold */
   auto timing_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
   timing_latency_threshold_descriptor.description = "The threshold for the timing latency (in seconds) before stimulation is prevented";
@@ -71,7 +64,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Minimum pulse interval: %.1f (s)", this->minimum_intertrial_interval);
-  RCLCPP_INFO(this->get_logger(), "  Dropped samples per second threshold: %d", this->dropped_sample_threshold);
   RCLCPP_INFO(this->get_logger(), "  Timing latency threshold: %.1f (ms)", 1000 * this->timing_latency_threshold);
 
   /* Validate the minimum pulse interval. */
@@ -249,11 +241,8 @@ void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata
   this->is_session_ongoing = true;
   this->error_occurred = false;
 
-  this->previous_time = UNSET_PREVIOUS_TIME;
-  this->total_dropped_samples = 0;
-
-  this->previous_stimulation_time = UNSET_PREVIOUS_TIME;
-  this->pulse_lockout_end_time = UNSET_PREVIOUS_TIME;
+  this->previous_stimulation_time = UNSET_TIME;
+  this->pulse_lockout_end_time = UNSET_TIME;
   this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
 
   /* Clear the event queue. */
@@ -859,63 +848,8 @@ void EegDecider::update_decider_list() {
   this->decider_list_publisher->publish(msg);
 }
 
-void EegDecider::check_dropped_samples(double_t sample_time) {
-  const auto& metadata = this->session_metadata;
-
-  if (metadata.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
-    RCLCPP_WARN(this->get_logger(), "Sampling frequency not received, cannot check for dropped samples.");
-    return;
-  }
-
-  if (this->previous_time) {
-    auto time_diff = sample_time - this->previous_time;
-    auto threshold = metadata.sampling_period + this->TOLERANCE_S;
-
-    /* Calculate number of dropped samples. */
-    int dropped_samples = std::max(
-        0,
-        static_cast<int>(std::round((time_diff - metadata.sampling_period) * metadata.sampling_frequency)));
-
-    if (time_diff > threshold) {
-      /* Accumulate dropped samples. */
-      this->total_dropped_samples += dropped_samples;
-
-      /* Sliding window: add dropped samples and clean up entries older than 1 second. */
-      this->dropped_samples_window.push_back({sample_time, dropped_samples});
-      while (!this->dropped_samples_window.empty() &&
-             (sample_time - this->dropped_samples_window.front().first > 1.0)) {
-        this->dropped_samples_window.pop_front();
-      }
-
-      /* Sum of dropped samples in the last second. */
-      int recent_dropped_samples = 0;
-      for (const auto& entry : this->dropped_samples_window) {
-        recent_dropped_samples += entry.second;
-      }
-
-      if (recent_dropped_samples > this->dropped_sample_threshold) {
-        this->error_occurred = true;
-        RCLCPP_ERROR(this->get_logger(),
-            "Dropped samples exceeded threshold! Recent dropped samples: %d, Threshold: %d",
-            recent_dropped_samples, this->dropped_sample_threshold);
-      } else {
-        RCLCPP_WARN(this->get_logger(),
-            "Dropped samples detected. Time difference: %.5f, Dropped samples: %d",
-            time_diff, dropped_samples);
-      }
-
-    } else {
-      RCLCPP_DEBUG(this->get_logger(),
-        "Time difference between consecutive samples: %.5f", time_diff);
-    }
-  }
-
-  /* Update the previous time. */
-  this->previous_time = sample_time;
-}
-
 void EegDecider::handle_pulse_delivered(const double_t pulse_delivered_time) {
-  if (this->previous_stimulation_time == UNSET_PREVIOUS_TIME) {
+  if (this->previous_stimulation_time == UNSET_TIME) {
     return;
   }
 
@@ -964,8 +898,6 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
                          sample_time);
     return;
   }
-
-  check_dropped_samples(sample_time);
 
   /* If the sample includes a trigger, handle it accordingly. */
   if (msg->pulse_delivered) {

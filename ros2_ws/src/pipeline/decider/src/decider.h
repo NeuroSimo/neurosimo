@@ -44,14 +44,14 @@
 
 const uint16_t UNSET_SAMPLING_FREQUENCY = 0;
 const uint8_t UNSET_NUM_OF_CHANNELS = 255;
-const double_t UNSET_PREVIOUS_TIME = std::numeric_limits<double_t>::quiet_NaN();
+const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
 
 struct SessionMetadataState {
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
   uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
   uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
-  double_t session_start_time = UNSET_PREVIOUS_TIME;
+  double_t session_start_time = UNSET_TIME;
   double_t sampling_period = 0.0;
 
   void update(const eeg_interfaces::msg::SessionMetadata& msg) {
@@ -141,8 +141,6 @@ private:
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
   void update_decider_list();
 
-  void check_dropped_samples(double_t sample_time);
-
   void handle_pulse_delivered(const double_t pulse_delivered_time);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
@@ -194,16 +192,14 @@ private:
 
   bool is_session_ongoing = false;
 
-  double_t next_periodic_processing_time = UNSET_PREVIOUS_TIME;
+  double_t next_periodic_processing_time = UNSET_TIME;
 
   /* Used for keeping track of the time of the previous trigger time to ensure that the minimum pulse
      interval is respected. */
-  double_t previous_stimulation_time = UNSET_PREVIOUS_TIME;
+  double_t previous_stimulation_time = UNSET_TIME;
 
   /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
-  double_t pulse_lockout_end_time = UNSET_PREVIOUS_TIME;
-
-  bool reinitialize = true;
+  double_t pulse_lockout_end_time = UNSET_TIME;
 
   std::string active_project = UNSET_STRING;
 
@@ -213,16 +209,9 @@ private:
 
   std::vector<std::string> modules;
 
-  std::deque<std::pair<double_t, int>> dropped_samples_window;
-
-  uint16_t total_dropped_samples = 0;
-  uint16_t dropped_sample_threshold;
   double_t timing_latency_threshold;
 
   SessionMetadataState session_metadata;
-
-  /* For checking if samples have been dropped, store the time of the previous sample received. */
-  double_t previous_time = UNSET_PREVIOUS_TIME;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;
   std::vector<pipeline_interfaces::msg::SensoryStimulus> sensory_stimuli;
@@ -266,8 +255,8 @@ private:
                       std::vector<DeferredProcessingRequest>,
                       std::greater<DeferredProcessingRequest>> deferred_processing_queue;
 
-  /* When determining if samples have been dropped by comparing the timestamps of two consecutive
-     samples, allow some tolerance to account for finite precision of floating point numbers. */
+  /* When determining if a sample is ready to be processed, allow some tolerance to account
+     for finite precision of floating point numbers. */
   static constexpr double_t TOLERANCE_S = 2 * pow(10, -5);
 };
 

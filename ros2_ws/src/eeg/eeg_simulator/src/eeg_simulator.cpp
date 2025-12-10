@@ -442,8 +442,8 @@ void EegSimulator::handle_start_streamer(
       std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void) request;
   initialize_streaming();
-  this->streaming_start_time = this->get_clock()->now().seconds();
-  this->streaming_sample_index = 0;
+  this->session_start_time = this->get_clock()->now().seconds();
+  this->session_sample_index = 0;
   this->is_session_start = true;
   this->is_session_end = false;
   this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
@@ -548,11 +548,11 @@ void EegSimulator::stream_timer_callback() {
     return;
   }
 
-  if (std::isnan(this->streaming_start_time)) {
+  if (std::isnan(this->session_start_time)) {
     return;
   }
 
-  double_t elapsed = this->get_clock()->now().seconds() - this->streaming_start_time;
+  double_t elapsed = this->get_clock()->now().seconds() - this->session_start_time;
   double_t target_time = this->play_dataset_from + elapsed;
 
   bool success = this->publish_until(target_time);
@@ -595,13 +595,13 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   msg.session.num_eeg_channels = this->num_eeg_channels;
   msg.session.num_emg_channels = this->num_emg_channels;
   msg.session.is_simulation = true;
-  msg.session.start_time = this->streaming_start_time;
+  msg.session.start_time = this->session_start_time;
 
   msg.time = time;
 
   /* Set the sample index. */
-  msg.sample_index = this->streaming_sample_index;
-  this->streaming_sample_index++;
+  msg.sample_index = this->session_sample_index;
+  this->session_sample_index++;
 
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   msg.valid = true;

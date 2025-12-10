@@ -122,10 +122,10 @@ private:
   uint64_t previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   
   /* Streaming sample index (starts at 0 for each streaming run) */
-  uint64_t streaming_sample_index = 0;
+  uint64_t session_sample_index = 0;
 
   double_t time_offset = UNSET_TIME;     // in seconds
-  double_t streaming_start_time = UNSET_TIME;  // Unix timestamp when streaming started
+  double_t session_start_time = UNSET_TIME;  // Unix timestamp when streaming started
 
   /* Healthcheck */
   uint8_t status = system_interfaces::msg::HealthcheckStatus::NOT_READY;

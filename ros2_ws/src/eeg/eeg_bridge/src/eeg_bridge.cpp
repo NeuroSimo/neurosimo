@@ -173,8 +173,8 @@ void EegBridge::handle_start_streamer(
     return;
   }
 
-  this->streaming_start_time = this->get_clock()->now().seconds();
-  this->streaming_sample_index = 0;
+  this->session_start_time = this->get_clock()->now().seconds();
+  this->session_sample_index = 0;
   this->time_offset = UNSET_TIME;
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   this->is_session_start = true;
@@ -255,7 +255,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.session.num_eeg_channels = eeg_info.num_eeg_channels;
   sample.session.num_emg_channels = eeg_info.num_emg_channels;
   sample.session.is_simulation = false;
-  sample.session.start_time = this->streaming_start_time;
+  sample.session.start_time = this->session_start_time;
 
   return sample;
 }
@@ -286,8 +286,8 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   sample.is_session_end = this->is_session_end;
 
   /* Set the streaming sample index. */
-  sample.sample_index = this->streaming_sample_index;
-  this->streaming_sample_index++;
+  sample.sample_index = this->session_sample_index;
+  this->session_sample_index++;
 
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   sample.valid = true;
@@ -302,8 +302,8 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
     RCLCPP_INFO(this->get_logger(), "Session end sample published, stopping streaming.");
     this->is_session_end = false;
     this->streamer_state = system_interfaces::msg::StreamerState::READY;
-    this->streaming_start_time = UNSET_TIME;
-    this->streaming_sample_index = 0;
+    this->session_start_time = UNSET_TIME;
+    this->session_sample_index = 0;
     this->time_offset = UNSET_TIME;
     this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
     this->error_state = ErrorState::NO_ERROR;

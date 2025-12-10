@@ -16,7 +16,7 @@ import {
 } from 'styles/General'
 
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
-import { setDatasetRos, setPlaybackRos, setStartTimeRos, setRecordDataRos } from 'ros/eeg_simulator'
+import { setDatasetRos, setEnabledRos, setStartTimeRos, setRecordDataRos } from 'ros/eeg_simulator'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
@@ -46,7 +46,7 @@ const CompactRow = styled(ConfigRow)`
 
 export const EegSimulatorDisplay: React.FC = () => {
   const { eegSimulatorHealthcheck } = useContext(HealthcheckContext)
-  const { datasetList, dataset, playback, recordData, startTime } = useContext(EegSimulatorContext)
+  const { datasetList, dataset, enabled, recordData, startTime } = useContext(EegSimulatorContext)
 
   const eegSimulatorHealthcheckOk = eegSimulatorHealthcheck?.status.value === HealthcheckStatus.READY
 
@@ -58,9 +58,9 @@ export const EegSimulatorDisplay: React.FC = () => {
     })
   }
 
-  const setPlayback = (playback: boolean) => {
-    setPlaybackRos(playback, () => {
-      console.log('Playback set to ' + playback)
+  const setEnabled = (enabled: boolean) => {
+    setEnabledRos(enabled, () => {
+      console.log('Enabled set to ' + enabled)
     })
   }
 
@@ -121,16 +121,16 @@ export const EegSimulatorDisplay: React.FC = () => {
       </CompactRow>
       <br />
       <CompactRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Playback:</ConfigLabel>
+        <ConfigLabel>Enabled:</ConfigLabel>
         <SwitchWrapper>
-          <ToggleSwitch type='flat' checked={playback} onChange={setPlayback} disabled={false} />
+          <ToggleSwitch type='flat' checked={enabled} onChange={setEnabled} disabled={false} />
         </SwitchWrapper>
       </CompactRow>
-      <GrayedOutPanel isGrayedOut={!playback}>
+      <GrayedOutPanel isGrayedOut={!enabled}>
         <CompactRow style={{ justifyContent: 'space-between' }}>
           <ConfigLabel style={{ paddingLeft: 10 }}>Record</ConfigLabel>
           <SwitchWrapper>
-            <ToggleSwitch type='flat' checked={recordData} onChange={setRecordData} disabled={!playback} />
+            <ToggleSwitch type='flat' checked={recordData} onChange={setRecordData} disabled={!enabled} />
           </SwitchWrapper>
         </CompactRow>
         <CompactRow style={{ justifyContent: 'space-between' }}>
@@ -142,7 +142,7 @@ export const EegSimulatorDisplay: React.FC = () => {
               min={0}
               max={selectedDataset?.duration || 0}
               onChange={setStartTime}
-              disabled={!playback}
+              disabled={!enabled}
             />
           </div>
         </CompactRow>

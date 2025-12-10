@@ -34,7 +34,7 @@ interface RosFloat64 extends ROSLIB.Message {
 interface EegSimulatorContextType {
   datasetList: Dataset[]
   dataset: string
-  playback: boolean
+  enabled: boolean
   recordData: boolean
   startTime: number
 }
@@ -42,7 +42,7 @@ interface EegSimulatorContextType {
 const defaultDatasetState: EegSimulatorContextType = {
   datasetList: [],
   dataset: '',
-  playback: false,
+  enabled: false,
   recordData: false,
   startTime: 0,
 }
@@ -57,7 +57,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const [datasetList, setDatasetList] = useState<Dataset[]>([])
   const [dataset, setDataset] = useState<string>('')
 
-  const [playback, setPlayback] = useState<boolean>(false)
+  const [enabled, setEnabled] = useState<boolean>(false)
   const [startTime, setStartTime] = useState<number>(0)
   const [recordData, setRecordData] = useState<boolean>(false)
 
@@ -84,15 +84,15 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       setDataset(message.data)
     })
 
-    /* Subscriber for playback. */
-    const playbackSubscriber = new Topic<RosBoolean>({
+    /* Subscriber for enabled. */
+    const enabledSubscriber = new Topic<RosBoolean>({
       ros: ros,
-      name: '/eeg_simulator/playback',
+      name: '/eeg_simulator/enabled',
       messageType: 'std_msgs/Bool',
     })
 
-    playbackSubscriber.subscribe((message) => {
-      setPlayback(message.data)
+    enabledSubscriber.subscribe((message) => {
+      setEnabled(message.data)
     })
 
     /* Subscriber for start time. */
@@ -122,7 +122,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       datasetListSubscriber.unsubscribe()
       datasetSubscriber.unsubscribe()
 
-      playbackSubscriber.unsubscribe()
+      enabledSubscriber.unsubscribe()
       startTimeSubscriber.unsubscribe()
       recordDataSubscriber.unsubscribe()
     }
@@ -133,7 +133,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       value={{
         datasetList,
         dataset,
-        playback,
+        enabled,
         startTime,
         recordData,
       }}

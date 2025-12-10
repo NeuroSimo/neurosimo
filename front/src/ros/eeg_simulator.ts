@@ -29,29 +29,29 @@ export const setDatasetRos = (filename: string, callback: () => void) => {
   )
 }
 
-/* Set playback service */
-const setPlaybackService = new ROSLIB.Service({
+/* Set enabled service */
+const setEnabledService = new ROSLIB.Service({
   ros: ros,
-  name: '/eeg_simulator/playback/set',
+  name: '/eeg_simulator/enabled/set',
   serviceType: 'std_srvs/SetBool',
 })
 
-export const setPlaybackRos = (playback: boolean, callback: () => void) => {
+export const setEnabledRos = (enabled: boolean, callback: () => void) => {
   const request = new ROSLIB.ServiceRequest({
-    data: playback,
+    data: enabled,
   }) as any
 
-  setPlaybackService.callService(
+  setEnabledService.callService(
     request,
     (response) => {
       if (!response.success) {
-        console.log('ERROR: Failed to set playback: success field was false.')
+        console.log('ERROR: Failed to set enabled: success field was false.')
       } else {
         callback()
       }
     },
     (error) => {
-      console.log('ERROR: Failed to set playback, error:')
+      console.log('ERROR: Failed to set enabled, error:')
       console.log(error)
     }
   )

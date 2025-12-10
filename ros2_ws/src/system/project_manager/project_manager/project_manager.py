@@ -51,10 +51,10 @@ class ProjectManagerNode(Node):
         self.presenter_enabled_client = self.create_client(SetBool, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
         self.protocol_client = self.create_client(SetProtocol, "/experiment/protocol/set", callback_group=self.callback_group)
 
-        self.set_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
-        self.set_playback_service = self.create_client(SetBool, "/eeg_simulator/playback/set", callback_group=self.callback_group)
-        self.set_start_time_service = self.create_client(SetStartTime, "/eeg_simulator/start_time/set", callback_group=self.callback_group)
-        self.record_data_service = self.create_client(SetBool, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
+        self.eeg_simulator_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
+        self.eeg_simulator_enabled_service = self.create_client(SetBool, "/eeg_simulator/enabled/set", callback_group=self.callback_group)
+        self.eeg_simulator_start_time_service = self.create_client(SetStartTime, "/eeg_simulator/start_time/set", callback_group=self.callback_group)
+        self.eeg_recorder_record_data_service = self.create_client(SetBool, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
 
         # Wait for services to be available
         while not self.preprocessor_module_client.wait_for_service(timeout_sec=2.0):
@@ -78,16 +78,16 @@ class ProjectManagerNode(Node):
         while not self.decider_enabled_client.wait_for_service(timeout_sec=2.0):
             self.logger.error("Decider enabled service not available, waiting...")
 
-        while not self.set_dataset_service.wait_for_service(timeout_sec=2.0):
+        while not self.eeg_simulator_dataset_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set dataset service not available, waiting...")
 
-        while not self.set_playback_service.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Set playback service not available, waiting...")
+        while not self.eeg_simulator_enabled_service.wait_for_service(timeout_sec=2.0):
+            self.logger.error("Set enabled service not available, waiting...")
 
-        while not self.set_start_time_service.wait_for_service(timeout_sec=2.0):
+        while not self.eeg_simulator_start_time_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set start time service not available, waiting...")
 
-        while not self.record_data_service.wait_for_service(timeout_sec=2.0):
+        while not self.eeg_recorder_record_data_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set record data service not available, waiting...")
 
         # Publisher
@@ -105,10 +105,10 @@ class ProjectManagerNode(Node):
         self.create_subscription(Bool, "/pipeline/presenter/enabled", self.presenter_enabled_callback, 10)
         self.create_subscription(String, "/experiment/protocol", self.protocol_callback, 10)
 
-        self.create_subscription(String, "/eeg_simulator/dataset", self.dataset_callback, 10)
-        self.create_subscription(Bool, "/eeg_simulator/playback", self.playback_callback, 10)
-        self.create_subscription(Float64, "/eeg_simulator/start_time", self.start_time_callback, 10)
-        self.create_subscription(Bool, "/eeg_recorder/record_data", self.record_data_callback, 10)
+        self.create_subscription(String, "/eeg_simulator/dataset", self.eeg_simulator_dataset_callback, 10)
+        self.create_subscription(Bool, "/eeg_simulator/enabled", self.eeg_simulator_enabled_callback, 10)
+        self.create_subscription(Float64, "/eeg_simulator/start_time", self.eeg_simulator_start_time_callback, 10)
+        self.create_subscription(Bool, "/eeg_recorder/record_data", self.eeg_recorder_record_data_callback, 10)
 
         # Initialize state
         self.global_state = self.load_global_state()
@@ -180,7 +180,7 @@ class ProjectManagerNode(Node):
             },
             "simulator": {
                 "dataset_filename": 'random_data_1_khz.json',
-                "playback": False,
+                "enabled": False,
                 "start_time": 0.0
             },
             "experiment": {
@@ -218,7 +218,7 @@ class ProjectManagerNode(Node):
             self.logger.error("State file is missing required keys in presenter.")
             return False
     
-        if not all(key in state["simulator"] for key in ["dataset_filename", "playback", "start_time"]):
+        if not all(key in state["simulator"] for key in ["dataset_filename", "enabled", "start_time"]):
             self.logger.error("State file is missing required keys in simulator.")
             return False
     
@@ -295,14 +295,14 @@ class ProjectManagerNode(Node):
 
         # Set the state for the simulator
         dataset_filename = self.project_state["simulator"]["dataset_filename"]
-        playback = self.project_state["simulator"]["playback"]
+        enabled = self.project_state["simulator"]["enabled"]
         start_time = self.project_state["simulator"]["start_time"]
         record_data = self.project_state["recorder"]["record_data"]
 
-        self.set_dataset(dataset_filename)
-        self.set_playback(playback)
-        self.set_start_time(start_time)
-        self.set_record_data(record_data)
+        self.set_eeg_simulator_dataset(dataset_filename)
+        self.set_eeg_simulator_enabled(enabled)
+        self.set_eeg_simulator_start_time(start_time)
+        self.set_eeg_recorder_record_data(record_data)
 
         self.logger.info(f"State loaded for project: {self.active_project}")
 
@@ -438,11 +438,11 @@ class ProjectManagerNode(Node):
 
         future.add_done_callback(callback)
 
-    def set_dataset(self, dataset_filename):
+    def set_eeg_simulator_dataset(self, dataset_filename):
         request = SetDataset.Request()
         request.filename = dataset_filename
 
-        future = self.set_dataset_service.call_async(request)
+        future = self.eeg_simulator_dataset_service.call_async(request)
 
         def callback(future):
             result = future.result()
@@ -451,24 +451,24 @@ class ProjectManagerNode(Node):
         
         future.add_done_callback(callback)
     
-    def set_playback(self, playback):
+    def set_eeg_simulator_enabled(self, enabled):
         request = SetBool.Request()
-        request.data = playback
+        request.data = enabled
 
-        future = self.set_playback_service.call_async(request)
+        future = self.eeg_simulator_enabled_service.call_async(request)
 
         def callback(future):
             result = future.result()
             if result is None or not result.success:
-                self.logger.error(f"Failed to set playback to {playback}.")
+                self.logger.error(f"Failed to set enabled to {enabled}.")
 
         future.add_done_callback(callback)
 
-    def set_start_time(self, start_time):
+    def set_eeg_simulator_start_time(self, start_time):
         request = SetStartTime.Request()
         request.start_time = start_time
 
-        future = self.set_start_time_service.call_async(request)
+        future = self.eeg_simulator_start_time_service.call_async(request)
 
         def callback(future):
             result = future.result()
@@ -477,11 +477,11 @@ class ProjectManagerNode(Node):
         
         future.add_done_callback(callback)
     
-    def set_record_data(self, record_data):
+    def set_eeg_recorder_record_data(self, record_data):
         request = SetBool.Request()
         request.data = record_data
 
-        future = self.record_data_service.call_async(request)
+        future = self.eeg_recorder_record_data_service.call_async(request)
 
         def callback(future):
             result = future.result()
@@ -544,29 +544,29 @@ class ProjectManagerNode(Node):
             self.project_state["experiment"]["protocol"] = msg.data
             self.save_project_state(self.project_state)
 
-    def dataset_callback(self, msg: String):
+    def eeg_simulator_dataset_callback(self, msg: String):
         if self.project_state is None:
             return
         with self.project_state_lock:
             self.project_state["simulator"]["dataset_filename"] = msg.data
             self.save_project_state(self.project_state)
 
-    def playback_callback(self, msg: Bool):
+    def eeg_simulator_enabled_callback(self, msg: Bool):
         if self.project_state is None:
             return
         flag = msg.data
         with self.project_state_lock:
-            self.project_state["simulator"]["playback"] = flag
+            self.project_state["simulator"]["enabled"] = flag
             self.save_project_state(self.project_state)
 
-    def start_time_callback(self, msg: Float64):
+    def eeg_simulator_start_time_callback(self, msg: Float64):
         if self.project_state is None:
             return
         with self.project_state_lock:
             self.project_state["simulator"]["start_time"] = msg.data
             self.save_project_state(self.project_state)
     
-    def record_data_callback(self, msg: Bool):
+    def eeg_recorder_record_data_callback(self, msg: Bool):
         if self.project_state is None:
             return
         flag = msg.data

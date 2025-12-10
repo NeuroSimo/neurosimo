@@ -46,7 +46,6 @@ interface RosStreamerState extends ROSLIB.Message {
 interface EegSimulatorContextType {
   datasetList: Dataset[]
   dataset: string
-  recordData: boolean
   startTime: number
   streamerState: StreamerStateValue
   toggleStreaming: () => void
@@ -55,7 +54,6 @@ interface EegSimulatorContextType {
 const defaultDatasetState: EegSimulatorContextType = {
   datasetList: [],
   dataset: '',
-  recordData: false,
   startTime: 0,
   streamerState: StreamerStateValue.READY,
   toggleStreaming: () => {
@@ -74,7 +72,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const [dataset, setDataset] = useState<string>('')
 
   const [startTime, setStartTime] = useState<number>(0)
-  const [recordData, setRecordData] = useState<boolean>(false)
   const [streamerState, setStreamerState] = useState<StreamerStateValue>(StreamerStateValue.READY)
 
   useEffect(() => {
@@ -111,17 +108,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       setStartTime(message.data)
     })
 
-    /* Subscriber for record data. */
-    const recordDataSubscriber = new Topic<RosBoolean>({
-      ros: ros,
-      name: '/eeg_recorder/record_data',
-      messageType: 'std_msgs/Bool',
-    })
-
-    recordDataSubscriber.subscribe((message: RosBoolean) => {
-      setRecordData(message.data)
-    })
-
     /* Subscriber for simulator state. */
     const stateSubscriber = new Topic<RosStreamerState>({
       ros: ros,
@@ -139,7 +125,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       datasetSubscriber.unsubscribe()
 
       startTimeSubscriber.unsubscribe()
-      recordDataSubscriber.unsubscribe()
       stateSubscriber.unsubscribe()
     }
   }, [])
@@ -166,7 +151,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
         datasetList,
         dataset,
         startTime,
-        recordData,
         streamerState,
         toggleStreaming,
       }}

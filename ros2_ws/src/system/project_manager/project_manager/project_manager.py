@@ -53,7 +53,6 @@ class ProjectManagerNode(Node):
 
         self.eeg_simulator_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
         self.eeg_simulator_start_time_service = self.create_client(SetStartTime, "/eeg_simulator/start_time/set", callback_group=self.callback_group)
-        self.eeg_recorder_record_data_service = self.create_client(SetBool, "/eeg_recorder/record_data/set", callback_group=self.callback_group)
 
         # Wait for services to be available
         while not self.preprocessor_module_client.wait_for_service(timeout_sec=2.0):
@@ -83,9 +82,6 @@ class ProjectManagerNode(Node):
         while not self.eeg_simulator_start_time_service.wait_for_service(timeout_sec=2.0):
             self.logger.error("Set start time service not available, waiting...")
 
-        while not self.eeg_recorder_record_data_service.wait_for_service(timeout_sec=2.0):
-            self.logger.error("Set record data service not available, waiting...")
-
         # Publisher
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -103,7 +99,6 @@ class ProjectManagerNode(Node):
 
         self.create_subscription(String, "/eeg_simulator/dataset", self.eeg_simulator_dataset_callback, 10)
         self.create_subscription(Float64, "/eeg_simulator/start_time", self.eeg_simulator_start_time_callback, 10)
-        self.create_subscription(Bool, "/eeg_recorder/record_data", self.eeg_recorder_record_data_callback, 10)
 
         # Initialize state
         self.global_state = self.load_global_state()
@@ -180,13 +175,10 @@ class ProjectManagerNode(Node):
             "experiment": {
                 "protocol": 'example',
             },
-            "recorder": {
-                "record_data": False
-            }
         }
 
     def validate_project_state(self, state):
-        required_keys = ["decider", "preprocessor", "presenter", "simulator", "experiment", "recorder"]
+        required_keys = ["decider", "preprocessor", "presenter", "simulator", "experiment"]
         for key in required_keys:
             if key not in state:
                 self.logger.error(f"State file is missing required key: {key}")
@@ -196,8 +188,12 @@ class ProjectManagerNode(Node):
             self.logger.error("State file has invalid structure for decider, preprocessor, or presenter.")
             return False
     
-        if not isinstance(state["simulator"], dict) or not isinstance(state["experiment"], dict) or not isinstance(state["recorder"], dict):
-            self.logger.error("State file has invalid structure for simulator, experiment, or recorder.")
+        if not isinstance(state["simulator"], dict):
+            self.logger.error("State file has invalid structure for simulator.")
+            return False
+
+        if not isinstance(state["experiment"], dict):
+            self.logger.error("State file has invalid structure for experiment.")
             return False
     
         if not all(key in state["decider"] for key in ["module", "enabled"]):
@@ -218,10 +214,6 @@ class ProjectManagerNode(Node):
     
         if not all(key in state["experiment"] for key in ["protocol"]):
             self.logger.error("State file is missing required keys in experiment.")
-            return False
-    
-        if not all(key in state["recorder"] for key in ["record_data"]):
-            self.logger.error("State file is missing required keys in recorder.")
             return False
 
         return True
@@ -290,11 +282,9 @@ class ProjectManagerNode(Node):
         # Set the state for the simulator
         dataset_filename = self.project_state["simulator"]["dataset_filename"]
         start_time = self.project_state["simulator"]["start_time"]
-        record_data = self.project_state["recorder"]["record_data"]
 
         self.set_eeg_simulator_dataset(dataset_filename)
         self.set_eeg_simulator_start_time(start_time)
-        self.set_eeg_recorder_record_data(record_data)
 
         self.logger.info(f"State loaded for project: {self.active_project}")
 
@@ -456,19 +446,6 @@ class ProjectManagerNode(Node):
         
         future.add_done_callback(callback)
     
-    def set_eeg_recorder_record_data(self, record_data):
-        request = SetBool.Request()
-        request.data = record_data
-
-        future = self.eeg_recorder_record_data_service.call_async(request)
-
-        def callback(future):
-            result = future.result()
-            if result is None or not result.success:
-                self.logger.error(f"Failed to set record data to {record_data}.")
-        
-        future.add_done_callback(callback)
-
     # Subscriber callbacks
 
     def decider_module_callback(self, msg: String):
@@ -545,14 +522,6 @@ class ProjectManagerNode(Node):
             self.project_state["simulator"]["start_time"] = msg.data
             self.save_project_state(self.project_state)
     
-    def eeg_recorder_record_data_callback(self, msg: Bool):
-        if self.project_state is None:
-            return
-        flag = msg.data
-        with self.project_state_lock:
-            self.project_state["recorder"]["record_data"] = flag
-            self.save_project_state(self.project_state)
-
 
 def main(args=None):
     rclpy.init(args=args)

@@ -14,7 +14,6 @@ namespace py = pybind11;
 
 DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
-  state = WrapperState::UNINITIALIZED;
 
   /* Initialize the Python interpreter. */
   interpreter = std::make_unique<py::scoped_interpreter>();
@@ -152,7 +151,7 @@ void DeciderWrapper::update_internal_imports(const std::string& base_directory) 
   }
 }
 
-void DeciderWrapper::initialize_module(
+bool DeciderWrapper::initialize_module(
     const std::string& project_directory,
     const std::string& module_directory,
     const std::string& module_name,
@@ -168,8 +167,7 @@ void DeciderWrapper::initialize_module(
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
     RCLCPP_ERROR(*logger_ptr, "Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
-    state = WrapperState::ERROR;
-    return;
+    return false;
   }
 
   /* Reset the module state. */
@@ -208,9 +206,7 @@ void DeciderWrapper::initialize_module(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    state = WrapperState::ERROR;
-    return;
+    return false;
 
   } catch (const std::exception &e) {
     std::string error_msg = std::string("C++ error during import: ") + e.what();
@@ -222,8 +218,7 @@ void DeciderWrapper::initialize_module(
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
     
-    state = WrapperState::ERROR;
-    return;
+    return false;
   }
 
   /* Update the list of internal imports to watch for changes. */
@@ -243,9 +238,7 @@ void DeciderWrapper::initialize_module(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    state = WrapperState::ERROR;
-    return;
+    return false;
 
   } catch (const std::exception &e) {
     std::string error_msg = std::string("C++ error during initialization: ") + e.what();
@@ -256,16 +249,13 @@ void DeciderWrapper::initialize_module(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    state = WrapperState::ERROR;
-    return;
+    return false;
   }
 
   /* Check that the Python module has a process_eeg_trigger method (mandatory). */
   if (!py::hasattr(*decider_instance, "process_eeg_trigger")) {
     RCLCPP_ERROR(*logger_ptr, "Decider module must implement 'process_eeg_trigger' method.");
-    state = WrapperState::ERROR;
-    return;
+    return false;
   }
 
   /* Extract the configuration from decider_instance. */
@@ -290,8 +280,7 @@ void DeciderWrapper::initialize_module(
       std::string key = py::str(item.first).cast<std::string>();
       if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
         RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', and 'event_processors' are allowed.", key.c_str());
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
     }
 
@@ -323,28 +312,24 @@ void DeciderWrapper::initialize_module(
           this->look_ahead_samples);
       } else {
         RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
 
     } else {
       RCLCPP_ERROR(*logger_ptr, "'sample_window' key not found in configuration dictionary.");
-      state = WrapperState::ERROR;
-      return;
+      return false;
     }
 
     /* Extract predefined_sensory_stimuli (optional). */
     if (config.contains("predefined_sensory_stimuli")) {
       if (!py::isinstance<py::list>(config["predefined_sensory_stimuli"])) {
         RCLCPP_ERROR(*logger_ptr, "predefined_sensory_stimuli must be a list.");
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
 
       py::list py_sensory_stimuli = config["predefined_sensory_stimuli"].cast<py::list>();
       if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
     }
 
@@ -354,20 +339,17 @@ void DeciderWrapper::initialize_module(
         this->periodic_processing_enabled = config["periodic_processing_enabled"].cast<bool>();
       } catch (const py::cast_error& e) {
         RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled must be a boolean: %s", e.what());
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
     } else {
       RCLCPP_ERROR(*logger_ptr, "'periodic_processing_enabled' key not found in configuration dictionary.");
-      state = WrapperState::ERROR;
-      return;
+      return false;
     }
 
     /* Check that if periodic processing is enabled, the periodic_processing_interval is provided. */
     if (this->periodic_processing_enabled && !config.contains("periodic_processing_interval")) {
       RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled is true but 'periodic_processing_interval' is not provided in configuration dictionary.");
-      state = WrapperState::ERROR;
-      return;
+      return false;
     }
 
     /* Extract periodic_processing_interval. */
@@ -376,13 +358,11 @@ void DeciderWrapper::initialize_module(
         this->periodic_processing_interval = config["periodic_processing_interval"].cast<double>();
         if (this->periodic_processing_interval <= 0.0) {
           RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a positive number (got %.3f).", this->periodic_processing_interval);
-          state = WrapperState::ERROR;
-          return;
+          return false;
         }
       } catch (const py::cast_error& e) {
         RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a number: %s", e.what());
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
     } else {
       this->periodic_processing_interval = 0.0;
@@ -394,13 +374,11 @@ void DeciderWrapper::initialize_module(
         this->first_periodic_processing_at = config["first_periodic_processing_at"].cast<double>();
         if (this->first_periodic_processing_at < 0.0) {
           RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be non-negative.");
-          state = WrapperState::ERROR;
-          return;
+          return false;
         }
       } catch (const py::cast_error& e) {
         RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be a number: %s", e.what());
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
     } else {
       /* Default to same as periodic_processing_interval. */
@@ -429,13 +407,11 @@ void DeciderWrapper::initialize_module(
         this->pulse_lockout_duration = config["pulse_lockout_duration"].cast<double>();
         if (this->pulse_lockout_duration < 0.0) {
           RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be non-negative.");
-          state = WrapperState::ERROR;
-          return;
+          return false;
         }
       } catch (const py::cast_error& e) {
         RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be a number: %s", e.what());
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
     } else {
       this->pulse_lockout_duration = 0.0;
@@ -449,8 +425,7 @@ void DeciderWrapper::initialize_module(
     if (config.contains("event_processors")) {
       if (!py::isinstance<py::dict>(config["event_processors"])) {
         RCLCPP_ERROR(*logger_ptr, "event_processors must be a dictionary.");
-        state = WrapperState::ERROR;
-        return;
+        return false;
       }
 
       py::dict processors = config["event_processors"].cast<py::dict>();
@@ -470,8 +445,7 @@ void DeciderWrapper::initialize_module(
           /* Extract processor */
           if (!processor_config.contains("processor")) {
             RCLCPP_ERROR(*logger_ptr, "Event processor config for '%s' must contain 'processor' key.", event_type.c_str());
-            state = WrapperState::ERROR;
-            return;
+            return false;
           }
           processor = processor_config["processor"].cast<py::object>();
           
@@ -480,8 +454,7 @@ void DeciderWrapper::initialize_module(
             py::list sample_window = processor_config["sample_window"].cast<py::list>();
             if (sample_window.size() != 2) {
               RCLCPP_ERROR(*logger_ptr, "sample_window for event '%s' must have 2 elements.", event_type.c_str());
-              state = WrapperState::ERROR;
-              return;
+              return false;
             }
             double earliest_seconds = sample_window[0].cast<double>();
             double latest_seconds = sample_window[1].cast<double>();
@@ -512,8 +485,7 @@ void DeciderWrapper::initialize_module(
         /* Verify that the processor is callable */
         if (!py::hasattr(processor, "__call__")) {
           RCLCPP_ERROR(*logger_ptr, "Event processor for '%s' is not callable.", event_type.c_str());
-          state = WrapperState::ERROR;
-          return;
+          return false;
         }
         
         this->event_processors[event_type] = processor;
@@ -521,13 +493,11 @@ void DeciderWrapper::initialize_module(
       }
     } else {
       RCLCPP_ERROR(*logger_ptr, "'event_processors' key not found in configuration dictionary.");
-      state = WrapperState::ERROR;
-      return;
+      return false;
     }
   } else {
     RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Decider instance.");
-    state = WrapperState::ERROR;
-    return;
+    return false;
   }
 
   /* Calculate the maximum buffer size needed to cover all windows.
@@ -577,8 +547,6 @@ void DeciderWrapper::initialize_module(
     RCLCPP_DEBUG(*logger_ptr, "Preallocated arrays for event '%s' with buffer size %zu", event_type.c_str(), event_buffer_size);
   }
 
-  state = WrapperState::READY;
-
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
@@ -612,6 +580,8 @@ void DeciderWrapper::initialize_module(
     RCLCPP_INFO(*logger_ptr, "  - Pulse lockout duration: %s%.1f%s (s)", bold_on.c_str(), this->pulse_lockout_duration, bold_off.c_str());
   }
   RCLCPP_INFO(*logger_ptr, " ");
+
+  return true;
 }
 
 void DeciderWrapper::reset_module_state() {
@@ -624,14 +594,12 @@ void DeciderWrapper::reset_module_state() {
   py_emg.reset();
   
   event_arrays.clear();
-
-  state = WrapperState::UNINITIALIZED;
 }
 
-void DeciderWrapper::warm_up() {
-  if (state != WrapperState::READY || !decider_instance) {
-    RCLCPP_WARN(*logger_ptr, "Cannot warm up: module not ready or instance not available");
-    return;
+bool DeciderWrapper::warm_up() {
+  if (!decider_instance) {
+    RCLCPP_WARN(*logger_ptr, "Cannot warm up: decider instance not available");
+    return false;
   }
 
   try {
@@ -647,7 +615,7 @@ void DeciderWrapper::warm_up() {
       RCLCPP_INFO(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
       RCLCPP_INFO(*logger_ptr, " ");
       log_section_header("Operation");
-      return;
+      return false;
     }
 
     RCLCPP_INFO(*logger_ptr, "Starting %d warm-up rounds...", warm_up_rounds);
@@ -705,10 +673,10 @@ void DeciderWrapper::warm_up() {
         
       } catch (const py::error_already_set& e) {
         RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (Python error: %s)", round + 1, warm_up_rounds, e.what());
-        // Continue with remaining rounds
+        return false;
       } catch (const std::exception& e) {
         RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (C++ error: %s)", round + 1, warm_up_rounds, e.what());
-        // Continue with remaining rounds
+        return false;
       }
     }
 
@@ -725,11 +693,15 @@ void DeciderWrapper::warm_up() {
     RCLCPP_ERROR(*logger_ptr, "Warm-up failed with Python error: %s", e.what());
     // Clear logs from failed warm-up as well
     get_and_clear_logs();
+    return false;
   } catch (const std::exception& e) {
     RCLCPP_ERROR(*logger_ptr, "Warm-up failed with C++ error: %s", e.what());
     // Clear logs from failed warm-up as well
     get_and_clear_logs();
+    return false;
   }
+
+  return true;
 }
 
 DeciderWrapper::~DeciderWrapper() {
@@ -749,10 +721,6 @@ std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
 
 std::vector<std::string> DeciderWrapper::get_internal_imports() const {
   return this->internal_imports;
-}
-
-WrapperState DeciderWrapper::get_state() const {
-  return this->state;
 }
 
 std::size_t DeciderWrapper::get_buffer_size() const {
@@ -808,7 +776,6 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
     if (!py_sensory_stimulus.contains(field)) {
       RCLCPP_ERROR(*logger_ptr,
         "sensory_stimulus missing field '%s'", field.c_str());
-      state = WrapperState::ERROR;
       return false;
     }
   }
@@ -818,7 +785,6 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
     out_msg.time = py_sensory_stimulus["time"].cast<double>();
   } catch (const py::cast_error& e) {
     RCLCPP_ERROR(*logger_ptr, "'time' must be a float or int: %s", e.what());
-    state = WrapperState::ERROR;
     return false;
   }
 
@@ -826,7 +792,6 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
     out_msg.type = py_sensory_stimulus["type"].cast<std::string>();
   } catch (const py::cast_error& e) {
     RCLCPP_ERROR(*logger_ptr, "'type' must be a string: %s", e.what());
-    state = WrapperState::ERROR;
     return false;
   }
 
@@ -835,7 +800,6 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
     params = py_sensory_stimulus["parameters"].cast<py::dict>();
   } catch (const py::cast_error& e) {
     RCLCPP_ERROR(*logger_ptr, "'parameters' must be a dictionary: %s", e.what());
-    state = WrapperState::ERROR;
     return false;
   }
 
@@ -847,7 +811,6 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
       key = item.first.cast<std::string>();
     } catch (const py::cast_error& e) {
       RCLCPP_ERROR(*logger_ptr, "parameter key is not a string: %s", e.what());
-      state = WrapperState::ERROR;
       return false;
     }
 
@@ -856,7 +819,6 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
       val = py::str(item.second);  // Serializes any Python value
     } catch (const std::exception& e) {
       RCLCPP_ERROR(*logger_ptr, "parameter value could not be serialized to string: %s", e.what());
-      state = WrapperState::ERROR;
       return false;
     }
 
@@ -877,7 +839,6 @@ bool DeciderWrapper::process_sensory_stimuli_list(
     for (const auto& py_sensory_stimulus : py_sensory_stimuli) {
       if (!py::isinstance<py::dict>(py_sensory_stimulus)) {
         RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list of dictionaries.");
-        state = WrapperState::ERROR;
         return false;
       }
       py::dict py_sensory_stimulus_dict = py_sensory_stimulus.cast<py::dict>();
@@ -886,7 +847,6 @@ bool DeciderWrapper::process_sensory_stimuli_list(
         sensory_stimuli.push_back(msg);
       } else {
         RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
-        state = WrapperState::ERROR;
         return false;
       }
     }
@@ -993,7 +953,6 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
           log_buffer.push_back({error_msg, LogLevel::ERROR});
         }
         
-        state = WrapperState::ERROR;
         success = false;
         return {success, timed_trigger, coil_target};
       }
@@ -1015,9 +974,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
     
-    state = WrapperState::ERROR;
     success = false;
-
     return {success, timed_trigger, coil_target};
 
   } catch(const std::exception& e) {
@@ -1030,9 +987,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
     
-    state = WrapperState::ERROR;
     success = false;
-
     return {success, timed_trigger, coil_target};
   }
 
@@ -1044,9 +999,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   /* If the return value is not None, ensure that it is a dictionary. */
   if (!py::isinstance<py::dict>(py_result)) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary.");
-    state = WrapperState::ERROR;
     success = false;
-
     return {success, timed_trigger, coil_target};
   }
 
@@ -1059,7 +1012,6 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
       RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'timed_trigger', 'sensory_stimuli', 'events', and 'coil_target' are allowed.", key.c_str());
-      state = WrapperState::ERROR;
       success = false;
 
       return {success, timed_trigger, coil_target};
@@ -1078,14 +1030,12 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   if (dict_result.contains("sensory_stimuli")) {
     if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
       RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
-      state = WrapperState::ERROR;
       success = false;
       return {success, timed_trigger, coil_target};
     }
 
     py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
     if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
-      state = WrapperState::ERROR;
       success = false;
       return {success, timed_trigger, coil_target};
     }
@@ -1094,7 +1044,6 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   if (dict_result.contains("events")) {
     if (!py::isinstance<py::list>(dict_result["events"])) {
       RCLCPP_ERROR(*logger_ptr, "events must be a list.");
-      state = WrapperState::ERROR;
       success = false;
       return {success, timed_trigger, coil_target};
     }

@@ -147,19 +147,6 @@ services:
       - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
 
-  session_manager:
-    build:
-      context: .
-      dockerfile: ros2_ws/src/system/session_manager/Dockerfile
-    env_file:
-      - .env
-    environment:
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - ROS_DOMAIN_ID
-    # The container needs to be privileged to set real-time priority.
-    privileged: true
-    network_mode: host
-
   trigger_timer:
     build:
       context: .

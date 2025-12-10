@@ -1,6 +1,0 @@
-# Start device
-#
-# Response: Boolean indicating if starting was successful.
-
----
-bool success

@@ -73,6 +73,7 @@ private:
                                           const eeg_interfaces::msg::EegInfo& eeg_info);
 
   void handle_sample(eeg_interfaces::msg::Sample sample);
+  bool check_for_dropped_samples(uint64_t device_sample_index);
 
   void create_publishers();
   void create_subscribers();
@@ -109,7 +110,12 @@ private:
 
   /* Session management */
   bool first_sample_of_session = true;
-  uint64_t previous_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
+  
+  /* Device sample tracking for dropped sample detection */
+  uint64_t previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
+  
+  /* Session sample index (starts at 0 for each session) */
+  uint64_t session_sample_index = 0;
 
   double_t time_offset = UNSET_TIME;     // in seconds
   double_t session_start_time = UNSET_TIME;  // Unix timestamp when session started

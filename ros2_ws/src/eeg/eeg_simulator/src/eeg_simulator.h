@@ -92,7 +92,6 @@ private:
   bool eeg_bridge_available = false;
 
   bool playback = false;
-  static constexpr bool LOOP = true;  // Loop is always enabled
   double_t play_dataset_from = 0.0;
 
   size_t current_index = 0;

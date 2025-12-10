@@ -16,7 +16,7 @@ def save_to_csv(output_directory, filename, data, fmt='%.5f'):
     output_path = os.path.join(output_directory, filename)
     np.savetxt(output_path, data, delimiter=",", fmt=fmt)
 
-def save_to_json(output_directory, base_filename, name, num_eeg_channels, num_emg_channels, data_filename):
+def save_to_json(output_directory, base_filename, name, num_eeg_channels, num_emg_channels, data_filename, loop):
     json_filename = base_filename + ".json"
     json_data = {
         "name": name,
@@ -25,6 +25,7 @@ def save_to_json(output_directory, base_filename, name, num_eeg_channels, num_em
             "emg": num_emg_channels
         },
         "data_file": data_filename,
+        "loop": loop,
     }
 
     output_path = os.path.join(output_directory, json_filename)
@@ -41,6 +42,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_directory", type=str, default=".", help="Output directory for files")
     parser.add_argument("--output_filename", type=str, default="random_data", help="Output base filename without extension")
     parser.add_argument("--dataset_name", type=str, default="Random data", help="Name of the dataset")
+    parser.add_argument("--loop", action="store_true", help="Whether to loop the dataset when reaching the end")
 
     args = parser.parse_args()
 
@@ -60,6 +62,7 @@ if __name__ == "__main__":
         num_eeg_channels=args.eeg_channels,
         num_emg_channels=args.emg_channels,
         data_filename=data_filename,
+        loop=args.loop,
     )
 
     print("Random data with {} EEG channels and {} EMG channels saved to {}/{}.csv".format(

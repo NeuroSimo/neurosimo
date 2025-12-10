@@ -107,18 +107,18 @@ Optional fields:
 - `loop`: Set to `true` to loop the dataset continuously (default: `false`)
 - `pulse_times`: Array of timestamps (in seconds) when pulses should be delivered, e.g., `[10.5, 25.3, 41.7]`. Not supported when `loop` is `true`.
 
-The data CSV file should contain the data in the following format:
+The data CSV file should contain the channel data in the following format:
 
 ```csv
-0,0.1,0.2,0.3,1
-0.001,0.11,0.21,0.31,2
-0.002,0.12,0.22,0.32,3
+0.1,0.2,0.3,1.0
+0.11,0.21,0.31,1.1
+0.12,0.22,0.32,1.2
 ...
 ```
 
-The first column is the time in seconds, and the following columns are the EEG and EMG
-channels in that order. The number of EEG and EMG channels should match the numbers
-given in the JSON file.
+Each row is one sample. The columns are EEG channels followed by EMG channels.
+The number of columns should match `num_eeg_channels + num_emg_channels` in the JSON file.
+Timestamps are computed automatically from the sampling frequency.
 
 After creating a new data set, you can select it from the dropdown menu in the panel
 where it should automatically appear.

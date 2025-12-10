@@ -49,7 +49,7 @@ private:
   void publish_healthcheck();
   void handle_eeg_bridge_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg);
 
-  std::tuple<bool, int, double, bool> get_dataset_info(const std::string& data_file_path);
+  std::tuple<bool, size_t> get_sample_count(const std::string& data_file_path);
   std::vector<project_interfaces::msg::Dataset> list_datasets(const std::string& path);
   void update_dataset_list();
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
@@ -161,10 +161,6 @@ private:
   int inotify_descriptor;
   int watch_descriptor;
   char inotify_buffer[1024];
-
-  /* When determining if samples have been dropped by comparing the timestamps of two consecutive
-     samples, allow some tolerance to account for finite precision of floating point numbers. */
-  static constexpr double_t TOLERANCE_S = 2 * pow(10, -5);
 };
 
 #endif //EEG_SIMULATOR_H

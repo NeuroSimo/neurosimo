@@ -5,12 +5,11 @@ import json
 
 def generate_random_data(num_eeg_channels, num_emg_channels, sampling_frequency, duration):
     num_of_samples = int(duration * sampling_frequency)
-    timestamps = np.linspace(0, duration, num_of_samples, endpoint=False)
 
+    # Generate random data for EEG and EMG channels (no timestamp column)
     data = 2 * np.random.rand(num_of_samples, num_eeg_channels + num_emg_channels) - 1
-    data_with_timestamps = np.column_stack((timestamps, data))
 
-    return data_with_timestamps
+    return data
 
 def save_to_csv(output_directory, filename, data, fmt='%.5f'):
     output_path = os.path.join(output_directory, filename)

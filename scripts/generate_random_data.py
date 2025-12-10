@@ -16,15 +16,16 @@ def save_to_csv(output_directory, filename, data, fmt='%.5f'):
     output_path = os.path.join(output_directory, filename)
     np.savetxt(output_path, data, delimiter=",", fmt=fmt)
 
-def save_to_json(output_directory, base_filename, name, num_eeg_channels, num_emg_channels, data_filename, loop):
+def save_to_json(output_directory, base_filename, name, sampling_frequency, num_eeg_channels, num_emg_channels, data_filename, loop):
     json_filename = base_filename + ".json"
     json_data = {
         "name": name,
-        "channels": {
-            "eeg": num_eeg_channels,
-            "emg": num_emg_channels
-        },
         "data_file": data_filename,
+        "session": {
+            "sampling_frequency": sampling_frequency,
+            "num_eeg_channels": num_eeg_channels,
+            "num_emg_channels": num_emg_channels,
+        },
         "loop": loop,
     }
 
@@ -59,6 +60,7 @@ if __name__ == "__main__":
         output_directory=args.output_directory,
         base_filename=args.output_filename,
         name=args.dataset_name,
+        sampling_frequency=args.sampling_frequency,
         num_eeg_channels=args.eeg_channels,
         num_emg_channels=args.emg_channels,
         data_filename=data_filename,

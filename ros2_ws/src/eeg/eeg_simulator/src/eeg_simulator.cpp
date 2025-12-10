@@ -309,23 +309,32 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
           continue;
         }
 
-        /* Validate "channels" object and its fields "eeg" and "emg". */
-        if (json_data.contains("channels") && json_data["channels"].is_object()) {
-          if (json_data["channels"].contains("eeg") && json_data["channels"]["eeg"].is_number_integer()) {
-            dataset_msg.num_eeg_channels = json_data["channels"]["eeg"];
+        /* Validate "session" object with sampling_frequency, num_eeg_channels, num_emg_channels. */
+        if (json_data.contains("session") && json_data["session"].is_object()) {
+          auto& session = json_data["session"];
+
+          if (session.contains("sampling_frequency") && session["sampling_frequency"].is_number_integer()) {
+            dataset_msg.sampling_frequency = session["sampling_frequency"];
           } else {
-            RCLCPP_ERROR(this->get_logger(), "  • Mandatory field 'channels.eeg' is missing or invalid");
+            RCLCPP_ERROR(this->get_logger(), "  • Mandatory field 'session.sampling_frequency' is missing or invalid");
             continue;
           }
 
-          if (json_data["channels"].contains("emg") && json_data["channels"]["emg"].is_number_integer()) {
-            dataset_msg.num_emg_channels = json_data["channels"]["emg"];
+          if (session.contains("num_eeg_channels") && session["num_eeg_channels"].is_number_integer()) {
+            dataset_msg.num_eeg_channels = session["num_eeg_channels"];
           } else {
-            RCLCPP_ERROR(this->get_logger(), "  • Mandatory field 'channels.emg' is missing or invalid");
+            RCLCPP_ERROR(this->get_logger(), "  • Mandatory field 'session.num_eeg_channels' is missing or invalid");
+            continue;
+          }
+
+          if (session.contains("num_emg_channels") && session["num_emg_channels"].is_number_integer()) {
+            dataset_msg.num_emg_channels = session["num_emg_channels"];
+          } else {
+            RCLCPP_ERROR(this->get_logger(), "  • Mandatory field 'session.num_emg_channels' is missing or invalid");
             continue;
           }
         } else {
-          RCLCPP_ERROR(this->get_logger(), "  • Mandatory object 'channels' is missing or invalid");
+          RCLCPP_ERROR(this->get_logger(), "  • Mandatory object 'session' is missing or invalid");
           continue;
         }
 
@@ -358,9 +367,9 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
         dataset_msg.pulse_count = parsed_pulse_times.size();
         pulse_times_map[filename] = parsed_pulse_times;
 
-        /* Calculate the sampling frequency and duration from the data file. */
+        /* Get duration and check for dropped samples from the data file. */
         std::string data_file_path = entry.path().parent_path().string() + "/" + dataset_msg.data_filename;
-        auto [success, sampling_frequency, duration, samples_dropped] = get_dataset_info(data_file_path);
+        auto [success, calculated_sampling_frequency, duration, samples_dropped] = get_dataset_info(data_file_path);
 
         if (!success) {
           RCLCPP_ERROR(this->get_logger(), "  • Error reading the dataset, skipping...");
@@ -368,11 +377,15 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
         }
 
         if (samples_dropped) {
-          /* TODO: Should this fail harder? */
           RCLCPP_WARN(this->get_logger(), "  • Warning: Dropped samples found");
         }
 
-        dataset_msg.sampling_frequency = sampling_frequency;
+        /* Warn if calculated sampling frequency differs significantly from JSON value. */
+        if (calculated_sampling_frequency != dataset_msg.sampling_frequency) {
+          RCLCPP_WARN(this->get_logger(), "  • Warning: Calculated sampling frequency (%d Hz) differs from JSON (%d Hz)",
+                      calculated_sampling_frequency, dataset_msg.sampling_frequency);
+        }
+
         dataset_msg.duration = duration;
 
         datasets.push_back(dataset_msg);

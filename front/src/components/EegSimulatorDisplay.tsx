@@ -163,12 +163,8 @@ export const EegSimulatorDisplay: React.FC = () => {
           />
         </div>
       </CompactRow>
-      <SectionStartRow>
-        <ConfigLabel>Status:</ConfigLabel>
-        <ConfigValue>{eegSimulatorHealthcheck?.status_message}</ConfigValue>
-      </SectionStartRow>
       <CompactRow>
-        <ConfigLabel>Simulator state:</ConfigLabel>
+        <ConfigLabel>Status:</ConfigLabel>
         <ConfigValue>{streamerStateLabel}</ConfigValue>
       </CompactRow>
     </EegSimulatorPanel>

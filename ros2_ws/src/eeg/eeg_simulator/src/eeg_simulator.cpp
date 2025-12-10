@@ -80,10 +80,10 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     rmw_qos_profile_services_default,
     callback_group);
 
-  /* Service for changing playback. */
-  this->set_playback_service = this->create_service<std_srvs::srv::SetBool>(
-    "/eeg_simulator/playback/set",
-    std::bind(&EegSimulator::handle_set_playback, this, std::placeholders::_1, std::placeholders::_2),
+  /* Service for changing enabled state. */
+  this->set_enabled_service = this->create_service<std_srvs::srv::SetBool>(
+    "/eeg_simulator/enabled/set",
+    std::bind(&EegSimulator::handle_set_enabled, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
     callback_group);
 
@@ -99,9 +99,9 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     "/eeg_simulator/dataset",
     qos_persist_latest);
 
-  /* Publisher for playback. */
-  this->playback_publisher = this->create_publisher<std_msgs::msg::Bool>(
-    "/eeg_simulator/playback",
+  /* Publisher for enabled state. */
+  this->enabled_publisher = this->create_publisher<std_msgs::msg::Bool>(
+    "/eeg_simulator/enabled",
     qos_persist_latest);
 
   /* Publisher for start time. */
@@ -200,7 +200,7 @@ void EegSimulator::publish_healthcheck() {
 void EegSimulator::handle_eeg_bridge_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg) {
   this->eeg_bridge_available = msg->status.value == system_interfaces::msg::HealthcheckStatus::READY;
   if (eeg_bridge_available) {
-    this->set_playback(false);
+    this->set_enabled(false);
     RCLCPP_INFO(this->get_logger(), "EEG simulator disabled because EEG bridge is available.");
   }
 }
@@ -421,8 +421,8 @@ bool EegSimulator::set_dataset(std::string json_filename) {
   /* Reset the simulator state. */
   this->eeg_simulator_state = EegSimulatorState::READY;
 
-  /* If playback is set to true, re-initialize streaming. */
-  if (this->playback) {
+  /* If enabled, re-initialize streaming. */
+  if (this->enabled) {
     initialize_streaming();
   }
 
@@ -436,28 +436,28 @@ void EegSimulator::handle_set_dataset(
   response->success = set_dataset(request->filename);
 }
 
-void EegSimulator::set_playback(bool playback) {
-  this->playback = playback;
+void EegSimulator::set_enabled(bool enabled) {
+  this->enabled = enabled;
 
-  RCLCPP_INFO(this->get_logger(), "Playback %s.", this->playback ? "enabled" : "disabled");
+  RCLCPP_INFO(this->get_logger(), "Simulator %s.", this->enabled ? "enabled" : "disabled");
 
   /* Update ROS state variable. */
   auto msg = std_msgs::msg::Bool();
-  msg.data = this->playback;
+  msg.data = this->enabled;
 
-  this->playback_publisher->publish(msg);
+  this->enabled_publisher->publish(msg);
 
-  /* If playback is set to true, initialize streaming. */
-  if (this->playback) {
+  /* If enabled, initialize streaming. */
+  if (this->enabled) {
     initialize_streaming();
   }
 }
 
-void EegSimulator::handle_set_playback(
+void EegSimulator::handle_set_enabled(
       const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
       std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
 
-  set_playback(request->data);
+  set_enabled(request->data);
   response->success = true;
   response->message = "";
 }
@@ -524,7 +524,7 @@ void EegSimulator::initialize_streaming() {
           this->eeg_simulator_state = EegSimulatorState::ERROR_LOADING;
           this->error_message = "Error on line " + std::to_string(line_number);
           data_file.close();
-          this->set_playback(false);
+          this->set_enabled(false);
 
           return;
         }
@@ -576,8 +576,8 @@ void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::
     this->session_start_time = this->get_clock()->now().seconds();
   }
 
-  /* Return if the simulator is not set to playback dataset. */
-  if (!playback) {
+  /* Return if the simulator is not enabled. */
+  if (!enabled) {
     this->is_streaming = false;
     return;
   }

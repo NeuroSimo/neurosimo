@@ -59,8 +59,8 @@ private:
       const std::shared_ptr<project_interfaces::srv::SetDataset::Request> request,
       std::shared_ptr<project_interfaces::srv::SetDataset::Response> response);
 
-  void set_playback(bool playback);
-  void handle_set_playback(
+  void set_enabled(bool enabled);
+  void handle_set_enabled(
       const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
       std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
@@ -92,7 +92,7 @@ private:
 
   bool eeg_bridge_available = false;
 
-  bool playback = false;
+  bool enabled = false;
   double_t play_dataset_from = 0.0;
 
   size_t current_index = 0;
@@ -144,8 +144,8 @@ private:
   rclcpp::Service<project_interfaces::srv::SetDataset>::SharedPtr set_dataset_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr dataset_publisher;
 
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_playback_service;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr playback_publisher;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_enabled_service;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr enabled_publisher;
 
   rclcpp::Service<project_interfaces::srv::SetStartTime>::SharedPtr start_time_service;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr start_time_publisher;

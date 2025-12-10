@@ -17,7 +17,7 @@ import {
 } from 'styles/General'
 
 import { EegSimulatorContext, StreamerStateValue } from 'providers/EegSimulatorProvider'
-import { setDatasetRos, setStartTimeRos, setRecordDataRos } from 'ros/eeg_simulator'
+import { setDatasetRos, setStartTimeRos } from 'ros/eeg_simulator'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
@@ -54,7 +54,6 @@ export const EegSimulatorDisplay: React.FC = () => {
   const {
     datasetList,
     dataset,
-    recordData,
     startTime,
     streamerState,
     toggleStreaming,
@@ -79,12 +78,6 @@ export const EegSimulatorDisplay: React.FC = () => {
     }
     setStartTimeRos(startTime, () => {
       console.log('Start time set to ' + startTime)
-    })
-  }
-
-  const setRecordData = (recordData: boolean) => {
-    setRecordDataRos(recordData, () => {
-      console.log('Record data set to ' + recordData)
     })
   }
 
@@ -144,12 +137,6 @@ export const EegSimulatorDisplay: React.FC = () => {
         <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
         <ConfigValue>{selectedDataset?.num_emg_channels}</ConfigValue>
       </CompactRow>
-      <SectionStartRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Record</ConfigLabel>
-        <SwitchWrapper>
-          <ToggleSwitch type='flat' checked={recordData} onChange={setRecordData} disabled={false} />
-        </SwitchWrapper>
-      </SectionStartRow>
       <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Start time (s)</ConfigLabel>
         <div style={{ marginRight: 20 }}>

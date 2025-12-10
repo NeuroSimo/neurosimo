@@ -28,18 +28,6 @@ const std::string DEFAULT_PREPROCESSOR_NAME = "example";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
 EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_logger("preprocessor")) {
-  /* Read ROS parameter: dropped sample threshold */
-  auto dropped_sample_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  dropped_sample_threshold_descriptor.description = "The threshold for the number of dropped samples before the decider enters an error state";
-  dropped_sample_threshold_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
-  this->declare_parameter("dropped-sample-threshold", 4, dropped_sample_threshold_descriptor);
-  this->get_parameter("dropped-sample-threshold", this->dropped_sample_threshold);
-
-  /* Log the configuration. */
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "Configuration:");
-  RCLCPP_INFO(this->get_logger(), "  Dropped samples per second threshold: %d", this->dropped_sample_threshold);
-
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
 
@@ -155,10 +143,6 @@ void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMet
   this->error_occurred = false;
 
   this->session_metadata.update(metadata);
-
-  /* Avoid checking for dropped samples on the first sample. */
-  this->previous_time = UNSET_PREVIOUS_TIME;
-  this->total_dropped_samples = 0;
 
   /* Clear deferred processing queue when session starts. */
   while (!this->deferred_processing_queue.empty()) {
@@ -482,65 +466,6 @@ void EegPreprocessor::update_preprocessor_list() {
   this->preprocessor_list_publisher->publish(msg);
 }
 
-/* EEG functions */
-
-/* XXX: Very close to a similar check in other pipeline stages. Unify? */
-void EegPreprocessor::check_dropped_samples(double_t sample_time) {
-  const auto& metadata = this->session_metadata;
-
-  if (metadata.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
-    RCLCPP_WARN(this->get_logger(), "Sampling frequency not received, cannot check for dropped samples.");
-    return;
-  }
-
-  if (this->previous_time) {
-    auto time_diff = sample_time - this->previous_time;
-    auto threshold = metadata.sampling_period + this->TOLERANCE_S;
-
-    /* Calculate number of dropped samples. */
-    int dropped_samples = std::max(
-        0,
-        static_cast<int>(std::round((time_diff - metadata.sampling_period) * metadata.sampling_frequency)));
-
-    if (time_diff > threshold) {
-      /* Accumulate dropped samples. */
-      this->total_dropped_samples += dropped_samples;
-
-      /* Sliding window: add dropped samples and clean up entries older than 1 second. */
-      this->dropped_samples_window.push_back({sample_time, dropped_samples});
-      while (!this->dropped_samples_window.empty() &&
-             (sample_time - this->dropped_samples_window.front().first > 1.0)) {
-        this->dropped_samples_window.pop_front();
-      }
-
-      /* Sum of dropped samples in the last second. */
-      int recent_dropped_samples = 0;
-      for (const auto& entry : this->dropped_samples_window) {
-        recent_dropped_samples += entry.second;
-      }
-
-      if (recent_dropped_samples > this->dropped_sample_threshold) {
-        this->error_occurred = true;
-        RCLCPP_ERROR(this->get_logger(),
-            "Dropped samples exceeded threshold! Recent dropped samples: %d, Threshold: %d",
-            recent_dropped_samples, this->dropped_sample_threshold);
-      } else {
-        RCLCPP_WARN(this->get_logger(),
-            "Dropped samples detected. Time difference: %.5f, Dropped samples: %d",
-            time_diff, dropped_samples);
-      }
-      // Note: Dropped sample count is published by the decider, not the preprocessor
-
-    } else {
-      RCLCPP_DEBUG(this->get_logger(),
-        "Time difference between consecutive samples: %.5f", time_diff);
-    }
-  }
-
-  /* Update the previous time. */
-  this->previous_time = sample_time;
-}
-
 void EegPreprocessor::process_ready_deferred_requests(double_t current_sample_time) {
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   while (!this->deferred_processing_queue.empty()) {
@@ -628,8 +553,6 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
     this->error_occurred = true;
     return;
   }
-
-  check_dropped_samples(sample_time);
 
   if (msg->pulse_delivered) {
     RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.1f (s).", sample_time);

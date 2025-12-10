@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 - Removed support for event files in the EEG simulator.
+- Allow specifying pulse times in the EEG simulator dataset JSON configuration.
 - Define looping behavior in the EEG simulator dataset JSON configuration instead of the user interface.
+- Change format of the EEG simulator dataset JSON configuration.
 
 ## [0.2.0] – 2025-12-04
 

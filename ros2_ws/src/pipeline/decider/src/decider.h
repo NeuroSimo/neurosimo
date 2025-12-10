@@ -26,9 +26,6 @@
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
 
-#include "system_interfaces/msg/session.hpp"
-#include "system_interfaces/msg/session_state.hpp"
-
 #include "pipeline_interfaces/msg/coil_target.hpp"
 
 #include "pipeline_interfaces/msg/timing_error.hpp"
@@ -95,7 +92,9 @@ private:
 
   void publish_healthcheck();
 
-  void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
+  void handle_session_start();
+  void handle_session_end();
+
   void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
@@ -155,8 +154,6 @@ private:
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr preprocessor_enabled_subscriber;
 
-  rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
-
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
@@ -184,8 +181,8 @@ private:
   bool enabled = false;
 
   DeciderState decider_state = DeciderState::WAITING_FOR_ENABLED;
-  system_interfaces::msg::SessionState session_state;
 
+  bool session_started = false;
   bool first_sample_ever = true;
   bool first_sample_of_session = false;
 

@@ -19,41 +19,15 @@ const uint16_t EEG_QUEUE_LENGTH = 65535;
 
 const std::string DEFAULT_PROTOCOL_NAME = "example";
 
-/* XXX: Needs to match the values in session_bridge.cpp. */
-const milliseconds SESSION_PUBLISHING_INTERVAL = 20ms;
-const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 5ms;
-
-ExperimentCoordinator::ExperimentCoordinator() 
-  : Node("experiment_coordinator"), 
+ExperimentCoordinator::ExperimentCoordinator()
+  : Node("experiment_coordinator"),
     protocol_loader(rclcpp::get_logger("protocol_loader")),
     logger(rclcpp::get_logger("experiment_coordinator")) {
-  
+
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(
     HEALTHCHECK_TOPIC, 10);
-  
-  /* Subscriber for session. */
-  const auto DEADLINE_NS = std::chrono::nanoseconds(SESSION_PUBLISHING_INTERVAL + SESSION_PUBLISHING_INTERVAL_TOLERANCE);
-  
-  auto qos_session = rclcpp::QoS(rclcpp::KeepLast(1))
-      .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-      .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)
-      .deadline(DEADLINE_NS)
-      .lifespan(DEADLINE_NS);
-  
-  rclcpp::SubscriptionOptions subscription_options;
-  subscription_options.event_callbacks.deadline_callback = 
-    [this]([[maybe_unused]] rclcpp::QOSDeadlineRequestedInfo & event) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, 
-        "Session not received within deadline.");
-    };
-  
-  this->session_subscriber = this->create_subscription<system_interfaces::msg::Session>(
-    "/system/session",
-    qos_session,
-    std::bind(&ExperimentCoordinator::handle_session, this, _1),
-    subscription_options);
-  
+
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
         .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
@@ -159,55 +133,45 @@ void ExperimentCoordinator::publish_healthcheck() {
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void ExperimentCoordinator::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
-  bool state_changed = this->session_state.value != msg->state.value;
-  this->session_state = msg->state;
-  
-  if (state_changed) {
-    if (this->session_state.value == system_interfaces::msg::SessionState::STARTED) {
-      RCLCPP_INFO(this->get_logger(), "Session started, resetting experiment state");
-      reset_experiment_state();
-      state.session_started = true;
-      publish_experiment_state(0.0);
-    } else if (this->session_state.value == system_interfaces::msg::SessionState::STOPPED) {
-      RCLCPP_INFO(this->get_logger(), "Session stopped");
-      state.session_started = false;
-      publish_experiment_state(state.last_sample_time);
-    }
-  }
-}
-
 void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  /* Handle session start marker from EEG bridge/simulator. */
+  if (msg->is_session_start) {
+    RCLCPP_INFO(this->get_logger(), "Session started, resetting experiment state");
+    reset_experiment_state();
+    state.session_started = true;
+    publish_experiment_state(0.0);
+  }
+
   /* Only process samples during an active session. */
-  if (this->session_state.value != system_interfaces::msg::SessionState::STARTED) {
+  if (!state.session_started) {
     return;
   }
-  
+
   if (!this->protocol.has_value()) {
     RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
       "No protocol loaded, passing through sample without enrichment");
     this->enriched_eeg_publisher->publish(*msg);
     return;
   }
-  
+
   double sample_time = msg->time;
-  
+
   /* Track the most recent sample time. */
   state.last_sample_time = sample_time;
-  
+
   /* Update experiment state based on sample time. */
   update_experiment_state(sample_time);
-  
+
   /* Create enriched sample. */
   auto enriched = *msg;
-  
+
   /* Add experiment state fields. */
   enriched.in_rest = state.in_rest;
   enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
   enriched.trial = state.trial;
   enriched.pulse_count = state.total_pulses;
-  
+
   /* Add stage information. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
     const auto& element = protocol->elements[state.current_element_index];
@@ -215,11 +179,18 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
       enriched.stage_name = element.stage->name;
     }
   }
-  
+
   /* Publish enriched sample. */
   this->enriched_eeg_publisher->publish(enriched);
-  
+
   publish_experiment_state(sample_time);
+
+  /* Handle session end marker from EEG bridge/simulator (after publishing enriched sample). */
+  if (msg->is_session_end) {
+    RCLCPP_INFO(this->get_logger(), "Session stopped");
+    state.session_started = false;
+    publish_experiment_state(state.last_sample_time);
+  }
 }
 
 void ExperimentCoordinator::handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg) {

@@ -9,8 +9,7 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
 
-#include "system_interfaces/msg/session.hpp"
-#include "system_interfaces/msg/session_state.hpp"
+#include "eeg_interfaces/msg/sample.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
@@ -48,7 +47,7 @@ private:
   void publish_python_logs(double sample_time, bool is_initialization);
   void unset_presenter_module();
 
-  void handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg);
+  void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
   std::string get_module_name_with_fallback(const std::string module_name);
   bool set_presenter_module(const std::string module_name);
@@ -76,7 +75,7 @@ private:
 
   rclcpp::Logger logger;
 
-  rclcpp::Subscription<system_interfaces::msg::Session>::SharedPtr session_subscriber;
+  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_subscriber;
 
@@ -107,9 +106,8 @@ private:
 
   std::unique_ptr<PresenterWrapper> presenter_wrapper;
 
-  /* Keep track of the session state so that the Python module can be re-initialized just once
-     when the session is stopped. */
-  system_interfaces::msg::SessionState session_state;
+  /* Track session state internally based on session markers from EEG samples. */
+  bool session_started = false;
 
   /* Inotify variables */
   rclcpp::TimerBase::SharedPtr inotify_timer;

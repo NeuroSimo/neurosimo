@@ -44,11 +44,6 @@ void crash_handler(int sig) {
   exit(1);
 }
 
-/* XXX: Needs to match the values in session_bridge.cpp. */
-const milliseconds SESSION_PUBLISHING_INTERVAL = 20ms;
-const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 20ms;
-
-
 EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")) {
   /* Read ROS parameter: Minimum interval between consecutive pulses (in seconds). */
   auto minimum_intertrial_interval_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
@@ -93,26 +88,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
-
-  /* Subscriber for session. */
-  const auto DEADLINE_NS = std::chrono::nanoseconds(SESSION_PUBLISHING_INTERVAL + SESSION_PUBLISHING_INTERVAL_TOLERANCE);
-
-  auto qos_session = rclcpp::QoS(rclcpp::KeepLast(1))
-      .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-      .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)
-      .deadline(DEADLINE_NS)
-      .lifespan(DEADLINE_NS);
-
-  rclcpp::SubscriptionOptions subscription_options;
-  subscription_options.event_callbacks.deadline_callback = [this]([[maybe_unused]] rclcpp::QOSDeadlineRequestedInfo & event) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Session not received within deadline.");
-  };
-
-  this->session_subscriber = this->create_subscription<system_interfaces::msg::Session>(
-    "/system/session",
-    qos_session,
-    std::bind(&EegDecider::handle_session, this, _1),
-    subscription_options);
 
   /* EEG subscriber will be created by handle_preprocessor_enabled based on preprocessor state. */
 
@@ -286,27 +261,30 @@ void EegDecider::publish_healthcheck() {
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void EegDecider::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
-  bool state_changed = this->session_state.value != msg->state.value;
-  this->session_state = msg->state;
+void EegDecider::handle_session_start() {
+  RCLCPP_INFO(this->get_logger(), "Session started");
+  this->session_started = true;
+  this->first_sample_of_session = true;
+}
 
-  if (state_changed && this->session_state.value == system_interfaces::msg::SessionState::STOPPED) {
-    this->first_sample_of_session = true;
-    this->total_dropped_samples = 0;
-    update_dropped_sample_count();
+void EegDecider::handle_session_end() {
+  RCLCPP_INFO(this->get_logger(), "Session stopped");
+  this->session_started = false;
+  this->first_sample_of_session = true;
+  this->total_dropped_samples = 0;
+  update_dropped_sample_count();
 
-    this->reinitialize = true;
-    this->previous_stimulation_time = UNSET_PREVIOUS_TIME;
-    this->pulse_lockout_end_time = UNSET_PREVIOUS_TIME;
+  this->reinitialize = true;
+  this->previous_stimulation_time = UNSET_PREVIOUS_TIME;
+  this->pulse_lockout_end_time = UNSET_PREVIOUS_TIME;
 
-    /* Clear deferred processing queue when session stops. */
-    while (!this->deferred_processing_queue.empty()) {
-      this->deferred_processing_queue.pop();
-    }
-
-    /* Reset the decider state when the session is stopped. */
-    reset_decider_state();
+  /* Clear deferred processing queue when session stops. */
+  while (!this->deferred_processing_queue.empty()) {
+    this->deferred_processing_queue.pop();
   }
+
+  /* Reset the decider state when the session is stopped. */
+  reset_decider_state();
 }
 
 void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg) {
@@ -1008,8 +986,18 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   double_t sample_time = msg->time;
 
+  /* Handle session start marker from upstream. */
+  if (msg->is_session_start) {
+    handle_session_start();
+  }
+
+  /* Handle session end marker from upstream. */
+  if (msg->is_session_end) {
+    handle_session_end();
+  }
+
   /* Check that session has started. */
-  if (this->session_state.value != system_interfaces::msg::SessionState::STARTED) {
+  if (!this->session_started) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
@@ -1165,7 +1153,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   
   /* Add to deferred processing queue. */
   this->deferred_processing_queue.push(request);
-  
+
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
 }

@@ -17,36 +17,21 @@ using namespace std::chrono;
 using namespace std::placeholders;
 
 const std::string SENSORY_STIMULUS_TOPIC = "/pipeline/sensory_stimulus";
+const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
 const std::string DEFAULT_PRESENTER_NAME = "example";
 
-/* XXX: Needs to match the values in session_bridge.cpp. */
-const milliseconds SESSION_PUBLISHING_INTERVAL = 20ms;
-const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 5ms;
-
+/* Have a long queue to avoid dropping messages. */
+const uint16_t EEG_QUEUE_LENGTH = 65535;
 
 EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("presenter")) {
-  /* Subscriber for session. */
-  const auto DEADLINE_NS = std::chrono::nanoseconds(SESSION_PUBLISHING_INTERVAL + SESSION_PUBLISHING_INTERVAL_TOLERANCE);
-
-  auto qos_session = rclcpp::QoS(rclcpp::KeepLast(1))
-      .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-      .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)
-      .deadline(DEADLINE_NS)
-      .lifespan(DEADLINE_NS);
-
-  rclcpp::SubscriptionOptions subscription_options;
-  subscription_options.event_callbacks.deadline_callback = [this]([[maybe_unused]] rclcpp::QOSDeadlineRequestedInfo & event) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Session not received within deadline.");
-  };
-
-  this->session_subscriber = this->create_subscription<system_interfaces::msg::Session>(
-    "/system/session",
-    qos_session,
-    std::bind(&EegPresenter::handle_session, this, _1),
-    subscription_options);
+  /* Subscriber for EEG samples (to get session markers and time). */
+  this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
+    EEG_ENRICHED_TOPIC,
+    EEG_QUEUE_LENGTH,
+    std::bind(&EegPresenter::handle_eeg_sample, this, _1));
 
   /* Subscriber for sensory stimuli. */
 
@@ -185,16 +170,25 @@ void EegPresenter::initialize_presenter_module() {
   publish_python_logs(0.0, true);
 }
 
-/* Session handler. */
-void EegPresenter::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
-  bool state_changed = this->session_state.value != msg->state.value;
-  this->session_state = msg->state;
+/* EEG sample handler (for session markers and time updates). */
+void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  /* Handle session start marker. */
+  if (msg->is_session_start) {
+    RCLCPP_INFO(this->get_logger(), "Session started");
+    this->session_started = true;
+  }
 
-  if (state_changed && this->session_state.value == system_interfaces::msg::SessionState::STOPPED) {
+  /* Handle session end marker. */
+  if (msg->is_session_end) {
+    RCLCPP_INFO(this->get_logger(), "Session stopped");
+    this->session_started = false;
     this->initialize_presenter_module();
   }
 
-  update_time(msg->time);
+  /* Update time for stimulus presentation. */
+  if (this->session_started) {
+    update_time(msg->time);
+  }
 }
 
 /* Listing and setting EEG presenters. */

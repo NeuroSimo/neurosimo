@@ -83,6 +83,7 @@ private:
   void inotify_timer_callback();
 
   std::unordered_map<std::string, project_interfaces::msg::Dataset> dataset_map;
+  std::unordered_map<std::string, std::vector<double_t>> pulse_times_map;
   std::string default_dataset_json;
 
   project_interfaces::msg::Dataset dataset;
@@ -95,6 +96,7 @@ private:
   double_t play_dataset_from = 0.0;
 
   size_t current_index = 0;
+  size_t current_pulse_index = 0;
 
   bool session_started = false;
 
@@ -121,6 +123,9 @@ private:
   
   double_t latest_sample_time = 0.0;
   double_t time_offset = 0.0;
+
+  /* Pulse times loaded from dataset JSON, used to inject pulse_delivered flags. */
+  std::vector<double_t> pulse_times;
 
   std::string active_project;
   std::string data_directory;

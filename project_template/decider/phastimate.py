@@ -107,7 +107,8 @@ class Decider:
         """
         return {
             # Data configuration
-            'sample_window': [-(self.buffer_size_samples - 1), 0],
+            # Use seconds; convert buffer length in samples to seconds for clarity
+            'sample_window': [-(self.buffer_size_samples - 1) / self.sampling_frequency, 0.0],
             
             # Periodic processing
             'periodic_processing_enabled': True,

@@ -13,7 +13,7 @@ class Preprocessor:
         self.samples_after_pulse = 0
         
         # Configure sample window for buffering
-        self.sample_window = [-5, 5]
+        self.sample_window = [-0.005, 0.0]  # 5 ms look-back, 0 ms look-ahead
 
         print("Preprocessor initialized with sampling frequency: ", sampling_frequency, "Hz")
 

@@ -446,6 +446,7 @@ void EegSimulator::handle_start_streamer(
   (void) request;
   initialize_streaming();
   this->streaming_start_time = this->get_clock()->now().seconds();
+  this->streaming_sample_index = 0;
   this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
   response->success = true;
   response->message = "EEG simulator streaming started.";
@@ -458,6 +459,7 @@ void EegSimulator::handle_stop_streamer(
   (void) request;
   this->streamer_state = system_interfaces::msg::StreamerState::READY;
   this->streaming_start_time = UNSET_TIME;
+  this->streaming_sample_index = 0;
   this->current_index = 0;
   this->current_pulse_index = 0;
   this->time_offset = 0.0;
@@ -593,6 +595,10 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   msg.session.start_time = this->streaming_start_time;
 
   msg.time = time;
+
+  /* Set the sample index. */
+  msg.sample_index = this->streaming_sample_index;
+  this->streaming_sample_index++;
 
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   msg.valid = true;

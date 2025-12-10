@@ -97,8 +97,12 @@ export const EegSimulatorDisplay: React.FC = () => {
       </ConfigRow>
       <br />
       <CompactRow>
-        <ConfigLabel>Duration:</ConfigLabel>
-        <ConfigValue>{formatTime(selectedDataset?.duration)}</ConfigValue>
+        <ConfigLabel>Length:</ConfigLabel>
+        <ConfigValue>
+          {selectedDataset?.loop
+            ? 'Continuous'
+            : `${formatTime(selectedDataset?.duration)}${selectedDataset?.pulse_count ? `, ${selectedDataset.pulse_count} pulses` : ''}`}
+        </ConfigValue>
       </CompactRow>
       <CompactRow>
         <ConfigLabel>Sampling rate:</ConfigLabel>

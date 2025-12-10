@@ -329,7 +329,12 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
           continue;
         }
 
-
+        /* Read optional "loop" field, defaulting to false. */
+        if (json_data.contains("loop") && json_data["loop"].is_boolean()) {
+          dataset_msg.loop = json_data["loop"];
+        } else {
+          dataset_msg.loop = false;
+        }
 
         /* Calculate the sampling frequency and duration from the data file. */
         std::string data_file_path = entry.path().parent_path().string() + "/" + dataset_msg.data_filename;
@@ -684,15 +689,15 @@ bool EegSimulator::publish_until(double_t until_time) {
     // Move to next sample
     this->current_index = (this->current_index + 1) % dataset_buffer.size();
 
-    // If we've wrapped around and LOOP is enabled, update time offset
-    if (LOOP && this->current_index == 0) {
+    // If we've wrapped around and loop is enabled, update time offset
+    if (this->dataset.loop && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset, looping back to beginning.");
       this->time_offset = this->time_offset + dataset_buffer.back().front() + sampling_period;
     }
 
-    // Safety check: prevent infinite loops if not in loop mode
-    if (!LOOP && this->current_index == 0) {
-      RCLCPP_INFO(this->get_logger(), "Reached end of dataset without loop mode. Stopping session.");
+    // If not in loop mode and we've reached the end, stop the session
+    if (!this->dataset.loop && this->current_index == 0) {
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Stopping session.");
 
       // Call the stop session service
       auto request = std::make_shared<system_interfaces::srv::StopSession::Request>();

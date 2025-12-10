@@ -47,14 +47,6 @@ const uint8_t UNSET_NUM_OF_CHANNELS = 255;
 const double_t UNSET_PREVIOUS_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
 
-enum class DeciderState {
-  WAITING_FOR_ENABLED,
-  READY,
-  DROPPED_SAMPLE_THRESHOLD_EXCEEDED,
-  MODULE_ERROR,
-  INCONSISTENT_SESSION_METADATA
-};
-
 struct SessionMetadataState {
   uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
   uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
@@ -121,8 +113,6 @@ private:
 
   void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
-
-  void update_dropped_sample_count();
 
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
@@ -196,16 +186,13 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionInfo>::SharedPtr decision_info_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
-  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr dropped_sample_count_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
   rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;
 
   bool enabled = false;
 
-  DeciderState decider_state = DeciderState::WAITING_FOR_ENABLED;
-
-  bool session_started = false;
+  bool is_session_ongoing = false;
 
   double_t next_periodic_processing_time = UNSET_PREVIOUS_TIME;
 
@@ -247,6 +234,9 @@ private:
   bool is_preprocessor_enabled = false;
 
   double_t timing_latency = 0.0;
+
+  /* State variables */
+  bool error_occurred = false;
 
   /* Neuronavigation */
   bool is_coil_at_target = false;

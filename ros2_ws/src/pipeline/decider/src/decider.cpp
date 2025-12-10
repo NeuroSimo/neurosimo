@@ -148,11 +148,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/pipeline/decision_info",
     10);
 
-  /* Publisher for dropped sample count. */
-  this->dropped_sample_count_publisher = this->create_publisher<std_msgs::msg::Int32>(
-    "/pipeline/dropped_samples",
-    10);
-
   /* Subscriber for timing latency. */
   this->timing_latency_subscriber = this->create_subscription<pipeline_interfaces::msg::TimingLatency>(
     "/pipeline/timing/latency",
@@ -233,66 +228,52 @@ EegDecider::~EegDecider() {
 void EegDecider::publish_healthcheck() {
   auto healthcheck = system_interfaces::msg::Healthcheck();
 
-  switch (this->decider_state) {
-    case DeciderState::WAITING_FOR_ENABLED:
+  switch (this->error_occurred) {
+    case true:
       healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::NOT_READY;
-      healthcheck.status_message = "Decider not enabled";
-      healthcheck.actionable_message = "Please enable the decider.";
+      healthcheck.status_message = "Error occurred";
+      healthcheck.actionable_message = "An error occurred in decider.";
       break;
 
-    case DeciderState::READY:
+    case false:
       healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
       healthcheck.status_message = "Ready";
-      healthcheck.actionable_message = "Ready";
-      break;
-
-    case DeciderState::DROPPED_SAMPLE_THRESHOLD_EXCEEDED:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Dropped sample threshold exceeded";
-      healthcheck.actionable_message = "Dropped sample threshold (" + std::to_string(this->dropped_sample_threshold) + " per second) exceeded.";
-      break;
-
-    case DeciderState::MODULE_ERROR:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Module error";
-      healthcheck.actionable_message = "Decider has encountered an error.";
-      break;
-
-    case DeciderState::INCONSISTENT_SESSION_METADATA:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Session metadata changed mid-session";
-      healthcheck.actionable_message = "Check EEG session metadata consistency.";
-      break;
+      healthcheck.actionable_message = "No error occurred in decider.";
+      break; 
   }
   this->healthcheck_publisher->publish(healthcheck);
 }
 
 void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
   RCLCPP_INFO(this->get_logger(), "Session started");
-  this->session_started = true;
-  this->reinitialize = true;
+  this->is_session_ongoing = true;
+  this->error_occurred = false;
+
   this->previous_time = UNSET_PREVIOUS_TIME;
-
-  this->session_metadata.update(metadata);
-}
-
-void EegDecider::handle_session_end() {
-  RCLCPP_INFO(this->get_logger(), "Session stopped");
-  this->session_started = false;
   this->total_dropped_samples = 0;
-  update_dropped_sample_count();
 
-  this->reinitialize = true;
   this->previous_stimulation_time = UNSET_PREVIOUS_TIME;
   this->pulse_lockout_end_time = UNSET_PREVIOUS_TIME;
+  this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
 
-  /* Clear deferred processing queue when session stops. */
+  /* Clear the event queue. */
+  while (!this->event_queue.empty()) {
+    this->event_queue.pop();
+  }
+
+  /* Clear deferred processing queue. */
   while (!this->deferred_processing_queue.empty()) {
     this->deferred_processing_queue.pop();
   }
 
-  /* Reset the decider state when the session is stopped. */
-  reset_decider_state();
+  this->session_metadata.update(metadata);
+
+  this->initialize_module();
+}
+
+void EegDecider::handle_session_end() {
+  RCLCPP_INFO(this->get_logger(), "Session stopped");
+  this->is_session_ongoing = false;
 }
 
 void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg) {
@@ -304,6 +285,64 @@ void EegDecider::log_section_header(const std::string& title) {
   RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), title.c_str(), bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
+}
+
+void EegDecider::initialize_module() {
+  if (this->working_directory == UNSET_STRING ||
+      this->module_name == UNSET_STRING) {
+
+    RCLCPP_INFO(this->get_logger(), "Not initializing, decider module unset.");
+    this->error_occurred = true;
+    return;
+  }
+
+  RCLCPP_INFO(this->get_logger(), "");
+
+  log_section_header("Loading decider: " + this->module_name);
+
+  bool success = this->decider_wrapper->initialize_module(
+    PROJECTS_DIRECTORY,
+    this->working_directory,
+    this->module_name,
+    this->session_metadata.num_eeg_channels,
+    this->session_metadata.num_emg_channels,
+    this->session_metadata.sampling_frequency,
+    this->sensory_stimuli,
+    this->event_queue,
+    this->event_queue_mutex);
+
+  /* Publish initialization logs from Python constructor */
+  publish_python_logs(0.0, true);
+
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module.");
+    this->error_occurred = true;
+    return;
+  }
+
+  size_t buffer_size = this->decider_wrapper->get_buffer_size();
+  this->sample_buffer.reset(buffer_size);
+
+  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->session_metadata.sampling_frequency, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_eeg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_emg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), " ");
+
+  /* Perform warm-up if requested by the Python module */
+  bool was_warmup_successful = this->decider_wrapper->warm_up();
+  if (!was_warmup_successful) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
+    this->error_occurred = true;
+    return;
+  }
+
+  /* Send the initial sensory stimuli to the presenter. */
+  for (auto& sensory_stimulus : this->sensory_stimuli) {
+    this->sensory_stimulus_publisher->publish(sensory_stimulus);
+  }
+  this->sensory_stimuli.clear();
 }
 
 void EegDecider::publish_python_logs(double sample_time, bool is_initialization) {
@@ -336,62 +375,6 @@ void EegDecider::publish_python_logs(double sample_time, bool is_initialization)
   
   // Publish all logs in a single batched message
   this->python_log_publisher->publish(batch_msg);
-}
-
-void EegDecider::initialize_module() {
-  if (this->working_directory == UNSET_STRING ||
-      this->module_name == UNSET_STRING) {
-
-    RCLCPP_INFO(this->get_logger(), "Not initializing, decider module unset.");
-    return;
-  }
-
-  RCLCPP_INFO(this->get_logger(), "");
-
-  log_section_header("Loading decider: " + this->module_name);
-
-  /* Clear the event queue before initializing. */
-  while (!this->event_queue.empty()) {
-    this->event_queue.pop();
-  }
-
-  this->decider_wrapper->initialize_module(
-    PROJECTS_DIRECTORY,
-    this->working_directory,
-    this->module_name,
-    this->session_metadata.num_eeg_channels,
-    this->session_metadata.num_emg_channels,
-    this->session_metadata.sampling_frequency,
-    this->sensory_stimuli,
-    this->event_queue,
-    this->event_queue_mutex);
-
-  /* Publish initialization logs from Python constructor */
-  publish_python_logs(0.0, true);
-
-  if (this->decider_wrapper->get_state() != WrapperState::READY) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to load.");
-    return;
-  }
-
-  size_t buffer_size = this->decider_wrapper->get_buffer_size();
-  this->sample_buffer.reset(buffer_size);
-
-  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->session_metadata.sampling_frequency, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_eeg_channels, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_emg_channels, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), " ");
-
-  /* Perform warm-up if requested by the Python module */
-  this->decider_wrapper->warm_up();
-
-  /* Send the initial sensory stimuli to the presenter. */
-  for (auto& sensory_stimulus : this->sensory_stimuli) {
-    this->sensory_stimulus_publisher->publish(sensory_stimulus);
-  }
-  this->sensory_stimuli.clear();
 }
 
 std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t current_time) {
@@ -456,18 +439,15 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto start_time = std::chrono::high_resolution_clock::now();
   
   double_t sample_time = request.triggering_sample->time;
-  bool pulse_delivered = request.pulse_delivered;
-  bool has_event = request.has_event;
-  std::string event_type = request.event_type;
 
   /* Process the sample. */
   auto [success, timed_trigger, coil_target] = this->decider_wrapper->process(
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
-    pulse_delivered,
-    has_event,
-    event_type,
+    request.pulse_delivered,
+    request.has_event,
+    request.event_type,
     this->event_queue,
     this->event_queue_mutex,
     this->is_coil_at_target);
@@ -477,11 +457,10 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   /* Log and return early if the Python call failed. */
   if (!success) {
-    RCLCPP_ERROR_THROTTLE(this->get_logger(),
-                          *this->get_clock(),
-                          1000,
-                          "Python call failed, not processing EEG sample at time %.3f (s).",
-                          sample_time);
+    RCLCPP_ERROR(this->get_logger(),
+                 "Python call failed, not processing EEG sample at time %.3f (s).",
+                 sample_time);
+    this->error_occurred = true;
     return;
   }
 
@@ -529,8 +508,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
 
   /* Send timed trigger if requested. */
-  double_t trigger_time = timed_trigger->time;
-
   auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
   request_msg->timed_trigger = *timed_trigger;
   request_msg->decision_time = sample_time;
@@ -589,12 +566,6 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
 
 /* Initialization and reset functions */
 
-void EegDecider::reset_decider_state() {
-  this->decider_state = this->enabled ? DeciderState::READY : DeciderState::WAITING_FOR_ENABLED;
-  this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
-}
-
-
 void EegDecider::handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg::Bool> msg) {
   this->is_preprocessor_enabled = msg->data;
 
@@ -631,14 +602,6 @@ bool EegDecider::set_decider_enabled(bool enabled) {
 
   this->decider_enabled_publisher->publish(msg);
 
-  /* Re-initialize the module each time the decider is enabled. */
-  if (enabled) {
-    this->reinitialize = true;
-  }
-
-  /* Reset decider state. */
-  reset_decider_state();
-
   return true;
 }
 
@@ -660,9 +623,6 @@ void EegDecider::unset_decider_module() {
   msg.data = this->module_name;
 
   this->decider_module_publisher->publish(msg);
-
-  /* Reset the Python module state. */
-  this->decider_wrapper->reset_module_state();
 
   /* Disable the decider. */
   set_decider_enabled(false);
@@ -701,9 +661,6 @@ bool EegDecider::set_decider_module(const std::string module_name) {
   msg.data = this->module_name;
 
   this->decider_module_publisher->publish(msg);
-
-  /* Re-initialize the module each time the module is reset. */
-  this->reinitialize = true;
 
   return true;
 }
@@ -880,7 +837,6 @@ void EegDecider::inotify_timer_callback() {
 
       if ((event->mask & IN_MODIFY) && (is_internal_import || event_name == this->module_name + ".py")) {
         RCLCPP_INFO(this->get_logger(), "Module %s was modified, re-loading.", event_name.c_str());
-        this->reinitialize = true;
       }
       if ((event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) && is_python_file) {
         RCLCPP_INFO(this->get_logger(), "File %s created, deleted, or moved, updating decider list.", event_name.c_str());
@@ -901,14 +857,6 @@ void EegDecider::update_decider_list() {
   msg.scripts = this->modules;
 
   this->decider_list_publisher->publish(msg);
-}
-
-/* EEG functions */
-void EegDecider::update_dropped_sample_count() {
-  auto msg = std_msgs::msg::Int32();
-  msg.data = this->total_dropped_samples;
-
-  this->dropped_sample_count_publisher->publish(msg);
 }
 
 void EegDecider::check_dropped_samples(double_t sample_time) {
@@ -946,7 +894,7 @@ void EegDecider::check_dropped_samples(double_t sample_time) {
       }
 
       if (recent_dropped_samples > this->dropped_sample_threshold) {
-        this->decider_state = DeciderState::DROPPED_SAMPLE_THRESHOLD_EXCEEDED;
+        this->error_occurred = true;
         RCLCPP_ERROR(this->get_logger(),
             "Dropped samples exceeded threshold! Recent dropped samples: %d, Threshold: %d",
             recent_dropped_samples, this->dropped_sample_threshold);
@@ -955,7 +903,6 @@ void EegDecider::check_dropped_samples(double_t sample_time) {
             "Dropped samples detected. Time difference: %.5f, Dropped samples: %d",
             time_diff, dropped_samples);
       }
-      this->update_dropped_sample_count();
 
     } else {
       RCLCPP_DEBUG(this->get_logger(),
@@ -999,53 +946,22 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     handle_session_end();
   }
 
-  /* Check that session has started. */
-  if (!this->session_started) {
-    RCLCPP_INFO_THROTTLE(this->get_logger(),
-                         *this->get_clock(),
-                         1000,
-                         "Session not started, not processing EEG sample at time %.3f (s).",
-                         sample_time);
-    return;
-  }
-
   /* Ensure session metadata stays constant within a session. */
   if (!this->session_metadata.matches(msg->session)) {
-    this->decider_state = DeciderState::INCONSISTENT_SESSION_METADATA;
+    this->error_occurred = true;
     RCLCPP_ERROR(this->get_logger(),
                  "Session metadata changed mid-session. Rejecting sample at %.3f (s).",
                  sample_time);
     return;
   }
 
-  /* Check that the decider is enabled. */
-  if (!this->enabled) {
+  /* Check that no error has occurred. */
+  if (this->error_occurred) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
-                         "Decider not enabled");
-    return;
-  }
-
-  /* Assert that module name is set - we shouldn't otherwise allow to enable the decider. */
-  assert(this->module_name != UNSET_STRING);
-
-  if (this->reinitialize ||
-      this->decider_wrapper->get_state() == WrapperState::UNINITIALIZED) {
-
-    initialize_module();
-    reset_decider_state();
-
-    this->reinitialize = false;
-  }
-
-  /* Check that the decider module has not encountered an error. */
-  if (this->decider_wrapper->get_state() == WrapperState::ERROR) {
-    this->decider_state = DeciderState::MODULE_ERROR;
-
-    if (this->decider_state != DeciderState::MODULE_ERROR) {
-      RCLCPP_INFO(this->get_logger(), "An error occurred in decider module.");
-    }
+                         "An error occurred in decider module, not processing EEG sample at time %.3f (s).",
+                         sample_time);
     return;
   }
 

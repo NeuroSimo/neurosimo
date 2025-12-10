@@ -30,12 +30,6 @@ namespace py = pybind11;
 const std::string bold_on = "\033[1m";
 const std::string bold_off = "\033[0m";
 
-enum class WrapperState {
-  UNINITIALIZED,
-  READY,
-  ERROR
-};
-
 enum class LogLevel : uint8_t {
   INFO = 0,
   WARNING = 1,
@@ -55,7 +49,7 @@ public:
   void remove_modules(const std::string& base_directory);
   void update_internal_imports(const std::string& base_directory);
 
-  void initialize_module(
+  bool initialize_module(
       const std::string& project_directory,
       const std::string& module_directory,
       const std::string& module_name,
@@ -70,7 +64,7 @@ public:
 
   void reset_module_state();
 
-  void warm_up();
+  bool warm_up();
 
   bool parse_sensory_stimulus_dict(
     const py::dict& py_sensory_stimulus,
@@ -88,7 +82,6 @@ public:
     std::mutex& event_queue_mutex,
     bool is_coil_at_target);
 
-  WrapperState get_state() const;
   std::vector<std::string> get_internal_imports() const;
 
   std::size_t get_buffer_size() const;
@@ -116,8 +109,6 @@ private:
   /* Buffer for Python logs - static to be accessible from static log functions */
   static std::vector<LogEntry> log_buffer;
   static std::mutex log_buffer_mutex;
-
-  WrapperState state;
 
   std::unique_ptr<py::module> decider_module;
   std::unique_ptr<py::object> decider_instance;

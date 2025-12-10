@@ -205,65 +205,21 @@ void EegSimulator::handle_eeg_bridge_healthcheck(const std::shared_ptr<system_in
   }
 }
 
-std::tuple<bool, int, double, bool> EegSimulator::get_dataset_info(const std::string& data_file_path) {
+std::tuple<bool, size_t> EegSimulator::get_sample_count(const std::string& data_file_path) {
   std::ifstream data_file(data_file_path);
-  int sampling_frequency = 0;
-  double duration = 0.0;
-  bool samples_dropped = false;
-  bool success = true;
 
   if (!data_file.is_open()) {
     RCLCPP_ERROR(this->get_logger(), "Error opening file: %s", data_file_path.c_str());
-
-    success = false;
-    return std::make_tuple(success, sampling_frequency, duration, samples_dropped);
+    return std::make_tuple(false, 0);
   }
 
+  size_t line_count = 0;
   std::string line;
-  double first_timestamp, second_timestamp;
-
-  /* Read the first timestamp. */
-  if (std::getline(data_file, line)) {
-    std::stringstream ss(line);
-    ss >> first_timestamp;
-  }
-
-  /* Read the second timestamp to determine sampling frequency. */
-  if (std::getline(data_file, line)) {
-    std::stringstream ss(line);
-    ss >> second_timestamp;
-
-    /* Calculate and round the sampling frequency to the nearest integer. */
-    sampling_frequency = static_cast<int>(std::round(1.0 / (second_timestamp - first_timestamp)));
-  }
-
-  double_t previous_timestamp = second_timestamp;
-  double_t expected_difference = second_timestamp - first_timestamp;
-
-  double_t internal_timestamp;
-
-  /* Read until the last line to get the last timestamp and check for dropped samples. */
   while (std::getline(data_file, line)) {
-    std::stringstream ss(line);
-    ss >> internal_timestamp;
-
-    /* Check if the current sample interval is equal to the expected interval (second - first). */
-    if (std::abs((internal_timestamp - previous_timestamp) - expected_difference) > TOLERANCE_S) {
-      RCLCPP_WARN(this->get_logger(), "Warning: Dropped samples found in dataset %s.", data_file_path.c_str());
-      RCLCPP_WARN(this->get_logger(), "Previous timestamp: %.4f, current timestamp: %.4f, expected difference: %.4f",
-        previous_timestamp,
-        internal_timestamp,
-        expected_difference);
-
-      samples_dropped = true;
-    }
-    previous_timestamp = internal_timestamp;
+    line_count++;
   }
 
-  /* Calculate the duration using the first and last timestamp. */
-  duration = internal_timestamp - first_timestamp;
-
-  return std::make_tuple(success, sampling_frequency, duration, samples_dropped);
+  return std::make_tuple(true, line_count);
 }
 
 std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const std::string& path) {
@@ -367,26 +323,16 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
         dataset_msg.pulse_count = parsed_pulse_times.size();
         pulse_times_map[filename] = parsed_pulse_times;
 
-        /* Get duration and check for dropped samples from the data file. */
+        /* Get sample count from the data file and compute duration. */
         std::string data_file_path = entry.path().parent_path().string() + "/" + dataset_msg.data_filename;
-        auto [success, calculated_sampling_frequency, duration, samples_dropped] = get_dataset_info(data_file_path);
+        auto [success, sample_count] = get_sample_count(data_file_path);
 
         if (!success) {
           RCLCPP_ERROR(this->get_logger(), "  • Error reading the dataset, skipping...");
           continue;
         }
 
-        if (samples_dropped) {
-          RCLCPP_WARN(this->get_logger(), "  • Warning: Dropped samples found");
-        }
-
-        /* Warn if calculated sampling frequency differs significantly from JSON value. */
-        if (calculated_sampling_frequency != dataset_msg.sampling_frequency) {
-          RCLCPP_WARN(this->get_logger(), "  • Warning: Calculated sampling frequency (%d Hz) differs from JSON (%d Hz)",
-                      calculated_sampling_frequency, dataset_msg.sampling_frequency);
-        }
-
-        dataset_msg.duration = duration;
+        dataset_msg.duration = static_cast<double>(sample_count) / dataset_msg.sampling_frequency;
 
         datasets.push_back(dataset_msg);
 
@@ -662,21 +608,21 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   }
 
   const std::vector<double_t>& data = dataset_buffer[sample_index];
-  double_t sample_time = data.front();
 
-  if (total_channels > static_cast<int>(data.size() - 1)) {
-    RCLCPP_ERROR(this->get_logger(), "Total # of EEG and EMG channels (%d) exceeds # of channels in data (%zu)", total_channels, data.size() - 1);
+  if (total_channels > static_cast<int>(data.size())) {
+    RCLCPP_ERROR(this->get_logger(), "Total # of EEG and EMG channels (%d) exceeds # of channels in data (%zu)", total_channels, data.size());
     return false;
   }
 
+  /* Compute sample time from index and sampling frequency. */
+  double_t sample_time = sample_index * this->sampling_period;
   double_t time = sample_time + this->time_offset;
 
   /* Create the sample message. */
   eeg_interfaces::msg::Sample msg;
 
-  /* Note: + 1 below is to skip the time column. */
-  msg.eeg.insert(msg.eeg.end(), data.begin() + 1, data.begin() + 1 + num_eeg_channels);
-  msg.emg.insert(msg.emg.end(), data.begin() + 1 + num_eeg_channels, data.end());
+  msg.eeg.insert(msg.eeg.end(), data.begin(), data.begin() + num_eeg_channels);
+  msg.emg.insert(msg.emg.end(), data.begin() + num_eeg_channels, data.end());
 
   msg.session.sampling_frequency = this->sampling_frequency;
   msg.session.num_eeg_channels = this->num_eeg_channels;
@@ -728,12 +674,11 @@ bool EegSimulator::publish_until(double_t until_time) {
     return false;
   }
 
-  double_t sample_time = 0.0;
   size_t samples_published = 0;
-  
+
   while (true) {
-    const std::vector<double_t>& data = dataset_buffer[this->current_index];
-    sample_time = data.front();
+    /* Compute sample time from index and sampling frequency. */
+    double_t sample_time = this->current_index * this->sampling_period;
     double_t adjusted_time = sample_time + this->time_offset;
 
     // If we've reached a sample after until_time, stop
@@ -756,7 +701,8 @@ bool EegSimulator::publish_until(double_t until_time) {
     // If we've wrapped around and loop is enabled, update time offset
     if (this->dataset.loop && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset, looping back to beginning.");
-      this->time_offset = this->time_offset + dataset_buffer.back().front() + sampling_period;
+      double_t dataset_duration = dataset_buffer.size() * this->sampling_period;
+      this->time_offset = this->time_offset + dataset_duration;
     }
 
     // If not in loop mode and we've reached the end, stop the session

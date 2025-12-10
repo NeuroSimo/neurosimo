@@ -27,6 +27,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   "msg/SessionState.msg"
   "msg/Session.msg"
+  "msg/StreamerState.msg"
 
   "srv/StartSession.srv"
   "srv/StopSession.srv"

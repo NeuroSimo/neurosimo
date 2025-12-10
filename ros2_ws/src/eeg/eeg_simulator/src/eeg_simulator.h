@@ -97,8 +97,8 @@ private:
   uint8_t num_emg_channels;
   uint8_t total_channels;
 
-  double_t streaming_start_time = UNSET_TIME;  // Unix timestamp when streaming started
-  uint64_t streaming_sample_index = 0;         // Monotonic sample index within a streaming run
+  double_t session_start_time = UNSET_TIME;  // Unix timestamp when streaming started
+  uint64_t session_sample_index = 0;         // Monotonic sample index within a streaming run
   bool is_session_start = false;
   bool is_session_end = false;
 

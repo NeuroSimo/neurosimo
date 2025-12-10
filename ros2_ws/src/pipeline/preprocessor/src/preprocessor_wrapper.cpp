@@ -11,7 +11,6 @@ namespace py = pybind11;
 
 PreprocessorWrapper::PreprocessorWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
-  state = WrapperState::UNINITIALIZED;
   guard = std::make_unique<py::scoped_interpreter>();
   setup_custom_print();
 }
@@ -43,7 +42,7 @@ builtins.print_throttle = print_throttle
     )", py::globals());
 }
 
-void PreprocessorWrapper::initialize_module(
+bool PreprocessorWrapper::initialize_module(
     const std::string& directory,
     const std::string& module_name,
     const size_t eeg_size,
@@ -53,8 +52,7 @@ void PreprocessorWrapper::initialize_module(
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
     RCLCPP_ERROR(*logger_ptr, "Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
-    state = WrapperState::ERROR;
-    return;
+    return false;
   }
 
   /* If we have an existing preprocessor instance, release it which will call the destructor. */
@@ -89,9 +87,7 @@ void PreprocessorWrapper::initialize_module(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    state = WrapperState::ERROR;
-    return;
+    return false;
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
@@ -103,8 +99,7 @@ void PreprocessorWrapper::initialize_module(
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
     
-    state = WrapperState::ERROR;
-    return;
+    return false;
   }
 
   /* Helpers to convert seconds to samples (ceil to guarantee coverage). */
@@ -148,8 +143,6 @@ void PreprocessorWrapper::initialize_module(
   this->eeg_size = eeg_size;
   this->emg_size = emg_size;
 
-  state = WrapperState::READY;
-
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
@@ -159,6 +152,8 @@ void PreprocessorWrapper::initialize_module(
               window_latest_seconds,
               bold_off.c_str());
   RCLCPP_INFO(*logger_ptr, " ");
+
+  return true;
 }
 
 void PreprocessorWrapper::reset_module_state() {
@@ -169,8 +164,6 @@ void PreprocessorWrapper::reset_module_state() {
   py_eeg.reset();
   py_emg.reset();
 
-  state = WrapperState::UNINITIALIZED;
-
   RCLCPP_INFO(*logger_ptr, "Preprocessor reset.");
 }
 
@@ -178,10 +171,6 @@ PreprocessorWrapper::~PreprocessorWrapper() {
   py_time_offsets.reset();
   py_eeg.reset();
   py_emg.reset();
-}
-
-WrapperState PreprocessorWrapper::get_state() const {
-  return this->state;
 }
 
 std::size_t PreprocessorWrapper::get_buffer_size() const {
@@ -233,8 +222,6 @@ bool PreprocessorWrapper::process(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    state = WrapperState::ERROR;
     return false;
 
   } catch(const std::exception& e) {
@@ -246,15 +233,12 @@ bool PreprocessorWrapper::process(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    state = WrapperState::ERROR;
     return false;
   }
 
   /* Validate the return value of the Python function call. */
   if (!py::isinstance<py::dict>(result)) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary.");
-    state = WrapperState::ERROR;
     return false;
   }
 
@@ -262,19 +246,16 @@ bool PreprocessorWrapper::process(
 
   if (!dict_result.contains("eeg_sample")) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary with the field: eeg_sample.");
-    state = WrapperState::ERROR;
     return false;
   }
 
   if (!dict_result.contains("emg_sample")) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary with the field: emg_sample.");
-    state = WrapperState::ERROR;
     return false;
   }
 
   if (!dict_result.contains("valid")) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary with the field: valid.");
-    state = WrapperState::ERROR;
     return false;
   }
 

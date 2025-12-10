@@ -132,69 +132,91 @@ EegPreprocessor::~EegPreprocessor() {
 void EegPreprocessor::publish_healthcheck() {
   auto healthcheck = system_interfaces::msg::Healthcheck();
 
-  switch (this->preprocessor_state) {
-    case PreprocessorState::WAITING_FOR_ENABLED:
+  switch (this->error_occurred) {
+    case true:
       healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::NOT_READY;
-      healthcheck.status_message = "EEG preprocessor not enabled";
-      healthcheck.actionable_message = "Please enable the EEG preprocessor.";
+      healthcheck.status_message = "Error occurred";
+      healthcheck.actionable_message = "An error occurred in preprocessor.";
       break;
 
-    case PreprocessorState::READY:
+    case false:
       healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
       healthcheck.status_message = "Ready";
-      healthcheck.actionable_message = "Ready";
+      healthcheck.actionable_message = "No error occurred in preprocessor.";
       break;
-
-    case PreprocessorState::SAMPLES_DROPPED:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Samples dropped";
-      healthcheck.actionable_message = "Sample(s) dropped in preprocessor.";
-      break;
-
-    case PreprocessorState::DROPPED_SAMPLE_THRESHOLD_EXCEEDED:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Dropped sample threshold exceeded";
-      healthcheck.actionable_message = "Dropped sample threshold (" + std::to_string(this->dropped_sample_threshold) + " per second) exceeded.";
-      break;
-
-    case PreprocessorState::MODULE_ERROR:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Module error";
-      healthcheck.actionable_message = "Preprocessor has encountered an error.";
-      break;
-
-    case PreprocessorState::INCONSISTENT_SESSION_METADATA:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Session metadata changed mid-session";
-      healthcheck.actionable_message = "Check EEG session metadata consistency.";
-      break;
-  }
+  } 
   this->healthcheck_publisher->publish(healthcheck);
 }
 
 void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
   RCLCPP_INFO(this->get_logger(), "Session started");
+
   this->is_session_ongoing = true;
+  this->error_occurred = false;
 
   this->session_metadata.update(metadata);
 
   /* Avoid checking for dropped samples on the first sample. */
   this->previous_time = UNSET_PREVIOUS_TIME;
+  this->total_dropped_samples = 0;
+
+  /* Clear deferred processing queue when session starts. */
+  while (!this->deferred_processing_queue.empty()) {
+    this->deferred_processing_queue.pop();
+  }
+
+  initialize_module();
 }
 
 void EegPreprocessor::handle_session_end() {
   RCLCPP_INFO(this->get_logger(), "Session stopped");
   this->is_session_ongoing = false;
-  this->total_dropped_samples = 0;
-  this->reinitialize = true;
+}
 
-  /* Clear deferred processing queue when session stops. */
-  while (!this->deferred_processing_queue.empty()) {
-    this->deferred_processing_queue.pop();
+void EegPreprocessor::initialize_module() {
+  if (this->working_directory == UNSET_STRING ||
+      this->module_name == UNSET_STRING) {
+
+    RCLCPP_INFO(this->get_logger(), "Not initializing preprocessor module, module unset.");
+    this->error_occurred = true;
+    return;
   }
 
-  /* Reset the preprocessor state when the session is stopped. */
-  reset_preprocessor_state();
+  RCLCPP_INFO(this->get_logger(), " ");
+
+  /* Print underlined, bolded text. */
+  std::string text_str = "Loading preprocessor: " + this->module_name;
+  std::wstring underline_str(text_str.size(), L'–');
+  RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), text_str.c_str(), bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
+
+  RCLCPP_INFO(this->get_logger(), "");
+
+  bool success = this->preprocessor_wrapper->initialize_module(
+    this->working_directory,
+    this->module_name,
+    this->session_metadata.num_eeg_channels,
+    this->session_metadata.num_emg_channels,
+    this->session_metadata.sampling_frequency);
+
+  /* Publish initialization logs from Python constructor */
+  publish_python_logs(0.0, true);
+
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to initialize preprocessor.");
+    this->error_occurred = true;
+    return;
+  }
+
+  size_t buffer_size = this->preprocessor_wrapper->get_buffer_size();
+  this->sample_buffer.reset(buffer_size);
+
+  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", this->session_metadata.sampling_frequency);
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->session_metadata.num_eeg_channels);
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->session_metadata.num_emg_channels);
+  RCLCPP_INFO(this->get_logger(), " ");
 }
 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {
@@ -229,80 +251,15 @@ void EegPreprocessor::publish_python_logs(double sample_time, bool is_initializa
   this->python_log_publisher->publish(batch_msg);
 }
 
-void EegPreprocessor::initialize_module() {
-  if (this->working_directory == UNSET_STRING ||
-      this->module_name == UNSET_STRING) {
-
-    RCLCPP_INFO(this->get_logger(), "Not initializing preprocessor module, module unset.");
-    return;
-  }
-
-  RCLCPP_INFO(this->get_logger(), " ");
-
-  /* Print underlined, bolded text. */
-  std::string text_str = "Loading preprocessor: " + this->module_name;
-  std::wstring underline_str(text_str.size(), L'–');
-  RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), text_str.c_str(), bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
-
-  RCLCPP_INFO(this->get_logger(), "");
-
-  this->preprocessor_wrapper->initialize_module(
-    this->working_directory,
-    this->module_name,
-    this->session_metadata.num_eeg_channels,
-    this->session_metadata.num_emg_channels,
-    this->session_metadata.sampling_frequency);
-
-  /* Publish initialization logs from Python constructor */
-  publish_python_logs(0.0, true);
-
-  if (this->preprocessor_wrapper->get_state() != WrapperState::READY) {
-    RCLCPP_INFO(this->get_logger(), "Failed to initialize preprocessor.");
-    return;
-  }
-
-  size_t buffer_size = this->preprocessor_wrapper->get_buffer_size();
-  this->sample_buffer.reset(buffer_size);
-
-  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", this->session_metadata.sampling_frequency);
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->session_metadata.num_eeg_channels);
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->session_metadata.num_emg_channels);
-  RCLCPP_INFO(this->get_logger(), " ");
-}
-
-void EegPreprocessor::reset_preprocessor_state() {
-  this->preprocessor_state = this->enabled ? PreprocessorState::READY : PreprocessorState::WAITING_FOR_ENABLED;
-}
-
 /* Listing and setting EEG preprocessors. */
 bool EegPreprocessor::set_preprocessor_enabled(bool enabled) {
-
-  /* Only allow enabling the preprocessor if a module is set. */
-  if (enabled && this->module_name == UNSET_STRING) {
-    RCLCPP_WARN(this->get_logger(), "Cannot enable preprocessor, no module set.");
-
-    return false;
-  }
-
   /* Update global state variable. */
   this->enabled = enabled;
 
   /* Update ROS state variable. */
   auto msg = std_msgs::msg::Bool();
   msg.data = enabled;
-
   this->preprocessor_enabled_publisher->publish(msg);
-
-  /* Re-initialize the module each time the preprocessor is enabled. */
-  if (enabled) {
-    this->reinitialize = true;
-  }
-
-  /* Reset preprocessor state. */
-  reset_preprocessor_state();
 
   RCLCPP_INFO(this->get_logger(), "Preprocessor %s.", this->enabled ? "enabled" : "disabled");
 
@@ -368,9 +325,6 @@ bool EegPreprocessor::set_preprocessor_module(const std::string module_name) {
   msg.data = this->module_name;
 
   this->preprocessor_module_publisher->publish(msg);
-
-  /* Re-initialize the module each time the module is reset. */
-  this->reinitialize = true;
 
   return true;
 }
@@ -505,8 +459,7 @@ void EegPreprocessor::inotify_timer_callback() {
       if ((event->mask & IN_MODIFY) &&
           (event_name == this->module_name + ".py")) {
 
-        RCLCPP_INFO(this->get_logger(), "The current module '%s' was modified, re-initializing.", this->module_name.c_str());
-        this->reinitialize = true;
+        RCLCPP_INFO(this->get_logger(), "The current module '%s' was modified.", this->module_name.c_str());
       }
       if (event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) {
         RCLCPP_INFO(this->get_logger(), "File '%s' created, deleted, or moved, updating preprocessor list.", event_name.c_str());
@@ -567,7 +520,7 @@ void EegPreprocessor::check_dropped_samples(double_t sample_time) {
       }
 
       if (recent_dropped_samples > this->dropped_sample_threshold) {
-        this->preprocessor_state = PreprocessorState::DROPPED_SAMPLE_THRESHOLD_EXCEEDED;
+        this->error_occurred = true;
         RCLCPP_ERROR(this->get_logger(),
             "Dropped samples exceeded threshold! Recent dropped samples: %d, Threshold: %d",
             recent_dropped_samples, this->dropped_sample_threshold);
@@ -611,48 +564,40 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   auto triggering_sample = request.triggering_sample;
   double_t sample_time = triggering_sample->time;
   
-  /* Determine if a pulse was given. */
-  bool pulse_given = is_pulse_feedback_received(sample_time) || triggering_sample->pulse_delivered;
-  
   /* Process the sample. */
   bool success = this->preprocessor_wrapper->process(
     preprocessed_sample,
     this->sample_buffer,
     sample_time,
-    pulse_given);
+    triggering_sample->pulse_delivered);
 
   /* Publish buffered Python logs after process() completes to avoid interfering with timing */
   publish_python_logs(sample_time, false);
 
-  if (success) {
-    /* Copy session information from the triggering sample. */
-    preprocessed_sample.session.sampling_frequency = triggering_sample->session.sampling_frequency;
-    preprocessed_sample.session.num_eeg_channels = triggering_sample->session.num_eeg_channels;
-    preprocessed_sample.session.num_emg_channels = triggering_sample->session.num_emg_channels;
-    preprocessed_sample.session.is_simulation = triggering_sample->session.is_simulation;
-    preprocessed_sample.session.start_time = triggering_sample->session.start_time;
-
-    /* Copy hardware trigger information. */
-    preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
-
-    /* Calculate preprocessing duration. */
-    auto end_time = std::chrono::high_resolution_clock::now();
-    preprocessed_sample.preprocessing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
-
-    /* Publish the preprocessed sample. */
-    preprocessed_eeg_publisher->publish(preprocessed_sample);
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(),
+                 "Python call failed, not processing EEG sample at time %.3f (s).",
+                 sample_time);
+    this->error_occurred = true;
+    return;
   }
-}
 
-bool EegPreprocessor::is_pulse_feedback_received(double_t sample_time) {
-  bool pulse_feedback_received = false;
+  /* Copy session information from the triggering sample. */
+  preprocessed_sample.session.sampling_frequency = triggering_sample->session.sampling_frequency;
+  preprocessed_sample.session.num_eeg_channels = triggering_sample->session.num_eeg_channels;
+  preprocessed_sample.session.num_emg_channels = triggering_sample->session.num_emg_channels;
+  preprocessed_sample.session.is_simulation = triggering_sample->session.is_simulation;
+  preprocessed_sample.session.start_time = triggering_sample->session.start_time;
 
-  /* Remove all execution times from the queue that have happened before the current sample time. */
-  while (!pulse_execution_times.empty() && sample_time >= pulse_execution_times.front()) {
-    pulse_execution_times.pop();
-    pulse_feedback_received = true;
-  }
-  return pulse_feedback_received;
+  /* Copy hardware trigger information. */
+  preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
+
+  /* Calculate preprocessing duration. */
+  auto end_time = std::chrono::high_resolution_clock::now();
+  preprocessed_sample.preprocessing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
+
+  /* Publish the preprocessed sample. */
+  preprocessed_eeg_publisher->publish(preprocessed_sample);
 }
 
 void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
@@ -665,12 +610,12 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
     handle_session_start(msg->session);
   }
 
-  /* Check that session has started. */
-  if (!this->is_session_ongoing) {
+  /* Check that no error has occurred. */
+  if (this->error_occurred) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
-                         "Session not started, not processing EEG sample at time %.3f (s).",
+                         "An error occurred in preprocessor module, not processing EEG sample at time %.3f (s).",
                          sample_time);
     return;
   }
@@ -680,47 +625,14 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
     RCLCPP_ERROR(this->get_logger(),
                  "Session metadata changed mid-session. Rejecting sample at %.3f (s).",
                  sample_time);
-    this->preprocessor_state = PreprocessorState::INCONSISTENT_SESSION_METADATA;
-    return;
-  }
-
-  /* Check that the preprocessor is enabled. */
-  if (!this->enabled) {
-    RCLCPP_INFO_THROTTLE(this->get_logger(),
-                         *this->get_clock(),
-                         2000,
-                         "Preprocessor disabled, not processing EEG sample at time %.1f (s).",
-                         sample_time);
+    this->error_occurred = true;
     return;
   }
 
   check_dropped_samples(sample_time);
 
-  /* Assert that module name is set - we shouldn't otherwise allow to enable the preprocessor. */
-  assert(this->module_name != UNSET_STRING);
-
-  if (this->reinitialize ||
-      this->preprocessor_wrapper->get_state() == WrapperState::UNINITIALIZED) {
-
-    initialize_module();
-    reset_preprocessor_state();
-
-    this->reinitialize = false;
-  }
-
-  /* Check that the preprocessor module has not encountered an error. */
-  if (this->preprocessor_wrapper->get_state() == WrapperState::ERROR) {
-    this->preprocessor_state = PreprocessorState::MODULE_ERROR;
-
-    RCLCPP_INFO_THROTTLE(this->get_logger(),
-                         *this->get_clock(),
-                         1000,
-                         "An error occurred in preprocessor module.");
-    return;
-  }
-
   if (msg->pulse_delivered) {
-    RCLCPP_INFO(this->get_logger(), "Registered trigger at: %.1f (s).", sample_time);
+    RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.1f (s).", sample_time);
   }
 
   this->sample_buffer.append(msg);
@@ -744,9 +656,6 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
      Each sample takes sampling period time. */
   if (look_ahead_samples > 0) {
     request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
-    RCLCPP_DEBUG(this->get_logger(), 
-                 "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
-                 sample_time, request.scheduled_time, look_ahead_samples);
   } else {
     /* If look-ahead is 0 or negative, no look-ahead is needed, process immediately. */
     request.scheduled_time = sample_time;

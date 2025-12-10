@@ -32,15 +32,6 @@ const uint8_t UNSET_NUM_OF_CHANNELS = 255;
 const double_t UNSET_PREVIOUS_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
 
-enum class PreprocessorState {
-  WAITING_FOR_ENABLED,
-  READY,
-  SAMPLES_DROPPED,
-  DROPPED_SAMPLE_THRESHOLD_EXCEEDED,
-  MODULE_ERROR,
-  INCONSISTENT_SESSION_METADATA
-};
-
 struct DeferredProcessingRequest {
   /* The time when processing should actually occur (after look-ahead samples have arrived). */
   double_t scheduled_time;
@@ -93,8 +84,6 @@ private:
   void initialize_module();
   void publish_python_logs(double sample_time, bool is_initialization);
 
-  void reset_preprocessor_state();
-
   void unset_preprocessor_module();
 
   bool set_preprocessor_enabled(bool enabled);
@@ -112,8 +101,6 @@ private:
   void update_preprocessor_list();
 
   void check_dropped_samples(double_t sample_time);
-
-  bool is_pulse_feedback_received(double_t sample_time);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   
@@ -147,12 +134,7 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
   bool enabled = false;
-
-  PreprocessorState preprocessor_state = PreprocessorState::WAITING_FOR_ENABLED;
-
   bool is_session_ongoing = false;
-
-  bool reinitialize = true;
 
   std::string active_project = UNSET_STRING;
 
@@ -167,11 +149,11 @@ private:
   uint16_t total_dropped_samples = 0;
   uint16_t dropped_sample_threshold;
 
+  bool error_occurred = false;
+
   SessionMetadataState session_metadata;
 
   double_t previous_time = UNSET_PREVIOUS_TIME;
-
-  std::queue<double_t> pulse_execution_times;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;
   eeg_interfaces::msg::Sample preprocessed_sample;

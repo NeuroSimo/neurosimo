@@ -29,9 +29,7 @@ const std::string DATASET_LIST_TOPIC = "/eeg_simulator/dataset/list";
 const std::string PROJECTS_DIRECTORY = "projects/";
 const std::string EEG_SIMULATOR_DATA_SUBDIRECTORY = "eeg_simulator/";
 
-const milliseconds SESSION_PUBLISHING_INTERVAL = 1ms;
-const milliseconds SESSION_PUBLISHING_INTERVAL_TOLERANCE = 2ms;
-
+const milliseconds STREAMING_INTERVAL = 1ms;
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
@@ -73,17 +71,15 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     DATASET_LIST_TOPIC,
     qos_persist_latest);
 
+  /* Publisher for streamer state. */
+  streamer_state_publisher = this->create_publisher<system_interfaces::msg::StreamerState>(
+    "/eeg_simulator/state",
+    qos_persist_latest);
+
   /* Service for changing dataset. */
   this->set_dataset_service = this->create_service<project_interfaces::srv::SetDataset>(
     "/eeg_simulator/dataset/set",
     std::bind(&EegSimulator::handle_set_dataset, this, std::placeholders::_1, std::placeholders::_2),
-    rmw_qos_profile_services_default,
-    callback_group);
-
-  /* Service for changing enabled state. */
-  this->set_enabled_service = this->create_service<std_srvs::srv::SetBool>(
-    "/eeg_simulator/enabled/set",
-    std::bind(&EegSimulator::handle_set_enabled, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
     callback_group);
 
@@ -94,44 +90,28 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     rmw_qos_profile_services_default,
     callback_group);
 
+  /* Services for starting/stopping the streamer. */
+  this->start_streamer_service = this->create_service<std_srvs::srv::Trigger>(
+    "/eeg_simulator/start",
+    std::bind(&EegSimulator::handle_start_streamer, this, std::placeholders::_1, std::placeholders::_2),
+    rmw_qos_profile_services_default,
+    callback_group);
+
+  this->stop_streamer_service = this->create_service<std_srvs::srv::Trigger>(
+    "/eeg_simulator/stop",
+    std::bind(&EegSimulator::handle_stop_streamer, this, std::placeholders::_1, std::placeholders::_2),
+    rmw_qos_profile_services_default,
+    callback_group);
+
   /* Publisher for dataset. */
   this->dataset_publisher = this->create_publisher<std_msgs::msg::String>(
     "/eeg_simulator/dataset",
-    qos_persist_latest);
-
-  /* Publisher for enabled state. */
-  this->enabled_publisher = this->create_publisher<std_msgs::msg::Bool>(
-    "/eeg_simulator/enabled",
     qos_persist_latest);
 
   /* Publisher for start time. */
   this->start_time_publisher = this->create_publisher<std_msgs::msg::Float64>(
     "/eeg_simulator/start_time",
     qos_persist_latest);
-
-  /* QOS for session */
-  const auto DEADLINE_NS = std::chrono::nanoseconds(SESSION_PUBLISHING_INTERVAL + SESSION_PUBLISHING_INTERVAL_TOLERANCE);
-
-  auto qos_session = rclcpp::QoS(rclcpp::KeepLast(1))
-      .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-      .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)
-      .deadline(DEADLINE_NS)
-      .lifespan(DEADLINE_NS);
-
-  /* Subscriber for session.
-
-     NB: It is crucial to not use the shared, re-entrant callback group for this subscriber, as the session
-       messages are time-critical and using the shared callback group seems to hinder the performance. */
-  this->session_subscriber = create_subscription<system_interfaces::msg::Session>(
-    "/system/session",
-    qos_session,
-    std::bind(&EegSimulator::handle_session, this, std::placeholders::_1));
-
-  /* Client for stopping session. */
-  this->stop_session_client = this->create_client<system_interfaces::srv::StopSession>(
-    "/system/session/stop",
-    rmw_qos_profile_services_default,
-    callback_group);
 
   /* Publisher for EEG samples.
 
@@ -157,11 +137,18 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
                                                 std::bind(&EegSimulator::inotify_timer_callback, this),
                                                 callback_group);
 
+  /* Timer to drive streaming. */
+  this->stream_timer = this->create_wall_timer(STREAMING_INTERVAL,
+                                               std::bind(&EegSimulator::stream_timer_callback, this));
+
   /* Create a timer for publishing healthcheck. */
   this->healthcheck_publisher_timer = this->create_wall_timer(
       std::chrono::milliseconds(500),
       [this] { publish_healthcheck(); },
       callback_group);
+
+  /* Publish initial streamer state. */
+  publish_streamer_state();
 }
 
 EegSimulator::~EegSimulator() {
@@ -176,15 +163,15 @@ void EegSimulator::publish_healthcheck() {
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::NOT_READY;
     healthcheck.status_message = "Not ready";
     healthcheck.actionable_message = "Turn off the EEG bridge to use the EEG simulator.";
-  } else if (this->is_streaming) {
+  } else if (this->streamer_state == system_interfaces::msg::StreamerState::RUNNING) {
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
     healthcheck.status_message = "Streaming...";
-    healthcheck.actionable_message = "End the session to stop streaming.";
-  } else if (this->eeg_simulator_state == EegSimulatorState::LOADING) {
+    healthcheck.actionable_message = "End streaming to stop data.";
+  } else if (this->streamer_state == system_interfaces::msg::StreamerState::LOADING) {
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
     healthcheck.status_message = "Loading...";
     healthcheck.actionable_message = "Wait until loading is finished.";
-  } else if (this->eeg_simulator_state == EegSimulatorState::ERROR_LOADING) {
+  } else if (this->streamer_state == system_interfaces::msg::StreamerState::ERROR) {
     // Healthcheck status is set to READY, as it is not a critical error.
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
     healthcheck.status_message = this->error_message;
@@ -192,17 +179,19 @@ void EegSimulator::publish_healthcheck() {
   } else {
     healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
     healthcheck.status_message = "Ready";
-    healthcheck.actionable_message = "Start a session to stream data.";
+    healthcheck.actionable_message = "Start streaming to stream data.";
   }
   this->healthcheck_publisher->publish(healthcheck);
 }
 
+void EegSimulator::publish_streamer_state() {
+  system_interfaces::msg::StreamerState msg;
+  msg.state = this->streamer_state;
+  this->streamer_state_publisher->publish(msg);
+}
+
 void EegSimulator::handle_eeg_bridge_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg) {
   this->eeg_bridge_available = msg->status.value == system_interfaces::msg::HealthcheckStatus::READY;
-  if (eeg_bridge_available) {
-    this->set_enabled(false);
-    RCLCPP_INFO(this->get_logger(), "EEG simulator disabled because EEG bridge is available.");
-  }
 }
 
 std::tuple<bool, size_t> EegSimulator::get_sample_count(const std::string& data_file_path) {
@@ -421,10 +410,8 @@ bool EegSimulator::set_dataset(std::string json_filename) {
   /* Reset the simulator state. */
   this->eeg_simulator_state = EegSimulatorState::READY;
 
-  /* If enabled, re-initialize streaming. */
-  if (this->enabled) {
-    initialize_streaming();
-  }
+  /* Re-initialize streaming. */
+  initialize_streaming();
 
   return true;
 }
@@ -434,32 +421,6 @@ void EegSimulator::handle_set_dataset(
       std::shared_ptr<project_interfaces::srv::SetDataset::Response> response) {
 
   response->success = set_dataset(request->filename);
-}
-
-void EegSimulator::set_enabled(bool enabled) {
-  this->enabled = enabled;
-
-  RCLCPP_INFO(this->get_logger(), "Simulator %s.", this->enabled ? "enabled" : "disabled");
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::Bool();
-  msg.data = this->enabled;
-
-  this->enabled_publisher->publish(msg);
-
-  /* If enabled, initialize streaming. */
-  if (this->enabled) {
-    initialize_streaming();
-  }
-}
-
-void EegSimulator::handle_set_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
-
-  set_enabled(request->data);
-  response->success = true;
-  response->message = "";
 }
 
 void EegSimulator::handle_set_start_time(
@@ -479,6 +440,32 @@ void EegSimulator::handle_set_start_time(
   response->success = true;
 }
 
+void EegSimulator::handle_start_streamer(
+      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+      std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+  (void) request;
+  initialize_streaming();
+  this->streaming_start_time = this->get_clock()->now().seconds();
+  this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
+  response->success = true;
+  response->message = "EEG simulator streaming started.";
+  publish_streamer_state();
+}
+
+void EegSimulator::handle_stop_streamer(
+      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+      std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+  (void) request;
+  this->streamer_state = system_interfaces::msg::StreamerState::READY;
+  this->streaming_start_time = UNSET_TIME;
+  this->current_index = 0;
+  this->current_pulse_index = 0;
+  this->time_offset = 0.0;
+  response->success = true;
+  response->message = "EEG simulator streaming stopped.";
+  publish_streamer_state();
+}
+
 void EegSimulator::initialize_streaming() {
   this->sampling_frequency = this->dataset.sampling_frequency;
   this->num_eeg_channels = this->dataset.num_eeg_channels;
@@ -495,6 +482,9 @@ void EegSimulator::initialize_streaming() {
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Initializing streaming of dataset: %s", data_filename.c_str());
 
+  this->streamer_state = system_interfaces::msg::StreamerState::LOADING;
+  publish_streamer_state();
+
   data_file.open(data_file_path, std::ios::in);
 
   if (!data_file.is_open()) {
@@ -503,8 +493,6 @@ void EegSimulator::initialize_streaming() {
   }
 
   if (this->current_data_file_path != data_file_path) {
-    this->eeg_simulator_state = EegSimulatorState::LOADING;
-
     dataset_buffer.clear();
     std::string line;
     uint32_t line_number = 0;
@@ -521,10 +509,10 @@ void EegSimulator::initialize_streaming() {
           RCLCPP_ERROR(this->get_logger(), "Error converting string to double on line %d", line_number);
           RCLCPP_ERROR(this->get_logger(), "Line contents: %s", line.c_str());
 
-          this->eeg_simulator_state = EegSimulatorState::ERROR_LOADING;
+          this->streamer_state = system_interfaces::msg::StreamerState::ERROR;
           this->error_message = "Error on line " + std::to_string(line_number);
+          publish_streamer_state();
           data_file.close();
-          this->set_enabled(false);
 
           return;
         }
@@ -549,53 +537,27 @@ void EegSimulator::initialize_streaming() {
 
   data_file.close();
 
-  this->eeg_simulator_state = EegSimulatorState::READY;
+  this->streamer_state = system_interfaces::msg::StreamerState::READY;
+  publish_streamer_state();
 }
 
-void EegSimulator::handle_session(const std::shared_ptr<system_interfaces::msg::Session> msg) {
-  this->session_time = msg->time;
-
-  /* Return if session is not ongoing. */
-  if (msg->state.value != system_interfaces::msg::SessionState::STARTED) {
-    /* Re-initialize streaming already after stopping the previous session. */
-    if (this->session_started) {
-      RCLCPP_INFO(this->get_logger(), "Session stopped, stopping streaming.");
-      this->initialize_streaming();
-    }
-
-    this->session_started = false;
-    this->is_streaming = false;
-    this->session_start_time = UNSET_TIME;
+void EegSimulator::stream_timer_callback() {
+  if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     return;
   }
 
-  /* Check if the session is started for the first time. */
-  if (!this->session_started) {
-    RCLCPP_INFO(this->get_logger(), "Session started, starting streaming.");
-    this->session_started = true;
-    this->session_start_time = this->get_clock()->now().seconds();
-  }
-
-  /* Return if the simulator is not enabled. */
-  if (!enabled) {
-    this->is_streaming = false;
+  if (std::isnan(this->streaming_start_time)) {
     return;
   }
 
-  /* Return if the simulator is still loading the dataset. */
-  if (this->eeg_simulator_state == EegSimulatorState::LOADING) {
-    return;
-  }
-  this->is_streaming = true;
+  double_t elapsed = this->get_clock()->now().seconds() - this->streaming_start_time;
+  double_t target_time = this->play_dataset_from + elapsed;
 
-  /* Calculate the target time up to which we should publish samples */
-  double_t target_time = this->play_dataset_from + this->session_time;
-
-  /* Publish samples until target time */
   bool success = this->publish_until(target_time);
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to publish samples until target time. Stopping streaming.");
-    this->is_streaming = false;
+    this->streamer_state = system_interfaces::msg::StreamerState::ERROR;
+    publish_streamer_state();
     return;
   }
 }
@@ -628,7 +590,7 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   msg.session.num_eeg_channels = this->num_eeg_channels;
   msg.session.num_emg_channels = this->num_emg_channels;
   msg.session.is_simulation = true;
-  msg.session.start_time = this->session_start_time;
+  msg.session.start_time = this->streaming_start_time;
 
   msg.time = time;
 
@@ -705,13 +667,12 @@ bool EegSimulator::publish_until(double_t until_time) {
       this->time_offset = this->time_offset + dataset_duration;
     }
 
-    // If not in loop mode and we've reached the end, stop the session
+    // If not in loop mode and we've reached the end, stop streaming
     if (!this->dataset.loop && this->current_index == 0) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Stopping session.");
 
-      // Call the stop session service
-      auto request = std::make_shared<system_interfaces::srv::StopSession::Request>();
-      auto result = stop_session_client->async_send_request(request);
+      this->streamer_state = system_interfaces::msg::StreamerState::READY;
+      publish_streamer_state();
 
       break;
     }

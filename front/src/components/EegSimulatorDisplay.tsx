@@ -7,16 +7,17 @@ import { ValidatedInput } from 'components/ValidatedInput'
 import {
   StyledPanel,
   Select,
-  GrayedOutPanel,
   SmallerTitle,
   ConfigRow,
   ConfigLabel,
   ConfigValue,
   CONFIG_PANEL_WIDTH,
+  StyledButton,
+  StyledRedButton,
 } from 'styles/General'
 
-import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
-import { setDatasetRos, setEnabledRos, setStartTimeRos, setRecordDataRos } from 'ros/eeg_simulator'
+import { EegSimulatorContext, StreamerStateValue } from 'providers/EegSimulatorProvider'
+import { setDatasetRos, setStartTimeRos, setRecordDataRos } from 'ros/eeg_simulator'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
@@ -50,21 +51,24 @@ const SectionStartRow = styled(CompactRow)`
 
 export const EegSimulatorDisplay: React.FC = () => {
   const { eegSimulatorHealthcheck } = useContext(HealthcheckContext)
-  const { datasetList, dataset, enabled, recordData, startTime } = useContext(EegSimulatorContext)
+  const {
+    datasetList,
+    dataset,
+    recordData,
+    startTime,
+    streamerState,
+    toggleStreaming,
+  } = useContext(EegSimulatorContext)
 
   const eegSimulatorHealthcheckOk = eegSimulatorHealthcheck?.status.value === HealthcheckStatus.READY
+  const isRunning = streamerState === StreamerStateValue.RUNNING
+  const isLoading = streamerState === StreamerStateValue.LOADING
 
   const setDataset = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newDataset = event.target.value
 
     setDatasetRos(newDataset, () => {
       console.log('Dataset set to ' + newDataset)
-    })
-  }
-
-  const setEnabled = (enabled: boolean) => {
-    setEnabledRos(enabled, () => {
-      console.log('Enabled set to ' + enabled)
     })
   }
 
@@ -84,15 +88,33 @@ export const EegSimulatorDisplay: React.FC = () => {
     })
   }
 
-  const selectedDataset = datasetList.find((d) => d.json_filename === dataset)
+  const selectedDataset = datasetList.find(
+    (d: typeof datasetList[number]) => d.json_filename === dataset
+  )
+  const ActionButton = isRunning ? StyledRedButton : StyledButton
+  const actionLabel = isRunning ? 'Stop' : 'Start'
+  const actionDisabled = !selectedDataset || isLoading
+  const streamerStateLabel =
+    streamerState === StreamerStateValue.RUNNING
+      ? 'Running'
+      : streamerState === StreamerStateValue.LOADING
+      ? 'Loading'
+      : streamerState === StreamerStateValue.ERROR
+      ? 'Error'
+      : 'Ready'
 
   return (
     <EegSimulatorPanel isGrayedOut={!eegSimulatorHealthcheckOk}>
       <SmallerTitle>Simulator</SmallerTitle>
+      <ConfigRow style={{ justifyContent: 'flex-end', paddingRight: 12 }}>
+        <ActionButton onClick={toggleStreaming} disabled={actionDisabled}>
+          {actionLabel}
+        </ActionButton>
+      </ConfigRow>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Dataset:</ConfigLabel>
         <DatasetSelect onChange={setDataset} value={dataset}>
-          {datasetList.map((dataset, index) => (
+          {datasetList.map((dataset: typeof datasetList[number], index: number) => (
             <option key={index} value={dataset.json_filename}>
               {dataset.name}
             </option>
@@ -123,36 +145,32 @@ export const EegSimulatorDisplay: React.FC = () => {
         <ConfigValue>{selectedDataset?.num_emg_channels}</ConfigValue>
       </CompactRow>
       <SectionStartRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Enabled:</ConfigLabel>
+        <ConfigLabel>Record</ConfigLabel>
         <SwitchWrapper>
-          <ToggleSwitch type='flat' checked={enabled} onChange={setEnabled} disabled={false} />
+          <ToggleSwitch type='flat' checked={recordData} onChange={setRecordData} disabled={false} />
         </SwitchWrapper>
       </SectionStartRow>
-      <GrayedOutPanel isGrayedOut={!enabled}>
-        <CompactRow style={{ justifyContent: 'space-between' }}>
-          <ConfigLabel style={{ paddingLeft: 10 }}>Record</ConfigLabel>
-          <SwitchWrapper>
-            <ToggleSwitch type='flat' checked={recordData} onChange={setRecordData} disabled={!enabled} />
-          </SwitchWrapper>
-        </CompactRow>
-        <CompactRow style={{ justifyContent: 'space-between' }}>
-          <ConfigLabel style={{ paddingLeft: 10 }}>Start time (s)</ConfigLabel>
-          <div style={{ marginRight: 20 }}>
-            <ValidatedInput
-              type='number'
-              value={startTime}
-              min={0}
-              max={selectedDataset?.duration || 0}
-              onChange={setStartTime}
-              disabled={!enabled}
-            />
-          </div>
-        </CompactRow>
-      </GrayedOutPanel>
+      <CompactRow style={{ justifyContent: 'space-between' }}>
+        <ConfigLabel>Start time (s)</ConfigLabel>
+        <div style={{ marginRight: 20 }}>
+          <ValidatedInput
+            type='number'
+            value={startTime}
+            min={0}
+            max={selectedDataset?.duration || 0}
+            onChange={setStartTime}
+            disabled={false}
+          />
+        </div>
+      </CompactRow>
       <SectionStartRow>
         <ConfigLabel>Status:</ConfigLabel>
         <ConfigValue>{eegSimulatorHealthcheck?.status_message}</ConfigValue>
       </SectionStartRow>
+      <CompactRow>
+        <ConfigLabel>Simulator state:</ConfigLabel>
+        <ConfigValue>{streamerStateLabel}</ConfigValue>
+      </CompactRow>
     </EegSimulatorPanel>
   )
 }

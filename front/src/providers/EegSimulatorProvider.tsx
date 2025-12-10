@@ -58,7 +58,9 @@ const defaultDatasetState: EegSimulatorContextType = {
   recordData: false,
   startTime: 0,
   streamerState: StreamerStateValue.READY,
-  toggleStreaming: () => {},
+  toggleStreaming: () => {
+    console.warn('toggleStreaming called before provider mounted')
+  },
 }
 
 export const EegSimulatorContext = React.createContext<EegSimulatorContextType>(defaultDatasetState)
@@ -143,12 +145,18 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   }, [])
 
   const toggleStreaming = () => {
+    setStreamerState(StreamerStateValue.LOADING)
+
     if (streamerState === StreamerStateValue.RUNNING) {
       // Service call to stop
-      stopSimulatorRos(() => {})
+      stopSimulatorRos(() => {
+        setStreamerState(StreamerStateValue.READY)
+      })
     } else {
       // Service call to start
-      startSimulatorRos(() => {})
+      startSimulatorRos(() => {
+        setStreamerState(StreamerStateValue.RUNNING)
+      })
     }
   }
 

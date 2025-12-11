@@ -140,7 +140,6 @@ void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMet
   RCLCPP_INFO(this->get_logger(), "Session started");
 
   this->is_session_ongoing = true;
-  this->error_occurred = false;
 
   this->session_metadata.update(metadata);
 
@@ -149,7 +148,7 @@ void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMet
     this->deferred_processing_queue.pop();
   }
 
-  initialize_module();
+  this->error_occurred = !this->initialize_module();
 }
 
 void EegPreprocessor::handle_session_end() {
@@ -157,13 +156,12 @@ void EegPreprocessor::handle_session_end() {
   this->is_session_ongoing = false;
 }
 
-void EegPreprocessor::initialize_module() {
+bool EegPreprocessor::initialize_module() {
   if (this->working_directory == UNSET_STRING ||
       this->module_name == UNSET_STRING) {
 
     RCLCPP_INFO(this->get_logger(), "Not initializing preprocessor module, module unset.");
-    this->error_occurred = true;
-    return;
+    return false;
   }
 
   RCLCPP_INFO(this->get_logger(), " ");
@@ -188,8 +186,7 @@ void EegPreprocessor::initialize_module() {
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize preprocessor.");
-    this->error_occurred = true;
-    return;
+    return false;
   }
 
   size_t buffer_size = this->preprocessor_wrapper->get_buffer_size();
@@ -201,6 +198,8 @@ void EegPreprocessor::initialize_module() {
   RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->session_metadata.num_eeg_channels);
   RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->session_metadata.num_emg_channels);
   RCLCPP_INFO(this->get_logger(), " ");
+
+  return true;
 }
 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {

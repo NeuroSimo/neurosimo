@@ -7,11 +7,8 @@ from project_interfaces.srv import (
     ListProjects,
     SetActiveProject,
     SetModule,
-    SetModule,
-    SetModule,
     SetDataset,
     SetStartTime,
-    SetProtocol,
 )
 
 from std_srvs.srv import SetBool
@@ -49,7 +46,7 @@ class ProjectManagerNode(Node):
         self.preprocessor_enabled_client = self.create_client(SetBool, "/pipeline/preprocessor/enabled/set", callback_group=self.callback_group)
         self.presenter_module_client = self.create_client(SetModule, "/pipeline/presenter/module/set", callback_group=self.callback_group)
         self.presenter_enabled_client = self.create_client(SetBool, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
-        self.protocol_client = self.create_client(SetProtocol, "/experiment/protocol/set", callback_group=self.callback_group)
+        self.protocol_client = self.create_client(SetModule, "/experiment/protocol/set", callback_group=self.callback_group)
 
         self.eeg_simulator_dataset_service = self.create_client(SetDataset, "/eeg_simulator/dataset/set", callback_group=self.callback_group)
         self.eeg_simulator_start_time_service = self.create_client(SetStartTime, "/eeg_simulator/start_time/set", callback_group=self.callback_group)
@@ -407,8 +404,8 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_protocol(self, protocol_name):
-        request = SetProtocol.Request()
-        request.protocol = protocol_name
+        request = SetModule.Request()
+        request.module = protocol_name
 
         self.logger.info(f"Setting experiment protocol to {protocol_name}...")
         future = self.protocol_client.call_async(request)

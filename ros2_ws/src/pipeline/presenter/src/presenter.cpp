@@ -44,8 +44,6 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     qos_keep_all,
     std::bind(&EegPresenter::handle_sensory_stimulus, this, _1));
 
-  RCLCPP_INFO(this->get_logger(), "Listening to sensory stimuli on topic %s.", SENSORY_STIMULUS_TOPIC.c_str());
-
   /* Subscriber for active project. */
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
         .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
@@ -114,12 +112,6 @@ EegPresenter::~EegPresenter() {
   close(inotify_descriptor);
 }
 
-void EegPresenter::reset_sensory_stimuli() {
-  while (!this->sensory_stimuli.empty()) {
-    this->sensory_stimuli.pop();
-  }
-}
-
 void EegPresenter::publish_python_logs(double sample_time, bool is_initialization) {
   auto logs = this->presenter_wrapper->get_and_clear_logs();
   
@@ -153,21 +145,27 @@ void EegPresenter::publish_python_logs(double sample_time, bool is_initializatio
 }
 
 /* Functions to re-initialize the presenter state. */
-void EegPresenter::initialize_presenter_module() {
-  reset_sensory_stimuli();
-
-  if (!this->enabled ||
-      this->working_directory == UNSET_STRING ||
-      this->module_name == UNSET_STRING) {
-
-    return;
+bool EegPresenter::initialize_presenter_module() {
+  if (!this->enabled) {
+    RCLCPP_INFO(this->get_logger(), "Not initializing presenter module, module unset.");
+    return false;
   }
-  this->presenter_wrapper->initialize_module(
+
+  RCLCPP_INFO(this->get_logger(), "Initializing presenter module: %s.", this->module_name.c_str());
+
+  bool success = this->presenter_wrapper->initialize_module(
     this->working_directory,
     this->module_name);
 
   /* Publish initialization logs from Python constructor */
   publish_python_logs(0.0, true);
+
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module.");
+    return false;
+  }
+
+  return true;
 }
 
 /* EEG sample handler (for session markers and time updates). */
@@ -176,17 +174,28 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   if (msg->is_session_start) {
     RCLCPP_INFO(this->get_logger(), "Session started");
     this->session_started = true;
+
+    /* Clear the sensory stimuli queue. */
+    while (!this->sensory_stimuli.empty()) {
+      this->sensory_stimuli.pop();
+    }
+
+    /* Initialize the presenter module. */
+    this->error_occurred = !this->initialize_presenter_module();
   }
 
   /* Handle session end marker. */
   if (msg->is_session_end) {
     RCLCPP_INFO(this->get_logger(), "Session stopped");
     this->session_started = false;
-    this->initialize_presenter_module();
+
+    /* Reset the state of the existing module so that any windows etc. created by the Python module are closed,
+       but do not unset the module. */
+    this->presenter_wrapper->reset_module_state();
   }
 
   /* Update time for stimulus presentation. */
-  if (this->session_started) {
+  if (this->session_started && !this->error_occurred) {
     update_time(msg->time);
   }
 }
@@ -208,16 +217,6 @@ void EegPresenter::handle_set_presenter_enabled(
 
   RCLCPP_INFO(this->get_logger(), "%s presenter.", this->enabled ? "Enabling" : "Disabling");
 
-  /* Initialize the presenter module if it was enabled, otherwise reset it. */
-  if (this->enabled) {
-    this->initialize_presenter_module();
-
-  } else {
-    /* Reset the state of the existing module so that any windows etc. created by the Python module are closed,
-       but do not unset the module. */
-    this->presenter_wrapper->reset_module_state();
-  }
-
   response->success = true;
   response->message = "";
 }
@@ -232,9 +231,6 @@ void EegPresenter::unset_presenter_module() {
   msg.data = this->module_name;
 
   this->presenter_module_publisher->publish(msg);
-
-  /* Reset the state of the existing module. */
-  this->presenter_wrapper->reset_module_state();
 }
 
 std::string EegPresenter::get_module_name_with_fallback(const std::string module_name) {
@@ -270,9 +266,6 @@ bool EegPresenter::set_presenter_module(const std::string module_name) {
   msg.data = this->module_name;
 
   this->presenter_module_publisher->publish(msg);
-
-  /* Initialize the wrapper to use the changed presenter module. */
-  initialize_presenter_module();
 
   return true;
 }
@@ -408,7 +401,6 @@ void EegPresenter::inotify_timer_callback() {
           (event_name == this->module_name + ".py")) {
 
         RCLCPP_INFO(this->get_logger(), "The current module '%s' was modified, re-initializing.", this->module_name.c_str());
-        this->initialize_presenter_module();
       }
       if (event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) {
         RCLCPP_INFO(this->get_logger(), "File '%s' created, deleted, or moved, updating presenter list.", event_name.c_str());
@@ -468,6 +460,7 @@ void EegPresenter::update_time(double_t time) {
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");
+    this->error_occurred = true;
   }
 }
 
@@ -482,28 +475,13 @@ void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interf
                          "Presenter not enabled, ignoring stimulus.");
     return;
   }
-  if (this->module_name == UNSET_STRING) {
+  if (this->error_occurred) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
-                         "Presenter enabled but not selected, ignoring stimulus.");
+                         "An error occurred in presenter module. Ignoring stimulus.");
     return;
   }
-  if (!this->presenter_wrapper->is_initialized()) {
-    RCLCPP_INFO_THROTTLE(this->get_logger(),
-                         *this->get_clock(),
-                         1000,
-                         "Presenter enabled and selected but not initialized, ignoring stimulus.");
-    return;
-  }
-  if (this->presenter_wrapper->error_occurred()) {
-    RCLCPP_INFO_THROTTLE(this->get_logger(),
-                         *this->get_clock(),
-                         1000,
-                         "An error occurred in presenter module, please re-initialize. Ignoring stimulus.");
-    return;
-  }
-
   this->sensory_stimuli.push(msg);
 }
 

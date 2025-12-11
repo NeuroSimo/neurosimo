@@ -14,7 +14,9 @@ const Container = styled(StyledPanel)`
 `
 
 export const ExperimentPanel: React.FC = () => {
-  const { protocolName, protocolList } = useContext(PipelineContext)
+  const { protocolName, protocolList, experimentState } = useContext(PipelineContext)
+
+  const isExperimentOngoing = experimentState?.ongoing ?? false
 
   const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const protocol = event.target.value
@@ -28,7 +30,7 @@ export const ExperimentPanel: React.FC = () => {
       <SmallerTitle>Experiment</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Protocol:</ConfigLabel>
-        <Select onChange={handleProtocolChange} value={protocolName}>
+        <Select onChange={handleProtocolChange} value={protocolName} disabled={isExperimentOngoing}>
           {protocolList.map((protocol, index) => (
             <option key={index} value={protocol}>
               {protocol}

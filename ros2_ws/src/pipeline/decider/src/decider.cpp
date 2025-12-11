@@ -15,7 +15,7 @@ using namespace std::chrono;
 using namespace std::placeholders;
 
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
+const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string HEALTHCHECK_TOPIC = "/eeg/decider/healthcheck";
 const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
 
@@ -566,7 +566,7 @@ void EegDecider::handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg
   this->eeg_subscriber.reset();
 
   /* Create the subscriber based on preprocessor state. */
-  std::string topic = this->is_preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_RAW_TOPIC;
+  std::string topic = this->is_preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
   this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
     topic,
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */

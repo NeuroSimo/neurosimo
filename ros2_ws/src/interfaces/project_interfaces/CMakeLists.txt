@@ -25,14 +25,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ListProjects.srv"
   "srv/SetActiveProject.srv"
 
-  "msg/PreprocessorList.msg"
-  "srv/SetPreprocessorModule.srv"
-
-  "msg/DeciderList.msg"
-  "srv/SetDeciderModule.srv"
-
-  "msg/PresenterList.msg"
-  "srv/SetPresenterModule.srv"
+  "srv/SetModule.srv"
+  "msg/ModuleList.msg"
 
   "msg/ProtocolList.msg"
   "srv/SetProtocol.srv"

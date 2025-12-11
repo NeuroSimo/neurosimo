@@ -22,7 +22,6 @@
 
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
-
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
 
@@ -35,8 +34,8 @@
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
 
-#include "project_interfaces/msg/decider_list.hpp"
-#include "project_interfaces/srv/set_decider_module.hpp"
+#include "project_interfaces/msg/module_list.hpp"
+#include "project_interfaces/srv/set_module.hpp"
 
 #include "std_srvs/srv/set_bool.hpp"
 
@@ -135,8 +134,8 @@ private:
   std::string get_module_name_with_fallback(const std::string module_name);
   bool set_decider_module(const std::string module);
   void handle_set_decider_module(
-      const std::shared_ptr<project_interfaces::srv::SetDeciderModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetDeciderModule::Response> response);
+      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
+      std::shared_ptr<project_interfaces::srv::SetModule::Response> response);
 
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
   void update_decider_list();
@@ -169,9 +168,9 @@ private:
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
-  rclcpp::Publisher<project_interfaces::msg::DeciderList>::SharedPtr decider_list_publisher;
+  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr decider_list_publisher;
 
-  rclcpp::Service<project_interfaces::srv::SetDeciderModule>::SharedPtr set_decider_module_service;
+  rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_decider_module_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decider_module_publisher;
 
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_decider_enabled_service;

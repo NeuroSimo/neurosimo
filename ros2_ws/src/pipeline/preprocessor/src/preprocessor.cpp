@@ -52,12 +52,12 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     std::bind(&EegPreprocessor::handle_set_active_project, this, _1));
 
   /* Publisher for listing preprocessors. */
-  this->preprocessor_list_publisher = this->create_publisher<project_interfaces::msg::PreprocessorList>(
+  this->preprocessor_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
     "/pipeline/preprocessor/list",
     qos_persist_latest);
 
   /* Service for changing preprocessor module. */
-  this->set_preprocessor_module_service = this->create_service<project_interfaces::srv::SetPreprocessorModule>(
+  this->set_preprocessor_module_service = this->create_service<project_interfaces::srv::SetModule>(
     "/pipeline/preprocessor/module/set",
     std::bind(&EegPreprocessor::handle_set_preprocessor_module, this, _1, _2));
 
@@ -313,8 +313,8 @@ bool EegPreprocessor::set_preprocessor_module(const std::string module_name) {
 }
 
 void EegPreprocessor::handle_set_preprocessor_module(
-      const std::shared_ptr<project_interfaces::srv::SetPreprocessorModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPreprocessorModule::Response> response) {
+      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
+      std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
 
   response->success = set_preprocessor_module(request->module);
 }
@@ -327,7 +327,7 @@ void EegPreprocessor::handle_set_active_project(const std::shared_ptr<std_msgs::
   this->is_working_directory_set = change_working_directory(PROJECTS_DIRECTORY + "/" + this->active_project + "/preprocessor");
   update_preprocessor_list();
 
-  update_inotify_watch();
+  update_inotify_watch(this->working_directory);
 }
 
 /* File-system related functions */
@@ -398,15 +398,15 @@ std::vector<std::string> EegPreprocessor::list_python_modules_in_working_directo
   return modules;
 }
 
-void EegPreprocessor::update_inotify_watch() {
+void EegPreprocessor::update_inotify_watch(const std::string working_directory) {
   /* Remove the old watch. */
   inotify_rm_watch(inotify_descriptor, watch_descriptor);
 
   /* Check if working directory exists and is accessible. */
   std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) || 
-      !std::filesystem::is_directory(this->working_directory, ec)) {
-    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", this->working_directory.c_str());
+  if (!std::filesystem::exists(working_directory, ec) || 
+      !std::filesystem::is_directory(working_directory, ec)) {
+    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", working_directory.c_str());
     if (ec) {
       RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
     }
@@ -414,9 +414,9 @@ void EegPreprocessor::update_inotify_watch() {
   }
 
   /* Add a new watch. */
-  watch_descriptor = inotify_add_watch(inotify_descriptor, this->working_directory.c_str(), IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);
+  watch_descriptor = inotify_add_watch(inotify_descriptor, working_directory.c_str(), IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);
   if (watch_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error adding watch for: %s", this->working_directory.c_str());
+      RCLCPP_ERROR(this->get_logger(), "Error adding watch for: %s", working_directory.c_str());
       return;
   }
 }
@@ -438,14 +438,7 @@ void EegPreprocessor::inotify_timer_callback() {
   while (i < length) {
     struct inotify_event *event = (struct inotify_event *)&inotify_buffer[i];
     if (event->len) {
-      std::string event_name = event->name;
-      if ((event->mask & IN_MODIFY) &&
-          (event_name == this->module_name + ".py")) {
-
-        RCLCPP_INFO(this->get_logger(), "The current module '%s' was modified.", this->module_name.c_str());
-      }
       if (event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) {
-        RCLCPP_INFO(this->get_logger(), "File '%s' created, deleted, or moved, updating preprocessor list.", event_name.c_str());
         this->update_preprocessor_list();
       }
     }
@@ -459,8 +452,8 @@ void EegPreprocessor::update_preprocessor_list() {
   } else {
     this->modules.clear();
   }
-  auto msg = project_interfaces::msg::PreprocessorList();
-  msg.scripts = this->modules;
+  auto msg = project_interfaces::msg::ModuleList();
+  msg.modules = this->modules;
 
   this->preprocessor_list_publisher->publish(msg);
 }

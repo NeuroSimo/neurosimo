@@ -15,8 +15,8 @@
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
 
-#include "project_interfaces/msg/presenter_list.hpp"
-#include "project_interfaces/srv/set_presenter_module.hpp"
+#include "project_interfaces/msg/module_list.hpp"
+#include "project_interfaces/srv/set_module.hpp"
 
 #include "std_srvs/srv/set_bool.hpp"
 
@@ -52,8 +52,8 @@ private:
   bool set_presenter_module(const std::string module_name);
 
   void handle_set_presenter_module(
-      const std::shared_ptr<project_interfaces::srv::SetPresenterModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPresenterModule::Response> response);
+      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
+      std::shared_ptr<project_interfaces::srv::SetModule::Response> response);
 
   void handle_set_presenter_enabled(
       const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -79,9 +79,9 @@ private:
   rclcpp::Subscription<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
-  rclcpp::Publisher<project_interfaces::msg::PresenterList>::SharedPtr presenter_list_publisher;
+  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr presenter_list_publisher;
 
-  rclcpp::Service<project_interfaces::srv::SetPresenterModule>::SharedPtr set_presenter_module_service;
+  rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_presenter_module_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr presenter_module_publisher;
 
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_presenter_enabled_service;

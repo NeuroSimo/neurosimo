@@ -53,14 +53,14 @@
           - docker-ce-cli
           - containerd.io
           - docker-buildx-plugin
-          - docker-compose-plugin
+          - docker compose-plugin
         state: present
 
-    - name: Optionally install docker-compose legacy alias
+    - name: Optionally install docker compose legacy alias
       when: enable_docker_compose_legacy_alias
       file:
         src: /usr/bin/docker
-        dest: /usr/local/bin/docker-compose
+        dest: /usr/local/bin/docker compose
         state: link
 
     - name: Add user to docker group

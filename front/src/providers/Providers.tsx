@@ -7,6 +7,7 @@ import { PipelineProvider } from './PipelineProvider'
 import { EegStreamProvider } from './EegStreamProvider'
 import { StatisticsProvider } from './StatisticsProvider'
 import { EegSimulatorProvider } from './EegSimulatorProvider'
+import { EegBridgeProvider } from './EegBridgeProvider'
 import { HealthcheckProvider } from './HealthcheckProvider'
 
 interface Props {
@@ -21,7 +22,9 @@ const Providers: React.FC<Props> = ({ children }) => {
           <EegStreamProvider>
             <StatisticsProvider>
               <EegSimulatorProvider>
-                <HealthcheckProvider>{children}</HealthcheckProvider>
+                <EegBridgeProvider>
+                  <HealthcheckProvider>{children}</HealthcheckProvider>
+                </EegBridgeProvider>
               </EegSimulatorProvider>
             </StatisticsProvider>
           </EegStreamProvider>

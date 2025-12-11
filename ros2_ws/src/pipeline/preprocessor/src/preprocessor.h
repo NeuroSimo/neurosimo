@@ -84,6 +84,7 @@ private:
 
   bool initialize_module();
   void publish_python_logs(double sample_time, bool is_initialization);
+  void publish_sentinel_sample(double_t sample_time);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 

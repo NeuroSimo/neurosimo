@@ -5,6 +5,7 @@
 #include <queue>
 
 #include "rclcpp/rclcpp.hpp"
+#include "inotify_utils/inotify_watcher.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -39,7 +40,6 @@ class PresenterWrapper;
 class EegPresenter : public rclcpp::Node {
 public:
   EegPresenter();
-  ~EegPresenter();
 
 private:
   bool initialize_presenter_module();
@@ -68,9 +68,6 @@ private:
   /* File-system related functions */
   bool change_working_directory(const std::string path);
   std::vector<std::string> list_python_modules_in_working_directory();
-
-  void update_inotify_watch();
-  void inotify_timer_callback();
 
   rclcpp::Logger logger;
 
@@ -110,11 +107,8 @@ private:
   /* Track session state internally based on session markers from EEG samples. */
   bool session_started = false;
 
-  /* Inotify variables */
-  rclcpp::TimerBase::SharedPtr inotify_timer;
-  int inotify_descriptor;
-  int watch_descriptor;
-  char inotify_buffer[1024];
+  /* Inotify watcher */
+  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
 };
 
 #endif //EEG_PROCESSOR_PRESENTER_H

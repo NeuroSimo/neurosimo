@@ -19,6 +19,7 @@ find_package(pipeline_interfaces REQUIRED)
 find_package(project_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
+find_package(inotify_utils REQUIRED)
 
 # Preprocessor executable
 add_executable(
@@ -35,6 +36,7 @@ target_include_directories(preprocessor
 
 target_link_libraries(preprocessor
   realtime_utils::utils
+  inotify_utils::inotify_watcher
 )
 
 ament_target_dependencies(
@@ -48,6 +50,7 @@ ament_target_dependencies(
   project_interfaces
   system_interfaces
   realtime_utils
+  inotify_utils
 )
 
 install(

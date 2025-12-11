@@ -8,6 +8,7 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
+#include "inotify_utils/inotify_watcher.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -73,7 +74,6 @@ class PreprocessorWrapper;
 class EegPreprocessor : public rclcpp::Node {
 public:
   EegPreprocessor();
-  ~EegPreprocessor();
 
 private:
   void publish_healthcheck();
@@ -110,9 +110,6 @@ private:
   /* File-system related functions */
   bool change_working_directory(const std::string path);
   std::vector<std::string> list_python_modules_in_working_directory();
-
-  void update_inotify_watch();
-  void inotify_timer_callback();
 
   rclcpp::Logger logger;
 
@@ -163,11 +160,8 @@ private:
   std::string status_message;
   std::string actionable_message;
 
-  /* Inotify variables */
-  rclcpp::TimerBase::SharedPtr inotify_timer;
-  int inotify_descriptor;
-  int watch_descriptor;
-  char inotify_buffer[1024];
+  /* Inotify watcher */
+  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
 
   /* When determining if a sample is ready to be processed, allow some tolerance to account
      for finite precision of floating point numbers. */

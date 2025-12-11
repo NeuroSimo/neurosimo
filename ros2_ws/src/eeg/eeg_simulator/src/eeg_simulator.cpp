@@ -10,11 +10,6 @@
 
 #include "realtime_utils/utils.h"
 
-#include <sys/inotify.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-
 #include <nlohmann/json.hpp>
 
 #include "eeg_simulator.h"
@@ -121,21 +116,11 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     EEG_RAW_TOPIC,
     EEG_QUEUE_LENGTH);
 
-  /* Initialize inotify. */
-  this->inotify_descriptor = inotify_init();
-  if (this->inotify_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error initializing inotify");
-      exit(1);
-  }
-
-  /* Set the inotify descriptor to non-blocking. */
-  int flags = fcntl(inotify_descriptor, F_GETFL, 0);
-  fcntl(inotify_descriptor, F_SETFL, flags | O_NONBLOCK);
-
-  /* Create a timer callback to poll inotify. */
-  this->inotify_timer = this->create_wall_timer(std::chrono::milliseconds(100),
-                                                std::bind(&EegSimulator::inotify_timer_callback, this),
-                                                callback_group);
+  /* Initialize inotify watcher. */
+  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
+    this, this->get_logger());
+  this->inotify_watcher->set_change_callback(
+    std::bind(&EegSimulator::update_dataset_list, this));
 
   /* Timer to drive streaming. */
   this->stream_timer = this->create_wall_timer(STREAMING_INTERVAL,
@@ -149,11 +134,6 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
 
   /* Publish initial streamer state. */
   publish_streamer_state();
-}
-
-EegSimulator::~EegSimulator() {
-  inotify_rm_watch(inotify_descriptor, watch_descriptor);
-  close(inotify_descriptor);
 }
 
 void EegSimulator::publish_healthcheck() {
@@ -379,7 +359,7 @@ void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg
     update_dataset_list();
   }
 
-  update_inotify_watch();
+  this->inotify_watcher->update_watch(this->data_directory);
 }
 
 bool EegSimulator::set_dataset(std::string json_filename) {
@@ -705,48 +685,6 @@ bool EegSimulator::publish_until(double_t until_time) {
 
   return true;
 }
-
-/* Inotify functions */
-
-void EegSimulator::update_inotify_watch() {
-  /* Remove the old watch. */
-  inotify_rm_watch(inotify_descriptor, watch_descriptor);
-
-  /* Add a new watch. */
-  watch_descriptor = inotify_add_watch(inotify_descriptor, this->data_directory.c_str(), IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);
-  if (watch_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error adding watch for: %s", this->data_directory.c_str());
-      return;
-  }
-}
-
-void EegSimulator::inotify_timer_callback() {
-  int length = read(inotify_descriptor, inotify_buffer, 1024);
-
-  if (length < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      /* No events, return early. */
-      return;
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Error reading inotify");
-      return;
-    }
-  }
-
-  int i = 0;
-  while (i < length) {
-    struct inotify_event *event = (struct inotify_event *)&inotify_buffer[i];
-    if (event->len) {
-      std::string event_name = event->name;
-      if (event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) {
-        RCLCPP_INFO(this->get_logger(), "File '%s' created, deleted, or moved, updating dataset list.", event_name.c_str());
-        this->update_dataset_list();
-      }
-    }
-    i += sizeof(struct inotify_event) + event->len;
-  }
-}
-
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);

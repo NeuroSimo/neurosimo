@@ -6,6 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
 #include "rcl_interfaces/msg/parameter_type.hpp"
+#include "inotify_utils/inotify_watcher.h"
 
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/msg/eeg_info.hpp"
@@ -31,7 +32,6 @@ const std::string UNSET_STRING = "";
 class EegSimulator : public rclcpp::Node {
 public:
   EegSimulator();
-  ~EegSimulator();
 
 private:
   void publish_healthcheck();
@@ -60,8 +60,6 @@ private:
      Returns true if the samples were published successfully. */
   bool publish_until(double_t until_time);
 
-  void update_inotify_watch();
-  void inotify_timer_callback();
   void publish_streamer_state();
   void stream_timer_callback();
   void handle_start_streamer(
@@ -141,11 +139,8 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streamer_service;
   rclcpp::TimerBase::SharedPtr stream_timer;
 
-  /* Inotify variables */
-  rclcpp::TimerBase::SharedPtr inotify_timer;
-  int inotify_descriptor;
-  int watch_descriptor;
-  char inotify_buffer[1024];
+  /* Inotify watcher */
+  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
 };
 
 #endif //EEG_SIMULATOR_H

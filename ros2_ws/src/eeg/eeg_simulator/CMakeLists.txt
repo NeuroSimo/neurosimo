@@ -18,6 +18,7 @@ find_package(eeg_interfaces REQUIRED)
 find_package(project_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
+find_package(inotify_utils REQUIRED)
 
 add_executable(
         eeg_simulator
@@ -32,6 +33,7 @@ target_include_directories(eeg_simulator
 
 target_link_libraries(eeg_simulator
   realtime_utils::utils
+  inotify_utils::inotify_watcher
 )
 
 ament_target_dependencies(
@@ -45,6 +47,7 @@ ament_target_dependencies(
   project_interfaces
   system_interfaces
   realtime_utils
+  inotify_utils
 )
 
 install(TARGETS

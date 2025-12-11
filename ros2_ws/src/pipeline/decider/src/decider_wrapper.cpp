@@ -513,7 +513,6 @@ bool DeciderWrapper::initialize_module(
 
   /* Initialize numpy arrays for default sample window. */
   py_time_offsets = std::make_unique<py::array_t<double>>(buffer_size);
-  py_valid = std::make_unique<py::array_t<bool>>(buffer_size);
 
   std::vector<size_t> eeg_shape = {buffer_size, eeg_size};
   py_eeg = std::make_unique<py::array_t<double>>(eeg_shape);
@@ -532,8 +531,7 @@ bool DeciderWrapper::initialize_module(
 
     EventArrays arrays;
     arrays.time_offsets = std::make_unique<py::array_t<double>>(event_buffer_size);
-    arrays.valid = std::make_unique<py::array_t<bool>>(event_buffer_size);
-    
+
     std::vector<size_t> event_eeg_shape = {event_buffer_size, eeg_size};
     arrays.eeg = std::make_unique<py::array_t<double>>(event_eeg_shape);
     
@@ -589,7 +587,6 @@ void DeciderWrapper::reset_module_state() {
   decider_module = nullptr;
 
   py_time_offsets.reset();
-  py_valid.reset();
   py_eeg.reset();
   py_emg.reset();
   
@@ -625,7 +622,6 @@ bool DeciderWrapper::warm_up() {
 
     // Get pointers to numpy arrays
     auto time_offsets_ptr = py_time_offsets->mutable_data();
-    auto valid_ptr = py_valid->mutable_data();
     auto eeg_ptr = py_eeg->mutable_data();
     auto emg_ptr = py_emg->mutable_data();
 
@@ -639,8 +635,7 @@ bool DeciderWrapper::warm_up() {
       // Generate fresh random data for this round
       for (size_t i = 0; i < buffer_size; i++) {
         time_offsets_ptr[i] = -static_cast<double>(buffer_size - 1 - i) / sampling_frequency;
-        valid_ptr[i] = true;
-        
+
         // Fill EEG data with small random values
         for (size_t j = 0; j < eeg_size; j++) {
           eeg_ptr[i * eeg_size + j] = (static_cast<double>(std::rand()) / RAND_MAX - 0.5) * 1e-6;
@@ -656,12 +651,11 @@ bool DeciderWrapper::warm_up() {
         auto start_time = std::chrono::high_resolution_clock::now();
         
         py::object py_result = decider_instance->attr("process_periodic")(
-          dummy_reference_time, 
+          dummy_reference_time,
           dummy_reference_index,
-          *py_time_offsets, 
-          *py_eeg, 
-          *py_emg, 
-          *py_valid, 
+          *py_time_offsets,
+          *py_eeg,
+          *py_emg,
           dummy_is_coil_at_target
         );
         
@@ -706,7 +700,6 @@ bool DeciderWrapper::warm_up() {
 
 DeciderWrapper::~DeciderWrapper() {
   py_time_offsets.reset();
-  py_valid.reset();
   py_eeg.reset();
   py_emg.reset();
   event_arrays.clear();
@@ -858,14 +851,12 @@ void DeciderWrapper::fill_arrays_from_buffer(
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
     py::array_t<double>& time_offsets,
-    py::array_t<bool>& valid,
     py::array_t<double>& eeg,
     py::array_t<double>& emg,
     size_t start_offset,
     size_t num_samples) {
-  
+
   auto time_offsets_ptr = time_offsets.mutable_data();
-  auto valid_ptr = valid.mutable_data();
   auto eeg_ptr = eeg.mutable_data();
   auto emg_ptr = emg.mutable_data();
 
@@ -876,7 +867,6 @@ void DeciderWrapper::fill_arrays_from_buffer(
     if (ring_idx >= start_offset && out_idx < num_samples) {
       const auto& sample = *sample_ptr;
       time_offsets_ptr[out_idx] = sample.time - reference_time;
-      valid_ptr[out_idx] = sample.valid;
       std::memcpy(eeg_ptr + out_idx * eeg_size, sample.eeg.data(), eeg_size * sizeof(double));
       std::memcpy(emg_ptr + out_idx * emg_size, sample.emg.data(), emg_size * sizeof(double));
       out_idx++;
@@ -905,19 +895,17 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
 
   /* Determine which arrays to use. Default to standard arrays. */
   py::array_t<double>* time_offsets_to_use = py_time_offsets.get();
-  py::array_t<bool>* valid_to_use = py_valid.get();
   py::array_t<double>* eeg_to_use = py_eeg.get();
   py::array_t<double>* emg_to_use = py_emg.get();
   int reference_index = this->look_back_samples;
   size_t num_samples = this->look_back_samples + this->look_ahead_samples + 1;
-  
+
   /* Override with event-specific arrays if this event has a custom window. */
   if (has_event) {
     auto arrays_it = event_arrays.find(event_type);
     if (arrays_it != event_arrays.end()) {
       EventArrays& arrays = arrays_it->second;
       time_offsets_to_use = arrays.time_offsets.get();
-      valid_to_use = arrays.valid.get();
       eeg_to_use = arrays.eeg.get();
       emg_to_use = arrays.emg.get();
       reference_index = arrays.reference_index;
@@ -931,7 +919,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   size_t start_offset = this->buffer_size - num_samples;
 
   /* Fill the selected arrays from buffer at the calculated offset. */
-  fill_arrays_from_buffer(buffer, reference_time, *time_offsets_to_use, *valid_to_use, 
+  fill_arrays_from_buffer(buffer, reference_time, *time_offsets_to_use,
                           *eeg_to_use, *emg_to_use, start_offset, num_samples);
 
   /* Call the appropriate Python function using the selected arrays. */
@@ -939,7 +927,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   try {
     if (pulse_delivered) {
       /* Call process_eeg_trigger. */
-      py_result = decider_instance->attr("process_eeg_trigger")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, *valid_to_use, is_coil_at_target);
+      py_result = decider_instance->attr("process_eeg_trigger")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
     } else if (has_event) {
       /* Call event processor for this event type. */
       auto processor_it = event_processors.find(event_type);
@@ -958,10 +946,10 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
       }
       
       /* Call the event processor (arrays already selected and filled). */
-      py_result = processor_it->second(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, *valid_to_use, is_coil_at_target);
+      py_result = processor_it->second(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
     } else {
       /* Call standard process_periodic method (for periodic processing). */
-      py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, *valid_to_use, is_coil_at_target);
+      py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
     }
 
   } catch(const py::error_already_set& e) {

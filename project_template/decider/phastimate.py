@@ -123,15 +123,13 @@ class Decider:
 
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-            is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """
         Process the EEG data to estimate phase and schedule a trigger periodically.
         
         Args:
             reference_time: Reference time point for the sample window (typically current sample time)
             time_offsets: Array of time offsets relative to reference_time
-            valid_samples: Boolean array indicating valid samples
             eeg_buffer: EEG data buffer (samples x channels)
             emg_buffer: EMG data buffer (unused)
             reference_index: Index in the buffer corresponding to reference_time (where time_offsets[i] == 0)
@@ -140,10 +138,6 @@ class Decider:
         Returns:
             Dictionary with 'timed_trigger' key and execution time, or None if no trigger scheduled
         """
-        # Early returns for invalid samples
-        if not np.all(valid_samples):
-            return None
-
         # Extract C3 channel with common average reference
         c3_referenced_data = self._extract_c3_referenced_data(eeg_buffer)
         if c3_referenced_data is None:
@@ -392,8 +386,7 @@ class Decider:
 
     def process_eeg_trigger(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-            is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG trigger from the EEG device."""
         print(f'EEG trigger received at time {reference_time:.4f}')
         # Phastimate doesn't process EEG triggers, just log them
@@ -401,8 +394,7 @@ class Decider:
 
     def process_pulse(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, valid_samples: np.ndarray, 
-            is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process pulse event."""
         print(f'Pulse event received at time {reference_time:.4f}')
         # Add your pulse event handling logic here

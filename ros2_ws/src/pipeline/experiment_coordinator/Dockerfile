@@ -24,12 +24,13 @@ COPY ros2_ws/src/interfaces/project_interfaces src/interfaces/project_interfaces
 COPY ros2_ws/src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 COPY ros2_ws/src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY ros2_ws/src/utils/realtime src/utils/realtime/
+COPY ros2_ws/src/utils/inotify_utils src/utils/inotify_utils/
 
 RUN source /opt/ros/iron/setup.bash && colcon build
 
 # ROS nodes
 COPY ros2_ws/src/pipeline/experiment_coordinator src/pipeline/experiment_coordinator/
-RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select experiment_coordinator
+RUN source /opt/ros/iron/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select experiment_coordinator
 
 # Copy entrypoint
 

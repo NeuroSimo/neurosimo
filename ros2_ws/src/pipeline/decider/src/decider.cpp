@@ -3,11 +3,6 @@
 #include <signal.h>
 #include <execinfo.h>
 
-#include <sys/inotify.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-
 #include "decider_wrapper.h"
 #include "decider.h"
 
@@ -189,32 +184,15 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
 
-  /* Initialize inotify. */
-  this->inotify_descriptor = inotify_init();
-  if (this->inotify_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error initializing inotify");
-      exit(1);
-  }
-
-  /* Set the inotify descriptor to non-blocking. */
-  int flags = fcntl(inotify_descriptor, F_GETFL, 0);
-  fcntl(inotify_descriptor, F_SETFL, flags | O_NONBLOCK);
-
-  /* Create a timer callback to poll inotify. */
-  this->inotify_timer = this->create_wall_timer(
-    std::chrono::milliseconds(100),
-    std::bind(&EegDecider::inotify_timer_callback, this));
+  /* Initialize inotify watcher. */
+  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
+    this, this->get_logger());
+  this->inotify_watcher->set_change_callback(
+    std::bind(&EegDecider::update_decider_list, this));
 
   this->healthcheck_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegDecider::publish_healthcheck, this));
-}
-
-EegDecider::~EegDecider() {
-  for (int wd : watch_descriptors) {
-    inotify_rm_watch(inotify_descriptor, wd);
-  }
-  close(inotify_descriptor);
 }
 
 void EegDecider::publish_healthcheck() {
@@ -667,7 +645,9 @@ void EegDecider::handle_set_active_project(const std::shared_ptr<std_msgs::msg::
   this->is_working_directory_set = change_working_directory(PROJECTS_DIRECTORY + "/" + this->active_project + "/decider");
   update_decider_list();
 
-  update_inotify_watch();
+  if (this->is_working_directory_set) {
+    this->inotify_watcher->update_watch(this->working_directory);
+  }
 }
 
 void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg) {
@@ -740,98 +720,6 @@ std::vector<std::string> EegDecider::list_python_modules_in_working_directory() 
   std::sort(modules.begin(), modules.end());
 
   return modules;
-}
-
-void EegDecider::update_inotify_watch() {
-  /* Remove all old watches. */
-  for (int wd : watch_descriptors) {
-    inotify_rm_watch(inotify_descriptor, wd);
-  }
-  watch_descriptors.clear();
-
-  /* Collect working directory and its subdirectories. */
-  std::vector<std::filesystem::path> directories;
-
-  /* Check if working directory exists and is accessible. */
-  std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) ||
-      !std::filesystem::is_directory(this->working_directory, ec)) {
-    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", this->working_directory.c_str());
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
-    }
-    return;
-  }
-
-  directories.push_back(std::filesystem::path(this->working_directory));
-
-  /* Use error code version to handle symlinks and permission issues gracefully. */
-  try {
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(this->working_directory, ec)) {
-      if (ec) {
-        RCLCPP_WARN(this->get_logger(), "Error iterating directory %s: %s", this->working_directory.c_str(), ec.message().c_str());
-        break;
-      }
-
-      std::error_code entry_ec;
-      if (std::filesystem::is_directory(entry, entry_ec) && !entry_ec) {
-        directories.push_back(entry.path());
-      }
-    }
-  } catch (const std::filesystem::filesystem_error& e) {
-    RCLCPP_WARN(this->get_logger(), "Filesystem error while iterating %s: %s", this->working_directory.c_str(), e.what());
-  }
-
-  /* Add watches for all collected directories. */
-  for (const auto& dir : directories) {
-    int wd = inotify_add_watch(inotify_descriptor, dir.c_str(), IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);
-    if (wd == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error adding watch for: %s", dir.c_str());
-    } else {
-      watch_descriptors.push_back(wd);
-      RCLCPP_DEBUG(this->get_logger(), "Added watch for: %s", dir.c_str());
-    }
-  }
-}
-
-void EegDecider::inotify_timer_callback() {
-  int length = read(inotify_descriptor, inotify_buffer, 1024);
-
-  if (length < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      /* No events, return early. */
-      return;
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Error reading inotify");
-      return;
-    }
-  }
-
-  int i = 0;
-  while (i < length) {
-    struct inotify_event *event = (struct inotify_event *)&inotify_buffer[i];
-    if (event->len) {
-      std::string event_name = event->name;
-
-      std::vector<std::string> internal_imports = this->decider_wrapper->get_internal_imports();
-      bool is_internal_import = std::find(internal_imports.begin(), internal_imports.end(), event_name) != internal_imports.end();
-
-      /* Check if the file ends with .py. */
-      bool is_python_file = false;
-      if (event_name.length() >= 3) {
-        is_python_file = (event_name.substr(event_name.length() - 3) == ".py");
-      }
-
-      if ((event->mask & IN_MODIFY) && (is_internal_import || event_name == this->module_name + ".py")) {
-        RCLCPP_INFO(this->get_logger(), "Module %s was modified, re-loading.", event_name.c_str());
-      }
-      if ((event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) && is_python_file) {
-        RCLCPP_INFO(this->get_logger(), "File %s created, deleted, or moved, updating decider list.", event_name.c_str());
-        this->update_decider_list();
-      }
-    }
-    i += sizeof(struct inotify_event) + event->len;
-  }
 }
 
 void EegDecider::update_decider_list() {

@@ -86,7 +86,9 @@ private:
   void publish_python_logs(double sample_time, bool is_initialization);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
-  
+
+  bool is_sample_window_valid() const;
+  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time);
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 

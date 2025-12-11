@@ -6,9 +6,9 @@ from threading import Event
 from project_interfaces.srv import (
     ListProjects,
     SetActiveProject,
-    SetDeciderModule,
-    SetPreprocessorModule,
-    SetPresenterModule,
+    SetModule,
+    SetModule,
+    SetModule,
     SetDataset,
     SetStartTime,
     SetProtocol,
@@ -43,11 +43,11 @@ class ProjectManagerNode(Node):
         self.create_service(SetActiveProject, '/projects/active/set', self.set_active_project_callback, callback_group=self.callback_group)
 
         # Clients
-        self.decider_module_client = self.create_client(SetDeciderModule, "/pipeline/decider/module/set", callback_group=self.callback_group)
+        self.decider_module_client = self.create_client(SetModule, "/pipeline/decider/module/set", callback_group=self.callback_group)
         self.decider_enabled_client = self.create_client(SetBool, "/pipeline/decider/enabled/set", callback_group=self.callback_group)
-        self.preprocessor_module_client = self.create_client(SetPreprocessorModule, "/pipeline/preprocessor/module/set", callback_group=self.callback_group)
+        self.preprocessor_module_client = self.create_client(SetModule, "/pipeline/preprocessor/module/set", callback_group=self.callback_group)
         self.preprocessor_enabled_client = self.create_client(SetBool, "/pipeline/preprocessor/enabled/set", callback_group=self.callback_group)
-        self.presenter_module_client = self.create_client(SetPresenterModule, "/pipeline/presenter/module/set", callback_group=self.callback_group)
+        self.presenter_module_client = self.create_client(SetModule, "/pipeline/presenter/module/set", callback_group=self.callback_group)
         self.presenter_enabled_client = self.create_client(SetBool, "/pipeline/presenter/enabled/set", callback_group=self.callback_group)
         self.protocol_client = self.create_client(SetProtocol, "/experiment/protocol/set", callback_group=self.callback_group)
 
@@ -328,7 +328,7 @@ class ProjectManagerNode(Node):
     
     # Service calls
     def set_decider_module(self, module_name):
-        request = SetDeciderModule.Request()
+        request = SetModule.Request()
         request.module = module_name
 
         self.logger.info(f"Setting decider module to {module_name}...")
@@ -355,7 +355,7 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_preprocessor_module(self, module_name):
-        request = SetPreprocessorModule.Request()
+        request = SetModule.Request()
         request.module = module_name
 
         future = self.preprocessor_module_client.call_async(request)
@@ -381,7 +381,7 @@ class ProjectManagerNode(Node):
         future.add_done_callback(callback)
 
     def set_presenter_module(self, module_name):
-        request = SetPresenterModule.Request()
+        request = SetModule.Request()
         request.module = module_name
 
         future = self.presenter_module_client.call_async(request)

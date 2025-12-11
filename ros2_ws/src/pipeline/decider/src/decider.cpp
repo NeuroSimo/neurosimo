@@ -100,7 +100,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
 
   /* Publisher for listing deciders. */
-  this->decider_list_publisher = this->create_publisher<project_interfaces::msg::DeciderList>(
+  this->decider_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
     "/pipeline/decider/list",
     qos_persist_latest);
 
@@ -111,7 +111,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     std::bind(&EegDecider::handle_preprocessor_enabled, this, _1));
 
   /* Service for changing decider module. */
-  this->set_decider_module_service = this->create_service<project_interfaces::srv::SetDeciderModule>(
+  this->set_decider_module_service = this->create_service<project_interfaces::srv::SetModule>(
     "/pipeline/decider/module/set",
     std::bind(&EegDecider::handle_set_decider_module, this, _1, _2));
 
@@ -653,8 +653,8 @@ bool EegDecider::set_decider_module(const std::string module_name) {
 }
 
 void EegDecider::handle_set_decider_module(
-      const std::shared_ptr<project_interfaces::srv::SetDeciderModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetDeciderModule::Response> response) {
+      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
+      std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
 
   response->success = set_decider_module(request->module);
 }
@@ -840,8 +840,8 @@ void EegDecider::update_decider_list() {
   } else {
     this->modules.clear();
   }
-  auto msg = project_interfaces::msg::DeciderList();
-  msg.scripts = this->modules;
+  auto msg = project_interfaces::msg::ModuleList();
+  msg.modules = this->modules;
 
   this->decider_list_publisher->publish(msg);
 }

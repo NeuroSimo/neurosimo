@@ -55,12 +55,12 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     std::bind(&EegPresenter::handle_set_active_project, this, _1));
 
   /* Publisher for listing presenters. */
-  this->presenter_list_publisher = this->create_publisher<project_interfaces::msg::PresenterList>(
+  this->presenter_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
     "/pipeline/presenter/list",
     qos_persist_latest);
 
   /* Service for changing presenter module. */
-  this->set_presenter_module_service = this->create_service<project_interfaces::srv::SetPresenterModule>(
+  this->set_presenter_module_service = this->create_service<project_interfaces::srv::SetModule>(
     "/pipeline/presenter/module/set",
     std::bind(&EegPresenter::handle_set_presenter_module, this, _1, _2));
 
@@ -271,8 +271,8 @@ bool EegPresenter::set_presenter_module(const std::string module_name) {
 }
 
 void EegPresenter::handle_set_presenter_module(
-      const std::shared_ptr<project_interfaces::srv::SetPresenterModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetPresenterModule::Response> response) {
+      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
+      std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
 
   response->success = set_presenter_module(request->module);
 }
@@ -417,8 +417,8 @@ void EegPresenter::update_presenter_list() {
   } else {
     this->modules.clear();
   }
-  auto msg = project_interfaces::msg::PresenterList();
-  msg.scripts = this->modules;
+  auto msg = project_interfaces::msg::ModuleList();
+  msg.modules = this->modules;
 
   this->presenter_list_publisher->publish(msg);
 }

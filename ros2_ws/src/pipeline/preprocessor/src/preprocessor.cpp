@@ -37,40 +37,21 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     EEG_QUEUE_LENGTH,
     std::bind(&EegPreprocessor::process_sample, this, _1));
 
-  /* Subscriber for active project. */
-  auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
-        .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-        .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-
-  this->active_project_subscriber = create_subscription<std_msgs::msg::String>(
-    "/projects/active",
-    qos_persist_latest,
-    std::bind(&EegPreprocessor::handle_set_active_project, this, _1));
-
-  /* Publisher for listing preprocessors. */
-  this->preprocessor_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
-    "/pipeline/preprocessor/list",
-    qos_persist_latest);
-
-  /* Service for changing preprocessor module. */
-  this->set_preprocessor_module_service = this->create_service<project_interfaces::srv::SetModule>(
-    "/pipeline/preprocessor/module/set",
-    std::bind(&EegPreprocessor::handle_set_preprocessor_module, this, _1, _2));
-
-  /* Publisher for preprocessor module. */
-  this->preprocessor_module_publisher = this->create_publisher<std_msgs::msg::String>(
-    "/pipeline/preprocessor/module",
-    qos_persist_latest);
-
-  /* Service for enabling and disabling preprocessor. */
-  this->set_preprocessor_enabled_service = this->create_service<std_srvs::srv::SetBool>(
-    "/pipeline/preprocessor/enabled/set",
-    std::bind(&EegPreprocessor::handle_set_preprocessor_enabled, this, _1, _2));
-
-  /* Publisher for preprocessor enabled message. */
-  this->preprocessor_enabled_publisher = this->create_publisher<std_msgs::msg::Bool>(
-    "/pipeline/preprocessor/enabled",
-    qos_persist_latest);
+  /* Initialize module manager for preprocessor modules. */
+  module_utils::ModuleManagerConfig module_config;
+  module_config.component_name = "preprocessor";
+  module_config.projects_base_directory = PROJECTS_DIRECTORY;
+  module_config.module_subdirectory = "preprocessor";
+  module_config.file_extensions = {".py"};
+  module_config.default_module_name = DEFAULT_PREPROCESSOR_NAME;
+  module_config.active_project_topic = "/projects/active";
+  module_config.module_list_topic = "/pipeline/preprocessor/list";
+  module_config.set_module_service = "/pipeline/preprocessor/module/set";
+  module_config.module_topic = "/pipeline/preprocessor/module";
+  module_config.set_enabled_service = "/pipeline/preprocessor/enabled/set";
+  module_config.enabled_topic = "/pipeline/preprocessor/enabled";
+  
+  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
 
   /* Publisher for Python logs from preprocessor. */
   // Logs can be sent in bursts so keep all messages in the queue.
@@ -86,12 +67,6 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
 
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
   this->preprocessed_sample = eeg_interfaces::msg::Sample();
-
-  /* Initialize inotify watcher. */
-  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
-    this, this->get_logger());
-  this->inotify_watcher->set_change_callback(
-    std::bind(&EegPreprocessor::update_preprocessor_list, this));
 
   this->healthcheck_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
@@ -138,8 +113,8 @@ void EegPreprocessor::handle_session_end() {
 }
 
 bool EegPreprocessor::initialize_module() {
-  if (this->working_directory == UNSET_STRING ||
-      this->module_name == UNSET_STRING) {
+  if (!this->module_manager->is_working_directory_set() ||
+      this->module_manager->get_module_name().empty()) {
 
     RCLCPP_INFO(this->get_logger(), "Not initializing preprocessor module, module unset.");
     return false;
@@ -148,7 +123,7 @@ bool EegPreprocessor::initialize_module() {
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Print underlined, bolded text. */
-  std::string text_str = "Loading preprocessor: " + this->module_name;
+  std::string text_str = "Loading preprocessor: " + this->module_manager->get_module_name();
   std::wstring underline_str(text_str.size(), L'–');
   RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), text_str.c_str(), bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
@@ -156,8 +131,8 @@ bool EegPreprocessor::initialize_module() {
   RCLCPP_INFO(this->get_logger(), "");
 
   bool success = this->preprocessor_wrapper->initialize_module(
-    this->working_directory,
-    this->module_name,
+    this->module_manager->get_working_directory(),
+    this->module_manager->get_module_name(),
     this->session_metadata.num_eeg_channels,
     this->session_metadata.num_emg_channels,
     this->session_metadata.sampling_frequency);
@@ -215,116 +190,19 @@ void EegPreprocessor::publish_python_logs(double sample_time, bool is_initializa
   this->python_log_publisher->publish(batch_msg);
 }
 
-/* Listing and setting EEG preprocessors. */
 bool EegPreprocessor::set_preprocessor_enabled(bool enabled) {
-  /* Update global state variable. */
-  this->enabled = enabled;
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::Bool();
-  msg.data = enabled;
-  this->preprocessor_enabled_publisher->publish(msg);
-
-  RCLCPP_INFO(this->get_logger(), "Preprocessor %s.", this->enabled ? "enabled" : "disabled");
-
+  RCLCPP_INFO(this->get_logger(), "Preprocessor %s.", enabled ? "enabled" : "disabled");
   return true;
 }
 
-void EegPreprocessor::handle_set_preprocessor_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
-
-  response->success = set_preprocessor_enabled(request->data);
-  response->message = "";
-}
-
-std::string EegPreprocessor::get_module_name_with_fallback(const std::string module_name) {
-  if (std::find(this->modules.begin(), this->modules.end(), module_name) != this->modules.end()) {
-    return module_name;
-  }
-  if (std::find(this->modules.begin(), this->modules.end(), DEFAULT_PREPROCESSOR_NAME) != this->modules.end()) {
-    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to default", module_name.c_str());
-    return DEFAULT_PREPROCESSOR_NAME;
-  }
-  if (!this->modules.empty()) {
-    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to first module on the list: %s", module_name.c_str(), this->modules[0].c_str());
-    return this->modules[0];
-  }
-  RCLCPP_WARN(this->get_logger(), "No preprocessors found in project: %s%s%s.", bold_on.c_str(), this->active_project.c_str(), bold_off.c_str());
-  return UNSET_STRING;
-}
-
 void EegPreprocessor::unset_preprocessor_module() {
-  this->module_name = UNSET_STRING;
-
   RCLCPP_INFO(this->get_logger(), "Preprocessor module unset.");
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::String();
-  msg.data = this->module_name;
-
-  this->preprocessor_module_publisher->publish(msg);
 
   /* Reset the Python module state. */
   this->preprocessor_wrapper->reset_module_state();
 
   /* Disable the preprocessor. */
   set_preprocessor_enabled(false);
-}
-
-bool EegPreprocessor::set_preprocessor_module(const std::string module_name) {
-  this->module_name = get_module_name_with_fallback(module_name);
-
-  if (this->module_name == UNSET_STRING) {
-    RCLCPP_ERROR(this->get_logger(), "No preprocessor module set.");
-    this->unset_preprocessor_module();
-
-    return false;
-  }
-
-  RCLCPP_INFO(this->get_logger(), "Preprocessor set to: %s.", this->module_name.c_str());
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::String();
-  msg.data = this->module_name;
-
-  this->preprocessor_module_publisher->publish(msg);
-
-  return true;
-}
-
-void EegPreprocessor::handle_set_preprocessor_module(
-      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
-
-  response->success = set_preprocessor_module(request->module);
-}
-
-void EegPreprocessor::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
-  this->active_project = msg->data;
-
-  RCLCPP_INFO(this->get_logger(), "Project set to: %s.", this->active_project.c_str());
-
-  this->working_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/preprocessor";
-  this->is_working_directory_set = filesystem_utils::change_working_directory(this->working_directory, this->get_logger());
-  update_preprocessor_list();
-
-  if (this->is_working_directory_set) {
-    this->inotify_watcher->update_watch(this->working_directory);
-  }
-}
-
-void EegPreprocessor::update_preprocessor_list() {
-  if (this->is_working_directory_set) {
-    this->modules = filesystem_utils::list_files_with_extension(
-      this->working_directory, ".py", this->get_logger());
-  } else {
-    this->modules.clear();
-  }
-  auto msg = project_interfaces::msg::ModuleList();
-  msg.modules = this->modules;
-
-  this->preprocessor_list_publisher->publish(msg);
 }
 
 void EegPreprocessor::process_ready_deferred_requests(double_t current_sample_time) {

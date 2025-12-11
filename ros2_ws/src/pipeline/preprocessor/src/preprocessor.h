@@ -9,6 +9,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "inotify_utils/inotify_watcher.h"
+#include "module_utils/module_manager.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -87,18 +88,6 @@ private:
   void unset_preprocessor_module();
 
   bool set_preprocessor_enabled(bool enabled);
-  void handle_set_preprocessor_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
-
-  std::string get_module_name_with_fallback(const std::string module_name);
-  bool set_preprocessor_module(const std::string module_name);
-  void handle_set_preprocessor_module(
-      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetModule::Response> response);
-
-  void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
-  void update_preprocessor_list();
 
   void check_dropped_samples(double_t sample_time);
 
@@ -115,27 +104,11 @@ private:
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_subscriber;
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr preprocessed_eeg_publisher;
 
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
-  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr preprocessor_list_publisher;
-
-  rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_preprocessor_module_service;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr preprocessor_module_publisher;
-
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_preprocessor_enabled_service;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr preprocessor_enabled_publisher;
-
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
-  bool enabled = false;
+  /* Module manager for handling module selection and project changes */
+  std::unique_ptr<module_utils::ModuleManager> module_manager;
   bool is_session_ongoing = false;
-
-  std::string active_project = UNSET_STRING;
-
-  std::string working_directory  = UNSET_STRING;
-  bool is_working_directory_set = false;
-  std::string module_name = UNSET_STRING;
-
-  std::vector<std::string> modules;
 
   bool error_occurred = false;
 
@@ -155,9 +128,6 @@ private:
   uint8_t status;
   std::string status_message;
   std::string actionable_message;
-
-  /* Inotify watcher */
-  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
 
   /* When determining if a sample is ready to be processed, allow some tolerance to account
      for finite precision of floating point numbers. */

@@ -19,6 +19,7 @@
   <depend>yaml-cpp</depend>
   <depend>inotify_utils</depend>
   <depend>filesystem_utils</depend>
+  <depend>module_utils</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

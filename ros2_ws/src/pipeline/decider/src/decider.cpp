@@ -21,7 +21,7 @@ const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
-const std::string DEFAULT_DECIDER_NAME = "example";
+const std::string DEFAULT_MODULE_NAME = "example";
 
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -79,15 +79,26 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* EEG subscriber will be created by handle_preprocessor_enabled based on preprocessor state. */
 
-  /* Subscriber for active project. */
+  /* Initialize module manager for decider modules. */
+  module_utils::ModuleManagerConfig module_config;
+  module_config.component_name = "decider";
+  module_config.projects_base_directory = PROJECTS_DIRECTORY;
+  module_config.module_subdirectory = "decider";
+  module_config.file_extensions = {".py"};
+  module_config.default_module_name = DEFAULT_MODULE_NAME;
+  module_config.active_project_topic = "/projects/active";
+  module_config.module_list_topic = "/pipeline/decider/list";
+  module_config.set_module_service = "/pipeline/decider/module/set";
+  module_config.module_topic = "/pipeline/decider/module";
+  module_config.set_enabled_service = "/pipeline/decider/enabled/set";
+  module_config.enabled_topic = "/pipeline/decider/enabled";
+  
+  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
+
+  /* Set up QoS profile for persistent state topics */
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
         .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-
-  this->active_project_subscriber = create_subscription<std_msgs::msg::String>(
-    "/projects/active",
-    qos_persist_latest,
-    std::bind(&EegDecider::handle_set_active_project, this, _1));
 
   /* Subscriber for is coil at target. */
   this->is_coil_at_target_subscriber = create_subscription<std_msgs::msg::Bool>(
@@ -95,36 +106,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     qos_persist_latest,
     std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
 
-  /* Publisher for listing deciders. */
-  this->decider_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
-    "/pipeline/decider/list",
-    qos_persist_latest);
-
   /* Subscriber for preprocessor enabled message. */
   this->preprocessor_enabled_subscriber = this->create_subscription<std_msgs::msg::Bool>(
     "/pipeline/preprocessor/enabled",
     qos_persist_latest,
     std::bind(&EegDecider::handle_preprocessor_enabled, this, _1));
-
-  /* Service for changing decider module. */
-  this->set_decider_module_service = this->create_service<project_interfaces::srv::SetModule>(
-    "/pipeline/decider/module/set",
-    std::bind(&EegDecider::handle_set_decider_module, this, _1, _2));
-
-  /* Publisher for decider module. */
-  this->decider_module_publisher = this->create_publisher<std_msgs::msg::String>(
-    "/pipeline/decider/module",
-    qos_persist_latest);
-
-  /* Service for enabling and disabling decider. */
-  this->set_decider_enabled_service = this->create_service<std_srvs::srv::SetBool>(
-    "/pipeline/decider/enabled/set",
-    std::bind(&EegDecider::handle_set_decider_enabled, this, _1, _2));
-
-  /* Publisher for decider enabled message. */
-  this->decider_enabled_publisher = this->create_publisher<std_msgs::msg::Bool>(
-    "/pipeline/decider/enabled",
-    qos_persist_latest);
 
   /* Publisher for timing error. */
   this->timing_error_publisher = this->create_publisher<pipeline_interfaces::msg::TimingError>(
@@ -184,12 +170,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->decider_wrapper = std::make_unique<DeciderWrapper>(logger);
 
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
-
-  /* Initialize inotify watcher. */
-  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
-    this, this->get_logger());
-  this->inotify_watcher->set_change_callback(
-    std::bind(&EegDecider::update_decider_list, this));
 
   this->healthcheck_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
@@ -255,8 +235,8 @@ void EegDecider::log_section_header(const std::string& title) {
 }
 
 bool EegDecider::initialize_module() {
-  if (this->working_directory == UNSET_STRING ||
-      this->module_name == UNSET_STRING) {
+  if (!this->module_manager->is_working_directory_set() ||
+      this->module_manager->get_module_name().empty()) {
 
     RCLCPP_INFO(this->get_logger(), "Not initializing, decider module unset.");
     return false;
@@ -264,12 +244,12 @@ bool EegDecider::initialize_module() {
 
   RCLCPP_INFO(this->get_logger(), "");
 
-  log_section_header("Loading decider: " + this->module_name);
+  log_section_header("Loading decider: " + this->module_manager->get_module_name());
 
   bool success = this->decider_wrapper->initialize_module(
     PROJECTS_DIRECTORY,
-    this->working_directory,
-    this->module_name,
+    this->module_manager->get_working_directory(),
+    this->module_manager->get_module_name(),
     this->session_metadata.num_eeg_channels,
     this->session_metadata.num_emg_channels,
     this->session_metadata.sampling_frequency,
@@ -549,124 +529,8 @@ void EegDecider::handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg
   RCLCPP_DEBUG(this->get_logger(), "Reading %s EEG data.", this->is_preprocessor_enabled ? "preprocessed" : "raw");
 }
 
-/* Listing and setting EEG deciders. */
-bool EegDecider::set_decider_enabled(bool enabled) {
-
-  /* Only allow enabling the decider if a module is set. */
-  if (enabled && this->module_name == UNSET_STRING) {
-    RCLCPP_WARN(this->get_logger(), "Cannot enable decider, no module set.");
-
-    return false;
-  }
-
-  /* Update global state variable. */
-  this->enabled = enabled;
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::Bool();
-  msg.data = enabled;
-
-  this->decider_enabled_publisher->publish(msg);
-
-  return true;
-}
-
-void EegDecider::handle_set_decider_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
-
-  response->success = set_decider_enabled(request->data);
-  response->message = "";
-}
-
-void EegDecider::unset_decider_module() {
-  this->module_name = UNSET_STRING;
-
-  RCLCPP_INFO(this->get_logger(), "Decider module unset.");
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::String();
-  msg.data = this->module_name;
-
-  this->decider_module_publisher->publish(msg);
-
-  /* Disable the decider. */
-  set_decider_enabled(false);
-}
-
-std::string EegDecider::get_module_name_with_fallback(const std::string module_name) {
-  if (std::find(this->modules.begin(), this->modules.end(), module_name) != this->modules.end()) {
-    return module_name;
-  }
-  if (std::find(this->modules.begin(), this->modules.end(), DEFAULT_DECIDER_NAME) != this->modules.end()) {
-    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to default", module_name.c_str());
-    return DEFAULT_DECIDER_NAME;
-  }
-  if (!this->modules.empty()) {
-    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to first module on the list: %s", module_name.c_str(), this->modules[0].c_str());
-    return this->modules[0];
-  }
-  RCLCPP_WARN(this->get_logger(), "No deciders found in project: %s%s%s.", bold_on.c_str(), this->active_project.c_str(), bold_off.c_str());
-  return UNSET_STRING;
-}
-
-bool EegDecider::set_decider_module(const std::string module_name) {
-  this->module_name = get_module_name_with_fallback(module_name);
-
-  if (this->module_name == UNSET_STRING) {
-    RCLCPP_ERROR(this->get_logger(), "No decider module set.");
-    this->unset_decider_module();
-
-    return false;
-  }
-
-  RCLCPP_INFO(this->get_logger(), "Decider set to: %s%s%s.", bold_on.c_str(), this->module_name.c_str(), bold_off.c_str());
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::String();
-  msg.data = this->module_name;
-
-  this->decider_module_publisher->publish(msg);
-
-  return true;
-}
-
-void EegDecider::handle_set_decider_module(
-      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
-
-  response->success = set_decider_module(request->module);
-}
-
-void EegDecider::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
-  this->active_project = msg->data;
-  RCLCPP_INFO(this->get_logger(), "");
-  RCLCPP_INFO(this->get_logger(), "Project set to: %s%s%s.", bold_on.c_str(), this->active_project.c_str(), bold_off.c_str());
-
-  this->working_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/decider";
-  this->is_working_directory_set = filesystem_utils::change_working_directory(this->working_directory, this->get_logger());
-  update_decider_list();
-
-  if (this->is_working_directory_set) {
-    this->inotify_watcher->update_watch(this->working_directory);
-  }
-}
-
 void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg) {
   this->is_coil_at_target = msg->data;
-}
-
-void EegDecider::update_decider_list() {
-  if (is_working_directory_set) {
-    this->modules = filesystem_utils::list_files_with_extension(
-      this->working_directory, ".py", this->get_logger());
-  } else {
-    this->modules.clear();
-  }
-  auto msg = project_interfaces::msg::ModuleList();
-  msg.modules = this->modules;
-
-  this->decider_list_publisher->publish(msg);
 }
 
 void EegDecider::handle_pulse_delivered(const double_t pulse_delivered_time) {

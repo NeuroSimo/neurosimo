@@ -551,6 +551,11 @@ void EegDecider::handle_pulse_delivered(const double_t pulse_delivered_time) {
 }
 
 void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  /* Return early if decider module is not enabled. */
+  if (!this->module_manager->is_enabled()) {
+    return;
+  }
+
   auto start_time = std::chrono::high_resolution_clock::now();
 
   double_t sample_time = msg->time;

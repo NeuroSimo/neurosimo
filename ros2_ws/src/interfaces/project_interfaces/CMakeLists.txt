@@ -28,9 +28,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetModule.srv"
   "msg/ModuleList.msg"
 
-  "msg/ProtocolList.msg"
-  "srv/SetProtocol.srv"
-
   "msg/Dataset.msg"
   "msg/DatasetList.msg"
   "srv/SetDataset.srv"

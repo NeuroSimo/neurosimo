@@ -24,6 +24,7 @@ data/bags/
 .vscode
 venv
 .venv
+CLAUDE.md
 
 # MacOS temporary file
 .DS_Store

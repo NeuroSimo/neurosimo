@@ -85,12 +85,6 @@ private:
   bool initialize_module();
   void publish_python_logs(double sample_time, bool is_initialization);
 
-  void unset_preprocessor_module();
-
-  bool set_preprocessor_enabled(bool enabled);
-
-  void check_dropped_samples(double_t sample_time);
-
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);

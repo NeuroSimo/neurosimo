@@ -117,7 +117,7 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
-  void initialize_module();
+  bool initialize_module();
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
 

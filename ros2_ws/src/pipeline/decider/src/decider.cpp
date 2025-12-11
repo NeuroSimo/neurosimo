@@ -239,7 +239,6 @@ void EegDecider::publish_healthcheck() {
 void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
   RCLCPP_INFO(this->get_logger(), "Session started");
   this->is_session_ongoing = true;
-  this->error_occurred = false;
 
   this->previous_stimulation_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
@@ -257,7 +256,7 @@ void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata
 
   this->session_metadata.update(metadata);
 
-  this->initialize_module();
+  this->error_occurred = !this->initialize_module();
 }
 
 void EegDecider::handle_session_end() {
@@ -276,13 +275,12 @@ void EegDecider::log_section_header(const std::string& title) {
   RCLCPP_INFO(this->get_logger(), " ");
 }
 
-void EegDecider::initialize_module() {
+bool EegDecider::initialize_module() {
   if (this->working_directory == UNSET_STRING ||
       this->module_name == UNSET_STRING) {
 
     RCLCPP_INFO(this->get_logger(), "Not initializing, decider module unset.");
-    this->error_occurred = true;
-    return;
+    return false;
   }
 
   RCLCPP_INFO(this->get_logger(), "");
@@ -305,8 +303,7 @@ void EegDecider::initialize_module() {
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module.");
-    this->error_occurred = true;
-    return;
+    return false;
   }
 
   size_t buffer_size = this->decider_wrapper->get_buffer_size();
@@ -323,8 +320,7 @@ void EegDecider::initialize_module() {
   bool was_warmup_successful = this->decider_wrapper->warm_up();
   if (!was_warmup_successful) {
     RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
-    this->error_occurred = true;
-    return;
+    return false;
   }
 
   /* Send the initial sensory stimuli to the presenter. */
@@ -332,6 +328,8 @@ void EegDecider::initialize_module() {
     this->sensory_stimulus_publisher->publish(sensory_stimulus);
   }
   this->sensory_stimuli.clear();
+
+  return true;
 }
 
 void EegDecider::publish_python_logs(double sample_time, bool is_initialization) {

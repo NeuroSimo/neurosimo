@@ -81,7 +81,7 @@ private:
   void handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata);
   void handle_session_end();
 
-  void initialize_module();
+  bool initialize_module();
   void publish_python_logs(double sample_time, bool is_initialization);
 
   void unset_preprocessor_module();

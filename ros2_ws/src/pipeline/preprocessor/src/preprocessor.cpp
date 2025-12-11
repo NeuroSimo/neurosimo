@@ -1,11 +1,6 @@
 #include <chrono>
 #include <filesystem>
 
-#include <sys/inotify.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-
 #include "preprocessor_wrapper.h"
 #include "preprocessor.h"
 
@@ -91,30 +86,15 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
   this->preprocessed_sample = eeg_interfaces::msg::Sample();
 
-  /* Initialize inotify. */
-  this->inotify_descriptor = inotify_init();
-  if (this->inotify_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error initializing inotify");
-      exit(1);
-  }
-
-  /* Set the inotify descriptor to non-blocking. */
-  int flags = fcntl(inotify_descriptor, F_GETFL, 0);
-  fcntl(inotify_descriptor, F_SETFL, flags | O_NONBLOCK);
-
-  /* Create a timer callback to poll inotify. */
-  this->inotify_timer = this->create_wall_timer(
-    std::chrono::milliseconds(100),
-    std::bind(&EegPreprocessor::inotify_timer_callback, this));
+  /* Initialize inotify watcher. */
+  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
+    this, this->get_logger());
+  this->inotify_watcher->set_change_callback(
+    std::bind(&EegPreprocessor::update_preprocessor_list, this));
 
   this->healthcheck_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegPreprocessor::publish_healthcheck, this));
-}
-
-EegPreprocessor::~EegPreprocessor() {
-  inotify_rm_watch(inotify_descriptor, watch_descriptor);
-  close(inotify_descriptor);
 }
 
 void EegPreprocessor::publish_healthcheck() {
@@ -327,7 +307,9 @@ void EegPreprocessor::handle_set_active_project(const std::shared_ptr<std_msgs::
   this->is_working_directory_set = change_working_directory(PROJECTS_DIRECTORY + "/" + this->active_project + "/preprocessor");
   update_preprocessor_list();
 
-  update_inotify_watch(this->working_directory);
+  if (this->is_working_directory_set) {
+    this->inotify_watcher->update_watch(this->working_directory);
+  }
 }
 
 /* File-system related functions */
@@ -396,54 +378,6 @@ std::vector<std::string> EegPreprocessor::list_python_modules_in_working_directo
   std::sort(modules.begin(), modules.end());
 
   return modules;
-}
-
-void EegPreprocessor::update_inotify_watch(const std::string working_directory) {
-  /* Remove the old watch. */
-  inotify_rm_watch(inotify_descriptor, watch_descriptor);
-
-  /* Check if working directory exists and is accessible. */
-  std::error_code ec;
-  if (!std::filesystem::exists(working_directory, ec) || 
-      !std::filesystem::is_directory(working_directory, ec)) {
-    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", working_directory.c_str());
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
-    }
-    return;
-  }
-
-  /* Add a new watch. */
-  watch_descriptor = inotify_add_watch(inotify_descriptor, working_directory.c_str(), IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);
-  if (watch_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error adding watch for: %s", working_directory.c_str());
-      return;
-  }
-}
-
-void EegPreprocessor::inotify_timer_callback() {
-  int length = read(inotify_descriptor, inotify_buffer, 1024);
-
-  if (length < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      /* No events, return early. */
-      return;
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Error reading inotify");
-      return;
-    }
-  }
-
-  int i = 0;
-  while (i < length) {
-    struct inotify_event *event = (struct inotify_event *)&inotify_buffer[i];
-    if (event->len) {
-      if (event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) {
-        this->update_preprocessor_list();
-      }
-    }
-    i += sizeof(struct inotify_event) + event->len;
-  }
 }
 
 void EegPreprocessor::update_preprocessor_list() {

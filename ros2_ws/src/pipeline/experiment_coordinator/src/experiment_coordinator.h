@@ -7,6 +7,7 @@
 #include <filesystem>
 
 #include "rclcpp/rclcpp.hpp"
+#include "inotify_utils/inotify_watcher.h"
 #include "eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
@@ -25,7 +26,6 @@ const std::string UNSET_STRING = "<unset>";
 class ExperimentCoordinator : public rclcpp::Node {
 public:
   ExperimentCoordinator();
-  ~ExperimentCoordinator() = default;
 
 private:
   /* ROS2 interfaces */
@@ -50,7 +50,6 @@ private:
   
   // Timers
   rclcpp::TimerBase::SharedPtr healthcheck_timer;
-  rclcpp::TimerBase::SharedPtr inotify_timer;
   
   /* Protocol and state */
   std::optional<experiment_coordinator::Protocol> protocol;
@@ -64,10 +63,8 @@ private:
   std::vector<std::string> available_protocols;
   bool is_working_directory_set = false;
 
-  /* Inotify for file watching */
-  int inotify_descriptor;
-  int watch_descriptor;
-  char inotify_buffer[1024];
+  /* Inotify watcher */
+  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
   
   /* Logger */
   rclcpp::Logger logger;
@@ -113,10 +110,6 @@ private:
   bool change_working_directory(const std::string& path);
   std::vector<std::string> list_yaml_files_in_working_directory();
   void update_protocol_list();
-  
-  /* Inotify */
-  void update_inotify_watch();
-  void inotify_timer_callback();
   
   /* Experiment logic */
   void update_experiment_state(double current_time);

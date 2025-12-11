@@ -1,10 +1,6 @@
 #include "experiment_coordinator.h"
 #include <chrono>
 #include <algorithm>
-#include <sys/inotify.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
 
 using namespace std::chrono;
 using namespace std::placeholders;
@@ -89,22 +85,13 @@ ExperimentCoordinator::ExperimentCoordinator()
     "/experiment/resume",
     std::bind(&ExperimentCoordinator::handle_resume, this, _1, _2));
   
-  /* Initialize inotify. */
-  this->inotify_descriptor = inotify_init();
-  if (this->inotify_descriptor == -1) {
-    RCLCPP_ERROR(this->get_logger(), "Error initializing inotify");
-    exit(1);
-  }
-  
-  /* Set the inotify descriptor to non-blocking. */
-  int flags = fcntl(inotify_descriptor, F_GETFL, 0);
-  fcntl(inotify_descriptor, F_SETFL, flags | O_NONBLOCK);
+  /* Initialize inotify watcher. */
+  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
+    this, this->get_logger());
+  this->inotify_watcher->set_change_callback(
+    std::bind(&ExperimentCoordinator::update_protocol_list, this));
   
   /* Create timers. */
-  this->inotify_timer = this->create_wall_timer(
-    std::chrono::milliseconds(100),
-    std::bind(&ExperimentCoordinator::inotify_timer_callback, this));
-  
   this->healthcheck_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&ExperimentCoordinator::publish_healthcheck, this));
@@ -502,7 +489,10 @@ void ExperimentCoordinator::handle_set_active_project(const std::shared_ptr<std_
     PROJECTS_DIRECTORY + "/" + this->active_project + "/protocols");
   
   update_protocol_list();
-  update_inotify_watch();
+  
+  if (this->is_working_directory_set) {
+    this->inotify_watcher->update_watch(this->working_directory);
+  }
 }
 
 /* File-system related functions */
@@ -585,64 +575,6 @@ void ExperimentCoordinator::update_protocol_list() {
   msg.protocols = this->available_protocols;
   
   this->protocol_list_publisher->publish(msg);
-}
-
-void ExperimentCoordinator::update_inotify_watch() {
-  inotify_rm_watch(inotify_descriptor, watch_descriptor);
-  
-  std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) || 
-      !std::filesystem::is_directory(this->working_directory, ec)) {
-    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s",
-      this->working_directory.c_str());
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
-    }
-    return;
-  }
-  
-  watch_descriptor = inotify_add_watch(inotify_descriptor, this->working_directory.c_str(),
-    IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);
-  
-  if (watch_descriptor == -1) {
-    RCLCPP_ERROR(this->get_logger(), "Error adding watch for: %s", this->working_directory.c_str());
-    return;
-  }
-}
-
-void ExperimentCoordinator::inotify_timer_callback() {
-  int length = read(inotify_descriptor, inotify_buffer, 1024);
-  
-  if (length < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      return;
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Error reading inotify");
-      return;
-    }
-  }
-  
-  int i = 0;
-  while (i < length) {
-    struct inotify_event *event = (struct inotify_event *)&inotify_buffer[i];
-    if (event->len) {
-      std::string event_name = event->name;
-      
-      if ((event->mask & IN_MODIFY) && 
-          (event_name == this->protocol_name + ".yaml" || event_name == this->protocol_name + ".yml")) {
-        RCLCPP_INFO(this->get_logger(), "Current protocol '%s' modified, reloading",
-          this->protocol_name.c_str());
-        load_protocol(this->protocol_name);
-      }
-      
-      if (event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) {
-        RCLCPP_INFO(this->get_logger(), "File '%s' created, deleted, or moved, updating protocol list",
-          event_name.c_str());
-        update_protocol_list();
-      }
-    }
-    i += sizeof(struct inotify_event) + event->len;
-  }
 }
 
 void ExperimentCoordinator::request_stop_session() {

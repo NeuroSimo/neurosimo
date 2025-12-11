@@ -12,6 +12,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
+#include "inotify_utils/inotify_watcher.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -98,7 +99,6 @@ class DeciderWrapper;
 class EegDecider : public rclcpp::Node {
 public:
   EegDecider();
-  ~EegDecider();
 
   void spin();
 
@@ -153,9 +153,6 @@ private:
   /* File-system related functions */
   bool change_working_directory(const std::string path);
   std::vector<std::string> list_python_modules_in_working_directory();
-
-  void update_inotify_watch();
-  void inotify_timer_callback();
 
   rclcpp::Logger logger;
 
@@ -237,11 +234,8 @@ private:
   std::string status_message;
   std::string actionable_message;
 
-  /* Inotify variables */
-  rclcpp::TimerBase::SharedPtr inotify_timer;
-  int inotify_descriptor;
-  std::vector<int> watch_descriptors;
-  char inotify_buffer[1024];
+  /* Inotify watcher */
+  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
 
   /* Event queue for storing events from the Python module. */
   std::priority_queue<std::pair<double, std::string>,

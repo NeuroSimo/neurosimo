@@ -1,11 +1,6 @@
 #include <chrono>
 #include <filesystem>
 
-#include <sys/inotify.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-
 #include "presenter_wrapper.h"
 #include "presenter.h"
 
@@ -91,25 +86,11 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
 
-  /* Initialize inotify. */
-  this->inotify_descriptor = inotify_init();
-  if (this->inotify_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error initializing inotify");
-      exit(1);
-  }
-
-  /* Set the inotify descriptor to non-blocking. */
-  int flags = fcntl(inotify_descriptor, F_GETFL, 0);
-  fcntl(inotify_descriptor, F_SETFL, flags | O_NONBLOCK);
-
-  /* Create a timer callback to poll inotify. */
-  this->inotify_timer = this->create_wall_timer(std::chrono::milliseconds(100),
-                                                std::bind(&EegPresenter::inotify_timer_callback, this));
-}
-
-EegPresenter::~EegPresenter() {
-  inotify_rm_watch(inotify_descriptor, watch_descriptor);
-  close(inotify_descriptor);
+  /* Initialize inotify watcher. */
+  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
+    this, this->get_logger());
+  this->inotify_watcher->set_change_callback(
+    std::bind(&EegPresenter::update_presenter_list, this));
 }
 
 void EegPresenter::publish_python_logs(double sample_time, bool is_initialization) {
@@ -285,7 +266,9 @@ void EegPresenter::handle_set_active_project(const std::shared_ptr<std_msgs::msg
   this->is_working_directory_set = change_working_directory(PROJECTS_DIRECTORY + "/" + this->active_project + "/presenter");
   update_presenter_list();
 
-  update_inotify_watch();
+  if (this->is_working_directory_set) {
+    this->inotify_watcher->update_watch(this->working_directory);
+  }
 }
 
 /* File-system related functions */
@@ -354,61 +337,6 @@ std::vector<std::string> EegPresenter::list_python_modules_in_working_directory(
   std::sort(modules.begin(), modules.end());
 
   return modules;
-}
-
-void EegPresenter::update_inotify_watch() {
-  /* Remove the old watch. */
-  inotify_rm_watch(inotify_descriptor, watch_descriptor);
-
-  /* Check if working directory exists and is accessible. */
-  std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) || 
-      !std::filesystem::is_directory(this->working_directory, ec)) {
-    RCLCPP_ERROR(this->get_logger(), "Working directory does not exist or is not a directory: %s", this->working_directory.c_str());
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
-    }
-    return;
-  }
-
-  /* Add a new watch. */
-  watch_descriptor = inotify_add_watch(inotify_descriptor, this->working_directory.c_str(), IN_MODIFY | IN_CREATE | IN_DELETE | IN_MOVE);
-  if (watch_descriptor == -1) {
-      RCLCPP_ERROR(this->get_logger(), "Error adding watch for: %s", this->working_directory.c_str());
-      return;
-  }
-}
-
-void EegPresenter::inotify_timer_callback() {
-  int length = read(inotify_descriptor, inotify_buffer, 1024);
-
-  if (length < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      /* No events, return early. */
-      return;
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Error reading inotify");
-      return;
-    }
-  }
-
-  int i = 0;
-  while (i < length) {
-    struct inotify_event *event = (struct inotify_event *)&inotify_buffer[i];
-    if (event->len) {
-      std::string event_name = event->name;
-      if ((event->mask & IN_MODIFY) &&
-          (event_name == this->module_name + ".py")) {
-
-        RCLCPP_INFO(this->get_logger(), "The current module '%s' was modified, re-initializing.", this->module_name.c_str());
-      }
-      if (event->mask & (IN_CREATE | IN_DELETE | IN_MOVE)) {
-        RCLCPP_INFO(this->get_logger(), "File '%s' created, deleted, or moved, updating presenter list.", event_name.c_str());
-        this->update_presenter_list();
-      }
-    }
-    i += sizeof(struct inotify_event) + event->len;
-  }
 }
 
 void EegPresenter::update_presenter_list() {

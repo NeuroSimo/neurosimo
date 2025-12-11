@@ -169,30 +169,3 @@ export const setPresenterEnabledRos = (enabled: boolean, callback: () => void) =
   )
 }
 
-/* Set experiment protocol */
-const setExperimentProtocolService = new ROSLIB.Service({
-  ros: ros,
-  name: '/experiment/protocol/set',
-  serviceType: 'project_interfaces/SetModule',
-})
-
-export const setExperimentProtocolRos = (module: string, callback: () => void) => {
-  const request = new ROSLIB.ServiceRequest({
-    module: module,
-  }) as any
-
-  setExperimentProtocolService.callService(
-    request,
-    (response) => {
-      if (!response.success) {
-        console.log('ERROR: Failed to set experiment protocol: success field was false.')
-      } else {
-        callback()
-      }
-    },
-    (error) => {
-      console.log('ERROR: Failed to set experiment protocol, error:')
-      console.log(error)
-    }
-  )
-}

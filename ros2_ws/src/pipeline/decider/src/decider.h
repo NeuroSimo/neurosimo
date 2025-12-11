@@ -78,10 +78,7 @@ struct DeferredProcessingRequest {
   
   /* The sample that triggered the processing request. */
   std::shared_ptr<eeg_interfaces::msg::Sample> triggering_sample;
-  
-  /* Whether this was triggered by a trigger signal. */
-  bool pulse_delivered;
-  
+
   /* Whether this has an event. */
   bool has_event;
   
@@ -132,7 +129,8 @@ private:
 
   std::tuple<bool, double, std::string> consume_next_event(double_t current_time);
   void pop_event();
-  
+
+  bool is_sample_window_valid() const;
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 

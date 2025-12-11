@@ -192,21 +192,6 @@ void EegPreprocessor::publish_python_logs(double sample_time, bool is_initializa
   this->python_log_publisher->publish(batch_msg);
 }
 
-bool EegPreprocessor::set_preprocessor_enabled(bool enabled) {
-  RCLCPP_INFO(this->get_logger(), "Preprocessor %s.", enabled ? "enabled" : "disabled");
-  return true;
-}
-
-void EegPreprocessor::unset_preprocessor_module() {
-  RCLCPP_INFO(this->get_logger(), "Preprocessor module unset.");
-
-  /* Reset the Python module state. */
-  this->preprocessor_wrapper->reset_module_state();
-
-  /* Disable the preprocessor. */
-  set_preprocessor_enabled(false);
-}
-
 void EegPreprocessor::process_ready_deferred_requests(double_t current_sample_time) {
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   while (!this->deferred_processing_queue.empty()) {

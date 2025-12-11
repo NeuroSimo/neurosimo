@@ -123,14 +123,12 @@ private:
 
   /* Preallocated numpy arrays for default sample window */
   std::unique_ptr<py::array_t<double>> py_time_offsets;
-  std::unique_ptr<py::array_t<bool>> py_valid;
   std::unique_ptr<py::array_t<double>> py_eeg;
   std::unique_ptr<py::array_t<double>> py_emg;
 
   /* Preallocated numpy arrays for custom event windows */
   struct EventArrays {
     std::unique_ptr<py::array_t<double>> time_offsets;
-    std::unique_ptr<py::array_t<bool>> valid;
     std::unique_ptr<py::array_t<double>> eeg;
     std::unique_ptr<py::array_t<double>> emg;
     size_t buffer_size;
@@ -166,7 +164,6 @@ private:
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     py::array_t<double>& timestamps,
-    py::array_t<bool>& valid,
     py::array_t<double>& eeg,
     py::array_t<double>& emg,
     size_t start_offset,

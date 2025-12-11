@@ -14,7 +14,9 @@ const Container = styled(StyledPanel)`
 `
 
 export const DeciderNode: React.FC = () => {
-  const { deciderEnabled: enabled, deciderModule: module, deciderList: modules } = useContext(PipelineContext)
+  const { deciderEnabled: enabled, deciderModule: module, deciderList: modules, experimentState } = useContext(PipelineContext)
+
+  const isExperimentOngoing = experimentState?.ongoing ?? false
 
   const handleToggle = (next: boolean) => {
     setDeciderEnabledRos(next, () => {
@@ -34,11 +36,11 @@ export const DeciderNode: React.FC = () => {
       <SmallerTitle>Decider</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Enabled:</ConfigLabel>
-        <ToggleSwitch type='flat' checked={enabled} onChange={handleToggle} />
+        <ToggleSwitch type='flat' checked={enabled} onChange={handleToggle} disabled={isExperimentOngoing} />
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Module:</ConfigLabel>
-        <Select onChange={handleModuleChange} value={module}>
+        <Select onChange={handleModuleChange} value={module} disabled={isExperimentOngoing}>
           {modules.map((mod, index) => (
             <option key={index} value={mod}>
               {mod}

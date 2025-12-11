@@ -53,8 +53,8 @@ private:
 
   void initialize_streaming();
 
-  /* Publish a single sample at the given index. Returns true if the sample was published successfully. */
-  bool publish_single_sample(size_t sample_index);
+  /* Publish a single sample at the given index with the specified session flags. */
+  bool publish_single_sample(size_t sample_index, bool is_session_start, bool is_session_end);
 
   /* Publish samples from current_index until (but not including) the first sample that is after until_time.
      Returns true if the samples were published successfully. */
@@ -62,10 +62,10 @@ private:
 
   void publish_streamer_state();
   void stream_timer_callback();
-  void handle_start_streamer(
+  void handle_start_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
-  void handle_stop_streamer(
+  void handle_stop_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
@@ -135,8 +135,8 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::EegInfo>::SharedPtr eeg_info_publisher;
 
   rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streamer_service;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streamer_service;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streaming_service;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streaming_service;
   rclcpp::TimerBase::SharedPtr stream_timer;
 
   /* Inotify watcher */

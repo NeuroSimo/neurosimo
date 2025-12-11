@@ -85,16 +85,16 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     rmw_qos_profile_services_default,
     callback_group);
 
-  /* Services for starting/stopping the streamer. */
-  this->start_streamer_service = this->create_service<std_srvs::srv::Trigger>(
+  /* Services for starting/stopping streaming. */
+  this->start_streaming_service = this->create_service<std_srvs::srv::Trigger>(
     "/eeg_simulator/start",
-    std::bind(&EegSimulator::handle_start_streamer, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&EegSimulator::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
     callback_group);
 
-  this->stop_streamer_service = this->create_service<std_srvs::srv::Trigger>(
+  this->stop_streaming_service = this->create_service<std_srvs::srv::Trigger>(
     "/eeg_simulator/stop",
-    std::bind(&EegSimulator::handle_stop_streamer, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&EegSimulator::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
     callback_group);
 
@@ -417,7 +417,7 @@ void EegSimulator::handle_set_start_time(
   response->success = true;
 }
 
-void EegSimulator::handle_start_streamer(
+void EegSimulator::handle_start_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void) request;
@@ -432,7 +432,7 @@ void EegSimulator::handle_start_streamer(
   publish_streamer_state();
 }
 
-void EegSimulator::handle_stop_streamer(
+void EegSimulator::handle_stop_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void) request;
@@ -544,8 +544,8 @@ void EegSimulator::stream_timer_callback() {
   }
 }
 
-/* Publish a single sample at the given index. Returns true if the sample was published successfully. */
-bool EegSimulator::publish_single_sample(size_t sample_index) {
+/* Publish a single sample at the given index with the specified session flags. */
+bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_start, bool is_session_end) {
   if (sample_index >= dataset_buffer.size()) {
     RCLCPP_ERROR(this->get_logger(), "Sample index %zu out of bounds (max: %zu)", sample_index, dataset_buffer.size() - 1);
     return false;
@@ -568,8 +568,8 @@ bool EegSimulator::publish_single_sample(size_t sample_index) {
   msg.eeg.insert(msg.eeg.end(), data.begin(), data.begin() + num_eeg_channels);
   msg.emg.insert(msg.emg.end(), data.begin() + num_eeg_channels, data.end());
 
-  msg.is_session_start = this->is_session_start;
-  msg.is_session_end = this->is_session_end;
+  msg.is_session_start = is_session_start;
+  msg.is_session_end = is_session_end;
 
   msg.session.sampling_frequency = this->sampling_frequency;
   msg.session.num_eeg_channels = this->num_eeg_channels;
@@ -645,24 +645,27 @@ bool EegSimulator::publish_until(double_t until_time) {
       this->is_session_end = true;
     }
 
-    // Publish this sample
-    bool success = publish_single_sample(this->current_index);
+    // Capture session flag values at a single point in time to avoid race conditions.
+    bool is_session_start = this->is_session_start;
+    bool is_session_end = this->is_session_end;
+
+    // Publish this sample with the captured flag values
+    bool success = publish_single_sample(this->current_index, is_session_start, is_session_end);
     if (!success) {
       RCLCPP_ERROR(this->get_logger(), "Failed to publish sample at index %zu", current_index);
       break;
     }
 
-    // Clear the session start marker after publishing.
-    this->is_session_start = false;
-
-    // If session end was requested, stop streaming.
-    if (this->is_session_end) {
-      this->is_session_end = false;
+    // If we just published a sample ending the session, stop streaming
+    if (is_session_end) {
+      this->is_session_end = false;  // Reset the flag since we've handled it
       this->streamer_state = system_interfaces::msg::StreamerState::READY;
       publish_streamer_state();
       return true;
     }
 
+    // Clear the session start marker after publishing.
+    this->is_session_start = false;
 
     // Move to next sample
     this->current_index = (this->current_index + 1) % dataset_buffer.size();

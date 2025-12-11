@@ -374,9 +374,36 @@ void EegDecider::process_ready_deferred_requests(double_t current_sample_time) {
   }
 }
 
+bool EegDecider::is_sample_window_valid() const {
+  /* Check that all samples in the current buffer window are valid for processing.
+     A window is invalid if:
+     1. The buffer is not yet full (not enough samples)
+     2. Any sample in the window is paused
+     3. Any sample in the window is in a rest period
+     4. Any sample in the window is marked as invalid by the preprocessor */
+
+  if (!this->sample_buffer.is_full()) {
+    return false;
+  }
+
+  bool has_invalid_sample = false;
+  this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<eeg_interfaces::msg::Sample>& sample) {
+    if (sample->paused || sample->in_rest || !sample->valid) {
+      has_invalid_sample = true;
+    }
+  });
+
+  return !has_invalid_sample;
+}
+
 void EegDecider::process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time) {
+  /* Validate that the current sample window is suitable for processing. */
+  if (!is_sample_window_valid()) {
+    return;
+  }
+
   auto start_time = std::chrono::high_resolution_clock::now();
-  
+
   double_t sample_time = request.triggering_sample->time;
 
   /* Process the sample. */
@@ -384,7 +411,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
-    request.pulse_delivered,
+    request.triggering_sample->pulse_delivered,
     request.has_event,
     request.event_type,
     this->event_queue,
@@ -482,6 +509,33 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
     this->coil_target_publisher->publish(coil_target_msg);
   }
+}
+
+void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, bool has_event, const std::string& event_type) {
+  /* Create a deferred processing request. */
+  DeferredProcessingRequest request;
+  request.triggering_sample = msg;
+  request.has_event = has_event;
+  request.event_type = event_type;
+
+  /* Calculate the number of look-ahead samples needed.
+     The look-ahead depends on what's being processed:
+       - Events with custom sample windows: use event-specific look-ahead
+       - EEG triggers and periodic processing: use default look-ahead */
+  int look_ahead_samples;
+  if (has_event) {
+    look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_event(event_type);
+  } else {
+    look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
+  }
+
+  /* Calculate the time when we'll have enough look-ahead samples.
+     If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
+     Each sample takes sampling_period time. */
+  request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
+
+  /* Add to deferred processing queue. */
+  this->deferred_processing_queue.push(request);
 }
 
 /* Service clients */
@@ -594,15 +648,10 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   bool periodic_processing_triggered = false;
   if (this->decider_wrapper->is_processing_interval_enabled()) {
     if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE_S) {
-      /* Move to next processing time and mark that periodic processing should occur (if buffer is full and not in lockout). */
+      /* Move to next processing time and mark that periodic processing should occur. */
       this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
       periodic_processing_triggered = true;
     }
-  }
-
-  /* Only proceed with actual processing if the buffer is full. This removes the inconvenience of handling partial buffers on the Python side. */
-  if (!this->sample_buffer.is_full()) {
-    return;
   }
 
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
@@ -626,8 +675,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   /* If the sample includes an EEG trigger, always trigger a Python call
      (irrespective of the lockout period). The Python-side handler can return None if it
      doesn't care about the trigger. */
-  bool pulse_delivered = msg->pulse_delivered;
-  if (pulse_delivered) {
+  if (msg->pulse_delivered) {
     should_trigger_python_call = true;
   }
 
@@ -646,44 +694,8 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     return;
   }
 
-  /* Defer processing based on the number of look-ahead samples.
-  
-     Calculate when processing should actually occur based on the look-ahead window. 
-     For a sample window like [-0.010, 0.005], we need 5 ms (converted to samples)
-     of look-ahead after the triggering sample before we can process it.
-      
-     The look-ahead depends on what's being processed:
-       - Events with custom sample windows: use event-specific look-ahead
-       - EEG triggers and periodic processing: use default look-ahead */
-  int look_ahead_samples;
-  if (has_event) {
-    look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_event(event_type);
-  } else {
-    look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
-  }
-  
-  /* Create a deferred processing request. */
-  DeferredProcessingRequest request;
-  request.triggering_sample = msg;
-  request.pulse_delivered = pulse_delivered;
-  request.has_event = has_event;
-  request.event_type = event_type;
-  
-  /* Calculate the time when we'll have enough look-ahead samples.
-      If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
-      Each sample takes sampling_period time. */
-  if (look_ahead_samples > 0) {
-    request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
-    RCLCPP_DEBUG(this->get_logger(), 
-                  "Deferring processing for sample at %.4f (s) until %.4f (s) (look-ahead: %d samples)",
-                  sample_time, request.scheduled_time, look_ahead_samples);
-  } else {
-    /* If look-ahead is 0 or negative, no look-ahead is needed, process at this sample time. */
-    request.scheduled_time = sample_time;
-  }
-  
-  /* Add to deferred processing queue. */
-  this->deferred_processing_queue.push(request);
+  /* Enqueue a deferred processing request. */
+  enqueue_deferred_request(msg, sample_time, has_event, event_type);
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);

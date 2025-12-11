@@ -64,18 +64,7 @@ ExperimentCoordinator::ExperimentCoordinator()
   module_config.enabled_topic = "/experiment/coordinator/enabled";
   
   this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
-  
-  /* Set callback to load protocol when module manager changes the selection. */
-  this->module_manager->set_module_list_change_callback([this]() {
-    /* When module list changes, check if we should load a protocol */
-    if (!this->module_manager->get_module_name().empty()) {
-      std::string protocol_name = this->module_manager->get_module_name();
-      if (protocol_name != this->protocol_name) {
-        this->load_protocol(protocol_name);
-      }
-    }
-  });
-  
+
   /* Clients for stopping EEG simulator or bridge when protocol completes. */
   this->stop_simulator_client = this->create_client<std_srvs::srv::Trigger>(
     "/eeg_simulator/stop");
@@ -101,23 +90,17 @@ ExperimentCoordinator::ExperimentCoordinator()
 void ExperimentCoordinator::publish_healthcheck() {
   auto healthcheck = system_interfaces::msg::Healthcheck();
   
-  switch (this->coordinator_state) {
-    case CoordinatorState::WAITING_FOR_PROTOCOL:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::NOT_READY;
-      healthcheck.status_message = "No protocol loaded";
-      healthcheck.actionable_message = "Please select a protocol.";
+  switch (this->error_occurred) {
+    case true:
+      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
+      healthcheck.status_message = "Error occurred";
+      healthcheck.actionable_message = "An error occurred. Please check logs.";
       break;
-    
-    case CoordinatorState::READY:
+
+    case false:
       healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
       healthcheck.status_message = "Ready";
       healthcheck.actionable_message = "Ready";
-      break;
-    
-    case CoordinatorState::PROTOCOL_ERROR:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Protocol error";
-      healthcheck.actionable_message = "Protocol has an error. Please check logs.";
       break;
   }
   
@@ -128,21 +111,28 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
   /* Handle session start marker from EEG bridge/simulator. */
   if (msg->is_session_start) {
     RCLCPP_INFO(this->get_logger(), "Session started, resetting experiment state");
-    reset_experiment_state();
-    state.session_started = true;
+    this->error_occurred = false;
     this->is_simulation = msg->session.is_simulation;
+
+    /* Load protocol. */
+    std::string protocol_name = this->module_manager->get_module_name();
+    this->load_protocol(protocol_name);
+
+    /* Reset experiment state. */
+    reset_experiment_state();
+
+    /* Mark session as ongoing after resetting state (which would set it to false). */
+    state.is_session_ongoing = true;
+
     publish_experiment_state(0.0);
   }
 
-  /* Only process samples during an active session. */
-  if (!state.session_started) {
-    return;
-  }
-
-  if (!this->protocol.has_value()) {
-    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-      "No protocol loaded, passing through sample without enrichment");
-    this->enriched_eeg_publisher->publish(*msg);
+  if (this->error_occurred) {
+    RCLCPP_INFO_THROTTLE(this->get_logger(),
+                      *this->get_clock(),
+                      1000,
+                      "An error occurred in experiment coordinator module, not processing EEG sample at time %.3f (s).",
+                      msg->time);
     return;
   }
 
@@ -180,7 +170,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
   /* Handle session end marker from EEG bridge/simulator (after publishing enriched sample). */
   if (msg->is_session_end) {
     RCLCPP_INFO(this->get_logger(), "Session stopped");
-    state.session_started = false;
+    state.is_session_ongoing = false;
     publish_experiment_state(state.last_sample_time);
   }
 }
@@ -188,7 +178,8 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
 void ExperimentCoordinator::handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg) {
   (void)msg;  // Unused
   
-  if (!this->protocol.has_value() || !state.session_started) {
+  if (!state.is_session_ongoing) {
+    RCLCPP_WARN(this->get_logger(), "Session not ongoing, ignoring pulse event");
     return;
   }
   
@@ -389,7 +380,7 @@ void ExperimentCoordinator::reset_experiment_state() {
   state = ExperimentState();
   
   if (protocol.has_value() && !protocol->elements.empty()) {
-    /* Start with first element at time 0.0 (will be updated when first sample arrives). */
+    /* Start with first element at time 0.0. */
     const auto& first_element = protocol->elements[0];
     double initial_time = 0.0;
     
@@ -406,11 +397,6 @@ void ExperimentCoordinator::reset_experiment_state() {
 /* Protocol management */
 
 bool ExperimentCoordinator::load_protocol(const std::string& protocol_name) {
-  if (!this->module_manager->is_working_directory_set() || protocol_name.empty()) {
-    RCLCPP_WARN(this->get_logger(), "Cannot load protocol: working directory not set or protocol name empty");
-    return false;
-  }
-  
   std::string filepath = this->module_manager->get_working_directory() + "/" + protocol_name + ".yaml";
   
   RCLCPP_INFO(this->get_logger(), "Loading protocol from: %s", filepath.c_str());
@@ -420,14 +406,12 @@ bool ExperimentCoordinator::load_protocol(const std::string& protocol_name) {
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s", 
       result.error_message.c_str());
-    this->coordinator_state = CoordinatorState::PROTOCOL_ERROR;
-    this->protocol_name = "";
+    this->error_occurred = true;
     return false;
   }
   
   this->protocol = result.protocol;
   this->protocol_name = protocol_name;
-  this->coordinator_state = CoordinatorState::READY;
   
   RCLCPP_INFO(this->get_logger(), "Protocol loaded successfully: %s", protocol_name.c_str());
   
@@ -478,7 +462,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   pipeline_interfaces::msg::ExperimentState msg;
   
   const bool has_protocol = protocol.has_value();
-  const bool ongoing = state.session_started && !state.protocol_complete;
+  const bool ongoing = state.is_session_ongoing && !state.protocol_complete;
   const auto experiment_time = get_experiment_time(current_time);
   
   msg.ongoing = ongoing;

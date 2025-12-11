@@ -9,7 +9,6 @@ namespace py = pybind11;
 
 PresenterWrapper::PresenterWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
-  _is_initialized = false;
 
   /* Initialize the Python interpreter. */
   interpreter = std::make_unique<py::scoped_interpreter>();
@@ -43,7 +42,7 @@ builtins.print_throttle = print_throttle
     )", py::globals());
 }
 
-void PresenterWrapper::initialize_module(
+bool PresenterWrapper::initialize_module(
     const std::string& directory,
     const std::string& module_name) {
 
@@ -78,9 +77,7 @@ void PresenterWrapper::initialize_module(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    this->_is_initialized = false;
-    return;
+    return false;
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
@@ -91,16 +88,13 @@ void PresenterWrapper::initialize_module(
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    this->_is_initialized = false;
-    return;
+    return false;
   }
 
   /* Check that the Python module has a get_configuration method (mandatory). */
   if (!py::hasattr(*presenter_instance, "get_configuration")) {
     RCLCPP_ERROR(*logger_ptr, "Presenter module must implement 'get_configuration' method.");
-    this->_is_initialized = false;
-    return;
+    return false;
   }
 
   /* Extract the configuration from presenter_instance. */
@@ -112,23 +106,20 @@ void PresenterWrapper::initialize_module(
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
       RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'stimulus_processors' is allowed.", key.c_str());
-      this->_is_initialized = false;
-      return;
+      return false;
     }
   }
 
   /* Check that the configuration contains a 'stimulus_processors' key. */
   if (!config.contains("stimulus_processors")) {
     RCLCPP_ERROR(*logger_ptr, "Configuration must contain 'stimulus_processors' key.");
-    this->_is_initialized = false;
-    return;
+    return false;
   }
 
   /* Check that the 'stimulus_processors' value is a dictionary. */
   if (!py::isinstance<py::dict>(config["stimulus_processors"])) {
     RCLCPP_ERROR(*logger_ptr, "stimulus_processors must be a dictionary.");
-    this->_is_initialized = false;
-    return;
+    return false;
   }
 
   /* Extract stimulus_processors. */
@@ -142,8 +133,7 @@ void PresenterWrapper::initialize_module(
     /* Verify that the processor is callable */
     if (!py::hasattr(processor, "__call__")) {
       RCLCPP_ERROR(*logger_ptr, "Stimulus processor for '%s' is not callable.", stimulus_type.c_str());
-      this->_is_initialized = false;
-      return;
+      return false;
     }
     
     this->stimulus_processors[stimulus_type] = processor;
@@ -152,25 +142,13 @@ void PresenterWrapper::initialize_module(
 
   RCLCPP_INFO(*logger_ptr, "Presenter set to: %s.", module_name.c_str());
 
-  this->_is_initialized = true;
-  this->_error_occurred = false;
+  return true;
 }
 
 void PresenterWrapper::reset_module_state() {
   presenter_module = nullptr;
   presenter_instance = nullptr;
   stimulus_processors.clear();
-
-  this->_is_initialized = false;
-  this->_error_occurred = false;
-}
-
-bool PresenterWrapper::is_initialized() const {
-  return this->_is_initialized;
-}
-
-bool PresenterWrapper::error_occurred() const {
-  return this->_error_occurred;
 }
 
 bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
@@ -188,8 +166,6 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    this->_error_occurred = true;
     return false;
   }
 
@@ -229,8 +205,6 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    this->_error_occurred = true;
     return false;
   }
   catch (const std::exception &e) {
@@ -242,8 +216,6 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
       std::lock_guard<std::mutex> lock(log_buffer_mutex);
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
-    
-    this->_error_occurred = true;
     return false;
   }
 
@@ -254,7 +226,7 @@ bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
     RCLCPP_ERROR(*logger_ptr,
       "Stimulus processor for '%s' must return a bool, got %s",
       type.c_str(), got_type.c_str());
-    this->_error_occurred = true;
+
     return false;
   }
 

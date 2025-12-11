@@ -42,8 +42,7 @@ public:
   ~EegPresenter();
 
 private:
-  void reset_sensory_stimuli();
-  void initialize_presenter_module();
+  bool initialize_presenter_module();
   void publish_python_logs(double sample_time, bool is_initialization);
   void unset_presenter_module();
 
@@ -90,7 +89,9 @@ private:
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
+  /* State variables */
   bool enabled;
+  bool error_occurred = false;
 
   std::string active_project;
 

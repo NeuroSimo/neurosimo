@@ -31,16 +31,13 @@ public:
 
   void setup_custom_print();
 
-  void initialize_module(
+  bool initialize_module(
       const std::string& directory,
       const std::string& module_name);
 
   void reset_module_state();
 
   bool process(pipeline_interfaces::msg::SensoryStimulus& msg);
-
-  bool is_initialized() const;
-  bool error_occurred() const;
 
   /* Exposed to Python, defined in cpp_bindings.cpp. */
   static void log(const std::string& message);
@@ -58,9 +55,6 @@ private:
   /* Buffer for Python logs - static to be accessible from static log functions */
   static std::vector<LogEntry> log_buffer;
   static std::mutex log_buffer_mutex;
-
-  bool _is_initialized;
-  bool _error_occurred;
 
   std::unique_ptr<py::module> presenter_module;
   std::unique_ptr<py::object> presenter_instance;

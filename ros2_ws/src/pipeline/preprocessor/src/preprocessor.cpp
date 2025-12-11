@@ -113,13 +113,6 @@ void EegPreprocessor::handle_session_end() {
 }
 
 bool EegPreprocessor::initialize_module() {
-  if (!this->module_manager->is_working_directory_set() ||
-      this->module_manager->get_module_name().empty()) {
-
-    RCLCPP_INFO(this->get_logger(), "Not initializing preprocessor module, module unset.");
-    return false;
-  }
-
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Print underlined, bolded text. */

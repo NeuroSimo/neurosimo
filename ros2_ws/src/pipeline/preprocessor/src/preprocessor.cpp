@@ -104,12 +104,21 @@ void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMet
     this->deferred_processing_queue.pop();
   }
 
+  /* Clear any stale session markers from previous session. */
+  this->pending_session_end = false;
+
   this->error_occurred = !this->initialize_module();
+
+  /* Mark that we need to carry forward the session start marker to the next published sample. */
+  this->pending_session_start = true;
 }
 
 void EegPreprocessor::handle_session_end() {
   RCLCPP_INFO(this->get_logger(), "Session stopped");
   this->is_session_ongoing = false;
+
+  /* Mark that we need to carry forward the session end marker to the next published sample. */
+  this->pending_session_end = true;
 }
 
 bool EegPreprocessor::initialize_module() {
@@ -248,6 +257,18 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
 
   /* Copy hardware trigger information. */
   preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
+
+  /* Carry forward any pending session markers. */
+  preprocessed_sample.is_session_start = this->pending_session_start;
+  preprocessed_sample.is_session_end = this->pending_session_end;
+
+  /* Clear the pending markers after carrying them forward. */
+  if (this->pending_session_start) {
+    this->pending_session_start = false;
+  }
+  if (this->pending_session_end) {
+    this->pending_session_end = false;
+  }
 
   /* Calculate preprocessing duration. */
   auto end_time = std::chrono::high_resolution_clock::now();

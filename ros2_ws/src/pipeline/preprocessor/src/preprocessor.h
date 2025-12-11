@@ -112,6 +112,10 @@ private:
 
   bool error_occurred = false;
 
+  /* Pending session markers to be carried forward to the next published sample. */
+  bool pending_session_start = false;
+  bool pending_session_end = false;
+
   SessionMetadataState session_metadata;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;

@@ -90,8 +90,8 @@ class Decider:
                             'color': 'red',
                             'size': 150,
                             'duration': 1.5,
-                            'position_x': 200,
-                            'position_y': 100
+                            'position_x': 0,
+                            'position_y': 0
                         }
                     },
                     {

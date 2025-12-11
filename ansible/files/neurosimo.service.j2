@@ -22,13 +22,13 @@ ExecStartPre=/usr/bin/xhost +local:docker
 
 # Start containers
 {% if use_gpu | bool %}
-ExecStart=docker-compose --profile gpu up
+ExecStart=docker compose --profile gpu up
 {% else %}
-ExecStart=docker-compose --profile non-gpu up
+ExecStart=docker compose --profile non-gpu up
 {% endif %}
 
 # Stop containers
-ExecStop=docker-compose -f docker-compose.yml down --remove-orphans
+ExecStop=docker compose -f docker-compose.yml down --remove-orphans
 
 Restart=always
 

@@ -6,6 +6,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "inotify_utils/inotify_watcher.h"
+#include "module_utils/module_manager.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -48,20 +49,6 @@ private:
 
   void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
-  std::string get_module_name_with_fallback(const std::string module_name);
-  bool set_presenter_module(const std::string module_name);
-
-  void handle_set_presenter_module(
-      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetModule::Response> response);
-
-  void handle_set_presenter_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
-
-  void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
-  void update_presenter_list();
-
   void update_time(double_t time);
   void handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg);
 
@@ -71,28 +58,13 @@ private:
 
   rclcpp::Subscription<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_subscriber;
 
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
-  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr presenter_list_publisher;
-
-  rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_presenter_module_service;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr presenter_module_publisher;
-
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_presenter_enabled_service;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr presenter_enabled_publisher;
-
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
+  /* Module manager for handling module selection and project changes */
+  std::unique_ptr<module_utils::ModuleManager> module_manager;
+
   /* State variables */
-  bool enabled;
   bool error_occurred = false;
-
-  std::string active_project;
-
-  std::string working_directory  = UNSET_STRING;
-  bool is_working_directory_set = false;
-  std::string module_name = UNSET_STRING;
-
-  std::vector<std::string> modules;
 
   std::priority_queue<
     std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>,
@@ -102,9 +74,6 @@ private:
 
   /* Track session state internally based on session markers from EEG samples. */
   bool session_started = false;
-
-  /* Inotify watcher */
-  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
 };
 
 #endif //EEG_PROCESSOR_PRESENTER_H

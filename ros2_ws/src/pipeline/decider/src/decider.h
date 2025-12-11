@@ -13,6 +13,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
+#include "module_utils/module_manager.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -122,23 +123,8 @@ private:
 
   void reset_decider_state();
 
-  void unset_decider_module();
-
   bool set_decider_enabled(bool enabled);
   void handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg::Bool> msg);
-
-  void handle_set_decider_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
-
-  std::string get_module_name_with_fallback(const std::string module_name);
-  bool set_decider_module(const std::string module);
-  void handle_set_decider_module(
-      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetModule::Response> response);
-
-  void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
-  void update_decider_list();
 
   void handle_pulse_delivered(const double_t pulse_delivered_time);
 
@@ -159,15 +145,7 @@ private:
 
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
-  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr decider_list_publisher;
-
-  rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_decider_module_service;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decider_module_publisher;
-
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_decider_enabled_service;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr decider_enabled_publisher;
 
   rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
 
@@ -180,7 +158,8 @@ private:
 
   rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;
 
-  bool enabled = false;
+  /* Module manager for handling module selection and project changes */
+  std::unique_ptr<module_utils::ModuleManager> module_manager;
 
   bool is_session_ongoing = false;
 
@@ -192,14 +171,6 @@ private:
 
   /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
   double_t pulse_lockout_end_time = UNSET_TIME;
-
-  std::string active_project = UNSET_STRING;
-
-  std::string working_directory  = UNSET_STRING;
-  bool is_working_directory_set = false;
-  std::string module_name = UNSET_STRING;
-
-  std::vector<std::string> modules;
 
   double_t timing_latency_threshold;
 
@@ -229,9 +200,6 @@ private:
   uint8_t status;
   std::string status_message;
   std::string actionable_message;
-
-  /* Inotify watcher */
-  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
 
   /* Event queue for storing events from the Python module. */
   std::priority_queue<std::pair<double, std::string>,

@@ -40,40 +40,21 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     qos_keep_all,
     std::bind(&EegPresenter::handle_sensory_stimulus, this, _1));
 
-  /* Subscriber for active project. */
-  auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
-        .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-        .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-
-  this->active_project_subscriber = create_subscription<std_msgs::msg::String>(
-    "/projects/active",
-    qos_persist_latest,
-    std::bind(&EegPresenter::handle_set_active_project, this, _1));
-
-  /* Publisher for listing presenters. */
-  this->presenter_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
-    "/pipeline/presenter/list",
-    qos_persist_latest);
-
-  /* Service for changing presenter module. */
-  this->set_presenter_module_service = this->create_service<project_interfaces::srv::SetModule>(
-    "/pipeline/presenter/module/set",
-    std::bind(&EegPresenter::handle_set_presenter_module, this, _1, _2));
-
-  /* Publisher for presenter module. */
-  this->presenter_module_publisher = this->create_publisher<std_msgs::msg::String>(
-    "/pipeline/presenter/module",
-    qos_persist_latest);
-
-  /* Service for enabling and disabling presenter. */
-  this->set_presenter_enabled_service = this->create_service<std_srvs::srv::SetBool>(
-    "/pipeline/presenter/enabled/set",
-    std::bind(&EegPresenter::handle_set_presenter_enabled, this, _1, _2));
-
-  /* Publisher for presenter enabled message. */
-  this->presenter_enabled_publisher = this->create_publisher<std_msgs::msg::Bool>(
-    "/pipeline/presenter/enabled",
-    qos_persist_latest);
+  /* Initialize module manager for presenter modules. */
+  module_utils::ModuleManagerConfig module_config;
+  module_config.component_name = "presenter";
+  module_config.projects_base_directory = PROJECTS_DIRECTORY;
+  module_config.module_subdirectory = "presenter";
+  module_config.file_extensions = {".py"};
+  module_config.default_module_name = DEFAULT_PRESENTER_NAME;
+  module_config.active_project_topic = "/projects/active";
+  module_config.module_list_topic = "/pipeline/presenter/list";
+  module_config.set_module_service = "/pipeline/presenter/module/set";
+  module_config.module_topic = "/pipeline/presenter/module";
+  module_config.set_enabled_service = "/pipeline/presenter/enabled/set";
+  module_config.enabled_topic = "/pipeline/presenter/enabled";
+  
+  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
 
   /* Publisher for Python logs from presenter. */
   // Logs can be sent in bursts so keep all messages in the queue.
@@ -86,12 +67,6 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
 
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
-
-  /* Initialize inotify watcher. */
-  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
-    this, this->get_logger());
-  this->inotify_watcher->set_change_callback(
-    std::bind(&EegPresenter::update_presenter_list, this));
 }
 
 void EegPresenter::publish_python_logs(double sample_time, bool is_initialization) {
@@ -128,16 +103,16 @@ void EegPresenter::publish_python_logs(double sample_time, bool is_initializatio
 
 /* Functions to re-initialize the presenter state. */
 bool EegPresenter::initialize_presenter_module() {
-  if (!this->enabled) {
+  if (!this->module_manager->is_enabled()) {
     RCLCPP_INFO(this->get_logger(), "Not initializing presenter module, module unset.");
     return false;
   }
 
-  RCLCPP_INFO(this->get_logger(), "Initializing presenter module: %s.", this->module_name.c_str());
+  RCLCPP_INFO(this->get_logger(), "Initializing presenter module: %s.", this->module_manager->get_module_name().c_str());
 
   bool success = this->presenter_wrapper->initialize_module(
-    this->working_directory,
-    this->module_name);
+    this->module_manager->get_working_directory(),
+    this->module_manager->get_module_name());
 
   /* Publish initialization logs from Python constructor */
   publish_python_logs(0.0, true);
@@ -182,108 +157,8 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   }
 }
 
-/* Listing and setting EEG presenters. */
-
-void EegPresenter::handle_set_presenter_enabled(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
-
-  /* Update local state variable. */
-  this->enabled = request->data;
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::Bool();
-  msg.data = enabled;
-
-  this->presenter_enabled_publisher->publish(msg);
-
-  RCLCPP_INFO(this->get_logger(), "%s presenter.", this->enabled ? "Enabling" : "Disabling");
-
-  response->success = true;
-  response->message = "";
-}
-
 void EegPresenter::unset_presenter_module() {
-  this->module_name = UNSET_STRING;
-
   RCLCPP_INFO(this->get_logger(), "Presenter module unset.");
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::String();
-  msg.data = this->module_name;
-
-  this->presenter_module_publisher->publish(msg);
-}
-
-std::string EegPresenter::get_module_name_with_fallback(const std::string module_name) {
-  if (std::find(this->modules.begin(), this->modules.end(), module_name) != this->modules.end()) {
-    return module_name;
-  }
-  if (std::find(this->modules.begin(), this->modules.end(), DEFAULT_PRESENTER_NAME) != this->modules.end()) {
-    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to default", module_name.c_str());
-    return DEFAULT_PRESENTER_NAME;
-  }
-  if (!this->modules.empty()) {
-    RCLCPP_WARN(this->get_logger(), "Module %s not found, setting to first module on the list: %s", module_name.c_str(), this->modules[0].c_str());
-    return this->modules[0];
-  }
-  RCLCPP_WARN(this->get_logger(), "No presenters found in project: %s%s%s.", bold_on.c_str(), this->active_project.c_str(), bold_off.c_str());
-  return UNSET_STRING;
-}
-
-bool EegPresenter::set_presenter_module(const std::string module_name) {
-  this->module_name = get_module_name_with_fallback(module_name);
-
-  if (this->module_name == UNSET_STRING) {
-    RCLCPP_ERROR(this->get_logger(), "No presenter module set.");
-    this->unset_presenter_module();
-
-    return false;
-  }
-
-  RCLCPP_INFO(this->get_logger(), "Presenter set to: %s.", this->module_name.c_str());
-
-  /* Update ROS state variable. */
-  auto msg = std_msgs::msg::String();
-  msg.data = this->module_name;
-
-  this->presenter_module_publisher->publish(msg);
-
-  return true;
-}
-
-void EegPresenter::handle_set_presenter_module(
-      const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-      std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
-
-  response->success = set_presenter_module(request->module);
-}
-
-void EegPresenter::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
-  this->active_project = msg->data;
-
-  RCLCPP_INFO(this->get_logger(), "Active project set to: %s.", this->active_project.c_str());
-
-  this->working_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/presenter";
-  this->is_working_directory_set = filesystem_utils::change_working_directory(this->working_directory, this->get_logger());
-  update_presenter_list();
-
-  if (this->is_working_directory_set) {
-    this->inotify_watcher->update_watch(this->working_directory);
-  }
-}
-
-void EegPresenter::update_presenter_list() {
-  if (this->is_working_directory_set) {
-    this->modules = filesystem_utils::list_files_with_extension(
-      this->working_directory, ".py", this->get_logger());
-  } else {
-    this->modules.clear();
-  }
-  auto msg = project_interfaces::msg::ModuleList();
-  msg.modules = this->modules;
-
-  this->presenter_list_publisher->publish(msg);
 }
 
 void EegPresenter::update_time(double_t time) {
@@ -331,7 +206,7 @@ void EegPresenter::update_time(double_t time) {
 void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg) {
   RCLCPP_INFO(this->get_logger(), "Received sensory stimulus (type: %s, time: %.3f)", msg->type.c_str(), msg->time);
 
-  if (!this->enabled) {
+  if (!this->module_manager->is_enabled()) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,

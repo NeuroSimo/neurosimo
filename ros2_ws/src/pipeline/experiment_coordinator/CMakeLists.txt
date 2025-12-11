@@ -16,6 +16,7 @@ find_package(pipeline_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(inotify_utils REQUIRED)
+find_package(filesystem_utils REQUIRED)
 
 # Experiment coordinator executable
 add_executable(
@@ -34,6 +35,7 @@ target_include_directories(experiment_coordinator
 target_link_libraries(experiment_coordinator
   yaml-cpp
   inotify_utils::inotify_watcher
+  filesystem_utils::filesystem_utils
 )
 
 ament_target_dependencies(
@@ -46,6 +48,7 @@ ament_target_dependencies(
   pipeline_interfaces
   system_interfaces
   inotify_utils
+  filesystem_utils
 )
 
 install(

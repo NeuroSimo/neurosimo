@@ -17,6 +17,8 @@
   <depend>pipeline_interfaces</depend>
   <depend>system_interfaces</depend>
   <depend>yaml-cpp</depend>
+  <depend>inotify_utils</depend>
+  <depend>filesystem_utils</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -107,10 +107,6 @@ private:
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 
-  /* File-system related functions */
-  bool change_working_directory(const std::string path);
-  std::vector<std::string> list_python_modules_in_working_directory();
-
   rclcpp::Logger logger;
 
   rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;

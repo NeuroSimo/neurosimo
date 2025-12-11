@@ -65,10 +65,6 @@ private:
   void update_time(double_t time);
   void handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg);
 
-  /* File-system related functions */
-  bool change_working_directory(const std::string path);
-  std::vector<std::string> list_python_modules_in_working_directory();
-
   rclcpp::Logger logger;
 
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;

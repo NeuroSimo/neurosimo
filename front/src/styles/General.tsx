@@ -19,7 +19,7 @@ export const Select = styled.select`
 export const CONFIG_PANEL_WIDTH = 220
 
 /* Shared dashboard panel title offset (px). */
-export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 580
+export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 220
 export const DASHBOARD_PANEL_HEIGHT = 300
 
 export const StyledPanel = styled.div<{ isGrayedOut?: boolean }>`

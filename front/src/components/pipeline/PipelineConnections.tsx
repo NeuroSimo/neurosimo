@@ -6,32 +6,31 @@ const Wrapper = styled.div`
   inset: 0;
   pointer-events: none;
 
-  .arrow {
-    width: 18px;
-    height: 5px;
+  .arrow-vertical {
+    width: 5px;
+    height: 45px;
     background: #888;
     position: absolute;
-    transform: translateY(-50%);
+    transform: translateX(-50%);
   }
 
-  .arrow:after {
+  .arrow-vertical:after {
     content: '';
     position: absolute;
-    top: 50%;
-    right: -5px;
-    transform: translateY(-50%);
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-    border-left: 6px solid #888;
+    left: 50%;
+    bottom: -5px;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #888;
   }
 `
 
 export const PipelineConnections: React.FC = () => (
   <Wrapper>
-    <div className='arrow' style={{ left: '47px', top: '68px' }} />
-    <div className='arrow' style={{ left: '252px', top: '68px' }} />
-    <div className='arrow' style={{ left: '457px', top: '68px' }} />
-    <div className='arrow' style={{ left: '453px', top: '146px', width: '27px', transform: 'rotate(45deg)' }} />
+    <div className='arrow-vertical' style={{ left: '10%', top: '59px' }} />
+    <div className='arrow-vertical' style={{ left: '10%', top: '166px' }} />
+    <div className='arrow-vertical' style={{ left: '10%', top: '274px' }} />
   </Wrapper>
 )
 

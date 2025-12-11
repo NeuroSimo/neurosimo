@@ -8,10 +8,10 @@ import { PipelineContext, LogMessage, LogLevel } from 'providers/PipelineProvide
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
 const PipelineLogPanelTitle = styled.div`
-  width: 437px;
+  width: 735px;
   position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  left: 680px;
+  top: 610px;
+  right: 27px;
   z-index: 1001;
   text-align: left;
   font-size: 12px;
@@ -78,11 +78,11 @@ const LogButton = styled.button`
 `
 
 const PipelineLogPanel = styled(StyledPanel)`
-  width: 419px;
-  height: 250px;
+  width: 733px;
+  height: 230px;
   position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 30}px;
-  left: 680px;
+  top: 650px;
+  right: 10px;
   z-index: 1000;
   padding: 9px;
   display: flex;

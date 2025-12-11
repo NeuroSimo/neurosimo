@@ -49,12 +49,12 @@ check_disk_space_and_clean
 echo "${BOLD}Building containers...${RESET}"
 
 if [ -z "$CONTAINER_NAME" ]; then
-    docker-compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build
+    docker compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build
 else
-    docker-compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build $CONTAINER_NAME
+    docker compose -f $NEUROSIMO_ROOT/docker-compose.yml --profile gpu --profile non-gpu build $CONTAINER_NAME
 fi
 
-# Check the exit status of the last command (docker-compose build).
+# Check the exit status of the last command (docker compose build).
 if [ $? -ne 0 ]; then
     echo "Build failed. Not restarting the containers."
     exit 1

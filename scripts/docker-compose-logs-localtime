@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /*
  * replace all UTC dates to local datetime with timezone offset through pipe
- * usage: docker-compose logs --timestamps container_name | docker-compose-logs-localtime
+ * usage: docker compose logs --timestamps container_name | docker-compose-logs-localtime
  *
  * Credits:
  *

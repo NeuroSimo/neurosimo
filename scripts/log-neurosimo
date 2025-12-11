@@ -16,7 +16,7 @@ TAIL_LINES="100"     # Default to the last 100 lines
 
 # Get list of running containers
 function get_running_containers() {
-    docker-compose -f "$NEUROSIMO_ROOT/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | sort
+    docker compose -f "$NEUROSIMO_ROOT/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | sort
 }
 
 # Print available containers
@@ -135,14 +135,14 @@ RESET_COLOR_CMD="sed \"s/$/${COLOR_RESET}/\" --unbuffered"
 FORMAT_CMD="$REMOVE_SUFFIX_CMD | $FORMAT_TIMESTAMP_CMD | $CLEAN_LABELS_CMD | $REMOVE_ROS_TIMESTAMPS_CMD | $PAD_MESSAGE_TYPES_CMD | $HIGHLIGHT_AFTER_THIRD_COLON_CMD | $ADD_DEFAULT_COLOR_CMD | $RESET_COLOR_CMD"
 
 
-# Use docker-compose logs if a container name is provided, otherwise use journalctl. This is because it is
+# Use docker compose logs if a container name is provided, otherwise use journalctl. This is because it is
 # difficult to filter the last n lines of logs outputted by a given container using journalctl.
 if [ -n "$CONTAINER_NAME" ] && [ "$TIME_FILTERS" = false ]; then
-    CMD="docker-compose -f $NEUROSIMO_ROOT/docker-compose.yml logs --timestamps --tail $TAIL_LINES"
+    CMD="docker compose -f $NEUROSIMO_ROOT/docker-compose.yml logs --timestamps --tail $TAIL_LINES"
     [ "$FOLLOW" = true ] && CMD="$CMD -f"
     CMD="$CMD $CONTAINER_NAME"
 
-    # XXX: Use a custom script to convert UTC to local time. This is a workaround for docker-compose not
+    # XXX: Use a custom script to convert UTC to local time. This is a workaround for docker compose not
     #   supporting local timezones in logs.
     CMD="$CMD | docker-compose-logs-localtime"
 

@@ -24,10 +24,6 @@ interface ModuleList extends ROSLIB.Message {
   modules: string[]
 }
 
-interface ProtocolList extends ROSLIB.Message {
-  protocols: string[]
-}
-
 export interface ExperimentState extends ROSLIB.Message {
   stage_name: string
   stage_index: number
@@ -281,14 +277,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     })
 
     /* Subscriber for available protocols. */
-    const protocolListSubscriber = new Topic<ProtocolList>({
+    const protocolListSubscriber = new Topic<ModuleList>({
       ros: ros,
       name: '/experiment/protocol/list',
-      messageType: 'project_interfaces/ProtocolList',
+      messageType: 'project_interfaces/ModuleList',
     })
 
     protocolListSubscriber.subscribe((message) => {
-      setProtocolList(message.protocols)
+      setProtocolList(message.modules)
     })
 
     /* Subscriber for active protocol. */

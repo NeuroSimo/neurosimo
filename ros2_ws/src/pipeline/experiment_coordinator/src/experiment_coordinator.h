@@ -14,8 +14,8 @@
 #include "std_srvs/srv/trigger.hpp"
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
-#include "project_interfaces/msg/protocol_list.hpp"
-#include "project_interfaces/srv/set_protocol.hpp"
+#include "project_interfaces/msg/module_list.hpp"
+#include "project_interfaces/srv/set_module.hpp"
 #include "pipeline_interfaces/msg/experiment_state.hpp"
 
 #include "protocol.h"
@@ -38,7 +38,7 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
-  rclcpp::Publisher<project_interfaces::msg::ProtocolList>::SharedPtr protocol_list_publisher;
+  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr protocol_list_publisher;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr protocol_module_publisher;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_simulator_client;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_bridge_client;
@@ -46,7 +46,7 @@ private:
   // Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_service;
-  rclcpp::Service<project_interfaces::srv::SetProtocol>::SharedPtr set_protocol_service;
+  rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_protocol_service;
   
   // Timers
   rclcpp::TimerBase::SharedPtr healthcheck_timer;
@@ -97,8 +97,8 @@ private:
   void publish_experiment_state(double current_time);
     
   void handle_set_protocol(
-    const std::shared_ptr<project_interfaces::srv::SetProtocol::Request> request,
-    std::shared_ptr<project_interfaces::srv::SetProtocol::Response> response);
+    const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
+    std::shared_ptr<project_interfaces::srv::SetModule::Response> response);
   
   /* Protocol management */
   bool load_protocol(const std::string& protocol_name);

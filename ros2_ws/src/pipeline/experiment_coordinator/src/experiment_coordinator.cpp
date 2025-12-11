@@ -56,12 +56,12 @@ ExperimentCoordinator::ExperimentCoordinator()
     std::bind(&ExperimentCoordinator::handle_set_active_project, this, _1));
   
   /* Publisher for listing protocols. */
-  this->protocol_list_publisher = this->create_publisher<project_interfaces::msg::ProtocolList>(
+  this->protocol_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
     "/experiment/protocol/list",
     qos_persist_latest);
   
   /* Service for changing protocol. */
-  this->set_protocol_service = this->create_service<project_interfaces::srv::SetProtocol>(
+  this->set_protocol_service = this->create_service<project_interfaces::srv::SetModule>(
     "/experiment/protocol/set",
     std::bind(&ExperimentCoordinator::handle_set_protocol, this, _1, _2));
   
@@ -476,9 +476,9 @@ bool ExperimentCoordinator::set_protocol(const std::string& protocol_name) {
 }
 
 void ExperimentCoordinator::handle_set_protocol(
-    const std::shared_ptr<project_interfaces::srv::SetProtocol::Request> request,
-    std::shared_ptr<project_interfaces::srv::SetProtocol::Response> response) {
-  response->success = set_protocol(request->protocol);
+    const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
+    std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
+  response->success = set_protocol(request->module);
 }
 
 void ExperimentCoordinator::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
@@ -504,9 +504,9 @@ void ExperimentCoordinator::update_protocol_list() {
   } else {
     this->available_protocols.clear();
   }
-  
-  auto msg = project_interfaces::msg::ProtocolList();
-  msg.protocols = this->available_protocols;
+
+  auto msg = project_interfaces::msg::ModuleList();
+  msg.modules = this->available_protocols;
   
   this->protocol_list_publisher->publish(msg);
 }

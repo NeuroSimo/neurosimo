@@ -235,13 +235,6 @@ void EegDecider::log_section_header(const std::string& title) {
 }
 
 bool EegDecider::initialize_module() {
-  if (!this->module_manager->is_working_directory_set() ||
-      this->module_manager->get_module_name().empty()) {
-
-    RCLCPP_INFO(this->get_logger(), "Not initializing, decider module unset.");
-    return false;
-  }
-
   RCLCPP_INFO(this->get_logger(), "");
 
   log_section_header("Loading decider: " + this->module_manager->get_module_name());

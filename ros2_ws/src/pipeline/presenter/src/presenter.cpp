@@ -103,12 +103,9 @@ void EegPresenter::publish_python_logs(double sample_time, bool is_initializatio
 
 /* Functions to re-initialize the presenter state. */
 bool EegPresenter::initialize_presenter_module() {
-  if (!this->module_manager->is_enabled()) {
-    RCLCPP_INFO(this->get_logger(), "Not initializing presenter module, module unset.");
-    return false;
-  }
-
-  RCLCPP_INFO(this->get_logger(), "Initializing presenter module: %s.", this->module_manager->get_module_name().c_str());
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "Loading presenter: %s.", this->module_manager->get_module_name().c_str());
+  RCLCPP_INFO(this->get_logger(), "");
 
   bool success = this->presenter_wrapper->initialize_module(
     this->module_manager->get_working_directory(),
@@ -127,6 +124,11 @@ bool EegPresenter::initialize_presenter_module() {
 
 /* EEG sample handler (for session markers and time updates). */
 void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  /* Return early if the presenter is not enabled. */
+  if (!this->module_manager->is_enabled()) {
+    return;
+  }
+
   /* Handle session start marker. */
   if (msg->is_session_start) {
     RCLCPP_INFO(this->get_logger(), "Session started");

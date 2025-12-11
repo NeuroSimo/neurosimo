@@ -107,8 +107,6 @@ private:
   std::string get_protocol_name_with_fallback(const std::string protocol_name);
   
   /* Project management */
-  bool change_working_directory(const std::string& path);
-  std::vector<std::string> list_yaml_files_in_working_directory();
   void update_protocol_list();
   
   /* Experiment logic */

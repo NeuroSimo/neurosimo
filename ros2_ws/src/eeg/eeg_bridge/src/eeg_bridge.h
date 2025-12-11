@@ -82,10 +82,10 @@ private:
   void publish_eeg_info();
   void publish_streamer_state();
 
-  void handle_start_streamer(
+  void handle_start_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
-  void handle_stop_streamer(
+  void handle_stop_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
@@ -110,8 +110,8 @@ private:
   rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
 
   /* Services */
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streamer_service;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streamer_service;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streaming_service;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streaming_service;
 
   /* Streaming state */
   system_interfaces::msg::StreamerState::_state_type streamer_state = system_interfaces::msg::StreamerState::READY;

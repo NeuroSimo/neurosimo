@@ -14,7 +14,9 @@ const Container = styled(StyledPanel)`
 `
 
 export const PreprocessorNode: React.FC = () => {
-  const { preprocessorEnabled: enabled, preprocessorModule: module, preprocessorList: modules } = useContext(PipelineContext)
+  const { preprocessorEnabled: enabled, preprocessorModule: module, preprocessorList: modules, experimentState } = useContext(PipelineContext)
+
+  const isExperimentOngoing = experimentState?.ongoing ?? false
 
   const handleToggle = (next: boolean) => {
     setPreprocessorEnabledRos(next, () => {
@@ -34,11 +36,11 @@ export const PreprocessorNode: React.FC = () => {
       <SmallerTitle>Preprocessor {enabled ? '' : '(bypass)'}</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Enabled:</ConfigLabel>
-        <ToggleSwitch type='flat' checked={enabled} onChange={handleToggle} />
+        <ToggleSwitch type='flat' checked={enabled} onChange={handleToggle} disabled={isExperimentOngoing} />
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Module:</ConfigLabel>
-        <Select onChange={handleModuleChange} value={module}>
+        <Select onChange={handleModuleChange} value={module} disabled={isExperimentOngoing}>
           {modules.map((mod, index) => (
             <option key={index} value={mod}>
               {mod}

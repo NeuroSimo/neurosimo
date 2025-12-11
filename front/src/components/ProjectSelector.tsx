@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { ProjectRow, Select, StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { listProjects, setActiveProject } from 'ros/project'
 import { ProjectContext } from 'providers/ProjectProvider'
+import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -20,11 +21,14 @@ const Label = styled.label`
 
 export const ProjectSelector: React.FC = () => {
   const { activeProject } = useContext(ProjectContext)
+  const { experimentState } = useContext(PipelineContext)
   const [projects, setProjects] = useState<string[]>([])
 
   useEffect(() => {
     listProjects(setProjects)
   }, [])
+
+  const isExperimentOngoing = experimentState?.ongoing ?? false
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newActiveProject = event.target.value
@@ -38,7 +42,7 @@ export const ProjectSelector: React.FC = () => {
       <SmallerTitle>Project</SmallerTitle>
       <ProjectRow>
         <Label>Project:</Label>
-        <Select onChange={handleChange} value={activeProject}>
+        <Select onChange={handleChange} value={activeProject} disabled={isExperimentOngoing}>
           {projects.map((project, index) => (
             <option key={index} value={project}>
               {project}

@@ -1,24 +1,18 @@
 ---
-- name: Install Docker and Docker Compose
+- name: Install Docker Engine and Docker Compose Plugin on Ubuntu 22.04
   hosts: all
+  become: yes
   connection: local
-  become: yes # Ensure all tasks run with sudo privileges
+
   vars:
-    docker_gpg_key_url: "https://download.docker.com/linux/ubuntu/gpg"
-    docker_repo: "https://download.docker.com/linux/ubuntu"
-    docker_repo_file: "/etc/apt/sources.list.d/docker.list"
-    docker_keyring: "/usr/share/keyrings/docker-archive-keyring.gpg"
-    docker_compose_version: "v2.5.0"
-    docker_compose_binary: "/usr/local/bin/docker-compose"
-    target_user: "{{ lookup('env', 'USER') }}" # Use current user's name
+    docker_keyring_path: /etc/apt/keyrings/docker.gpg
+    docker_repo_url: https://download.docker.com/linux/ubuntu
+    target_user: "{{ lookup('env', 'USER') }}"
+    enable_docker_compose_legacy_alias: true
 
   tasks:
-    - name: Update APT package cache
-      apt:
-        update_cache: yes
-      tags: update_cache
 
-    - name: Install required packages
+    - name: Ensure dependencies are installed
       apt:
         name:
           - ca-certificates
@@ -27,79 +21,56 @@
           - lsb-release
         state: present
         update_cache: yes
-      tags: install_dependencies
 
-    - name: Create directory for Docker keyring if it doesn't exist
+    - name: Create directory for APT keyrings
       file:
-        path: "{{ docker_keyring | dirname }}"
+        path: /etc/apt/keyrings
         state: directory
-        mode: "0755"
-      tags: setup_keyring
+        mode: '0755'
 
     - name: Download Docker GPG key
       get_url:
-        url: "{{ docker_gpg_key_url }}"
-        dest: "/tmp/docker.gpg"
-        mode: "0644"
-      tags: add_gpg_key
+        url: "{{ docker_repo_url }}/gpg"
+        dest: /etc/apt/keyrings/docker.gpg
+        mode: '0644'
 
-    - name: Convert Docker GPG key to keyring format
-      command: "gpg --dearmor -o {{ docker_keyring }} /tmp/docker.gpg"
-      args:
-        creates: "{{ docker_keyring }}"
-      tags: convert_gpg_key
-
-    - name: Remove temporary GPG key file
-      file:
-        path: "/tmp/docker.gpg"
-        state: absent
-      tags: cleanup
-
-    - name: Add Docker apt repository
+    - name: Add Docker APT repository
       apt_repository:
-        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
-        filename: "docker"
+        repo: >
+          deb [arch=amd64 signed-by={{ docker_keyring_path }}]
+          {{ docker_repo_url }} {{ ansible_lsb.codename }} stable
+        filename: docker
         state: present
 
-    - name: Update apt cache after adding Docker repository
+    - name: Update APT cache after adding Docker repo
       apt:
         update_cache: yes
-      tags: update_cache_after_repo
 
-    - name: Install Docker packages
+    - name: Install Docker Engine and Compose plugin
       apt:
         name:
           - docker-ce
           - docker-ce-cli
           - containerd.io
+          - docker-buildx-plugin
           - docker-compose-plugin
         state: present
-        update_cache: no
-      tags: install_docker
 
-    - name: Install Docker Compose binary
-      get_url:
-        url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-{{ ansible_architecture }}"
-        dest: "{{ docker_compose_binary }}"
-        mode: "0755"
-
-    - name: Ensure Docker Compose is executable
+    - name: Optionally install docker-compose legacy alias
+      when: enable_docker_compose_legacy_alias
       file:
-        path: "{{ docker_compose_binary }}"
-        mode: "0755"
-        state: file
-      tags: set_permissions
+        src: /usr/bin/docker
+        dest: /usr/local/bin/docker-compose
+        state: link
 
     - name: Add user to docker group
       user:
         name: "{{ target_user }}"
         groups: docker
         append: yes
-      tags: add_user_to_docker
 
     - name: Ensure Docker service is enabled and started
       service:
         name: docker
         enabled: yes
         state: started
-      tags: manage_service

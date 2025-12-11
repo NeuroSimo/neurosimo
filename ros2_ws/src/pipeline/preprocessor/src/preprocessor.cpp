@@ -209,12 +209,38 @@ void EegPreprocessor::process_ready_deferred_requests(double_t current_sample_ti
   }
 }
 
+bool EegPreprocessor::is_sample_window_valid() const {
+  /* Check that all samples in the current buffer window are valid for processing.
+     A window is invalid if:
+     1. The buffer is not yet full (not enough samples)
+     2. Any sample in the window is paused
+     3. Any sample in the window is in a rest period */
+
+  if (!this->sample_buffer.is_full()) {
+    return false;
+  }
+
+  bool has_invalid_sample = false;
+  this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<eeg_interfaces::msg::Sample>& sample) {
+    if (sample->paused || sample->in_rest) {
+      has_invalid_sample = true;
+    }
+  });
+
+  return !has_invalid_sample;
+}
+
 void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time) {
+  /* Validate that the current sample window is suitable for processing. */
+  if (!is_sample_window_valid()) {
+    return;
+  }
+
   auto start_time = std::chrono::high_resolution_clock::now();
 
   auto triggering_sample = request.triggering_sample;
   double_t sample_time = triggering_sample->time;
-  
+
   /* Process the sample. */
   bool success = this->preprocessor_wrapper->process(
     preprocessed_sample,
@@ -263,6 +289,27 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   preprocessed_eeg_publisher->publish(preprocessed_sample);
 }
 
+void EegPreprocessor::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time) {
+  /* For every sample, create a deferred processing request. */
+  int look_ahead_samples = this->preprocessor_wrapper->get_look_ahead_samples();
+
+  DeferredProcessingRequest request;
+  request.triggering_sample = msg;
+
+  /* Calculate the time when we'll have enough look-ahead samples.
+     If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
+     Each sample takes sampling period time. */
+  if (look_ahead_samples > 0) {
+    request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
+  } else {
+    /* If look-ahead is 0 or negative, no look-ahead is needed, process immediately. */
+    request.scheduled_time = sample_time;
+  }
+
+  /* Add to deferred processing queue. */
+  this->deferred_processing_queue.push(request);
+}
+
 void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   /* Return early if preprocessor module is not enabled. */
   if (!this->module_manager->is_enabled()) {
@@ -303,34 +350,11 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   this->sample_buffer.append(msg);
 
-  if (!this->sample_buffer.is_full()) {
-    return;
-  }
+  /* For every sample, create and enqueue a deferred processing request. */
+  enqueue_deferred_request(msg, sample_time);
 
-  /* Process any deferred requests that are now ready (= have enough look-ahead samples). */
-  process_ready_deferred_requests(sample_time);
-
-  /* For every sample, create a deferred processing request.
-     Calculate when processing should actually occur based on the look-ahead window. */
-  int look_ahead_samples = this->preprocessor_wrapper->get_look_ahead_samples();
-  
-  DeferredProcessingRequest request;
-  request.triggering_sample = msg;
-  
-  /* Calculate the time when we'll have enough look-ahead samples.
-     If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
-     Each sample takes sampling period time. */
-  if (look_ahead_samples > 0) {
-    request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
-  } else {
-    /* If look-ahead is 0 or negative, no look-ahead is needed, process immediately. */
-    request.scheduled_time = sample_time;
-  }
-  
-  /* Add to deferred processing queue. */
-  this->deferred_processing_queue.push(request);
-
-  /* Check requests once more so that a new request that was just added can be processed immediately if needed. */
+  /* Process any deferred requests that are now ready (= have enough look-ahead samples),
+     including the one that was just added. */
   process_ready_deferred_requests(sample_time);
 
   /* Handle session end marker from upstream (after processing the sample)

@@ -265,6 +265,11 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
 }
 
 void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  /* Return early if preprocessor module is not enabled. */
+  if (!this->module_manager->is_enabled()) {
+    return;
+  }
+
   auto start_time = std::chrono::high_resolution_clock::now();
 
   double_t sample_time = msg->time;

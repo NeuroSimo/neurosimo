@@ -20,6 +20,7 @@ find_package(project_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
 find_package(inotify_utils REQUIRED)
+find_package(filesystem_utils REQUIRED)
 
 add_executable(
         presenter
@@ -36,6 +37,7 @@ target_include_directories(presenter
 target_link_libraries(presenter
         realtime_utils::utils
         inotify_utils::inotify_watcher
+        filesystem_utils::filesystem_utils
 )
 
 ament_target_dependencies(
@@ -50,6 +52,7 @@ ament_target_dependencies(
   system_interfaces
   realtime_utils
   inotify_utils
+  filesystem_utils
 )
 
 install(TARGETS

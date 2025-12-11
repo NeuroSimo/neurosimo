@@ -1,4 +1,5 @@
 #include "experiment_coordinator.h"
+#include "filesystem_utils/filesystem_utils.h"
 #include <chrono>
 #include <algorithm>
 
@@ -485,8 +486,9 @@ void ExperimentCoordinator::handle_set_active_project(const std::shared_ptr<std_
   
   RCLCPP_INFO(this->get_logger(), "Project set to: %s", this->active_project.c_str());
   
-  this->is_working_directory_set = change_working_directory(
-    PROJECTS_DIRECTORY + "/" + this->active_project + "/protocols");
+  this->working_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/protocols";
+  this->is_working_directory_set = filesystem_utils::change_working_directory(
+    this->working_directory, this->get_logger());
   
   update_protocol_list();
   
@@ -495,78 +497,10 @@ void ExperimentCoordinator::handle_set_active_project(const std::shared_ptr<std_
   }
 }
 
-/* File-system related functions */
-
-bool ExperimentCoordinator::change_working_directory(const std::string& path) {
-  this->working_directory = path;
-  
-  std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) || 
-      !std::filesystem::is_directory(this->working_directory, ec)) {
-    RCLCPP_ERROR(this->get_logger(), "Directory does not exist: %s", path.c_str());
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
-    }
-    return false;
-  }
-  
-  if (std::filesystem::is_symlink(this->working_directory, ec)) {
-    auto resolved_path = std::filesystem::canonical(this->working_directory, ec);
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to resolve symlink %s: %s", 
-        path.c_str(), ec.message().c_str());
-      return false;
-    }
-    RCLCPP_INFO(this->get_logger(), "Resolved symlink %s to %s", 
-      path.c_str(), resolved_path.c_str());
-    
-    if (!std::filesystem::is_directory(resolved_path, ec)) {
-      RCLCPP_ERROR(this->get_logger(), "Symlink target is not a directory: %s -> %s",
-        path.c_str(), resolved_path.c_str());
-      return false;
-    }
-  }
-  
-  if (chdir(this->working_directory.c_str()) != 0) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s", 
-      this->working_directory.c_str());
-    return false;
-  }
-  
-  return true;
-}
-
-std::vector<std::string> ExperimentCoordinator::list_yaml_files_in_working_directory() {
-  std::vector<std::string> files;
-  
-  std::error_code ec;
-  try {
-    for (const auto& entry : std::filesystem::directory_iterator(this->working_directory, ec)) {
-      if (ec) {
-        RCLCPP_WARN(this->get_logger(), "Error accessing directory %s: %s",
-          this->working_directory.c_str(), ec.message().c_str());
-        return files;
-      }
-      
-      std::error_code entry_ec;
-      if (entry.is_regular_file(entry_ec) && !entry_ec && 
-          (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml")) {
-        files.push_back(entry.path().stem().string());
-      }
-    }
-  } catch (const std::filesystem::filesystem_error& e) {
-    RCLCPP_WARN(this->get_logger(), "Filesystem error while listing protocols in %s: %s",
-      this->working_directory.c_str(), e.what());
-    return files;
-  }
-  
-  std::sort(files.begin(), files.end());
-  return files;
-}
-
 void ExperimentCoordinator::update_protocol_list() {
   if (this->is_working_directory_set) {
-    this->available_protocols = this->list_yaml_files_in_working_directory();
+    this->available_protocols = filesystem_utils::list_files_with_extensions(
+      this->working_directory, {".yaml", ".yml"}, this->get_logger());
   } else {
     this->available_protocols.clear();
   }

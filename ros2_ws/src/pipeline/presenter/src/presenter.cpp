@@ -5,6 +5,7 @@
 #include "presenter.h"
 
 #include "realtime_utils/utils.h"
+#include "filesystem_utils/filesystem_utils.h"
 
 #include "std_msgs/msg/string.hpp"
 
@@ -263,7 +264,8 @@ void EegPresenter::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 
   RCLCPP_INFO(this->get_logger(), "Active project set to: %s.", this->active_project.c_str());
 
-  this->is_working_directory_set = change_working_directory(PROJECTS_DIRECTORY + "/" + this->active_project + "/presenter");
+  this->working_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/presenter";
+  this->is_working_directory_set = filesystem_utils::change_working_directory(this->working_directory, this->get_logger());
   update_presenter_list();
 
   if (this->is_working_directory_set) {
@@ -271,77 +273,10 @@ void EegPresenter::handle_set_active_project(const std::shared_ptr<std_msgs::msg
   }
 }
 
-/* File-system related functions */
-
-bool EegPresenter::change_working_directory(const std::string path) {
-  this->working_directory = path;
-
-  /* Check that the directory exists and follow symlinks. */
-  std::error_code ec;
-  if (!std::filesystem::exists(this->working_directory, ec) || 
-      !std::filesystem::is_directory(this->working_directory, ec)) {
-    RCLCPP_ERROR(this->get_logger(), "Directory does not exist: %s.", path.c_str());
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Filesystem error: %s", ec.message().c_str());
-    }
-    return false;
-  }
-
-  /* If it's a symlink, resolve it and check the target. */
-  if (std::filesystem::is_symlink(this->working_directory, ec)) {
-    auto resolved_path = std::filesystem::canonical(this->working_directory, ec);
-    if (ec) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to resolve symlink %s: %s", path.c_str(), ec.message().c_str());
-      return false;
-    }
-    RCLCPP_INFO(this->get_logger(), "Resolved symlink %s to %s", path.c_str(), resolved_path.c_str());
-    
-    if (!std::filesystem::is_directory(resolved_path, ec)) {
-      RCLCPP_ERROR(this->get_logger(), "Symlink target is not a directory: %s -> %s", path.c_str(), resolved_path.c_str());
-      return false;
-    }
-  }
-
-  /* Change the working directory to the project directory. */
-  if (chdir(this->working_directory.c_str()) != 0) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s.", this->working_directory.c_str());
-    return false;
-  }
-
-  return true;
-}
-
-std::vector<std::string> EegPresenter::list_python_modules_in_working_directory() {
-  std::vector<std::string> modules;
-
-  /* List all .py files in the working directory. */
-  std::error_code ec;
-  try {
-    for (const auto &entry : std::filesystem::directory_iterator(this->working_directory, ec)) {
-      if (ec) {
-        RCLCPP_WARN(this->get_logger(), "Error accessing directory %s: %s", this->working_directory.c_str(), ec.message().c_str());
-        return modules;  // Return empty vector
-      }
-      
-      std::error_code entry_ec;
-      if (entry.is_regular_file(entry_ec) && !entry_ec && entry.path().extension() == ".py") {
-        modules.push_back(entry.path().stem().string());
-      }
-    }
-  } catch (const std::filesystem::filesystem_error& e) {
-    RCLCPP_WARN(this->get_logger(), "Filesystem error while listing modules in %s: %s", this->working_directory.c_str(), e.what());
-    return modules;  // Return whatever we managed to collect
-  }
-
-  /* Sort modules */
-  std::sort(modules.begin(), modules.end());
-
-  return modules;
-}
-
 void EegPresenter::update_presenter_list() {
   if (this->is_working_directory_set) {
-    this->modules = this->list_python_modules_in_working_directory();
+    this->modules = filesystem_utils::list_files_with_extension(
+      this->working_directory, ".py", this->get_logger());
   } else {
     this->modules.clear();
   }

@@ -1,33 +1,20 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>decider</name>
+  <name>module_utils</name>
   <version>0.1.0</version>
-  <description>Decider</description>
+  <description>Module management utilities for pipeline components in ROS2 nodes.</description>
   <maintainer email="okahilak@gmail.com">Olli-Pekka Kahilakoski</maintainer>
   <license>GPL-3.0-only</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
-  <depend>rcpputils</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
-
-  <depend>eeg_interfaces</depend>
-  <depend>pipeline_interfaces</depend>
   <depend>project_interfaces</depend>
-  <depend>system_interfaces</depend>
-  <depend>realtime_utils</depend>
-  <depend>inotify_utils</depend>
   <depend>filesystem_utils</depend>
-  <depend>module_utils</depend>
-
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
-
-  <depend>action_msgs</depend>
-
-  <member_of_group>rosidl_interface_packages</member_of_group>
+  <depend>inotify_utils</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
@@ -36,3 +23,4 @@
     <build_type>ament_cmake</build_type>
   </export>
 </package>
+

@@ -49,26 +49,32 @@ ExperimentCoordinator::ExperimentCoordinator()
     100,
     std::bind(&ExperimentCoordinator::handle_pulse_event, this, _1));
   
-  /* Subscriber for active project. */
-  this->active_project_subscriber = this->create_subscription<std_msgs::msg::String>(
-    "/projects/active",
-    qos_persist_latest,
-    std::bind(&ExperimentCoordinator::handle_set_active_project, this, _1));
+  /* Initialize module manager for protocol management. */
+  module_utils::ModuleManagerConfig module_config;
+  module_config.component_name = "experiment_coordinator";
+  module_config.projects_base_directory = PROJECTS_DIRECTORY;
+  module_config.module_subdirectory = "protocols";
+  module_config.file_extensions = {".yaml", ".yml"};
+  module_config.default_module_name = DEFAULT_PROTOCOL_NAME;
+  module_config.active_project_topic = "/projects/active";
+  module_config.module_list_topic = "/experiment/protocol/list";
+  module_config.set_module_service = "/experiment/protocol/set";
+  module_config.module_topic = "/experiment/protocol";
+  module_config.set_enabled_service = "/experiment/coordinator/enabled/set";
+  module_config.enabled_topic = "/experiment/coordinator/enabled";
   
-  /* Publisher for listing protocols. */
-  this->protocol_list_publisher = this->create_publisher<project_interfaces::msg::ModuleList>(
-    "/experiment/protocol/list",
-    qos_persist_latest);
+  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
   
-  /* Service for changing protocol. */
-  this->set_protocol_service = this->create_service<project_interfaces::srv::SetModule>(
-    "/experiment/protocol/set",
-    std::bind(&ExperimentCoordinator::handle_set_protocol, this, _1, _2));
-  
-  /* Publisher for protocol module. */
-  this->protocol_module_publisher = this->create_publisher<std_msgs::msg::String>(
-    "/experiment/protocol",
-    qos_persist_latest);
+  /* Set callback to load protocol when module manager changes the selection. */
+  this->module_manager->set_module_list_change_callback([this]() {
+    /* When module list changes, check if we should load a protocol */
+    if (!this->module_manager->get_module_name().empty()) {
+      std::string protocol_name = this->module_manager->get_module_name();
+      if (protocol_name != this->protocol_name) {
+        this->load_protocol(protocol_name);
+      }
+    }
+  });
   
   /* Clients for stopping EEG simulator or bridge when protocol completes. */
   this->stop_simulator_client = this->create_client<std_srvs::srv::Trigger>(
@@ -85,12 +91,6 @@ ExperimentCoordinator::ExperimentCoordinator()
   this->resume_service = this->create_service<std_srvs::srv::Trigger>(
     "/experiment/resume",
     std::bind(&ExperimentCoordinator::handle_resume, this, _1, _2));
-  
-  /* Initialize inotify watcher. */
-  this->inotify_watcher = std::make_unique<inotify_utils::InotifyWatcher>(
-    this, this->get_logger());
-  this->inotify_watcher->set_change_callback(
-    std::bind(&ExperimentCoordinator::update_protocol_list, this));
   
   /* Create timers. */
   this->healthcheck_timer = this->create_wall_timer(
@@ -405,36 +405,13 @@ void ExperimentCoordinator::reset_experiment_state() {
 
 /* Protocol management */
 
-std::string ExperimentCoordinator::get_protocol_name_with_fallback(const std::string protocol_name) {
-  if (std::find(this->available_protocols.begin(), this->available_protocols.end(), protocol_name) 
-      != this->available_protocols.end()) {
-    return protocol_name;
-  }
-  
-  if (!this->available_protocols.empty()) {
-    RCLCPP_WARN(this->get_logger(), "Protocol %s not found, setting to first protocol: %s",
-      protocol_name.c_str(), this->available_protocols[0].c_str());
-    return this->available_protocols[0];
-  }
-  
-  RCLCPP_WARN(this->get_logger(), "No protocols found in project: %s", this->active_project.c_str());
-  return UNSET_STRING;
-}
-
-void ExperimentCoordinator::unset_protocol() {
-  this->protocol_name = UNSET_STRING;
-  this->protocol.reset();
-  this->coordinator_state = CoordinatorState::WAITING_FOR_PROTOCOL;
-  
-  RCLCPP_INFO(this->get_logger(), "Protocol unset");
-  
-  auto msg = std_msgs::msg::String();
-  msg.data = this->protocol_name;
-  this->protocol_module_publisher->publish(msg);
-}
-
 bool ExperimentCoordinator::load_protocol(const std::string& protocol_name) {
-  std::string filepath = this->working_directory + "/" + protocol_name + ".yaml";
+  if (!this->module_manager->is_working_directory_set() || protocol_name.empty()) {
+    RCLCPP_WARN(this->get_logger(), "Cannot load protocol: working directory not set or protocol name empty");
+    return false;
+  }
+  
+  std::string filepath = this->module_manager->get_working_directory() + "/" + protocol_name + ".yaml";
   
   RCLCPP_INFO(this->get_logger(), "Loading protocol from: %s", filepath.c_str());
   
@@ -444,71 +421,17 @@ bool ExperimentCoordinator::load_protocol(const std::string& protocol_name) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s", 
       result.error_message.c_str());
     this->coordinator_state = CoordinatorState::PROTOCOL_ERROR;
+    this->protocol_name = "";
     return false;
   }
   
   this->protocol = result.protocol;
+  this->protocol_name = protocol_name;
   this->coordinator_state = CoordinatorState::READY;
   
-  return true;
-}
-
-bool ExperimentCoordinator::set_protocol(const std::string& protocol_name) {
-  this->protocol_name = get_protocol_name_with_fallback(protocol_name);
-  
-  if (this->protocol_name == UNSET_STRING) {
-    RCLCPP_ERROR(this->get_logger(), "No protocol set");
-    unset_protocol();
-    return false;
-  }
-  
-  if (!load_protocol(this->protocol_name)) {
-    return false;
-  }
-  
-  RCLCPP_INFO(this->get_logger(), "Protocol set to: %s", this->protocol_name.c_str());
-  
-  auto msg = std_msgs::msg::String();
-  msg.data = this->protocol_name;
-  this->protocol_module_publisher->publish(msg);
+  RCLCPP_INFO(this->get_logger(), "Protocol loaded successfully: %s", protocol_name.c_str());
   
   return true;
-}
-
-void ExperimentCoordinator::handle_set_protocol(
-    const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-    std::shared_ptr<project_interfaces::srv::SetModule::Response> response) {
-  response->success = set_protocol(request->module);
-}
-
-void ExperimentCoordinator::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
-  this->active_project = msg->data;
-  
-  RCLCPP_INFO(this->get_logger(), "Project set to: %s", this->active_project.c_str());
-  
-  this->working_directory = PROJECTS_DIRECTORY + "/" + this->active_project + "/protocols";
-  this->is_working_directory_set = filesystem_utils::change_working_directory(
-    this->working_directory, this->get_logger());
-  
-  update_protocol_list();
-  
-  if (this->is_working_directory_set) {
-    this->inotify_watcher->update_watch(this->working_directory);
-  }
-}
-
-void ExperimentCoordinator::update_protocol_list() {
-  if (this->is_working_directory_set) {
-    this->available_protocols = filesystem_utils::list_files_with_extensions(
-      this->working_directory, {".yaml", ".yml"}, this->get_logger());
-  } else {
-    this->available_protocols.clear();
-  }
-
-  auto msg = project_interfaces::msg::ModuleList();
-  msg.modules = this->available_protocols;
-  
-  this->protocol_list_publisher->publish(msg);
 }
 
 void ExperimentCoordinator::request_stop_session() {

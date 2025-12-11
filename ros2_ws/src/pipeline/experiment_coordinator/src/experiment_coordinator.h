@@ -8,6 +8,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "inotify_utils/inotify_watcher.h"
+#include "module_utils/module_manager.h"
 #include "eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
@@ -38,15 +39,15 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
-  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr protocol_list_publisher;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr protocol_module_publisher;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_simulator_client;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_bridge_client;
   
   // Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_service;
-  rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_protocol_service;
+  
+  /* Module manager for handling protocol selection and project changes */
+  std::unique_ptr<module_utils::ModuleManager> module_manager;
   
   // Timers
   rclcpp::TimerBase::SharedPtr healthcheck_timer;
@@ -56,15 +57,8 @@ private:
   experiment_coordinator::ExperimentState state;
   experiment_coordinator::ProtocolLoader protocol_loader;
   
-  /* Project management */
-  std::string active_project = UNSET_STRING;
-  std::string working_directory = UNSET_STRING;
+  /* Protocol name tracking (separate from module_manager since protocols need loading) */
   std::string protocol_name = UNSET_STRING;
-  std::vector<std::string> available_protocols;
-  bool is_working_directory_set = false;
-
-  /* Inotify watcher */
-  std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;
   
   /* Logger */
   rclcpp::Logger logger;
@@ -83,7 +77,6 @@ private:
   /* Callbacks */
   void handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg);
-  void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
   
   void handle_pause(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
@@ -96,18 +89,8 @@ private:
   void mark_protocol_complete();
   void publish_experiment_state(double current_time);
     
-  void handle_set_protocol(
-    const std::shared_ptr<project_interfaces::srv::SetModule::Request> request,
-    std::shared_ptr<project_interfaces::srv::SetModule::Response> response);
-  
-  /* Protocol management */
+  /* Protocol management (called when module_manager selects a protocol) */
   bool load_protocol(const std::string& protocol_name);
-  void unset_protocol();
-  bool set_protocol(const std::string& protocol_name);
-  std::string get_protocol_name_with_fallback(const std::string protocol_name);
-  
-  /* Project management */
-  void update_protocol_list();
   
   /* Experiment logic */
   void update_experiment_state(double current_time);

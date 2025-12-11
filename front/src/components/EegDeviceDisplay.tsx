@@ -59,7 +59,7 @@ export const EegDeviceDisplay: React.FC = () => {
   return (
     <EegDevicePanel isGrayedOut={!eegHealthcheckOk}>
       <SmallerTitle>EEG Device</SmallerTitle>
-      <ConfigRow style={{ justifyContent: 'flex-end', paddingRight: 12 }}>
+      <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
         <ActionButton onClick={toggleStreaming} disabled={actionDisabled}>
           {actionLabel}
         </ActionButton>

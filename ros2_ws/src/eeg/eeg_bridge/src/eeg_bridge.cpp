@@ -122,14 +122,14 @@ void EegBridge::create_publishers() {
   this->healthcheck_publisher_timer = this->create_wall_timer(
       std::chrono::milliseconds(500), [this] { publish_eeg_healthcheck(); });
 
-  /* Services for starting/stopping the streamer. */
-  this->start_streamer_service = this->create_service<std_srvs::srv::Trigger>(
+  /* Services for starting/stopping streaming. */
+  this->start_streaming_service = this->create_service<std_srvs::srv::Trigger>(
     "/eeg_bridge/start",
-    std::bind(&EegBridge::handle_start_streamer, this, std::placeholders::_1, std::placeholders::_2));
+    std::bind(&EegBridge::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
-  this->stop_streamer_service = this->create_service<std_srvs::srv::Trigger>(
+  this->stop_streaming_service = this->create_service<std_srvs::srv::Trigger>(
     "/eeg_bridge/stop",
-    std::bind(&EegBridge::handle_stop_streamer, this, std::placeholders::_1, std::placeholders::_2));
+    std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Publish initial streamer state. */
   publish_streamer_state();
@@ -156,7 +156,7 @@ void EegBridge::publish_eeg_healthcheck() {
   this->healthcheck_publisher->publish(healtcheck);
 }
 
-void EegBridge::handle_start_streamer(
+void EegBridge::handle_start_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void) request;
@@ -188,7 +188,7 @@ void EegBridge::handle_start_streamer(
   response->message = "EEG bridge streaming started.";
 }
 
-void EegBridge::handle_stop_streamer(
+void EegBridge::handle_stop_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void) request;
@@ -279,11 +279,15 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
     this->time_offset = sample.time;
   }
 
+  /* Capture the session start and end flags at a single point in time to avoid race conditions. */
+  bool is_session_start = this->is_session_start;
+  bool is_session_end = this->is_session_end;
+
   sample.time -= this->time_offset;
 
   /* Set session start/end flags. */
-  sample.is_session_start = this->is_session_start;
-  sample.is_session_end = this->is_session_end;
+  sample.is_session_start = is_session_start;
+  sample.is_session_end = is_session_end;
 
   /* Set the streaming sample index. */
   sample.sample_index = this->session_sample_index;
@@ -297,10 +301,10 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   /* Clear the session start marker after publishing. */
   this->is_session_start = false;
 
-  /* If session end was requested, stop streaming. */
-  if (this->is_session_end) {
+  /* If we just published a sample ending the session, stop streaming. */
+  if (is_session_end) {
     RCLCPP_INFO(this->get_logger(), "Session end sample published, stopping streaming.");
-    this->is_session_end = false;
+    this->is_session_end = false;  // Reset the flag since we've handled it
     this->streamer_state = system_interfaces::msg::StreamerState::READY;
     this->session_start_time = UNSET_TIME;
     this->session_sample_index = 0;

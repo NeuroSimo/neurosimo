@@ -63,14 +63,9 @@ private:
   /* Logger */
   rclcpp::Logger logger;
   
-  /* Healthcheck state */
-  enum class CoordinatorState {
-    WAITING_FOR_PROTOCOL,
-    READY,
-    PROTOCOL_ERROR
-  };
-  CoordinatorState coordinator_state = CoordinatorState::WAITING_FOR_PROTOCOL;
-  
+  /* State */
+  bool error_occurred = false;
+
   /* Track whether we're in simulation mode (from session metadata) */
   bool is_simulation = false;
   

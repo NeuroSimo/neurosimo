@@ -102,7 +102,7 @@ struct ExperimentState {
   
   // Flags
   bool protocol_complete = false;
-  bool session_started = false;
+  bool is_session_ongoing = false;
 };
 
 } // namespace experiment_coordinator

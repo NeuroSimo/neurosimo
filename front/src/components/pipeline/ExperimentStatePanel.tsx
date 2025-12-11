@@ -18,7 +18,7 @@ const ExperimentStateTitle = styled.div`
   width: 255px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  right: 485px;
+  right: 505px;
   z-index: 1001;
   text-align: left;
   font-size: 12px;
@@ -90,6 +90,7 @@ export const ExperimentStatePanel: React.FC = () => {
           <ConfigLabel>Stage elapsed:</ConfigLabel>
           <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
         </ConfigRow>
+        <br />
         <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
           <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing}>
             {pauseResumeLabel}

@@ -41,7 +41,7 @@ const PipelineArea = styled.div`
   grid-column: 2;
   grid-row: 1;
   align-items: flex-start;
-  padding-left: 24px;
+  padding-left: 0px;
 `
 
 export const PipelineLayout: React.FC<Props> = ({ setupPrimary, pipeline, setupTitle, pipelineTitle }) => {

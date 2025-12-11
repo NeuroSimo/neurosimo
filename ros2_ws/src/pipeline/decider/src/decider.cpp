@@ -669,25 +669,12 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     in_lockout_period = true;
   }
 
-  /* Check if the sample should trigger a Python call. */
-  bool should_trigger_python_call = false;
+  /* Check if the sample should trigger a Python call. One of the following must be true:
 
-  /* If the sample includes an EEG trigger, always trigger a Python call
-     (irrespective of the lockout period). The Python-side handler can return None if it
-     doesn't care about the trigger. */
-  if (msg->pulse_delivered) {
-    should_trigger_python_call = true;
-  }
-
-  /* If periodic processing was triggered and we're not in lockout, schedule processing. */
-  if (periodic_processing_triggered && !in_lockout_period) {
-    should_trigger_python_call = true;
-  }
-
-  /* Always trigger processing if the sample includes an event (irrespective of the lockout period). */
-  if (has_event) {
-    should_trigger_python_call = true;
-  }
+     1. Periodic processing was triggered AND we're not in the pulse lockout period
+     2. The sample includes a pulse delivered
+     3. The sample includes an event. */
+  bool should_trigger_python_call = (periodic_processing_triggered && !in_lockout_period) || msg->pulse_delivered || has_event;
 
   /* Return early if no Python call should be triggered. */
   if (!should_trigger_python_call) {

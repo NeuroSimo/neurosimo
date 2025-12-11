@@ -5,7 +5,7 @@ import { ros } from './ros'
 const setPreprocessorModuleService = new ROSLIB.Service({
   ros: ros,
   name: '/pipeline/preprocessor/module/set',
-  serviceType: 'project_interfaces/SetPreprocessorModule',
+  serviceType: 'project_interfaces/SetModule',
 })
 
 export const setPreprocessorModuleRos = (module: string, callback: () => void) => {
@@ -61,7 +61,7 @@ export const setPreprocessorEnabledRos = (enabled: boolean, callback: () => void
 const setDeciderModuleService = new ROSLIB.Service({
   ros: ros,
   name: '/pipeline/decider/module/set',
-  serviceType: 'project_interfaces/SetDeciderModule',
+  serviceType: 'project_interfaces/SetModule',
 })
 
 export const setDeciderModuleRos = (module: string, callback: () => void) => {
@@ -117,7 +117,7 @@ export const setDeciderEnabledRos = (enabled: boolean, callback: () => void) => 
 const setPresenterModuleService = new ROSLIB.Service({
   ros: ros,
   name: '/pipeline/presenter/module/set',
-  serviceType: 'project_interfaces/SetPresenterModule',
+  serviceType: 'project_interfaces/SetModule',
 })
 
 export const setPresenterModuleRos = (module: string, callback: () => void) => {

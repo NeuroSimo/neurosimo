@@ -20,16 +20,8 @@ interface DecisionInfo extends ROSLIB.Message {
   total_latency: number
 }
 
-interface PreprocessorList extends ROSLIB.Message {
-  scripts: string[]
-}
-
-interface DeciderList extends ROSLIB.Message {
-  scripts: string[]
-}
-
-interface PresenterList extends ROSLIB.Message {
-  scripts: string[]
+interface ModuleList extends ROSLIB.Message {
+  modules: string[]
 }
 
 interface ProtocolList extends ROSLIB.Message {
@@ -190,14 +182,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
 
   useEffect(() => {
     /* Subscriber for preprocessor list. */
-    const preprocessorListSubscriber = new Topic<PreprocessorList>({
+    const preprocessorListSubscriber = new Topic<ModuleList>({
       ros: ros,
       name: '/pipeline/preprocessor/list',
-      messageType: 'project_interfaces/PreprocessorList',
+      messageType: 'project_interfaces/ModuleList',
     })
 
     preprocessorListSubscriber.subscribe((message) => {
-      setPreprocessorList(message.scripts)
+      setPreprocessorList(message.modules)
     })
 
     /* Subscriber for preprocessor module. */
@@ -223,14 +215,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     })
 
     /* Subscriber for decider list. */
-    const deciderListSubscriber = new Topic<DeciderList>({
+    const deciderListSubscriber = new Topic<ModuleList>({
       ros: ros,
       name: '/pipeline/decider/list',
-      messageType: 'project_interfaces/DeciderList',
+      messageType: 'project_interfaces/ModuleList',
     })
 
     deciderListSubscriber.subscribe((message) => {
-      setDeciderList(message.scripts)
+      setDeciderList(message.modules)
     })
 
     /* Subscriber for decider module. */
@@ -256,14 +248,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     })
 
     /* Subscriber for presenter list. */
-    const presenterListSubscriber = new Topic<PresenterList>({
+    const presenterListSubscriber = new Topic<ModuleList>({
       ros: ros,
       name: '/pipeline/presenter/list',
-      messageType: 'project_interfaces/PresenterList',
+      messageType: 'project_interfaces/ModuleList',
     })
 
     presenterListSubscriber.subscribe((message) => {
-      setPresenterList(message.scripts)
+      setPresenterList(message.modules)
     })
 
     /* Subscriber for presenter module. */

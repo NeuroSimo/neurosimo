@@ -230,6 +230,18 @@ bool EegPreprocessor::is_sample_window_valid() const {
   return !has_invalid_sample;
 }
 
+void EegPreprocessor::publish_sentinel_sample(double_t sample_time) {
+  /* Publish a sentinel sample with the session end marker. */
+  auto sentinel_sample = std::make_shared<eeg_interfaces::msg::Sample>();
+  sentinel_sample->time = sample_time;
+  sentinel_sample->is_session_end = this->pending_session_end;
+
+  /* Clear the pending session end marker. */
+  this->pending_session_end = false;
+
+  this->preprocessed_eeg_publisher->publish(*sentinel_sample);
+}
+
 void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time) {
   /* Validate that the current sample window is suitable for processing. */
   if (!is_sample_window_valid()) {
@@ -274,12 +286,8 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   preprocessed_sample.is_session_end = this->pending_session_end;
 
   /* Clear the pending markers after carrying them forward. */
-  if (this->pending_session_start) {
-    this->pending_session_start = false;
-  }
-  if (this->pending_session_end) {
-    this->pending_session_end = false;
-  }
+  this->pending_session_start = false;
+  this->pending_session_end = false;
 
   /* Calculate preprocessing duration. */
   auto end_time = std::chrono::high_resolution_clock::now();
@@ -325,6 +333,11 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
     handle_session_start(msg->session);
   }
 
+  /* Handle session end marker from upstream. */
+  if (msg->is_session_end) {
+    handle_session_end();
+  }
+
   /* Check that no error has occurred. */
   if (this->error_occurred) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
@@ -357,10 +370,11 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
      including the one that was just added. */
   process_ready_deferred_requests(sample_time);
 
-  /* Handle session end marker from upstream (after processing the sample)
-     TODO: Early returns make this not work correctly in all cases. Please fix. */
-  if (msg->is_session_end) {
-    handle_session_end();
+  /* If there's a pending session end marker, meaning that this is the last sample of the session,
+     publish a sentinel sample with the marker. Otherwise, downstream nodes will not know when the
+     session ends. */
+  if (this->pending_session_end) {
+    publish_sentinel_sample(sample_time);
   }
 }
 

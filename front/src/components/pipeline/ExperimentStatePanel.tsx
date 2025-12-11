@@ -8,11 +8,14 @@ import {
   SmallerTitle,
   DASHBOARD_PANEL_OFFSET_FROM_TOP,
   DASHBOARD_PANEL_HEIGHT,
+  StyledButton,
+  StyledRedButton,
 } from 'styles/General'
 import { PipelineContext } from 'providers/PipelineProvider'
+import { pauseExperimentRos, resumeExperimentRos } from 'ros/experiment'
 
 const ExperimentStateTitle = styled.div`
-  width: 210px;
+  width: 255px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
   right: 485px;
@@ -23,7 +26,7 @@ const ExperimentStateTitle = styled.div`
 `
 
 const Panel = styled(StyledPanel)`
-  width: 185px;
+  width: 255px;
   height: ${DASHBOARD_PANEL_HEIGHT}px;
   position: fixed;
   top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
@@ -34,10 +37,28 @@ const Panel = styled(StyledPanel)`
 export const ExperimentStatePanel: React.FC = () => {
   const { experimentState } = useContext(PipelineContext)
 
+  const isExperimentOngoing = experimentState?.ongoing ?? false
+  const isPaused = experimentState?.paused ?? false
+
   const formatSeconds = (value?: number | null) => {
     if (value === undefined || value === null) return '—'
     return `${value.toFixed(1)}s`
   }
+
+  const handlePauseResume = () => {
+    if (isPaused) {
+      resumeExperimentRos(() => {
+        console.log('Experiment resumed')
+      })
+    } else {
+      pauseExperimentRos(() => {
+        console.log('Experiment paused')
+      })
+    }
+  }
+
+  const PauseResumeButton = isPaused ? StyledButton : StyledRedButton
+  const pauseResumeLabel = isPaused ? 'Resume' : 'Pause'
 
   return (
     <>
@@ -45,7 +66,7 @@ export const ExperimentStatePanel: React.FC = () => {
       <Panel>
         <ConfigRow>
           <ConfigLabel>Status:</ConfigLabel>
-          <ConfigLabel>{experimentState?.ongoing ? 'Running' : 'Idle'}</ConfigLabel>
+          <ConfigLabel>{experimentState?.ongoing ? (isPaused ? 'Paused' : 'Running') : 'Idle'}</ConfigLabel>
         </ConfigRow>
         <ConfigRow>
           <ConfigLabel>Stage:</ConfigLabel>
@@ -68,6 +89,11 @@ export const ExperimentStatePanel: React.FC = () => {
         <ConfigRow>
           <ConfigLabel>Stage elapsed:</ConfigLabel>
           <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
+        </ConfigRow>
+        <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
+          <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing}>
+            {pauseResumeLabel}
+          </PauseResumeButton>
         </ConfigRow>
       </Panel>
     </>

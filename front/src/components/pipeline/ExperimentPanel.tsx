@@ -2,7 +2,7 @@ import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
-import { setExperimentProtocolRos } from 'ros/pipeline'
+import { setExperimentProtocolRos } from 'ros/experiment'
 import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`

@@ -2,8 +2,7 @@
 #define EEG_BRIDGE_SRC_ADAPTERS_NEURONE_ADAPTER_H
 
 #include <cstdlib>
-#include <netinet/in.h>
-#include <unistd.h>
+#include <memory>
 
 #include <queue>
 #include <vector>
@@ -12,6 +11,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "eeg_adapter.h"
+#include "socket.h"
 
 /// Maximum supported combined (EEG and bipolar) channel count in Bittium NeurOne.
 const int MAX_CHANNELS = 160;
@@ -90,18 +90,15 @@ class NeurOneAdapter : public EegAdapter {
 public:
   NeurOneAdapter(uint16_t port);
 
-  ~NeurOneAdapter() noexcept override { close(socket_); }
+  ~NeurOneAdapter() noexcept override = default;
 
   AdapterPacket read_eeg_packet() override;
 
 private:
-  bool init_socket();
   bool request_measurement_start_packet() const;
   void handle_measurement_start_packet();
 
   AdapterSample handle_sample_packet();
-
-  bool read_eeg_from_socket();
 
   /** Convert big-endian int24 represented as 3 uint8_t bytes to int32_t.
 
@@ -117,9 +114,7 @@ private:
 
   ChannelType channel_types[MAX_CHANNELS] = {ChannelType::UNDEFINED_CHANNEL};
 
-  int socket_ = -1;
-  uint16_t port = 0;
-  sockaddr_in socket_own = {};
+  std::unique_ptr<UdpSocket> socket_;
 
   bool measurement_start_packet_received = false;
   uint16_t packets_since_measurement_start_packet_requested = 0;

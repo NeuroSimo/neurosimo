@@ -32,7 +32,7 @@ const CompactRow = styled(ConfigRow)`
 
 export const EegDeviceDisplay: React.FC = () => {
   const { eegInfo } = useContext(EegStreamContext)
-  const { bridgeState, toggleStreaming } = useContext(EegBridgeContext)
+  const { bridgeState } = useContext(EegBridgeContext)
 
   const isStreaming = eegInfo?.is_streaming || false
   const samplingFrequency = eegInfo?.sampling_frequency ? formatFrequency(eegInfo.sampling_frequency) : '\u2013'
@@ -58,11 +58,6 @@ export const EegDeviceDisplay: React.FC = () => {
   return (
     <EegDevicePanel isGrayedOut={!isStreaming}>
       <SmallerTitle>EEG Device</SmallerTitle>
-      <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
-        <ActionButton onClick={toggleStreaming} disabled={actionDisabled}>
-          {actionLabel}
-        </ActionButton>
-      </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Sampling rate:</ConfigLabel>
         <ConfigValue>{samplingFrequency}</ConfigValue>

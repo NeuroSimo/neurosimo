@@ -3,6 +3,7 @@ import { Topic, Message } from 'roslib'
 import { ros } from 'ros/ros'
 
 interface EegInfo extends Message {
+  is_streaming: boolean
   sampling_frequency: number
   num_eeg_channels: number
   num_emg_channels: number

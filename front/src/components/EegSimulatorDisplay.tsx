@@ -18,6 +18,7 @@ import {
 
 import { EegSimulatorContext, StreamerStateValue } from 'providers/EegSimulatorProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
+import { EegStreamContext } from 'providers/EegStreamProvider'
 import { setDatasetRos, setStartTimeRos } from 'ros/eeg_simulator'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
@@ -60,11 +61,13 @@ export const EegSimulatorDisplay: React.FC = () => {
     toggleStreaming,
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(PipelineContext)
+  const { eegInfo } = useContext(EegStreamContext)
 
   const eegSimulatorHealthcheckOk = eegSimulatorHealthcheck?.status.value === HealthcheckStatus.READY
   const isRunning = streamerState === StreamerStateValue.RUNNING
   const isLoading = streamerState === StreamerStateValue.LOADING
   const isExperimentOngoing = experimentState?.ongoing ?? false
+  const isEegStreaming = eegInfo?.is_streaming || false
 
   const setDataset = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newDataset = event.target.value
@@ -89,7 +92,7 @@ export const EegSimulatorDisplay: React.FC = () => {
   )
   const ActionButton = isRunning ? StyledRedButton : StyledButton
   const actionLabel = isRunning ? 'Stop' : 'Start'
-  const actionDisabled = !selectedDataset || isLoading
+  const actionDisabled = !selectedDataset || isLoading || isEegStreaming
   const streamerStateLabel =
     streamerState === StreamerStateValue.RUNNING
       ? 'Running'
@@ -100,7 +103,7 @@ export const EegSimulatorDisplay: React.FC = () => {
       : 'Ready'
 
   return (
-    <EegSimulatorPanel isGrayedOut={!eegSimulatorHealthcheckOk}>
+    <EegSimulatorPanel isGrayedOut={isEegStreaming}>
       <SmallerTitle>Simulator</SmallerTitle>
       <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
         <ActionButton onClick={toggleStreaming} disabled={actionDisabled}>
@@ -109,7 +112,7 @@ export const EegSimulatorDisplay: React.FC = () => {
       </ConfigRow>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Dataset:</ConfigLabel>
-        <DatasetSelect onChange={setDataset} value={dataset} disabled={isExperimentOngoing}>
+        <DatasetSelect onChange={setDataset} value={dataset} disabled={isExperimentOngoing || isEegStreaming}>
           {datasetList.map((dataset: typeof datasetList[number], index: number) => (
             <option key={index} value={dataset.json_filename}>
               {dataset.name}
@@ -149,7 +152,7 @@ export const EegSimulatorDisplay: React.FC = () => {
             min={0}
             max={selectedDataset?.duration || 0}
             onChange={setStartTime}
-            disabled={isExperimentOngoing}
+            disabled={isExperimentOngoing || isEegStreaming}
           />
         </div>
       </CompactRow>

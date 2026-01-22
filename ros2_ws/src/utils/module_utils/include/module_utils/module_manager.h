@@ -11,7 +11,6 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 
-#include "project_interfaces/msg/module_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 
 #include "inotify_utils/inotify_watcher.h"
@@ -44,7 +43,6 @@ struct ModuleManagerConfig {
   
   /* Topic names for ROS communication */
   std::string active_project_topic = "/projects/active";
-  std::string module_list_topic;       // e.g., "/pipeline/decider/list"
   std::string set_module_service;      // e.g., "/pipeline/decider/module/set"
   std::string module_topic;            // e.g., "/pipeline/decider/module"
   std::string set_enabled_service;     // e.g., "/pipeline/decider/enabled/set"
@@ -163,7 +161,6 @@ private:
   /* ROS publishers */
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr enabled_publisher_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr module_publisher_;
-  rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr module_list_publisher_;
   
   /* ROS subscribers */
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber_;

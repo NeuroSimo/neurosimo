@@ -25,10 +25,6 @@ ModuleManager::ModuleManager(rclcpp::Node* node, const ModuleManagerConfig& conf
     config_.module_topic,
     qos_persist_latest);
   
-  /* Publisher for module list */
-  module_list_publisher_ = node_->create_publisher<project_interfaces::msg::ModuleList>(
-    config_.module_list_topic,
-    qos_persist_latest);
   
   /* Subscriber for active project */
   active_project_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
@@ -159,10 +155,6 @@ void ModuleManager::update_module_list() {
     modules_.clear();
   }
   
-  /* Publish updated module list */
-  auto msg = project_interfaces::msg::ModuleList();
-  msg.modules = modules_;
-  module_list_publisher_->publish(msg);
   
   RCLCPP_DEBUG(logger_, "Module list updated: %zu modules found", modules_.size());
   

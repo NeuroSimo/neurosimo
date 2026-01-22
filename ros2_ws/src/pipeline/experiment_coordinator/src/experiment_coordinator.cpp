@@ -57,7 +57,6 @@ ExperimentCoordinator::ExperimentCoordinator()
   module_config.file_extensions = {".yaml", ".yml"};
   module_config.default_module_name = DEFAULT_PROTOCOL_NAME;
   module_config.active_project_topic = "/projects/active";
-  module_config.module_list_topic = "/experiment/protocol/list";
   module_config.set_module_service = "/experiment/protocol/set";
   module_config.module_topic = "/experiment/protocol";
   module_config.set_enabled_service = "/experiment/coordinator/enabled/set";

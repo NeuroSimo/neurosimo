@@ -14,7 +14,6 @@ import {
 
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { EegBridgeContext, EegBridgeStateValue } from 'providers/EegBridgeProvider'
-import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
 import { formatFrequency } from 'utils/utils'
 
@@ -33,19 +32,19 @@ const CompactRow = styled(ConfigRow)`
 
 export const EegDeviceDisplay: React.FC = () => {
   const { eegInfo } = useContext(EegStreamContext)
-  const { eegHealthcheck } = useContext(HealthcheckContext)
   const { bridgeState, toggleStreaming } = useContext(EegBridgeContext)
 
-  const eegHealthcheckOk = eegHealthcheck?.status.value === HealthcheckStatus.READY
-  const numOfEegChannels = eegInfo?.num_eeg_channels || 0
-  const numOfEmgChannels = eegInfo?.num_emg_channels || 0
+  const isStreaming = eegInfo?.is_streaming || false
+  const samplingFrequency = eegInfo?.sampling_frequency ? formatFrequency(eegInfo.sampling_frequency) : '\u2013'
+  const numEegChannels = eegInfo?.num_eeg_channels ? eegInfo.num_eeg_channels : '\u2013'
+  const numEmgChannels = eegInfo?.num_emg_channels ? eegInfo.num_emg_channels : '\u2013'
 
   const isRunning = bridgeState === EegBridgeStateValue.RUNNING
   const isLoading = bridgeState === EegBridgeStateValue.LOADING
 
   const ActionButton = isRunning ? StyledRedButton : StyledButton
   const actionLabel = isRunning ? 'Stop' : 'Start'
-  const actionDisabled = !eegHealthcheckOk || isLoading
+  const actionDisabled = isLoading
 
   const streamerStateLabel =
     bridgeState === EegBridgeStateValue.RUNNING
@@ -57,7 +56,7 @@ export const EegDeviceDisplay: React.FC = () => {
       : 'Ready'
 
   return (
-    <EegDevicePanel isGrayedOut={!eegHealthcheckOk}>
+    <EegDevicePanel isGrayedOut={!isStreaming}>
       <SmallerTitle>EEG Device</SmallerTitle>
       <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
         <ActionButton onClick={toggleStreaming} disabled={actionDisabled}>
@@ -66,18 +65,18 @@ export const EegDeviceDisplay: React.FC = () => {
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Sampling rate:</ConfigLabel>
-        <ConfigValue>{formatFrequency(eegInfo?.sampling_frequency)}</ConfigValue>
+        <ConfigValue>{samplingFrequency}</ConfigValue>
       </ConfigRow>
       <CompactRow>
         <ConfigLabel>Channels:</ConfigLabel>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
-        <ConfigValue>{numOfEegChannels > 0 ? numOfEegChannels : '\u2013'}</ConfigValue>
+        <ConfigValue>{numEegChannels > 0 ? numEegChannels : '\u2013'}</ConfigValue>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
-        <ConfigValue>{numOfEmgChannels > 0 ? numOfEmgChannels : '\u2013'}</ConfigValue>
+        <ConfigValue>{numEmgChannels > 0 ? numEmgChannels : '\u2013'}</ConfigValue>
       </CompactRow>
       <CompactRow>
         <ConfigLabel>Status:</ConfigLabel>

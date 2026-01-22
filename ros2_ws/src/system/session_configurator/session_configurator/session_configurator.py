@@ -23,11 +23,11 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 
-class ProjectManagerNode(Node):
+class SessionConfiguratorNode(Node):
     PROJECTS_ROOT = '/app/projects'
 
     def __init__(self):
-        super().__init__('project_manager_node')
+        super().__init__('session_configurator_node')
         self.logger = self.get_logger()
         self.callback_group = ReentrantCallbackGroup()
 
@@ -522,7 +522,7 @@ class ProjectManagerNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ProjectManagerNode()
+    node = SessionConfiguratorNode()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
     executor.spin()

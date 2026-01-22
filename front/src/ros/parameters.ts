@@ -42,6 +42,33 @@ const toParameterValue = (value: ParameterValue): any => {
   throw new Error(`Unsupported parameter value type: ${typeof value}`)
 }
 
+/**
+ * Extract the actual value from a ROS2 ParameterValue structure
+ * @param paramValue ROS2 ParameterValue object
+ * @returns TypeScript value or undefined if unsupported type
+ */
+export const extractParameterValue = (paramValue: {
+  type: number
+  bool_value?: boolean
+  integer_value?: number
+  double_value?: number
+  string_value?: string
+}): boolean | number | string | undefined => {
+  switch (paramValue.type) {
+    case 1: // PARAMETER_BOOL
+      return paramValue.bool_value
+    case 2: // PARAMETER_INTEGER
+      return paramValue.integer_value
+    case 3: // PARAMETER_DOUBLE
+      return paramValue.double_value
+    case 4: // PARAMETER_STRING
+      return paramValue.string_value
+    default:
+      console.warn(`Unknown parameter type: ${paramValue.type}`)
+      return undefined
+  }
+}
+
 /* Set parameters service on session_configurator node */
 const setParametersService = new ROSLIB.Service({
   ros: ros,
@@ -118,4 +145,44 @@ export const setParametersRos = (parameters: Parameter[], callback: () => void) 
       console.log('ERROR: Failed to set parameters, error:', error)
     }
   )
+}
+
+/* Get parameters service on session_configurator node */
+const getParametersService = new ROSLIB.Service({
+  ros: ros,
+  name: '/session_configurator/get_parameters',
+  serviceType: 'rcl_interfaces/GetParameters',
+})
+
+/**
+ * Get current ROS parameters from the session_configurator node
+ * @param names Array of parameter names to fetch
+ * @returns Promise resolving to parameter values
+ */
+export const getParametersRos = (names: string[]): Promise<Map<string, boolean | number | string>> => {
+  return new Promise((resolve, reject) => {
+    const request = new ROSLIB.ServiceRequest({
+      names: names
+    }) as any
+
+    getParametersService.callService(
+      request,
+      (response: any) => {
+        const parameterMap = new Map<string, boolean | number | string>()
+
+        response.values.forEach((paramValue: any, index: number) => {
+          const value = extractParameterValue(paramValue)
+          if (value !== undefined) {
+            parameterMap.set(names[index], value)
+          }
+        })
+
+        resolve(parameterMap)
+      },
+      (error: any) => {
+        console.log('ERROR: Failed to get parameters, error:', error)
+        reject(error)
+      }
+    )
+  })
 }

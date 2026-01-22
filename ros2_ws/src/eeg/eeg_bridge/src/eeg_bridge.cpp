@@ -77,6 +77,12 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   uint8_t turbolink_eeg_channel_count;
   this->get_parameter("turbolink-eeg-channel-count", turbolink_eeg_channel_count);
 
+  /* Create UDP socket */
+  this->socket_ = std::make_shared<UdpSocket>(this->port);
+  if (!this->socket_->init_socket()) {
+    throw std::runtime_error("Failed to initialize UDP socket");
+  }
+
   /* Log configuration. */
   RCLCPP_INFO(this->get_logger(), "EEG bridge configuration:");
   RCLCPP_INFO(this->get_logger(), "  Port: %d", this->port);
@@ -87,9 +93,9 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   /* TODO: string to enum conversion should be done with cleaner solution at some
      point, maybe. */
   if (eeg_device_type == "neurone") {
-    this->eeg_adapter = std::make_shared<NeurOneAdapter>(this->port);
+    this->eeg_adapter = std::make_shared<NeurOneAdapter>(this->socket_);
   } else if (eeg_device_type == "turbolink") {
-    this->eeg_adapter = std::make_shared<TurboLinkAdapter>(this->port, turbolink_sampling_frequency,
+    this->eeg_adapter = std::make_shared<TurboLinkAdapter>(this->socket_, turbolink_sampling_frequency,
                                                            turbolink_eeg_channel_count);
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("eeg_bridge"), "Unsupported EEG device. %s",
@@ -325,7 +331,20 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 }
 
 void EegBridge::process_eeg_packet() {
-  AdapterPacket packet = this->eeg_adapter->read_eeg_packet();
+  // Read UDP packet
+  if (!this->socket_->read_data(this->buffer, BUFFER_SIZE)) {
+    RCLCPP_WARN(this->get_logger(), "Timeout while reading EEG data");
+
+    // Interpret timeout as the end of the stream. This can happen at the end of an actual stream
+    // when using TurboLink, as the device does not send any data after the stream ends, or e.g.,
+    // if the ethernet cable is disconnected in the middle of a stream.
+    set_eeg_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
+
+    return;
+  }
+
+  // Process the packet
+  AdapterPacket packet = this->eeg_adapter->process_packet(this->buffer, BUFFER_SIZE);
 
   auto eeg_info = this->eeg_adapter->get_eeg_info();
 

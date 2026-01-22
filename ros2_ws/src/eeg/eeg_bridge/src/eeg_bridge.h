@@ -21,6 +21,7 @@
 #include "std_srvs/srv/trigger.hpp"
 
 #include "adapters/eeg_adapter.h"
+#include "adapters/socket.h"
 
 using namespace std::chrono_literals;
 
@@ -96,7 +97,9 @@ private:
   uint8_t num_of_tolerated_dropped_samples = 0;
   EegDevice eeg_device;
 
+  std::shared_ptr<UdpSocket> socket_;
   std::shared_ptr<EegAdapter> eeg_adapter;
+  uint8_t buffer[BUFFER_SIZE] = {0};
 
   /* State */
   EegDeviceState eeg_device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;

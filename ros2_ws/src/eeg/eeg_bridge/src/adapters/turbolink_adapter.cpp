@@ -7,42 +7,37 @@
 
 const std::string LOGGER_NAME = "turbolink_adapter";
 
-TurboLinkAdapter::TurboLinkAdapter(uint16_t port, uint32_t sampling_frequency,
-                                   uint8_t eeg_channel_count) {
-  this->socket_ = std::make_unique<UdpSocket>(port);
-  bool success = this->socket_->init_socket();
-  if (!success) {
-    throw std::runtime_error("Failed to initialise socket");
-  }
-
+TurboLinkAdapter::TurboLinkAdapter(std::shared_ptr<UdpSocket> socket, uint32_t sampling_frequency,
+                                   uint8_t eeg_channel_count)
+    : EegAdapter(socket) {
   this->num_emg_channels = AUX_CHANNEL_COUNT;
   this->num_eeg_channels = eeg_channel_count;
   this->sampling_frequency = sampling_frequency;
 }
 
-std::tuple<AdapterSample, bool> TurboLinkAdapter::handle_packet() {
+std::tuple<AdapterSample, bool> TurboLinkAdapter::handle_packet(const uint8_t* buffer) {
   auto adapter_sample = AdapterSample();
   bool trigger_a = false;
 
-  uint32_t token = *reinterpret_cast<uint32_t *>(buffer + SamplePacketFieldIndex::TOKEN);
+  uint32_t token = *reinterpret_cast<const uint32_t *>(buffer + SamplePacketFieldIndex::TOKEN);
 
   if (token != 0x0050) {
     RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), "Sample packet started with unknown token %x",
                  token);
   }
 
-  uint32_t sample_index = *reinterpret_cast<uint32_t *>(buffer + SamplePacketFieldIndex::SAMPLE_COUNTER);
+  uint32_t sample_index = *reinterpret_cast<const uint32_t *>(buffer + SamplePacketFieldIndex::SAMPLE_COUNTER);
 
-  uint32_t trigger_bits = *reinterpret_cast<uint32_t *>(buffer + SamplePacketFieldIndex::TRIGGER_BITS);
+  uint32_t trigger_bits = *reinterpret_cast<const uint32_t *>(buffer + SamplePacketFieldIndex::TRIGGER_BITS);
 
   for (uint8_t i = 0; i < this->num_emg_channels; i++) {
-    uint8_t *data = buffer + SamplePacketFieldIndex::AUX_CHANNELS + 4 * i;
-    float_t value = *reinterpret_cast<float *>(data);
+    const uint8_t *data = buffer + SamplePacketFieldIndex::AUX_CHANNELS + 4 * i;
+    float_t value = *reinterpret_cast<const float *>(data);
     adapter_sample.emg.push_back(value);
   }
   for (uint8_t i = 0; i < this->num_eeg_channels; i++) {
-    uint8_t *data = buffer + SamplePacketFieldIndex::EEG_CHANNELS + 4 * i;
-    float_t value = *reinterpret_cast<float *>(data);
+    const uint8_t *data = buffer + SamplePacketFieldIndex::EEG_CHANNELS + 4 * i;
+    float_t value = *reinterpret_cast<const float *>(data);
     adapter_sample.eeg.push_back(value);
   }
 
@@ -57,12 +52,12 @@ std::tuple<AdapterSample, bool> TurboLinkAdapter::handle_packet() {
   /* Turbolink has no timestamp so interpret time from sampling frequency */
   adapter_sample.time = (double)sample_index / this->sampling_frequency;
   adapter_sample.sample_index = sample_index;
-  adapter_sample.trigger_a = false;  // Will be set in read_eeg_packet
+  adapter_sample.trigger_a = false;  // Will be set in process_packet
 
   return {adapter_sample, trigger_a};
 }
 
-AdapterPacket TurboLinkAdapter::read_eeg_packet() {
+AdapterPacket TurboLinkAdapter::process_packet(const uint8_t* buffer, size_t buffer_size) {
   /* Return variables */
   AdapterPacket packet;
   packet.result = INTERNAL;
@@ -71,13 +66,7 @@ AdapterPacket TurboLinkAdapter::read_eeg_packet() {
 
   bool trigger_a = false;
 
-  bool success = this->socket_->read_data(this->buffer, BUFFER_SIZE);
-  if (!success) {
-    RCLCPP_WARN(rclcpp::get_logger(LOGGER_NAME), "Timeout while reading EEG data");
-    packet.result = ERROR;
-    return packet;
-  }
-  std::tie(packet.sample, trigger_a) = handle_packet();
+  std::tie(packet.sample, trigger_a) = handle_packet(buffer);
   packet.result = SAMPLE;
   if (trigger_a) {
     packet.trigger_a_timestamp = packet.sample.time;

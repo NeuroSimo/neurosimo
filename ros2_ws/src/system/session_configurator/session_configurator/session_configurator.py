@@ -1,3 +1,4 @@
+import os
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
@@ -9,6 +10,7 @@ from project_interfaces.srv import (
     ListProjects,
     SetActiveProject,
 )
+from project_interfaces.msg import ModuleList
 
 from std_msgs.msg import String
 from rcl_interfaces.msg import SetParametersResult
@@ -51,11 +53,16 @@ class SessionConfiguratorNode(Node):
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
         self.create_service(SetActiveProject, '/projects/active/set', self.set_active_project_callback, callback_group=self.callback_group)
 
-        # Publisher
+        # Publishers
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
         self.active_project_publisher = self.create_publisher(String, "/projects/active", qos, callback_group=self.callback_group)
+
+        self.decider_module_list_publisher = self.create_publisher(ModuleList, "/pipeline/decider/list", qos, callback_group=self.callback_group)
+        self.preprocessor_module_list_publisher = self.create_publisher(ModuleList, "/pipeline/preprocessor/list", qos, callback_group=self.callback_group)
+        self.presenter_module_list_publisher = self.create_publisher(ModuleList, "/pipeline/presenter/list", qos, callback_group=self.callback_group)
+        self.protocol_list_publisher = self.create_publisher(ModuleList, "/experiment/protocol/list", qos, callback_group=self.callback_group)
 
         # Set active project
         active_project = self.project_manager.get_active_project()
@@ -89,7 +96,55 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_state["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_state["simulator.start_time"]),
         ])
+
+        # Publish the lists of modules for the new project
+        self.publish_module_list(project_name, "decider", [".py"], self.decider_module_list_publisher, "decider")
+        self.publish_module_list(project_name, "preprocessor", [".py"], self.preprocessor_module_list_publisher, "preprocessor")
+        self.publish_module_list(project_name, "presenter", [".py"], self.presenter_module_list_publisher, "presenter")
+        self.publish_module_list(project_name, "protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol")
+
         return True
+
+    def list_modules(self, project_name, subdirectory, file_extensions):
+        """List all files with specified extensions in the subdirectory of the specified project."""
+        module_dir = os.path.join(self.project_manager.PROJECTS_ROOT, project_name, subdirectory)
+
+        if not os.path.exists(module_dir):
+            self.logger.warning(f"Directory does not exist: {module_dir}")
+            return []
+
+        try:
+            # List all files with the specified extensions
+            matching_files = []
+            for ext in file_extensions:
+                matching_files.extend([f for f in os.listdir(module_dir)
+                                     if os.path.isfile(os.path.join(module_dir, f)) and f.endswith(ext)])
+
+            # Remove file extensions to get module names
+            module_names = []
+            for filename in matching_files:
+                for ext in file_extensions:
+                    if filename.endswith(ext):
+                        module_names.append(filename[:-len(ext)])
+                        break
+
+            self.logger.info(f"Found {len(module_names)} modules in project '{project_name}'/{subdirectory}: {module_names}")
+            return module_names
+
+        except Exception as e:
+            self.logger.error(f"Error listing modules for project '{project_name}'/{subdirectory}: {e}")
+            return []
+
+    def publish_module_list(self, project_name, subdirectory, file_extensions, publisher, component_name):
+        """Publish the list of modules for the specified project and component."""
+        modules = self.list_modules(project_name, subdirectory, file_extensions)
+
+        # Create and publish ModuleList message
+        msg = ModuleList()
+        msg.modules = modules
+        publisher.publish(msg)
+
+        self.logger.info(f"Published {component_name} module list for project '{project_name}': {modules}")
 
     # Service callbacks
 

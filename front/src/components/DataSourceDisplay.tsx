@@ -70,7 +70,7 @@ export const DataSourceDisplay: React.FC = () => {
     setDataSource(activeTab, () => {
       console.log('Data source set to ' + activeTab)
     })
-  }, [activeTab, setDataSource])
+  }, [activeTab])
 
   return (
     <DataSourcePanel>

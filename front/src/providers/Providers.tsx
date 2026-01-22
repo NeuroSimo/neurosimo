@@ -2,6 +2,7 @@ import React from 'react'
 import { ThemeProvider } from 'styled-components'
 import theme from 'styles/theme'
 
+import { ParameterProvider } from './ParameterProvider'
 import { ProjectProvider } from './ProjectProvider'
 import { PipelineProvider } from './PipelineProvider'
 import { EegStreamProvider } from './EegStreamProvider'
@@ -17,19 +18,21 @@ interface Props {
 const Providers: React.FC<Props> = ({ children }) => {
   return (
     <ThemeProvider theme={theme}>
-      <ProjectProvider>
-        <PipelineProvider>
-          <EegStreamProvider>
-            <StatisticsProvider>
-              <EegSimulatorProvider>
-                <EegBridgeProvider>
-                  <HealthcheckProvider>{children}</HealthcheckProvider>
-                </EegBridgeProvider>
-              </EegSimulatorProvider>
-            </StatisticsProvider>
-          </EegStreamProvider>
-        </PipelineProvider>
-      </ProjectProvider>
+      <ParameterProvider>
+        <ProjectProvider>
+          <PipelineProvider>
+            <EegStreamProvider>
+              <StatisticsProvider>
+                <EegSimulatorProvider>
+                  <EegBridgeProvider>
+                    <HealthcheckProvider>{children}</HealthcheckProvider>
+                  </EegBridgeProvider>
+                </EegSimulatorProvider>
+              </StatisticsProvider>
+            </EegStreamProvider>
+          </PipelineProvider>
+        </ProjectProvider>
+      </ParameterProvider>
     </ThemeProvider>
   )
 }

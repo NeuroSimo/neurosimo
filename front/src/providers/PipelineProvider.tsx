@@ -2,6 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic, Message } from 'roslib'
 
 import { ros } from 'ros/ros'
+import { useParameters } from './ParameterProvider'
 
 interface TimingLatency extends ROSLIB.Message {
   latency: number
@@ -147,23 +148,27 @@ interface PipelineProviderProps {
 }
 
 export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) => {
+  const { pipeline } = useParameters()
+
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
-  const [preprocessorModule, setPreprocessorModule] = useState<string>('')
-  const [preprocessorEnabled, setPreprocessorEnabled] = useState<boolean>(false)
   const [preprocessorLogs, setPreprocessorLogs] = useState<LogMessage[]>([])
 
   const [deciderList, setDeciderList] = useState<string[]>([])
-  const [deciderModule, setDeciderModule] = useState<string>('')
-  const [deciderEnabled, setDeciderEnabled] = useState<boolean>(false)
   const [deciderLogs, setDeciderLogs] = useState<LogMessage[]>([])
 
   const [presenterList, setPresenterList] = useState<string[]>([])
-  const [presenterModule, setPresenterModule] = useState<string>('')
-  const [presenterEnabled, setPresenterEnabled] = useState<boolean>(false)
   const [presenterLogs, setPresenterLogs] = useState<LogMessage[]>([])
 
   const [protocolList, setProtocolList] = useState<string[]>([])
-  const [protocolName, setProtocolName] = useState<string>('')
+
+  // Get parameter values from structured parameter store
+  const preprocessorModule = pipeline.preprocessor.module
+  const preprocessorEnabled = pipeline.preprocessor.enabled
+  const deciderModule = pipeline.decider.module
+  const deciderEnabled = pipeline.decider.enabled
+  const presenterModule = pipeline.presenter.module
+  const presenterEnabled = pipeline.presenter.enabled
+  const protocolName = pipeline.experiment.protocol
 
   const [timingLatency, setTimingLatency] = useState<TimingLatency | null>(null)
   const [timingError, setTimingError] = useState<TimingError | null>(null)
@@ -188,28 +193,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       setPreprocessorList(message.modules)
     })
 
-    /* Subscriber for preprocessor module. */
-    const preprocessorModuleSubscriber = new Topic<RosString>({
-      ros: ros,
-      name: '/pipeline/preprocessor/module',
-      messageType: 'std_msgs/String',
-    })
-
-    preprocessorModuleSubscriber.subscribe((message) => {
-      setPreprocessorModule(message.data)
-    })
-
-    /* Subscriber for preprocessor enabled. */
-    const preprocessorEnabledSubscriber = new Topic<RosBoolean>({
-      ros: ros,
-      name: '/pipeline/preprocessor/enabled',
-      messageType: 'std_msgs/Bool',
-    })
-
-    preprocessorEnabledSubscriber.subscribe((message) => {
-      setPreprocessorEnabled(message.data)
-    })
-
     /* Subscriber for decider list. */
     const deciderListSubscriber = new Topic<ModuleList>({
       ros: ros,
@@ -219,28 +202,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
 
     deciderListSubscriber.subscribe((message) => {
       setDeciderList(message.modules)
-    })
-
-    /* Subscriber for decider module. */
-    const deciderModuleSubscriber = new Topic<RosString>({
-      ros: ros,
-      name: '/pipeline/decider/module',
-      messageType: 'std_msgs/String',
-    })
-
-    deciderModuleSubscriber.subscribe((message) => {
-      setDeciderModule(message.data)
-    })
-
-    /* Subscriber for decider enabled. */
-    const deciderEnabledSubscriber = new Topic<RosBoolean>({
-      ros: ros,
-      name: '/pipeline/decider/enabled',
-      messageType: 'std_msgs/Bool',
-    })
-
-    deciderEnabledSubscriber.subscribe((message) => {
-      setDeciderEnabled(message.data)
     })
 
     /* Subscriber for presenter list. */
@@ -254,28 +215,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       setPresenterList(message.modules)
     })
 
-    /* Subscriber for presenter module. */
-    const presenterModuleSubscriber = new Topic<RosString>({
-      ros: ros,
-      name: '/pipeline/presenter/module',
-      messageType: 'std_msgs/String',
-    })
-
-    presenterModuleSubscriber.subscribe((message) => {
-      setPresenterModule(message.data)
-    })
-
-    /* Subscriber for presenter enabled. */
-    const presenterEnabledSubscriber = new Topic<RosBoolean>({
-      ros: ros,
-      name: '/pipeline/presenter/enabled',
-      messageType: 'std_msgs/Bool',
-    })
-
-    presenterEnabledSubscriber.subscribe((message) => {
-      setPresenterEnabled(message.data)
-    })
-
     /* Subscriber for available protocols. */
     const protocolListSubscriber = new Topic<ModuleList>({
       ros: ros,
@@ -285,17 +224,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
 
     protocolListSubscriber.subscribe((message) => {
       setProtocolList(message.modules)
-    })
-
-    /* Subscriber for active protocol. */
-    const protocolSubscriber = new Topic<RosString>({
-      ros: ros,
-      name: '/experiment/protocol',
-      messageType: 'std_msgs/String',
-    })
-
-    protocolSubscriber.subscribe((message) => {
-      setProtocolName(message.data)
     })
 
     /* Subscriber for timing latency. */
@@ -381,19 +309,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     /* Unsubscribers */
     return () => {
       preprocessorListSubscriber.unsubscribe()
-      preprocessorModuleSubscriber.unsubscribe()
-      preprocessorEnabledSubscriber.unsubscribe()
-
       deciderListSubscriber.unsubscribe()
-      deciderModuleSubscriber.unsubscribe()
-      deciderEnabledSubscriber.unsubscribe()
-
       presenterListSubscriber.unsubscribe()
-      presenterModuleSubscriber.unsubscribe()
-      presenterEnabledSubscriber.unsubscribe()
-
       protocolListSubscriber.unsubscribe()
-      protocolSubscriber.unsubscribe()
 
       timingLatencySubscriber.unsubscribe()
       timingErrorSubscriber.unsubscribe()

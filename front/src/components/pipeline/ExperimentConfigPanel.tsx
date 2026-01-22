@@ -2,7 +2,7 @@ import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
-import { setParameterRos } from 'ros/parameters'
+import { useParameters } from 'providers/ParameterProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
@@ -15,12 +15,13 @@ const Container = styled(StyledPanel)`
 
 export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList, experimentState } = useContext(PipelineContext)
+  const { setExperimentProtocol } = useParameters()
 
   const isExperimentOngoing = experimentState?.ongoing ?? false
 
   const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const protocol = event.target.value
-    setParameterRos('experiment.protocol', protocol, () => {
+    setExperimentProtocol(protocol, () => {
       console.log('Protocol set to ' + protocol)
     })
   }

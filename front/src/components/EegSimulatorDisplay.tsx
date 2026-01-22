@@ -19,7 +19,7 @@ import {
 import { EegSimulatorContext, StreamerStateValue } from 'providers/EegSimulatorProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
-import { setParameterRos } from 'ros/parameters'
+import { useParameters } from 'providers/ParameterProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
@@ -61,6 +61,7 @@ export const EegSimulatorDisplay: React.FC = () => {
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(PipelineContext)
   const { eegInfo } = useContext(EegStreamContext)
+  const { setSimulatorDataset, setSimulatorStartTime } = useParameters()
 
   const eegSimulatorHealthcheckOk = eegSimulatorHealthcheck?.status.value === HealthcheckStatus.READY
   const isRunning = streamerState === StreamerStateValue.RUNNING
@@ -71,7 +72,7 @@ export const EegSimulatorDisplay: React.FC = () => {
   const setDataset = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newDataset = event.target.value
 
-    setParameterRos('simulator.dataset_filename', newDataset, () => {
+    setSimulatorDataset(newDataset, () => {
       console.log('Dataset set to ' + newDataset)
     })
   }
@@ -81,7 +82,7 @@ export const EegSimulatorDisplay: React.FC = () => {
       console.error('Start time must be between 0 and ' + selectedDataset?.duration + ' seconds')
       return
     }
-    setParameterRos('simulator.start_time', startTime, () => {
+    setSimulatorStartTime(startTime, () => {
       console.log('Start time set to ' + startTime)
     })
   }

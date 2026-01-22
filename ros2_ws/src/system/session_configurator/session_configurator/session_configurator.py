@@ -28,7 +28,6 @@ class SessionConfiguratorNode(Node):
         self.project_manager = ProjectManager(self.logger)
 
         # Declare ROS2 parameters
-        self.declare_parameter('project', 'example')
 
         # Decider parameters
         self.declare_parameter('decider.module', 'example')
@@ -85,7 +84,6 @@ class SessionConfiguratorNode(Node):
 
         # Set ROS2 parameters from the loaded state
         self.set_parameters([
-            rclpy.parameter.Parameter('project', rclpy.parameter.Parameter.Type.STRING, project_name),
             rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_state["decider.module"]),
             rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["decider.enabled"]),
             rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_state["preprocessor.module"]),
@@ -173,42 +171,18 @@ class SessionConfiguratorNode(Node):
         return response
 
     def parameter_change_callback(self, params):
-        """Callback to handle parameter changes and save them to session state."""
+        """Callback to handle session parameter changes and save them to session state."""
         try:
-            # Find the project parameter in params (by param.name)
-            project_param = None
+            active_project = self.project_manager.get_active_project()
+
+            session_state = self.project_manager.load_session_state(active_project)
+
             for param in params:
-                if param.name == 'project':
-                    project_param = param
-                    break
+                session_state[param.name] = param.value
 
-            if project_param is not None:
-                active_project = self.project_manager.get_active_project()
-
-                new_project = project_param.value
-                if new_project != active_project:
-                    self.logger.info(f"Project parameter changed from '{active_project}' to '{new_project}', switching projects")
-                    success = self.set_active_project(new_project)
-                    if not success:
-                        self.logger.error(f"Failed to switch to project '{new_project}'")
-                        return rclpy.parameter.SetParametersResult(successful=False, reason=f"Invalid project: {new_project}")
-
-                    self.project_manager.save_active_project(new_project)
-
-                params = [p for p in params if p.name != 'project']
-
-            # Handle other parameter changes
-            if params:
-                active_project = self.project_manager.get_active_project()
-
-                session_state = self.project_manager.load_session_state(active_project)
-
-                for param in params:
-                    session_state[param.name] = param.value
-
-                # Save the updated session state
-                self.project_manager.save_session_state(active_project, session_state)
-                self.logger.info(f"Updated session state for project '{active_project}' with parameter changes")
+            # Save the updated session state
+            self.project_manager.save_session_state(active_project, session_state)
+            self.logger.info(f"Updated session state for project '{active_project}' with parameter changes")
 
         except Exception as e:
             self.logger.error(f"Error handling parameter changes: {e}")

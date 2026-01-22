@@ -15,12 +15,12 @@ def generate_launch_description():
     logger = LaunchConfiguration("log-level")
 
     node_executables = [
-        "project_manager",
+        "session_configurator",
     ]
 
     for node_executable in node_executables:
         node = Node(
-            package="project_manager",
+            package="session_configurator",
             executable=node_executable,
             arguments=['--ros-args', '--log-level', logger]
         )

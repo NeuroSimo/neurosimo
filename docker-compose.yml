@@ -134,10 +134,10 @@ services:
       # Provide access to sound devices
       - "/dev/snd:/dev/snd"
 
-  project_manager:
+  session_configurator:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/project_manager/Dockerfile
+      dockerfile: ros2_ws/src/system/session_configurator/Dockerfile
     env_file:
       - .env
     environment:

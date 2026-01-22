@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'project_manager'
+package_name = 'session_configurator'
 
 setup(
     name=package_name,
@@ -24,7 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'project_manager = project_manager.project_manager:main',
+            'session_configurator = session_configurator.session_configurator:main',
         ],
     },
 )

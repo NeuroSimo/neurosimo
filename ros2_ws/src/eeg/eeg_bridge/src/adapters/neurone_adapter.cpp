@@ -257,8 +257,11 @@ AdapterPacket NeurOneAdapter::read_eeg_packet() {
     break;
 
   case FrameType::MEASUREMENT_END:
-    RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "Measurement end packet received.");
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Measurement ended on the EEG device.");
+    this->num_emg_channels = UNSET_CHANNEL_COUNT;
+    this->num_eeg_channels = UNSET_CHANNEL_COUNT;
+    this->sampling_frequency = UNSET_SAMPLING_FREQUENCY;
+
     packet.result = END;
     break;
 

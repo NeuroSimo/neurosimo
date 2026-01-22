@@ -87,8 +87,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   module_config.file_extensions = {".py"};
   module_config.default_module_name = DEFAULT_MODULE_NAME;
   module_config.active_project_topic = "/projects/active";
-  module_config.module_list_topic = "/pipeline/decider/list";
-  module_config.set_module_service = "/pipeline/decider/module/set";
   module_config.module_topic = "/pipeline/decider/module";
   module_config.set_enabled_service = "/pipeline/decider/enabled/set";
   module_config.enabled_topic = "/pipeline/decider/enabled";

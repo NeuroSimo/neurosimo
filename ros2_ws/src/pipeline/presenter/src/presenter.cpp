@@ -48,8 +48,6 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
   module_config.file_extensions = {".py"};
   module_config.default_module_name = DEFAULT_PRESENTER_NAME;
   module_config.active_project_topic = "/projects/active";
-  module_config.module_list_topic = "/pipeline/presenter/list";
-  module_config.set_module_service = "/pipeline/presenter/module/set";
   module_config.module_topic = "/pipeline/presenter/module";
   module_config.set_enabled_service = "/pipeline/presenter/enabled/set";
   module_config.enabled_topic = "/pipeline/presenter/enabled";

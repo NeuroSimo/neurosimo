@@ -75,6 +75,10 @@ class SessionConfiguratorNode(Node):
             self.logger.error(f"Project does not exist: {project_name}")
             return False
 
+        # Store the active project in the project state if it has changed
+        if project_name != self.project_manager.get_active_project():
+            self.project_manager.save_active_project(project_name)
+
         # Publish active project
         msg = String(data=project_name)
         self.active_project_publisher.publish(msg)
@@ -163,9 +167,6 @@ class SessionConfiguratorNode(Node):
         if not success:
             response.success = False
             return response
-
-        # Store the active project in the project state
-        self.project_manager.save_active_project(project)
 
         response.success = True
         return response

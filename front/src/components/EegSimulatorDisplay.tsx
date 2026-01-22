@@ -58,7 +58,6 @@ export const EegSimulatorDisplay: React.FC = () => {
     dataset,
     startTime,
     streamerState,
-    toggleStreaming,
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(PipelineContext)
   const { eegInfo } = useContext(EegStreamContext)
@@ -105,11 +104,6 @@ export const EegSimulatorDisplay: React.FC = () => {
   return (
     <EegSimulatorPanel isGrayedOut={isEegStreaming}>
       <SmallerTitle>Simulator</SmallerTitle>
-      <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
-        <ActionButton onClick={toggleStreaming} disabled={actionDisabled}>
-          {actionLabel}
-        </ActionButton>
-      </ConfigRow>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Dataset:</ConfigLabel>
         <DatasetSelect onChange={setDataset} value={dataset} disabled={isExperimentOngoing || isEegStreaming}>

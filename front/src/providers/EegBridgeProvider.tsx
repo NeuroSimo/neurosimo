@@ -2,7 +2,6 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic, Message } from 'roslib'
 
 import { ros } from 'ros/ros'
-import { startEegBridgeRos, stopEegBridgeRos } from 'ros/eeg_bridge'
 
 export enum EegBridgeStateValue {
   READY = 0,
@@ -17,14 +16,10 @@ interface RosStreamerState extends ROSLIB.Message {
 
 interface EegBridgeContextType {
   bridgeState: EegBridgeStateValue
-  toggleStreaming: () => void
 }
 
 const defaultBridgeState: EegBridgeContextType = {
   bridgeState: EegBridgeStateValue.READY,
-  toggleStreaming: () => {
-    console.warn('toggleStreaming called before provider mounted')
-  },
 }
 
 export const EegBridgeContext = React.createContext<EegBridgeContextType>(defaultBridgeState)
@@ -54,27 +49,10 @@ export const EegBridgeProvider: React.FC<EegBridgeProviderProps> = ({ children }
     }
   }, [])
 
-  const toggleStreaming = () => {
-    setBridgeState(EegBridgeStateValue.LOADING)
-
-    if (bridgeState === EegBridgeStateValue.RUNNING) {
-      // Service call to stop
-      stopEegBridgeRos(() => {
-        setBridgeState(EegBridgeStateValue.READY)
-      })
-    } else {
-      // Service call to start
-      startEegBridgeRos(() => {
-        setBridgeState(EegBridgeStateValue.RUNNING)
-      })
-    }
-  }
-
   return (
     <EegBridgeContext.Provider
       value={{
         bridgeState,
-        toggleStreaming,
       }}
     >
       {children}

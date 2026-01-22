@@ -16,7 +16,7 @@ export const Select = styled.select`
 `
 
 // Shared width for configuration panels
-export const CONFIG_PANEL_WIDTH = 220
+export const CONFIG_PANEL_WIDTH = 240
 
 /* Shared dashboard panel title offset (px). */
 export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 220

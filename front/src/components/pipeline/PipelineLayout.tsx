@@ -11,7 +11,7 @@ type Props = {
 
 const Layout = styled.div`
   display: grid;
-  grid-template-columns: ${CONFIG_PANEL_WIDTH + 40}px 1fr;
+  grid-template-columns: ${CONFIG_PANEL_WIDTH + 60}px 1fr;
   grid-template-rows: auto;
   gap: 16px 24px;
   align-items: start;

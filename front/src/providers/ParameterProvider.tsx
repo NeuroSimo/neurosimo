@@ -71,6 +71,8 @@ interface ParameterContextType {
   setExperimentProtocol: (protocol: string, callback?: () => void) => Promise<void>
   setSimulatorDataset: (filename: string, callback?: () => void) => Promise<void>
   setSimulatorStartTime: (startTime: number, callback?: () => void) => Promise<void>
+  setPlaybackExperiment: (experiment: string, callback?: () => void) => Promise<void>
+  setPlaybackPreprocessed: (preprocessed: boolean, callback?: () => void) => Promise<void>
 }
 
 // ESLint disable for intentionally empty functions used as defaults
@@ -98,6 +100,8 @@ const defaultParameterState: ParameterContextType = {
   setExperimentProtocol: asyncNoop,
   setSimulatorDataset: asyncNoop,
   setSimulatorStartTime: asyncNoop,
+  setPlaybackExperiment: asyncNoop,
+  setPlaybackPreprocessed: asyncNoop,
 }
 
 export const ParameterContext = createContext<ParameterContextType>(defaultParameterState)
@@ -237,6 +241,14 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('simulator.start_time', startTime, callback || noop)
   }
+  const setPlaybackExperiment = async (experiment: string, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('playback.experiment', experiment, callback || noop)
+  }
+  const setPlaybackPreprocessed = async (preprocessed: boolean, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('playback.preprocessed', preprocessed, callback || noop)
+  }
 
   return (
     <ParameterContext.Provider
@@ -252,6 +264,8 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
         setExperimentProtocol,
         setSimulatorDataset,
         setSimulatorStartTime,
+        setPlaybackExperiment,
+        setPlaybackPreprocessed,
       }}
     >
       {children}

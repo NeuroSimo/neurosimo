@@ -1,20 +1,21 @@
 import React, { useContext } from 'react'
 
-import { setParameterRos } from 'ros/parameters'
+import { useParameters } from 'providers/ParameterProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { PipelineNode } from './PipelineNode'
 
 export const PreprocessorNode: React.FC = () => {
   const { preprocessorEnabled, preprocessorModule, preprocessorList } = useContext(PipelineContext)
+  const { setPreprocessorEnabled, setPreprocessorModule } = useParameters()
 
   const handleToggle = (next: boolean) => {
-    setParameterRos('preprocessor.enabled', next, () => {
+    setPreprocessorEnabled(next, () => {
       console.log('Preprocessor ' + (next ? 'enabled' : 'disabled'))
     })
   }
 
   const handleModuleChange = (nextModule: string) => {
-    setParameterRos('preprocessor.module', nextModule, () => {
+    setPreprocessorModule(nextModule, () => {
       console.log('Preprocessor set to ' + nextModule)
     })
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic, Message } from 'roslib'
 
 import { ros } from 'ros/ros'
+import { useParameters } from './ParameterProvider'
 
 export enum StreamerStateValue {
   READY = 0,
@@ -63,11 +64,14 @@ interface EegSimulatorProviderProps {
 }
 
 export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ children }) => {
-  const [datasetList, setDatasetList] = useState<Dataset[]>([])
-  const [dataset, setDataset] = useState<string>('')
+  const { simulator } = useParameters()
 
-  const [startTime, setStartTime] = useState<number>(0)
+  const [datasetList, setDatasetList] = useState<Dataset[]>([])
   const [streamerState, setStreamerState] = useState<StreamerStateValue>(StreamerStateValue.READY)
+
+  // Get parameter values from structured parameter store
+  const dataset = simulator.dataset_filename
+  const startTime = simulator.start_time
 
   useEffect(() => {
     /* Subscriber for dataset list. */
@@ -79,28 +83,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
 
     datasetListSubscriber.subscribe((message: DatasetList) => {
       setDatasetList(message.datasets)
-    })
-
-    /* Subscriber for active dataset. */
-    const datasetSubscriber = new Topic<RosString>({
-      ros: ros,
-      name: '/eeg_simulator/dataset',
-      messageType: 'std_msgs/String',
-    })
-
-    datasetSubscriber.subscribe((message: RosString) => {
-      setDataset(message.data)
-    })
-
-    /* Subscriber for start time. */
-    const startTimeSubscriber = new Topic<RosFloat64>({
-      ros: ros,
-      name: '/eeg_simulator/start_time',
-      messageType: 'std_msgs/Float64',
-    })
-
-    startTimeSubscriber.subscribe((message: RosFloat64) => {
-      setStartTime(message.data)
     })
 
     /* Subscriber for simulator state. */
@@ -117,9 +99,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
     /* Unsubscribers */
     return () => {
       datasetListSubscriber.unsubscribe()
-      datasetSubscriber.unsubscribe()
-
-      startTimeSubscriber.unsubscribe()
       stateSubscriber.unsubscribe()
     }
   }, [])

@@ -1,7 +1,6 @@
 import React from 'react'
 
 import { DataSourceDisplay } from 'components/DataSourceDisplay'
-import { EegDeviceDisplay } from 'components/EegDeviceDisplay'
 import { ProjectSelector } from 'components/ProjectSelector'
 import { ExperimentPanel } from 'components/pipeline/ExperimentConfigPanel'
 import { PipelineDiagram } from 'components/pipeline/PipelineDiagram'
@@ -15,7 +14,6 @@ export const PipelineView = () => {
           <ProjectSelector />
           <ExperimentPanel />
           <DataSourceDisplay />
-          <EegDeviceDisplay />
         </>
       }
       pipeline={

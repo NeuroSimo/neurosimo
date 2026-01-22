@@ -82,6 +82,8 @@ private:
   void publish_eeg_info();
   void publish_streamer_state();
 
+  void set_eeg_device_state(EegDeviceState new_state);
+
   void handle_start_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);

@@ -1,3 +1,4 @@
+bool is_streaming
 uint32 sampling_frequency
 uint8 num_eeg_channels
 uint8 num_emg_channels

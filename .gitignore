@@ -24,7 +24,9 @@ data/bags/
 .vscode
 venv
 .venv
+.cursor
 CLAUDE.md
+ARCHITECTURE.md
 
 # MacOS temporary file
 .DS_Store

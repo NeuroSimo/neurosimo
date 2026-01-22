@@ -2,7 +2,6 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic, Message } from 'roslib'
 
 import { ros } from 'ros/ros'
-import { startSimulatorRos, stopSimulatorRos } from 'ros/eeg_simulator'
 
 export enum StreamerStateValue {
   READY = 0,
@@ -48,7 +47,6 @@ interface EegSimulatorContextType {
   dataset: string
   startTime: number
   streamerState: StreamerStateValue
-  toggleStreaming: () => void
 }
 
 const defaultDatasetState: EegSimulatorContextType = {
@@ -56,9 +54,6 @@ const defaultDatasetState: EegSimulatorContextType = {
   dataset: '',
   startTime: 0,
   streamerState: StreamerStateValue.READY,
-  toggleStreaming: () => {
-    console.warn('toggleStreaming called before provider mounted')
-  },
 }
 
 export const EegSimulatorContext = React.createContext<EegSimulatorContextType>(defaultDatasetState)
@@ -129,22 +124,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
     }
   }, [])
 
-  const toggleStreaming = () => {
-    setStreamerState(StreamerStateValue.LOADING)
-
-    if (streamerState === StreamerStateValue.RUNNING) {
-      // Service call to stop
-      stopSimulatorRos(() => {
-        setStreamerState(StreamerStateValue.READY)
-      })
-    } else {
-      // Service call to start
-      startSimulatorRos(() => {
-        setStreamerState(StreamerStateValue.RUNNING)
-      })
-    }
-  }
-
   return (
     <EegSimulatorContext.Provider
       value={{
@@ -152,7 +131,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
         dataset,
         startTime,
         streamerState,
-        toggleStreaming,
       }}
     >
       {children}

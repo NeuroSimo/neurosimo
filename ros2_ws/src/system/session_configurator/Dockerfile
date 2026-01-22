@@ -23,14 +23,14 @@ COPY ros2_ws/src/interfaces/project_interfaces src/interfaces/project_interfaces
 RUN source /opt/ros/iron/setup.bash && colcon build
 
 # ROS node
-COPY ros2_ws/src/system/project_manager src/system/project_manager/
-RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select project_manager
+COPY ros2_ws/src/system/session_configurator src/system/session_configurator/
+RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select session_configurator
 
 # Copy entrypoint
 
 WORKDIR /app
 
-COPY ros2_ws/src/system/project_manager/ros_entrypoint.sh .
+COPY ros2_ws/src/system/session_configurator/ros_entrypoint.sh .
 RUN dos2unix ros_entrypoint.sh
 RUN chmod +x ros_entrypoint.sh
 

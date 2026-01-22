@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { EegSimulatorDisplay } from 'components/EegSimulatorDisplay'
+import { DataSourceDisplay } from 'components/DataSourceDisplay'
 import { EegDeviceDisplay } from 'components/EegDeviceDisplay'
 import { ProjectSelector } from 'components/ProjectSelector'
 import { ExperimentPanel } from 'components/pipeline/ExperimentConfigPanel'
@@ -14,7 +14,7 @@ export const PipelineView = () => {
         <>
           <ProjectSelector />
           <ExperimentPanel />
-          <EegSimulatorDisplay />
+          <DataSourceDisplay />
           <EegDeviceDisplay />
         </>
       }

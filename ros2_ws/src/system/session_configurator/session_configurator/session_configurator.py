@@ -1,7 +1,9 @@
-import os
-import json
-import threading
-from threading import Event
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
+
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 
 from project_interfaces.srv import (
     ListProjects,
@@ -10,25 +12,17 @@ from project_interfaces.srv import (
 
 from std_msgs.msg import String
 
-import rclpy
-from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
-
-from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from .project_manager import ProjectManager
 
 
 class SessionConfiguratorNode(Node):
-    PROJECTS_ROOT = '/app/projects'
-
     def __init__(self):
-        super().__init__('session_configurator_node')
+        super().__init__('session_configurator')
         self.logger = self.get_logger()
         self.callback_group = ReentrantCallbackGroup()
 
-        # The project state is properly initialized later in the constructor.
-        self.project_state = None
-        self.project_state_lock = threading.Lock()
+        # Initialize project manager
+        self.project_manager = ProjectManager(self.logger)
 
         # Declare ROS2 parameters
         self.declare_parameter('project', 'example')
@@ -62,179 +56,42 @@ class SessionConfiguratorNode(Node):
                          history=HistoryPolicy.KEEP_LAST)
         self.active_project_publisher = self.create_publisher(String, "/projects/active", qos, callback_group=self.callback_group)
 
-        # Initialize state
-        self.global_state = self.load_global_state()
-
-        if self.global_state is None:
-            self.logger.info("Global state not found, creating new one.")
-            self.global_state = self.initialize_global_state()
-            self.save_global_state(self.global_state)
-
         # Set active project
-        active_project = self.global_state['active_project']
+        active_project = self.project_manager.project_state['active_project']
         self.set_active_project(active_project)
 
-    # State management
-
-    def load_state(self, path):
-        try:
-            with open(path, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return None
-
-    def save_state(self, path, state):
-        tmp = path + ".tmp"
-        with open(tmp, 'w') as f:
-            json.dump(state, f, indent=2)
-        os.replace(tmp, path)
-
-    # Global state
-
-    def load_global_state(self):
-        path = os.path.join(self.PROJECTS_ROOT, "global_state.json")
-        state = self.load_state(path)
-        return state
-
-    def save_global_state(self, state):
-        path = os.path.join(self.PROJECTS_ROOT, "global_state.json")
-        self.save_state(path, state)
-
-    def initialize_global_state(self):
-        return {
-            "active_project": 'example',
-        }
-
-    # Project state
-
-    def load_project_state(self):
-        path = os.path.join(self.PROJECTS_ROOT, self.active_project, "state.json")
-        state = self.load_state(path)
-        return state
-
-    def save_project_state(self, state):
-        path = os.path.join(self.PROJECTS_ROOT, self.active_project, "state.json")
-        self.save_state(path, state)
-
-    def initialize_project_state(self):
-        return {
-            "decider": {
-                "module": 'example',
-                "enabled": False
-            },
-            "preprocessor": {
-                "module": 'example',
-                "enabled": False
-            },
-            "presenter": {
-                "module": 'example',
-                "enabled": False
-            },
-            "simulator": {
-                "dataset_filename": 'random_data_1_khz.json',
-                "start_time": 0.0
-            },
-            "experiment": {
-                "protocol": 'example',
-            },
-        }
-
-    def validate_project_state(self, state):
-        required_keys = ["decider", "preprocessor", "presenter", "simulator", "experiment"]
-        for key in required_keys:
-            if key not in state:
-                self.logger.error(f"State file is missing required key: {key}")
-                return False
-
-        if not isinstance(state["decider"], dict) or not isinstance(state["preprocessor"], dict) or not isinstance(state["presenter"], dict):
-            self.logger.error("State file has invalid structure for decider, preprocessor, or presenter.")
-            return False
-
-        if not isinstance(state["simulator"], dict):
-            self.logger.error("State file has invalid structure for simulator.")
-            return False
-
-        if not isinstance(state["experiment"], dict):
-            self.logger.error("State file has invalid structure for experiment.")
-            return False
-
-        if not all(key in state["decider"] for key in ["module", "enabled"]):
-            self.logger.error("State file is missing required keys in decider.")
-            return False
-
-        if not all(key in state["preprocessor"] for key in ["module", "enabled"]):
-            self.logger.error("State file is missing required keys in preprocessor.")
-            return False
-
-        if not all(key in state["presenter"] for key in ["module", "enabled"]):
-            self.logger.error("State file is missing required keys in presenter.")
-            return False
-
-        if not all(key in state["simulator"] for key in ["dataset_filename", "start_time"]):
-            self.logger.error("State file is missing required keys in simulator.")
-            return False
-
-        if not all(key in state["experiment"] for key in ["protocol"]):
-            self.logger.error("State file is missing required keys in experiment.")
-            return False
-
-        return True
-
-    # Project selection
-
     def set_active_project(self, project_name):
-        self.active_project = project_name
+        if not project_name in self.project_manager.list_projects():
+            self.logger.error(f"Project does not exist: {project_name}")
+            return False
 
         # Publish active project
         msg = String(data=project_name)
         self.active_project_publisher.publish(msg)
 
-        # Load or initialize state
-        with self.project_state_lock:
-            self.project_state = self.load_project_state()
-            if self.project_state is None:
-                self.project_state = self.initialize_project_state()
-                self.save_project_state(self.project_state)
-
-        # Validate state
-        if not self.validate_project_state(self.project_state):
-            self.logger.error("Reinitializing state.")
-            self.project_state = self.initialize_project_state()
-            self.save_project_state(self.project_state)
-
-        self.logger.info(f"Active project set to: {self.active_project}")
+        # Load session state for the project
+        session_state = self.project_manager.get_session_state_for_project(project_name)
 
         # Set ROS2 parameters from the loaded state
         self.set_parameters([
             rclpy.parameter.Parameter('project', rclpy.parameter.Parameter.Type.STRING, project_name),
-            rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, self.project_state["decider"]["module"]),
-            rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, self.project_state["decider"]["enabled"]),
-            rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, self.project_state["preprocessor"]["module"]),
-            rclpy.parameter.Parameter('preprocessor.enabled', rclpy.parameter.Parameter.Type.BOOL, self.project_state["preprocessor"]["enabled"]),
-            rclpy.parameter.Parameter('presenter.module', rclpy.parameter.Parameter.Type.STRING, self.project_state["presenter"]["module"]),
-            rclpy.parameter.Parameter('presenter.enabled', rclpy.parameter.Parameter.Type.BOOL, self.project_state["presenter"]["enabled"]),
-            rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, self.project_state["experiment"]["protocol"]),
-            rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, self.project_state["simulator"]["dataset_filename"]),
-            rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, self.project_state["simulator"]["start_time"]),
+            rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_state["decider"]["module"]),
+            rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["decider"]["enabled"]),
+            rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_state["preprocessor"]["module"]),
+            rclpy.parameter.Parameter('preprocessor.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["preprocessor"]["enabled"]),
+            rclpy.parameter.Parameter('presenter.module', rclpy.parameter.Parameter.Type.STRING, session_state["presenter"]["module"]),
+            rclpy.parameter.Parameter('presenter.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["presenter"]["enabled"]),
+            rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_state["experiment"]["protocol"]),
+            rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_state["simulator"]["dataset_filename"]),
+            rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_state["simulator"]["start_time"]),
         ])
-
-        self.logger.info(f"State loaded for project: {self.active_project}")
-
-    def list_projects(self):
-        all_dirs = [
-            d for d in os.listdir(self.PROJECTS_ROOT)
-            if os.path.isdir(os.path.join(self.PROJECTS_ROOT, d))
-        ]
-        if "example" in all_dirs:
-            all_dirs.remove("example")
-            return ["example"] + sorted(all_dirs)
-        return sorted(all_dirs)
+        return True
 
     # Service callbacks
 
     def list_projects_callback(self, request, response):
         try:
-            response.projects = self.list_projects()
+            response.projects = self.project_manager.list_projects()
             response.success = True
             self.logger.info("Projects successfully listed.")
         except Exception as e:
@@ -244,20 +101,17 @@ class SessionConfiguratorNode(Node):
 
     def set_active_project_callback(self, request, response):
         project = request.project
-        if project in self.list_projects():
-            self.set_active_project(project)
-            response.success = True
-            self.logger.info(f"Active project set to: {project}")
-        else:
+
+        success = self.set_active_project(project)
+        if not success:
             response.success = False
-            self.logger.error(f"Project does not exist: {project}")
+            return response
 
-        # Store the active project in the global state
-        self.global_state["active_project"] = project
-        self.save_global_state(self.global_state)
+        # Store the active project in the project state
+        self.project_manager.save_active_project(project)
 
+        response.success = True
         return response
-
 
 def main(args=None):
     rclpy.init(args=args)

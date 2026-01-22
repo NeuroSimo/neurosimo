@@ -3,10 +3,12 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <memory>
 #include <netinet/in.h>
 #include <vector>
 
 #include "eeg_interfaces/msg/eeg_info.hpp"
+#include "socket.h"
 
 /** UDP datagram length is limited by Ethernet MTU (IP layer fragmentation isn't
     supported). */
@@ -36,7 +38,7 @@ struct AdapterSample {
   bool trigger_b;                // Pulse trigger (Port B)
 };
 
-/** Packet returned from adapter read_eeg_packet().
+/** Packet returned from adapter process_packet().
     Contains both the result type and the sample data (when applicable). */
 struct AdapterPacket {
   AdapterPacketResult result;
@@ -46,16 +48,19 @@ struct AdapterPacket {
 
 class EegAdapter {
 public:
+  EegAdapter(std::shared_ptr<UdpSocket> socket) : socket_(socket) {}
   virtual ~EegAdapter() = default;
 
-  /** Read next packet from the EEG device.
+  /** Process a packet from buffer data that has already been read from socket.
 
-      Process the next packet received from the device. The packet can update
-      the adapter configuration and state or return a sample.
+      This method processes packet data that has been pre-read from the UDP socket.
+      The packet can update the adapter configuration and state or return a sample.
 
+      @param buffer The buffer containing the packet data
+      @param buffer_size The size of valid data in the buffer
       @return AdapterPacket containing the result type, sample data (when applicable),
       and trigger_a timestamp for latency measurement triggers. */
-  virtual AdapterPacket read_eeg_packet() = 0;
+  virtual AdapterPacket process_packet(const uint8_t* buffer, size_t buffer_size) = 0;
 
   /// Get EEG device configuration info
   eeg_interfaces::msg::EegInfo get_eeg_info() const {
@@ -68,6 +73,9 @@ public:
   }
 
 protected:
+  std::shared_ptr<UdpSocket> socket_;
+
+public:
   /// Sampling frequency in Hz.
   uint32_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
 

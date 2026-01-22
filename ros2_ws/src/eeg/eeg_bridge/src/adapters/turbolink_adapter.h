@@ -24,18 +24,15 @@ const uint8_t AUX_CHANNEL_COUNT = 8;
 class TurboLinkAdapter : public EegAdapter {
 
 public:
-  TurboLinkAdapter(uint16_t port, uint32_t sampling_frequency, uint8_t eeg_channel_count);
+  TurboLinkAdapter(std::shared_ptr<UdpSocket> socket, uint32_t sampling_frequency, uint8_t eeg_channel_count);
   ~TurboLinkAdapter() noexcept override = default;
 
-  AdapterPacket read_eeg_packet() override;
+  AdapterPacket process_packet(const uint8_t* buffer, size_t buffer_size) override;
 
 private:
-  std::tuple<AdapterSample, bool> handle_packet();
+  std::tuple<AdapterSample, bool> handle_packet(const uint8_t* buffer);
 
   static float_t convert_be_float_to_host(uint8_t *buffer);
-
-  std::unique_ptr<UdpSocket> socket_;
-  uint8_t buffer[BUFFER_SIZE] = {0};
 };
 
 #endif // EEG_BRIDGE_SRC_ADAPTERS_TURBOLINK_ADAPTER_H

@@ -88,17 +88,17 @@ enum ChannelType {
 class NeurOneAdapter : public EegAdapter {
 
 public:
-  NeurOneAdapter(uint16_t port);
+  NeurOneAdapter(std::shared_ptr<UdpSocket> socket);
 
   ~NeurOneAdapter() noexcept override = default;
 
-  AdapterPacket read_eeg_packet() override;
+  AdapterPacket process_packet(const uint8_t* buffer, size_t buffer_size) override;
 
 private:
   bool request_measurement_start_packet() const;
-  void handle_measurement_start_packet();
+  void handle_measurement_start_packet(const uint8_t* buffer);
 
-  AdapterSample handle_sample_packet();
+  AdapterSample handle_sample_packet(const uint8_t* buffer);
 
   /** Convert big-endian int24 represented as 3 uint8_t bytes to int32_t.
 
@@ -110,11 +110,7 @@ private:
       @return the actual value as int32_t. */
   static int32_t int24asint32(const uint8_t *value);
 
-  uint8_t buffer[BUFFER_SIZE] = {0};
-
   ChannelType channel_types[MAX_CHANNELS] = {ChannelType::UNDEFINED_CHANNEL};
-
-  std::unique_ptr<UdpSocket> socket_;
 
   bool measurement_start_packet_received = false;
   uint16_t packets_since_measurement_start_packet_requested = 0;

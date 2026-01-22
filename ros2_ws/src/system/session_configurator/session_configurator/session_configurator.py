@@ -11,6 +11,7 @@ from project_interfaces.srv import (
 )
 
 from std_msgs.msg import String
+from rcl_interfaces.msg import SetParametersResult
 
 from .project_manager import ProjectManager
 
@@ -60,6 +61,9 @@ class SessionConfiguratorNode(Node):
         active_project = self.project_manager.get_active_project()
         self.set_active_project(active_project)
 
+        # Add parameter change callback to save changes to session state
+        self.add_on_set_parameters_callback(self.parameter_change_callback)
+
     def set_active_project(self, project_name):
         if not project_name in self.project_manager.list_projects():
             self.logger.error(f"Project does not exist: {project_name}")
@@ -75,15 +79,15 @@ class SessionConfiguratorNode(Node):
         # Set ROS2 parameters from the loaded state
         self.set_parameters([
             rclpy.parameter.Parameter('project', rclpy.parameter.Parameter.Type.STRING, project_name),
-            rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_state["decider"]["module"]),
-            rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["decider"]["enabled"]),
-            rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_state["preprocessor"]["module"]),
-            rclpy.parameter.Parameter('preprocessor.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["preprocessor"]["enabled"]),
-            rclpy.parameter.Parameter('presenter.module', rclpy.parameter.Parameter.Type.STRING, session_state["presenter"]["module"]),
-            rclpy.parameter.Parameter('presenter.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["presenter"]["enabled"]),
-            rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_state["experiment"]["protocol"]),
-            rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_state["simulator"]["dataset_filename"]),
-            rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_state["simulator"]["start_time"]),
+            rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_state["decider.module"]),
+            rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["decider.enabled"]),
+            rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_state["preprocessor.module"]),
+            rclpy.parameter.Parameter('preprocessor.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["preprocessor.enabled"]),
+            rclpy.parameter.Parameter('presenter.module', rclpy.parameter.Parameter.Type.STRING, session_state["presenter.module"]),
+            rclpy.parameter.Parameter('presenter.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["presenter.enabled"]),
+            rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_state["experiment.protocol"]),
+            rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_state["simulator.dataset_filename"]),
+            rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_state["simulator.start_time"]),
         ])
         return True
 
@@ -112,6 +116,51 @@ class SessionConfiguratorNode(Node):
 
         response.success = True
         return response
+
+    def parameter_change_callback(self, params):
+        """Callback to handle parameter changes and save them to session state."""
+        try:
+            # Find the project parameter in params (by param.name)
+            project_param = None
+            for param in params:
+                if param.name == 'project':
+                    project_param = param
+                    break
+
+            if project_param is not None:
+                active_project = self.project_manager.get_active_project()
+
+                new_project = project_param.value
+                if new_project != active_project:
+                    self.logger.info(f"Project parameter changed from '{active_project}' to '{new_project}', switching projects")
+                    success = self.set_active_project(new_project)
+                    if not success:
+                        self.logger.error(f"Failed to switch to project '{new_project}'")
+                        return rclpy.parameter.SetParametersResult(successful=False, reason=f"Invalid project: {new_project}")
+
+                    self.project_manager.save_active_project(new_project)
+
+                params = [p for p in params if p.name != 'project']
+
+            # Handle other parameter changes
+            if params:
+                active_project = self.project_manager.get_active_project()
+
+                session_state = self.project_manager.load_session_state(active_project)
+
+                for param in params:
+                    session_state[param.name] = param.value
+
+                # Save the updated session state
+                self.project_manager.save_session_state(active_project, session_state)
+                self.logger.info(f"Updated session state for project '{active_project}' with parameter changes")
+
+        except Exception as e:
+            self.logger.error(f"Error handling parameter changes: {e}")
+            return SetParametersResult(successful=False, reason=str(e))
+
+        # Return success to allow parameter changes
+        return SetParametersResult(successful=True)
 
 def main(args=None):
     rclpy.init(args=args)

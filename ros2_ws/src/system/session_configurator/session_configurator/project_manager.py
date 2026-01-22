@@ -65,67 +65,31 @@ class ProjectManager:
 
     def initialize_session_state(self, project_name):
         state = {
-            "decider": {
-                "module": 'example',
-                "enabled": False
-            },
-            "preprocessor": {
-                "module": 'example',
-                "enabled": False
-            },
-            "presenter": {
-                "module": 'example',
-                "enabled": False
-            },
-            "simulator": {
-                "dataset_filename": 'random_data_1_khz.json',
-                "start_time": 0.0
-            },
-            "experiment": {
-                "protocol": 'example',
-            },
+            "decider.module": 'example',
+            "decider.enabled": False,
+            "preprocessor.module": 'example',
+            "preprocessor.enabled": False,
+            "presenter.module": 'example',
+            "presenter.enabled": False,
+            "simulator.dataset_filename": 'random_data_1_khz.json',
+            "simulator.start_time": 0.0,
+            "experiment.protocol": 'example',
         }
         self.save_session_state(project_name, state)
         return state
 
     def validate_session_state(self, state):
-        required_keys = ["decider", "preprocessor", "presenter", "simulator", "experiment"]
+        required_keys = [
+            "decider.module", "decider.enabled",
+            "preprocessor.module", "preprocessor.enabled",
+            "presenter.module", "presenter.enabled",
+            "simulator.dataset_filename", "simulator.start_time",
+            "experiment.protocol"
+        ]
         for key in required_keys:
             if key not in state:
                 self.logger.error(f"State file is missing required key: {key}")
                 return False
-
-        if not isinstance(state["decider"], dict) or not isinstance(state["preprocessor"], dict) or not isinstance(state["presenter"], dict):
-            self.logger.error("State file has invalid structure for decider, preprocessor, or presenter.")
-            return False
-
-        if not isinstance(state["simulator"], dict):
-            self.logger.error("State file has invalid structure for simulator.")
-            return False
-
-        if not isinstance(state["experiment"], dict):
-            self.logger.error("State file has invalid structure for experiment.")
-            return False
-
-        if not all(key in state["decider"] for key in ["module", "enabled"]):
-            self.logger.error("State file is missing required keys in decider.")
-            return False
-
-        if not all(key in state["preprocessor"] for key in ["module", "enabled"]):
-            self.logger.error("State file is missing required keys in preprocessor.")
-            return False
-
-        if not all(key in state["presenter"] for key in ["module", "enabled"]):
-            self.logger.error("State file is missing required keys in presenter.")
-            return False
-
-        if not all(key in state["simulator"] for key in ["dataset_filename", "start_time"]):
-            self.logger.error("State file is missing required keys in simulator.")
-            return False
-
-        if not all(key in state["experiment"] for key in ["protocol"]):
-            self.logger.error("State file is missing required keys in experiment.")
-            return False
 
         return True
 

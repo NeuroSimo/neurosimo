@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
 
-import { setDeciderEnabledRos, setDeciderModuleRos } from 'ros/pipeline'
+import { setParameterRos } from 'ros/parameters'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { PipelineNode } from './PipelineNode'
 
@@ -8,13 +8,13 @@ export const DeciderNode: React.FC = () => {
   const { deciderEnabled, deciderModule, deciderList } = useContext(PipelineContext)
 
   const handleToggle = (next: boolean) => {
-    setDeciderEnabledRos(next, () => {
+    setParameterRos('decider.enabled', next, () => {
       console.log('Decider ' + (next ? 'enabled' : 'disabled'))
     })
   }
 
   const handleModuleChange = (nextModule: string) => {
-    setDeciderModuleRos(nextModule, () => {
+    setParameterRos('decider.module', nextModule, () => {
       console.log('Decider set to ' + nextModule)
     })
   }

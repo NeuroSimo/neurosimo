@@ -8,17 +8,6 @@ class ProjectManager:
 
     def __init__(self, logger):
         self.logger = logger
-        self.session_state = None
-        self.session_state_lock = threading.Lock()
-        self.project_state = None
-
-        # Initialize state
-        self.project_state = self.load_project_state()
-
-        if self.project_state is None:
-            self.logger.info("Global state not found, creating new one.")
-            self.project_state = self.initialize_project_state()
-            self.save_project_state(self.project_state)
 
     # Helper functions
 
@@ -40,6 +29,11 @@ class ProjectManager:
     def load_project_state(self):
         path = os.path.join(self.PROJECTS_ROOT, "project_state.json")
         state = self._load_json(path)
+
+        if state is None:
+            self.logger.info("Project state not found, creating new one.")
+            state = self.initialize_project_state()
+
         return state
 
     def save_project_state(self, state):
@@ -47,23 +41,30 @@ class ProjectManager:
         self._save_json(path, state)
 
     def initialize_project_state(self):
-        return {
+        state = {
             "active_project": 'example',
         }
+        self.save_project_state(state)
+        return state
 
     # Session state
 
     def load_session_state(self, project_name):
         path = os.path.join(self.PROJECTS_ROOT, project_name, "session_state.json")
         state = self._load_json(path)
+
+        if state is None:
+            self.logger.info(f"Session state not found for project: {project_name}, initializing new one.")
+            state = self.initialize_session_state(project_name)
+
         return state
 
     def save_session_state(self, project_name, state):
         path = os.path.join(self.PROJECTS_ROOT, project_name, "session_state.json")
         self._save_json(path, state)
 
-    def initialize_session_state(self):
-        return {
+    def initialize_session_state(self, project_name):
+        state = {
             "decider": {
                 "module": 'example',
                 "enabled": False
@@ -84,6 +85,8 @@ class ProjectManager:
                 "protocol": 'example',
             },
         }
+        self.save_session_state(project_name, state)
+        return state
 
     def validate_session_state(self, state):
         required_keys = ["decider", "preprocessor", "presenter", "simulator", "experiment"]
@@ -130,22 +133,14 @@ class ProjectManager:
 
     def get_session_state_for_project(self, project_name):
         # Load or initialize session state
-        with self.session_state_lock:
-            self.session_state = self.load_session_state(project_name)
-            if self.session_state is None:
-                self.session_state = self.initialize_session_state()
-                self.save_session_state(project_name, self.session_state)
+        session_state = self.load_session_state(project_name)
 
         # Validate state
-        if not self.validate_session_state(self.session_state):
+        if not self.validate_session_state(session_state):
             self.logger.error("Reinitializing state.")
-            self.session_state = self.initialize_session_state()
-            self.save_session_state(project_name, self.session_state)
+            session_state = self.initialize_session_state(project_name)
 
-        self.logger.info(f"Active project set to: {project_name}")
-        self.logger.info(f"State loaded for project: {project_name}")
-
-        return self.session_state
+        return session_state
 
     def list_projects(self):
         all_dirs = [
@@ -157,7 +152,12 @@ class ProjectManager:
             return ["example"] + sorted(all_dirs)
         return sorted(all_dirs)
 
+    def get_active_project(self):
+        state = self.load_project_state()
+        return state["active_project"]
+
     def save_active_project(self, project_name):
         """Update the project state with the active project and save it."""
-        self.project_state["active_project"] = project_name
-        self.save_project_state(self.project_state)
+        state = self.load_project_state()
+        state["active_project"] = project_name
+        self.save_project_state(state)

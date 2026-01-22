@@ -57,7 +57,7 @@ class SessionConfiguratorNode(Node):
         self.active_project_publisher = self.create_publisher(String, "/projects/active", qos, callback_group=self.callback_group)
 
         # Set active project
-        active_project = self.project_manager.project_state['active_project']
+        active_project = self.project_manager.get_active_project()
         self.set_active_project(active_project)
 
     def set_active_project(self, project_name):

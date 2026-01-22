@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
 
-import { setPresenterEnabledRos, setPresenterModuleRos } from 'ros/pipeline'
+import { setParameterRos } from 'ros/parameters'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { PipelineNode } from './PipelineNode'
 
@@ -8,13 +8,13 @@ export const PresenterNode: React.FC = () => {
   const { presenterEnabled, presenterModule, presenterList } = useContext(PipelineContext)
 
   const handleToggle = (next: boolean) => {
-    setPresenterEnabledRos(next, () => {
+    setParameterRos('presenter.enabled', next, () => {
       console.log('Presenter ' + (next ? 'enabled' : 'disabled'))
     })
   }
 
   const handleModuleChange = (nextModule: string) => {
-    setPresenterModuleRos(nextModule, () => {
+    setParameterRos('presenter.module', nextModule, () => {
       console.log('Presenter set to ' + nextModule)
     })
   }

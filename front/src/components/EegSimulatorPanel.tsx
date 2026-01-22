@@ -1,13 +1,11 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext } from 'react'
 import styled from 'styled-components'
 
-import { ToggleSwitch } from 'components/ToggleSwitch'
 import { ValidatedInput } from 'components/ValidatedInput'
 
 import {
   StyledPanel,
   Select,
-  SmallerTitle,
   ConfigRow,
   ConfigLabel,
   ConfigValue,
@@ -23,8 +21,8 @@ import { useParameters } from 'providers/ParameterProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 
-const EegSimulatorPanel = styled(StyledPanel)`
-  width: ${CONFIG_PANEL_WIDTH}px;
+const SimulatorPanel = styled(StyledPanel)`
+  width: ${CONFIG_PANEL_WIDTH - 30}px;
   position: static;
   display: flex;
   flex-direction: column;
@@ -36,12 +34,6 @@ const DatasetSelect = styled(Select)`
   width: 150px;
 `
 
-const SwitchWrapper = styled.span`
-  width: 59px;
-  display: inline-flex;
-  justify-content: flex-end;
-`
-
 const CompactRow = styled(ConfigRow)`
   margin-bottom: 2px;
   gap: 4px;
@@ -51,7 +43,7 @@ const SectionStartRow = styled(CompactRow)`
   margin-top: 6px;
 `
 
-export const EegSimulatorDisplay: React.FC = () => {
+export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegSimulatorHealthcheck } = useContext(HealthcheckContext)
   const {
     datasetList,
@@ -103,8 +95,7 @@ export const EegSimulatorDisplay: React.FC = () => {
       : 'Ready'
 
   return (
-    <EegSimulatorPanel isGrayedOut={isEegStreaming}>
-      <SmallerTitle>Simulator</SmallerTitle>
+    <SimulatorPanel isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Dataset:</ConfigLabel>
         <DatasetSelect onChange={setDataset} value={dataset} disabled={isExperimentOngoing || isEegStreaming}>
@@ -155,6 +146,6 @@ export const EegSimulatorDisplay: React.FC = () => {
         <ConfigLabel>Status:</ConfigLabel>
         <ConfigValue>{streamerStateLabel}</ConfigValue>
       </CompactRow>
-    </EegSimulatorPanel>
+    </SimulatorPanel>
   )
 }

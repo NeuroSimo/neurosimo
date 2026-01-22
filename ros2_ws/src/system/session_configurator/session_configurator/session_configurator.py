@@ -48,6 +48,13 @@ class SessionConfiguratorNode(Node):
         self.declare_parameter('simulator.dataset_filename', 'random_data_1_khz.json')
         self.declare_parameter('simulator.start_time', 0.0)
 
+        # Playback parameters
+        self.declare_parameter('playback.bag_filename', '')
+        self.declare_parameter('playback.is_preprocessed', False)
+
+        # Data source parameter
+        self.declare_parameter('data_source', 'simulator')
+
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
         self.create_service(SetActiveProject, '/projects/active/set', self.set_active_project_callback, callback_group=self.callback_group)

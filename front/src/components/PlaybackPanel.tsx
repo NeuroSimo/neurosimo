@@ -43,27 +43,27 @@ const CompactRow = styled(ConfigRow)`
 export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { experimentState } = useContext(PipelineContext)
   const { eegInfo } = useContext(EegStreamContext)
-  const { setPlaybackExperiment, setPlaybackPreprocessed } = useParameters()
+  const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useParameters()
 
   // For playback tab - these would come from a playback context in the future
-  const [playbackExperiment, setPlaybackExperimentState] = useState<string>('')
-  const [playbackPreprocessed, setPlaybackPreprocessedState] = useState<boolean>(false)
+  const [playbackBagFilename, setPlaybackBagFilenameState] = useState<string>('')
+  const [playbackIsPreprocessed, setPlaybackIsPreprocessedState] = useState<boolean>(false)
 
   const isExperimentOngoing = experimentState?.ongoing ?? false
   const isEegStreaming = eegInfo?.is_streaming || false
 
-  const setPlaybackExperimentHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newExperiment = event.target.value
-    setPlaybackExperimentState(newExperiment)
-    setPlaybackExperiment(newExperiment, () => {
-      console.log('Playback experiment set to ' + newExperiment)
+  const setPlaybackBagFilenameHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const bagFilename = event.target.value
+    setPlaybackBagFilenameState(bagFilename)
+    setPlaybackBagFilename(bagFilename, () => {
+      console.log('Playback bag filename set to ' + bagFilename)
     })
   }
 
-  const setPlaybackPreprocessedHandler = (preprocessed: boolean) => {
-    setPlaybackPreprocessedState(preprocessed)
-    setPlaybackPreprocessed(preprocessed, () => {
-      console.log('Playback preprocessed set to ' + preprocessed)
+  const setPlaybackIsPreprocessedHandler = (isPreprocessed: boolean) => {
+    setPlaybackIsPreprocessedState(isPreprocessed)
+    setPlaybackIsPreprocessed(isPreprocessed, () => {
+      console.log('Playback is preprocessed set to ' + isPreprocessed)
     })
   }
 
@@ -71,7 +71,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
     <PlaybackContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Experiment:</ConfigLabel>
-        <ExperimentSelect onChange={setPlaybackExperimentHandler} value={playbackExperiment} disabled={isExperimentOngoing || isEegStreaming}>
+        <ExperimentSelect onChange={setPlaybackBagFilenameHandler} value={playbackBagFilename} disabled={isExperimentOngoing || isEegStreaming}>
           <option value="">Select experiment...</option>
           {/* TODO: Add experiment options here */}
         </ExperimentSelect>
@@ -81,8 +81,8 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         <SwitchWrapper>
           <ToggleSwitch
             type="flat"
-            checked={playbackPreprocessed}
-            onChange={setPlaybackPreprocessedHandler}
+            checked={playbackIsPreprocessed}
+            onChange={setPlaybackIsPreprocessedHandler}
             disabled={isExperimentOngoing || isEegStreaming}
           />
         </SwitchWrapper>

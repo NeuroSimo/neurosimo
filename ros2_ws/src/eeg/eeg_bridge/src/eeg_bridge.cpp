@@ -131,12 +131,14 @@ void EegBridge::create_publishers() {
     "/eeg_bridge/stop",
     std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
-  /* Publish initial streamer state. */
+  /* Publish initial states. */
   publish_streamer_state();
+  publish_eeg_info();
 }
 
 void EegBridge::publish_eeg_info() {
   auto eeg_info = this->eeg_adapter->get_eeg_info();
+  eeg_info.is_streaming = (this->eeg_device_state == EegDeviceState::EEG_DEVICE_STREAMING);
   this->eeg_info_publisher->publish(eeg_info);
 }
 
@@ -144,6 +146,14 @@ void EegBridge::publish_streamer_state() {
   system_interfaces::msg::StreamerState msg;
   msg.state = this->streamer_state;
   this->streamer_state_publisher->publish(msg);
+}
+
+void EegBridge::set_eeg_device_state(EegDeviceState new_state) {
+  EegDeviceState previous_state = this->eeg_device_state;
+  this->eeg_device_state = new_state;
+  if (previous_state != this->eeg_device_state) {
+    publish_eeg_info();
+  }
 }
 
 void EegBridge::publish_eeg_healthcheck() {
@@ -180,8 +190,7 @@ void EegBridge::handle_start_streaming(
   this->is_session_start = true;
   this->is_session_end = false;
   this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
-  
-  publish_eeg_info();
+
   publish_streamer_state();
   
   response->success = true;
@@ -261,7 +270,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
 }
 
 void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
-  this->eeg_device_state = EegDeviceState::EEG_DEVICE_STREAMING;
+  set_eeg_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
@@ -318,12 +327,6 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 void EegBridge::process_eeg_packet() {
   AdapterPacket packet = this->eeg_adapter->read_eeg_packet();
 
-  /* Ignore packets if we're not in streaming mode. The EEG device may be sending
-     packets even when we haven't started a streaming session yet. */
-  if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
-    return;
-  }
-
   auto eeg_info = this->eeg_adapter->get_eeg_info();
 
   if (eeg_info.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
@@ -353,8 +356,12 @@ void EegBridge::process_eeg_packet() {
 
     // Log pulse trigger (trigger_b) when present
     if (packet.sample.trigger_b) {
-      RCLCPP_INFO(this->get_logger(), "Received TMS pulse at time: %.4f s)",
-                  packet.sample.time - this->time_offset);
+      if (this->time_offset != UNSET_TIME) {
+        RCLCPP_INFO(this->get_logger(), "Received TMS pulse at time: %.4f s",
+                    packet.sample.time - this->time_offset);
+      } else {
+        RCLCPP_WARN(this->get_logger(), "Received TMS pulse, skipping.");
+      }
     }
 
     // Always handle the sample
@@ -368,12 +375,12 @@ void EegBridge::process_eeg_packet() {
 
   case ERROR:
     RCLCPP_ERROR(this->get_logger(), "Error reading data packet.");
-    this->eeg_device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
+    set_eeg_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
     break;
 
   case END:
     RCLCPP_INFO(this->get_logger(), "EEG device measurement stopped.");
-    this->eeg_device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
+    set_eeg_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
     break;
 
   default:
@@ -392,28 +399,16 @@ void EegBridge::spin() {
 
       process_eeg_packet();
 
-      /* Update healthcheck based on device and streamer state. */
+      /* Update healthcheck based on component health only. */
       if (this->error_state == ErrorState::ERROR_SAMPLES_DROPPED) {
-        /* Error state overrides all other conditions. */
+        /* Error state indicates component health issue. */
         this->update_healthcheck(system_interfaces::msg::HealthcheckStatus::ERROR,
                                  "Samples dropped in EEG device",
                                  "Samples dropped in EEG device.");
-      } else if (this->eeg_device_state == EegDeviceState::WAITING_FOR_EEG_DEVICE) {
-        /* Device not streaming. */
-        this->update_healthcheck(system_interfaces::msg::HealthcheckStatus::NOT_READY,
-                                 "Waiting for EEG measurement to start",
-                                 "Please start the measurement on the EEG device.");
-      } else if (this->eeg_device_state == EegDeviceState::EEG_DEVICE_STREAMING &&
-                 this->streamer_state == system_interfaces::msg::StreamerState::RUNNING) {
-        /* Device streaming and we're publishing. */
+      } else {
         this->update_healthcheck(system_interfaces::msg::HealthcheckStatus::READY,
-                                 "Streaming data",
-                                 "Streaming data");
-      } else if (this->eeg_device_state == EegDeviceState::EEG_DEVICE_STREAMING) {
-        /* Device streaming but not started yet. */
-        this->update_healthcheck(system_interfaces::msg::HealthcheckStatus::READY,
-                                 "Ready",
-                                 "Ready to start streaming");
+                                 "EEG bridge is operational",
+                                 "EEG bridge is ready and functioning properly");
       }
     }
   } catch (const rclcpp::exceptions::RCLError &exception) {

@@ -18,6 +18,8 @@ add_executable(eeg_bridge
         src/adapters/eeg_adapter.h
         src/adapters/neurone_adapter.cpp
         src/adapters/neurone_adapter.h
+        src/adapters/socket.cpp
+        src/adapters/socket.h
         src/adapters/turbolink_adapter.h
         src/adapters/turbolink_adapter.cpp
         src/eeg_bridge.cpp

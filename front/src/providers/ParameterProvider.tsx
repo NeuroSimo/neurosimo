@@ -1,5 +1,6 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
 import { Topic } from 'roslib'
+import { extractParameterValue } from '../ros/parameters'
 
 import { ros } from 'ros/ros'
 
@@ -133,6 +134,28 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
   }
 
   useEffect(() => {
+    // Fetch initial parameter values on startup
+    const fetchInitialParameters = async () => {
+      try {
+        const { getParametersRos } = await import('../ros/parameters')
+        const parameterNames = [
+          'decider.module', 'decider.enabled',
+          'preprocessor.module', 'preprocessor.enabled',
+          'presenter.module', 'presenter.enabled',
+          'experiment.protocol',
+          'simulator.dataset_filename', 'simulator.start_time'
+        ]
+
+        const initialParams = await getParametersRos(parameterNames)
+        setParameters(initialParams)
+      } catch (error) {
+        console.log('Failed to fetch initial parameters:', error)
+        // Continue with empty parameters - the events will populate them as they change
+      }
+    }
+
+    fetchInitialParameters()
+
     /* Subscriber for parameter events. */
     const parameterEventSubscriber = new Topic<ParameterEvent>({
       ros: ros,
@@ -242,29 +265,4 @@ export const useParameters = () => {
     throw new Error('useParameters must be used within a ParameterProvider')
   }
   return context
-}
-
-/**
- * Extract the actual value from a ROS2 ParameterValue structure
- */
-const extractParameterValue = (paramValue: {
-  type: number
-  bool_value?: boolean
-  integer_value?: number
-  double_value?: number
-  string_value?: string
-}): boolean | number | string | undefined => {
-  switch (paramValue.type) {
-    case 1: // PARAMETER_BOOL
-      return paramValue.bool_value
-    case 2: // PARAMETER_INTEGER
-      return paramValue.integer_value
-    case 3: // PARAMETER_DOUBLE
-      return paramValue.double_value
-    case 4: // PARAMETER_STRING
-      return paramValue.string_value
-    default:
-      console.warn(`Unknown parameter type: ${paramValue.type}`)
-      return undefined
-  }
 }

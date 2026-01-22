@@ -3,7 +3,6 @@ import styled from 'styled-components'
 
 import {
   StyledPanel,
-  SmallerTitle,
   ConfigRow,
   ConfigLabel,
   ConfigValue,
@@ -12,13 +11,13 @@ import {
   StyledRedButton,
 } from 'styles/General'
 
+
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { EegBridgeContext, EegBridgeStateValue } from 'providers/EegBridgeProvider'
-
 import { formatFrequency } from 'utils/utils'
 
-const EegDevicePanel = styled(StyledPanel)`
-  width: ${CONFIG_PANEL_WIDTH}px;
+const EegDeviceContainer = styled(StyledPanel)`
+  width: ${CONFIG_PANEL_WIDTH - 30}px;
   position: static;
   display: flex;
   flex-direction: column;
@@ -30,21 +29,16 @@ const CompactRow = styled(ConfigRow)`
   gap: 4px;
 `
 
-export const EegDeviceDisplay: React.FC = () => {
+export const EegDevicePanel: React.FC = () => {
   const { eegInfo } = useContext(EegStreamContext)
   const { bridgeState } = useContext(EegBridgeContext)
 
-  const isStreaming = eegInfo?.is_streaming || false
   const samplingFrequency = eegInfo?.sampling_frequency ? formatFrequency(eegInfo.sampling_frequency) : '\u2013'
   const numEegChannels = eegInfo?.num_eeg_channels ? eegInfo.num_eeg_channels : '\u2013'
   const numEmgChannels = eegInfo?.num_emg_channels ? eegInfo.num_emg_channels : '\u2013'
 
   const isRunning = bridgeState === EegBridgeStateValue.RUNNING
   const isLoading = bridgeState === EegBridgeStateValue.LOADING
-
-  const ActionButton = isRunning ? StyledRedButton : StyledButton
-  const actionLabel = isRunning ? 'Stop' : 'Start'
-  const actionDisabled = isLoading
 
   const streamerStateLabel =
     bridgeState === EegBridgeStateValue.RUNNING
@@ -56,8 +50,7 @@ export const EegDeviceDisplay: React.FC = () => {
       : 'Ready'
 
   return (
-    <EegDevicePanel isGrayedOut={!isStreaming}>
-      <SmallerTitle>EEG Device</SmallerTitle>
+    <EegDeviceContainer>
       <ConfigRow>
         <ConfigLabel>Sampling rate:</ConfigLabel>
         <ConfigValue>{samplingFrequency}</ConfigValue>
@@ -77,6 +70,6 @@ export const EegDeviceDisplay: React.FC = () => {
         <ConfigLabel>Status:</ConfigLabel>
         <ConfigValue>{streamerStateLabel}</ConfigValue>
       </CompactRow>
-    </EegDevicePanel>
+    </EegDeviceContainer>
   )
 }

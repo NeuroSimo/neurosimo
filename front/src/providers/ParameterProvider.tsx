@@ -71,8 +71,9 @@ interface ParameterContextType {
   setExperimentProtocol: (protocol: string, callback?: () => void) => Promise<void>
   setSimulatorDataset: (filename: string, callback?: () => void) => Promise<void>
   setSimulatorStartTime: (startTime: number, callback?: () => void) => Promise<void>
-  setPlaybackExperiment: (experiment: string, callback?: () => void) => Promise<void>
-  setPlaybackPreprocessed: (preprocessed: boolean, callback?: () => void) => Promise<void>
+  setPlaybackBagFilename: (bagFilename: string, callback?: () => void) => Promise<void>
+  setPlaybackIsPreprocessed: (isPreprocessed: boolean, callback?: () => void) => Promise<void>
+  setDataSource: (dataSource: string, callback?: () => void) => Promise<void>
 }
 
 // ESLint disable for intentionally empty functions used as defaults
@@ -100,8 +101,9 @@ const defaultParameterState: ParameterContextType = {
   setExperimentProtocol: asyncNoop,
   setSimulatorDataset: asyncNoop,
   setSimulatorStartTime: asyncNoop,
-  setPlaybackExperiment: asyncNoop,
-  setPlaybackPreprocessed: asyncNoop,
+  setPlaybackBagFilename: asyncNoop,
+  setPlaybackIsPreprocessed: asyncNoop,
+  setDataSource: asyncNoop,
 }
 
 export const ParameterContext = createContext<ParameterContextType>(defaultParameterState)
@@ -241,13 +243,17 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('simulator.start_time', startTime, callback || noop)
   }
-  const setPlaybackExperiment = async (experiment: string, callback?: () => void): Promise<void> => {
+  const setPlaybackBagFilename = async (bagFilename: string, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('playback.experiment', experiment, callback || noop)
+    setParameterRos('playback.bag_filename', bagFilename, callback || noop)
   }
-  const setPlaybackPreprocessed = async (preprocessed: boolean, callback?: () => void): Promise<void> => {
+  const setPlaybackIsPreprocessed = async (isPreprocessed: boolean, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('playback.preprocessed', preprocessed, callback || noop)
+    setParameterRos('playback.is_preprocessed', isPreprocessed, callback || noop)
+  }
+  const setDataSource = async (dataSource: string, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('data_source', dataSource, callback || noop)
   }
 
   return (
@@ -264,8 +270,9 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
         setExperimentProtocol,
         setSimulatorDataset,
         setSimulatorStartTime,
-        setPlaybackExperiment,
-        setPlaybackPreprocessed,
+        setPlaybackBagFilename,
+        setPlaybackIsPreprocessed,
+        setDataSource,
       }}
     >
       {children}

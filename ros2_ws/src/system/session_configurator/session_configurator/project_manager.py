@@ -74,6 +74,9 @@ class ProjectManager:
             "simulator.dataset_filename": 'random_data_1_khz.json',
             "simulator.start_time": 0.0,
             "experiment.protocol": 'example',
+            "playback.bag_filename": '',
+            "playback.is_preprocessed": False,
+            "data_source": 'simulator',
         }
         self.save_session_state(project_name, state)
         return state
@@ -84,7 +87,9 @@ class ProjectManager:
             "preprocessor.module", "preprocessor.enabled",
             "presenter.module", "presenter.enabled",
             "simulator.dataset_filename", "simulator.start_time",
-            "experiment.protocol"
+            "experiment.protocol",
+            "playback.bag_filename", "playback.is_preprocessed",
+            "data_source"
         ]
         for key in required_keys:
             if key not in state:

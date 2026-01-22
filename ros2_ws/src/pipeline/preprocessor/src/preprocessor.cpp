@@ -45,8 +45,6 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   module_config.file_extensions = {".py"};
   module_config.default_module_name = DEFAULT_PREPROCESSOR_NAME;
   module_config.active_project_topic = "/projects/active";
-  module_config.module_list_topic = "/pipeline/preprocessor/list";
-  module_config.set_module_service = "/pipeline/preprocessor/module/set";
   module_config.module_topic = "/pipeline/preprocessor/module";
   module_config.set_enabled_service = "/pipeline/preprocessor/enabled/set";
   module_config.enabled_topic = "/pipeline/preprocessor/enabled";

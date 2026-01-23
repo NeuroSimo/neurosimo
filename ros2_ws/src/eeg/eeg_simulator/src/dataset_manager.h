@@ -16,13 +16,16 @@ public:
 
   void set_active_project(const std::string& project_name);
 
-  std::tuple<bool, project_interfaces::msg::DatasetInfo> parse_dataset_info(
+  std::tuple<bool, project_interfaces::msg::DatasetInfo, std::vector<double_t>> get_dataset_info(
       const std::string& json_filename, const std::string& directory_path);
 
+  std::tuple<bool, std::string> load_dataset(
+      const std::string& project_name,
+      const project_interfaces::msg::DatasetInfo& dataset_info,
+      std::vector<std::vector<double_t>>& buffer);
+
 private:
-
   std::tuple<bool, size_t> get_sample_count(const std::string& data_file_path);
-
   void handle_get_dataset_info(
       const std::shared_ptr<project_interfaces::srv::GetDatasetInfo::Request> request,
       std::shared_ptr<project_interfaces::srv::GetDatasetInfo::Response> response);

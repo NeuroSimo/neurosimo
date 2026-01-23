@@ -40,17 +40,17 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
+
+  // Clients
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_simulator_client;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_bridge_client;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr finish_session_client;
   
   // Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_service;
   rclcpp::Service<pipeline_interfaces::srv::InitializeProtocol>::SharedPtr initialize_protocol_service;
-  
-  /* Module manager for handling protocol selection and project changes */
-  std::unique_ptr<module_utils::ModuleManager> module_manager;
-  
+    
   // Timers
   rclcpp::TimerBase::SharedPtr healthcheck_timer;
   
@@ -58,19 +58,12 @@ private:
   std::optional<experiment_coordinator::Protocol> protocol;
   experiment_coordinator::ExperimentState state;
   experiment_coordinator::ProtocolLoader protocol_loader;
-  
-  /* Protocol name tracking (separate from module_manager since protocols need loading) */
-  std::string protocol_name = UNSET_STRING;
-  
+  bool is_protocol_initialized = false;
+  bool error_occurred = false;
+    
   /* Logger */
   rclcpp::Logger logger;
-  
-  /* State */
-  bool error_occurred = false;
 
-  /* Track whether we're in simulation mode (from session metadata) */
-  bool is_simulation = false;
-  
   /* Callbacks */
   void handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg);
@@ -85,12 +78,9 @@ private:
   void handle_initialize_protocol(
     const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response);
-  void request_stop_session();
+  void request_finish_session();
   void mark_protocol_complete();
   void publish_experiment_state(double current_time);
-    
-  /* Protocol management (called when module_manager selects a protocol) */
-  bool load_protocol(const std::string& protocol_name);
   
   /* Experiment logic */
   void update_experiment_state(double current_time);

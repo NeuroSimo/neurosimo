@@ -10,7 +10,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
-#include "module_utils/module_manager.h"
 
 #include "preprocessor_wrapper.h"
 
@@ -86,7 +85,6 @@ private:
   void handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata);
   void handle_session_end();
 
-  bool initialize_module();
   rclcpp_action::GoalResponse handle_initialize_goal(
     const rclcpp_action::GoalUUID & uuid,
     std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal);
@@ -118,10 +116,6 @@ private:
 
   /* Action server for initialization */
   rclcpp_action::Server<pipeline_interfaces::action::InitializeComponent>::SharedPtr initialize_action_server;
-
-  /* Module manager for handling module selection and project changes */
-  std::unique_ptr<module_utils::ModuleManager> module_manager;
-  bool is_session_ongoing = false;
 
   /* Initialization state */
   bool is_initialized = false;

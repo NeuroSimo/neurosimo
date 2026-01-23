@@ -15,8 +15,7 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/float64.hpp"
 
-#include "project_interfaces/msg/dataset.hpp"
-#include "project_interfaces/msg/dataset_list.hpp"
+#include "project_interfaces/msg/dataset_info.hpp"
 #include "project_interfaces/srv/set_dataset.hpp"
 #include "project_interfaces/srv/set_start_time.hpp"
 
@@ -38,7 +37,7 @@ private:
   void handle_eeg_bridge_healthcheck(const std::shared_ptr<system_interfaces::msg::Healthcheck> msg);
 
   std::tuple<bool, size_t> get_sample_count(const std::string& data_file_path);
-  std::vector<project_interfaces::msg::Dataset> list_datasets(const std::string& path);
+  std::vector<project_interfaces::msg::DatasetInfo> list_datasets(const std::string& path);
   void update_dataset_list();
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
 
@@ -69,11 +68,11 @@ private:
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
-  std::unordered_map<std::string, project_interfaces::msg::Dataset> dataset_map;
+  std::unordered_map<std::string, project_interfaces::msg::DatasetInfo> dataset_map;
   std::unordered_map<std::string, std::vector<double_t>> pulse_times_map;
   std::string default_dataset_json;
 
-  project_interfaces::msg::Dataset dataset;
+  project_interfaces::msg::DatasetInfo dataset;
 
   system_interfaces::msg::StreamerState::_state_type streamer_state = system_interfaces::msg::StreamerState::READY;
 
@@ -123,7 +122,6 @@ private:
   rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
-  rclcpp::Publisher<project_interfaces::msg::DatasetList>::SharedPtr dataset_list_publisher;
 
   rclcpp::Service<project_interfaces::srv::SetDataset>::SharedPtr set_dataset_service;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr dataset_publisher;

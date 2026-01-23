@@ -19,7 +19,6 @@ using namespace std::chrono_literals;
 using namespace std::placeholders;
 
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
-const std::string DATASET_LIST_TOPIC = "/eeg_simulator/dataset/list";
 
 const std::string PROJECTS_DIRECTORY = "projects/";
 const std::string EEG_SIMULATOR_DATA_SUBDIRECTORY = "eeg_simulator/";
@@ -60,11 +59,6 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     qos_persist_latest,
     std::bind(&EegSimulator::handle_set_active_project, this, std::placeholders::_1),
     subscription_options);
-
-  /* Publisher for EEG datasets. */
-  dataset_list_publisher = this->create_publisher<project_interfaces::msg::DatasetList>(
-    DATASET_LIST_TOPIC,
-    qos_persist_latest);
 
   /* Publisher for streamer state. */
   streamer_state_publisher = this->create_publisher<system_interfaces::msg::StreamerState>(
@@ -191,8 +185,8 @@ std::tuple<bool, size_t> EegSimulator::get_sample_count(const std::string& data_
   return std::make_tuple(true, line_count);
 }
 
-std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const std::string& path) {
-  std::vector<project_interfaces::msg::Dataset> datasets;
+std::vector<project_interfaces::msg::DatasetInfo> EegSimulator::list_datasets(const std::string& path) {
+  std::vector<project_interfaces::msg::DatasetInfo> datasets;
 
   /* Check that the directory exists. */
   if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) {
@@ -213,7 +207,7 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
       RCLCPP_INFO(this->get_logger(), "%s", filename.c_str());
 
       try {
-        project_interfaces::msg::Dataset dataset_msg;
+        project_interfaces::msg::DatasetInfo dataset_msg;
         file >> json_data;
 
         dataset_msg.json_filename = filename;
@@ -322,12 +316,6 @@ std::vector<project_interfaces::msg::Dataset> EegSimulator::list_datasets(const 
 
 void EegSimulator::update_dataset_list() {
   auto datasets = this->list_datasets(this->data_directory);
-
-  /* Publish datasets. */
-  project_interfaces::msg::DatasetList msg;
-  msg.datasets = datasets;
-
-  this->dataset_list_publisher->publish(msg);
 
   /* Store datasets internally. */
   for (const auto& dataset : datasets) {

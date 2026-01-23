@@ -36,7 +36,7 @@
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
 
-#include "project_interfaces/msg/module_list.hpp"
+#include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 
 #include "std_srvs/srv/set_bool.hpp"

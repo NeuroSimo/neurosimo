@@ -188,7 +188,7 @@ If you're migrating from custom module management code:
 ```cpp
 // Multiple subscribers, publishers, services
 rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
-rclcpp::Publisher<project_interfaces::msg::ModuleList>::SharedPtr module_list_publisher;
+rclcpp::Publisher<project_interfaces::msg::FilenameList>::SharedPtr module_list_publisher;
 rclcpp::Service<project_interfaces::srv::SetModule>::SharedPtr set_module_service;
 // ... many more
 

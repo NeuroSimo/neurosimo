@@ -79,12 +79,24 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     })
   }
 
+  /*
   const selectedDataset = datasetList.find(
     (d: typeof datasetList[number]) => d.json_filename === dataset
   )
-  const ActionButton = isRunning ? StyledRedButton : StyledButton
-  const actionLabel = isRunning ? 'Stop' : 'Start'
-  const actionDisabled = !selectedDataset || isLoading || isEegStreaming
+  */
+  // Just a dummy for now
+  const selectedDataset = {
+    name: 'Dummy Dataset',
+    json_filename: 'dummy_dataset.json',
+    duration: 100,
+    sampling_frequency: 100,
+    num_eeg_channels: 1,
+    num_emg_channels: 0,
+    loop: false,
+    pulse_count: 0,
+  }
+    
+
   const streamerStateLabel =
     streamerState === StreamerStateValue.RUNNING
       ? 'Running'
@@ -99,9 +111,9 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Dataset:</ConfigLabel>
         <DatasetSelect onChange={setDataset} value={dataset} disabled={isExperimentOngoing || isEegStreaming}>
-          {datasetList.map((dataset: typeof datasetList[number], index: number) => (
-            <option key={index} value={dataset.json_filename}>
-              {dataset.name}
+          {datasetList.map((datasetFilename: typeof datasetList[number], index: number) => (
+            <option key={index} value={datasetFilename}>
+              {datasetFilename}
             </option>
           ))}
         </DatasetSelect>

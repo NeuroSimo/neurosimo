@@ -26,10 +26,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetActiveProject.srv"
 
   "srv/SetModule.srv"
-  "msg/ModuleList.msg"
 
-  "msg/Dataset.msg"
-  "msg/DatasetList.msg"
+  "msg/DatasetInfo.msg"
+  "msg/FilenameList.msg"
   "srv/SetDataset.srv"
   "srv/SetStartTime.srv"
 )

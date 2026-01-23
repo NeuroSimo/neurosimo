@@ -24,6 +24,7 @@ add_executable(
         eeg_simulator
 
         src/eeg_simulator.cpp
+        src/dataset_manager.cpp
 )
 
 target_include_directories(eeg_simulator

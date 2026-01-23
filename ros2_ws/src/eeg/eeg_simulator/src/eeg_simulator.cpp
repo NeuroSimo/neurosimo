@@ -79,6 +79,9 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     rmw_qos_profile_services_default,
     callback_group);
 
+  /* Initialize dataset manager. */
+  this->dataset_manager_ = std::make_unique<DatasetManager>(this);
+
   /* Services for starting/stopping streaming. */
   this->start_streaming_service = this->create_service<std_srvs::srv::Trigger>(
     "/eeg_simulator/start",
@@ -335,6 +338,9 @@ void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 
   RCLCPP_INFO(this->get_logger(), "Active project set to: %s", this->active_project.c_str());
 
+  /* Update dataset manager with new project */
+  this->dataset_manager_->set_active_project(this->active_project);
+
   /* Use a lock here to ensure that dataset is not reset by set_dataset while the list is still
      being updated. This can happen when the project manager first sets a new project using pub-sub
      and then immediately after that sets a new dataset with a service call. However, this is just
@@ -404,6 +410,7 @@ void EegSimulator::handle_set_start_time(
 
   response->success = true;
 }
+
 
 void EegSimulator::handle_start_streaming(
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,

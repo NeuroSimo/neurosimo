@@ -137,16 +137,8 @@ class SessionConfiguratorNode(Node):
                 matching_files.extend([f for f in os.listdir(module_dir)
                                      if os.path.isfile(os.path.join(module_dir, f)) and f.endswith(ext)])
 
-            # Remove file extensions to get module names
-            module_names = []
-            for filename in matching_files:
-                for ext in file_extensions:
-                    if filename.endswith(ext):
-                        module_names.append(filename[:-len(ext)])
-                        break
-
-            self.logger.info(f"Found {len(module_names)} modules in project '{project_name}'/{subdirectory}: {module_names}")
-            return module_names
+            self.logger.info(f"Found {len(matching_files)} modules in project '{project_name}'/{subdirectory}: {matching_files}")
+            return matching_files
 
         except Exception as e:
             self.logger.error(f"Error listing modules for project '{project_name}'/{subdirectory}: {e}")

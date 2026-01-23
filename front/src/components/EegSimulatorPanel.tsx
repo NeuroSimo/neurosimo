@@ -32,7 +32,7 @@ const SimulatorPanel = styled(StyledPanel)`
 
 const DatasetSelect = styled(Select)`
   margin-left: 6px;
-  width: 150px;
+  width: 170px;
 `
 
 const CompactRow = styled(ConfigRow)`

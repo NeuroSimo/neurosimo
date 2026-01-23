@@ -7,7 +7,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
-#include "module_utils/module_manager.h"
 
 #include "presenter_wrapper.h"
 
@@ -47,9 +46,7 @@ public:
   EegPresenter();
 
 private:
-  bool initialize_presenter_module();
   void publish_python_logs(double sample_time, bool is_initialization);
-  void unset_presenter_module();
 
   rclcpp_action::GoalResponse handle_initialize_goal(
     const rclcpp_action::GoalUUID & uuid,
@@ -76,9 +73,6 @@ private:
 
   /* Action server for initialization */
   rclcpp_action::Server<pipeline_interfaces::action::InitializeComponent>::SharedPtr initialize_action_server;
-
-  /* Module manager for handling module selection and project changes */
-  std::unique_ptr<module_utils::ModuleManager> module_manager;
 
   /* Initialization state */
   bool is_initialized = false;

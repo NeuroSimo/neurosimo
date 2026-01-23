@@ -37,20 +37,6 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     EEG_QUEUE_LENGTH,
     std::bind(&EegPreprocessor::process_sample, this, _1));
 
-  /* Initialize module manager for preprocessor modules. */
-  module_utils::ModuleManagerConfig module_config;
-  module_config.component_name = "preprocessor";
-  module_config.projects_base_directory = PROJECTS_DIRECTORY;
-  module_config.module_subdirectory = "preprocessor";
-  module_config.file_extensions = {".py"};
-  module_config.default_module_name = DEFAULT_PREPROCESSOR_NAME;
-  module_config.active_project_topic = "/projects/active";
-  module_config.module_topic = "/pipeline/preprocessor/module";
-  module_config.set_enabled_service = "/pipeline/preprocessor/enabled/set";
-  module_config.enabled_topic = "/pipeline/preprocessor/enabled";
-  
-  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
-
   /* Publisher for Python logs from preprocessor. */
   // Logs can be sent in bursts so keep all messages in the queue.
   auto qos_keep_all_logs = rclcpp::QoS(rclcpp::KeepAll())
@@ -144,6 +130,14 @@ void EegPreprocessor::execute_initialize(
     module_name = module_name.substr(0, module_name.size() - 3);
   }
 
+  /* Print underlined, bolded text. */
+  std::string text_str = "Loading preprocessor: " + module_name;
+  std::wstring underline_str(text_str.size(), L'–');
+  RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), text_str.c_str(), bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
+
+  RCLCPP_INFO(this->get_logger(), "");
+
   // Initialize the preprocessor wrapper
   bool success = this->preprocessor_wrapper->initialize_module(
     this->initialized_working_directory.string(),
@@ -169,8 +163,12 @@ void EegPreprocessor::execute_initialize(
   // Mark as initialized
   this->is_initialized = true;
 
-  RCLCPP_INFO(this->get_logger(), "Preprocessor initialized successfully: project=%s, module=%s",
-              goal->project_name.c_str(), goal->module_filename.c_str());
+  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", goal->sampling_frequency);
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", goal->num_eeg_channels);
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", goal->num_emg_channels);
+  RCLCPP_INFO(this->get_logger(), " ");
 
   result->success = true;
   goal_handle->succeed(result);
@@ -198,8 +196,6 @@ void EegPreprocessor::publish_healthcheck() {
 void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
   RCLCPP_INFO(this->get_logger(), "Session started");
 
-  this->is_session_ongoing = true;
-
   this->session_metadata.update(metadata);
 
   /* Clear deferred processing queue when session starts. */
@@ -210,57 +206,15 @@ void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMet
   /* Clear any stale session markers from previous session. */
   this->pending_session_end = false;
 
-  this->error_occurred = !this->initialize_module();
-
   /* Mark that we need to carry forward the session start marker to the next published sample. */
   this->pending_session_start = true;
 }
 
 void EegPreprocessor::handle_session_end() {
   RCLCPP_INFO(this->get_logger(), "Session stopped");
-  this->is_session_ongoing = false;
 
   /* Mark that we need to carry forward the session end marker to the next published sample. */
   this->pending_session_end = true;
-}
-
-bool EegPreprocessor::initialize_module() {
-  RCLCPP_INFO(this->get_logger(), " ");
-
-  /* Print underlined, bolded text. */
-  std::string text_str = "Loading preprocessor: " + this->module_manager->get_module_name();
-  std::wstring underline_str(text_str.size(), L'–');
-  RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), text_str.c_str(), bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
-
-  RCLCPP_INFO(this->get_logger(), "");
-
-  bool success = this->preprocessor_wrapper->initialize_module(
-    this->module_manager->get_working_directory(),
-    this->module_manager->get_module_name(),
-    this->session_metadata.num_eeg_channels,
-    this->session_metadata.num_emg_channels,
-    this->session_metadata.sampling_frequency);
-
-  /* Publish initialization logs from Python constructor */
-  publish_python_logs(0.0, true);
-
-  if (!success) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to initialize preprocessor.");
-    return false;
-  }
-
-  size_t buffer_size = this->preprocessor_wrapper->get_buffer_size();
-  this->sample_buffer.reset(buffer_size);
-
-  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", this->session_metadata.sampling_frequency);
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %d", this->session_metadata.num_eeg_channels);
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %d", this->session_metadata.num_emg_channels);
-  RCLCPP_INFO(this->get_logger(), " ");
-
-  return true;
 }
 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {
@@ -422,8 +376,8 @@ void EegPreprocessor::enqueue_deferred_request(const std::shared_ptr<eeg_interfa
 }
 
 void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
-  /* Return early if preprocessor is not enabled. */
-  if (!this->is_enabled) {
+  /* Return early if preprocessor is not enabled or initialized. */
+  if (!this->is_enabled || !this->is_initialized) {
     return;
   }
 

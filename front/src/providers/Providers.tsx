@@ -10,6 +10,7 @@ import { StatisticsProvider } from './StatisticsProvider'
 import { EegSimulatorProvider } from './EegSimulatorProvider'
 import { EegBridgeProvider } from './EegBridgeProvider'
 import { HealthcheckProvider } from './HealthcheckProvider'
+import { SessionProvider } from './SessionProvider'
 
 interface Props {
   children: React.ReactNode
@@ -25,7 +26,9 @@ const Providers: React.FC<Props> = ({ children }) => {
               <StatisticsProvider>
                 <EegSimulatorProvider>
                   <EegBridgeProvider>
-                    <HealthcheckProvider>{children}</HealthcheckProvider>
+                    <SessionProvider>
+                      <HealthcheckProvider>{children}</HealthcheckProvider>
+                    </SessionProvider>
                   </EegBridgeProvider>
                 </EegSimulatorProvider>
               </StatisticsProvider>

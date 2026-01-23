@@ -33,6 +33,11 @@ interface ParameterEvent extends ROSLIB.Message {
 }
 
 // Structured parameter interfaces
+interface MetadataParameters {
+  subject_id: string
+  notes: string
+}
+
 interface PipelineParameters {
   decider: {
     module: string
@@ -58,10 +63,13 @@ interface SimulatorParameters {
 
 interface ParameterContextType {
   // Structured parameter access
+  metadata: MetadataParameters
   pipeline: PipelineParameters
   simulator: SimulatorParameters
 
   // Convenience setters
+  setSubjectId: (subjectId: string, callback?: () => void) => Promise<void>
+  setNotes: (notes: string, callback?: () => void) => Promise<void>
   setDeciderModule: (module: string, callback?: () => void) => Promise<void>
   setDeciderEnabled: (enabled: boolean, callback?: () => void) => Promise<void>
   setPreprocessorModule: (module: string, callback?: () => void) => Promise<void>
@@ -82,6 +90,10 @@ const asyncNoop = async () => {}
 /* eslint-enable @typescript-eslint/no-empty-function */
 
 const defaultParameterState: ParameterContextType = {
+  metadata: {
+    subject_id: '',
+    notes: '',
+  },
   pipeline: {
     decider: { module: '', enabled: false },
     preprocessor: { module: '', enabled: false },
@@ -92,6 +104,8 @@ const defaultParameterState: ParameterContextType = {
     dataset_filename: '',
     start_time: 0,
   },
+  setSubjectId: asyncNoop,
+  setNotes: asyncNoop,
   setDeciderModule: asyncNoop,
   setDeciderEnabled: asyncNoop,
   setPreprocessorModule: asyncNoop,
@@ -116,6 +130,11 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
   const [parameters, setParameters] = useState<Map<string, boolean | number | string>>(new Map())
 
   // Structured parameter access
+  const metadata: MetadataParameters = {
+    subject_id: (parameters.get('subject_id') as string) || '',
+    notes: (parameters.get('notes') as string) || '',
+  }
+
   const pipeline: PipelineParameters = {
     decider: {
       module: (parameters.get('decider.module') as string) || '',
@@ -145,6 +164,7 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
       try {
         const { getParametersRos } = await import('../ros/parameters')
         const parameterNames = [
+          'subject_id', 'notes',
           'decider.module', 'decider.enabled',
           'preprocessor.module', 'preprocessor.enabled',
           'presenter.module', 'presenter.enabled',
@@ -207,6 +227,14 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
   // Convenience setters - use dynamic import to avoid circular dependencies
   const noop = () => {} // eslint-disable-line @typescript-eslint/no-empty-function
 
+  const setSubjectId = async (subjectId: string, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('subject_id', subjectId, callback || noop)
+  }
+  const setNotes = async (notes: string, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('notes', notes, callback || noop)
+  }
   const setDeciderModule = async (module: string, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('decider.module', module, callback || noop)
@@ -259,8 +287,11 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
   return (
     <ParameterContext.Provider
       value={{
+        metadata,
         pipeline,
         simulator,
+        setSubjectId,
+        setNotes,
         setDeciderModule,
         setDeciderEnabled,
         setPreprocessorModule,

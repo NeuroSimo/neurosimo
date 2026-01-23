@@ -29,6 +29,10 @@ class SessionConfiguratorNode(Node):
 
         # Declare ROS2 parameters
 
+        # Session parameters
+        self.declare_parameter('notes', '')
+        self.declare_parameter('subject_id', '')
+
         # Decider parameters
         self.declare_parameter('decider.module', 'example')
         self.declare_parameter('decider.enabled', False)
@@ -95,6 +99,8 @@ class SessionConfiguratorNode(Node):
 
         # Set ROS2 parameters from the loaded state
         self.set_parameters([
+            rclpy.parameter.Parameter('notes', rclpy.parameter.Parameter.Type.STRING, session_state["notes"]),
+            rclpy.parameter.Parameter('subject_id', rclpy.parameter.Parameter.Type.STRING, session_state["subject_id"]),
             rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_state["decider.module"]),
             rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["decider.enabled"]),
             rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_state["preprocessor.module"]),

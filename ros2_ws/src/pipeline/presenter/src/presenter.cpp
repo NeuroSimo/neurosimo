@@ -40,20 +40,6 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     qos_keep_all,
     std::bind(&EegPresenter::handle_sensory_stimulus, this, _1));
 
-  /* Initialize module manager for presenter modules. */
-  module_utils::ModuleManagerConfig module_config;
-  module_config.component_name = "presenter";
-  module_config.projects_base_directory = PROJECTS_DIRECTORY;
-  module_config.module_subdirectory = "presenter";
-  module_config.file_extensions = {".py"};
-  module_config.default_module_name = DEFAULT_PRESENTER_NAME;
-  module_config.active_project_topic = "/projects/active";
-  module_config.module_topic = "/pipeline/presenter/module";
-  module_config.set_enabled_service = "/pipeline/presenter/enabled/set";
-  module_config.enabled_topic = "/pipeline/presenter/enabled";
-  
-  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
-
   /* Publisher for Python logs from presenter. */
   // Logs can be sent in bursts so keep all messages in the queue.
   auto qos_keep_all_logs = rclcpp::QoS(rclcpp::KeepAll())
@@ -140,6 +126,10 @@ void EegPresenter::execute_initialize(
     module_name = module_name.substr(0, module_name.size() - 3);
   }
 
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "Loading presenter: %s.", module_name.c_str());
+  RCLCPP_INFO(this->get_logger(), "");
+
   // Initialize the presenter wrapper
   bool success = this->presenter_wrapper->initialize_module(
     this->initialized_working_directory.string(),
@@ -197,31 +187,10 @@ void EegPresenter::publish_python_logs(double sample_time, bool is_initializatio
   this->python_log_publisher->publish(batch_msg);
 }
 
-/* Functions to re-initialize the presenter state. */
-bool EegPresenter::initialize_presenter_module() {
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "Loading presenter: %s.", this->module_manager->get_module_name().c_str());
-  RCLCPP_INFO(this->get_logger(), "");
-
-  bool success = this->presenter_wrapper->initialize_module(
-    this->module_manager->get_working_directory(),
-    this->module_manager->get_module_name());
-
-  /* Publish initialization logs from Python constructor */
-  publish_python_logs(0.0, true);
-
-  if (!success) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module.");
-    return false;
-  }
-
-  return true;
-}
-
 /* EEG sample handler (for session markers and time updates). */
 void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
-  /* Return early if the presenter is not enabled. */
-  if (!this->is_enabled) {
+  /* Return early if the presenter is not enabled or initialized. */
+  if (!this->is_enabled || !this->is_initialized) {
     return;
   }
 
@@ -234,9 +203,6 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
     while (!this->sensory_stimuli.empty()) {
       this->sensory_stimuli.pop();
     }
-
-    /* Initialize the presenter module. */
-    this->error_occurred = !this->initialize_presenter_module();
   }
 
   /* Handle session end marker. */
@@ -244,8 +210,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
     RCLCPP_INFO(this->get_logger(), "Session stopped");
     this->session_started = false;
 
-    /* Reset the state of the existing module so that any windows etc. created by the Python module are closed,
-       but do not unset the module. */
+    /* Reset the state of the existing module so that any windows etc. created by the Python module are closed. */
     this->presenter_wrapper->reset_module_state();
   }
 
@@ -253,10 +218,6 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   if (this->session_started && !this->error_occurred) {
     update_time(msg->time);
   }
-}
-
-void EegPresenter::unset_presenter_module() {
-  RCLCPP_INFO(this->get_logger(), "Presenter module unset.");
 }
 
 void EegPresenter::update_time(double_t time) {
@@ -300,11 +261,10 @@ void EegPresenter::update_time(double_t time) {
   }
 }
 
-
 void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg) {
   RCLCPP_INFO(this->get_logger(), "Received sensory stimulus (type: %s, time: %.3f)", msg->type.c_str(), msg->time);
 
-  if (!this->is_enabled) {
+  if (!this->is_enabled || !this->is_initialized) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,
@@ -320,7 +280,6 @@ void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interf
   }
   this->sensory_stimuli.push(msg);
 }
-
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);

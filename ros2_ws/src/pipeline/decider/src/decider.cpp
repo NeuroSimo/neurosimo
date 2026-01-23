@@ -77,21 +77,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
 
-  /* EEG subscriber will be created by handle_preprocessor_enabled based on preprocessor state. */
-
-  /* Initialize module manager for decider modules. */
-  module_utils::ModuleManagerConfig module_config;
-  module_config.component_name = "decider";
-  module_config.projects_base_directory = PROJECTS_DIRECTORY;
-  module_config.module_subdirectory = "decider";
-  module_config.file_extensions = {".py"};
-  module_config.default_module_name = DEFAULT_MODULE_NAME;
-  module_config.active_project_topic = "/projects/active";
-  module_config.module_topic = "/pipeline/decider/module";
-  module_config.set_enabled_service = "/pipeline/decider/enabled/set";
-  module_config.enabled_topic = "/pipeline/decider/enabled";
-  
-  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
+  /* Note: The EEG subscriber will be created by handle_preprocessor_enabled based on preprocessor state. */
 
   /* Set up QoS profile for persistent state topics */
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
@@ -247,6 +233,8 @@ void EegDecider::execute_initialize(
     module_name = module_name.substr(0, module_name.size() - 3);
   }
 
+  log_section_header("Loading decider: " + module_name);
+
   // Initialize the decider wrapper
   bool success = this->decider_wrapper->initialize_module(
     PROJECTS_DIRECTORY,
@@ -272,6 +260,13 @@ void EegDecider::execute_initialize(
   // Get buffer size and set up sample buffer
   size_t buffer_size = this->decider_wrapper->get_buffer_size();
   this->sample_buffer.reset(buffer_size);
+
+  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), goal->sampling_frequency, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), goal->num_eeg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), goal->num_emg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), " ");
 
   /* Perform warm-up if requested by the Python module */
   bool was_warmup_successful = this->decider_wrapper->warm_up();
@@ -319,7 +314,6 @@ void EegDecider::publish_healthcheck() {
 
 void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
   RCLCPP_INFO(this->get_logger(), "Session started");
-  this->is_session_ongoing = true;
 
   this->previous_stimulation_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
@@ -336,13 +330,10 @@ void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata
   }
 
   this->session_metadata.update(metadata);
-
-  this->error_occurred = !this->initialize_module();
 }
 
 void EegDecider::handle_session_end() {
   RCLCPP_INFO(this->get_logger(), "Session stopped");
-  this->is_session_ongoing = false;
 }
 
 void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg) {
@@ -354,56 +345,6 @@ void EegDecider::log_section_header(const std::string& title) {
   RCLCPP_INFO(this->get_logger(), "%s%s%s", bold_on.c_str(), title.c_str(), bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "%s%ls%s", bold_on.c_str(), underline_str.c_str(), bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
-}
-
-bool EegDecider::initialize_module() {
-  RCLCPP_INFO(this->get_logger(), "");
-
-  log_section_header("Loading decider: " + this->module_manager->get_module_name());
-
-  bool success = this->decider_wrapper->initialize_module(
-    PROJECTS_DIRECTORY,
-    this->module_manager->get_working_directory(),
-    this->module_manager->get_module_name(),
-    this->session_metadata.num_eeg_channels,
-    this->session_metadata.num_emg_channels,
-    this->session_metadata.sampling_frequency,
-    this->sensory_stimuli,
-    this->event_queue,
-    this->event_queue_mutex);
-
-  /* Publish initialization logs from Python constructor */
-  publish_python_logs(0.0, true);
-
-  if (!success) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module.");
-    return false;
-  }
-
-  size_t buffer_size = this->decider_wrapper->get_buffer_size();
-  this->sample_buffer.reset(buffer_size);
-
-  RCLCPP_INFO(this->get_logger(), "EEG configuration:");
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), this->session_metadata.sampling_frequency, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_eeg_channels, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), this->session_metadata.num_emg_channels, bold_off.c_str());
-  RCLCPP_INFO(this->get_logger(), " ");
-
-  /* Perform warm-up if requested by the Python module */
-  bool was_warmup_successful = this->decider_wrapper->warm_up();
-  if (!was_warmup_successful) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
-    return false;
-  }
-
-  /* Send the initial sensory stimuli to the presenter. */
-  for (auto& sensory_stimulus : this->sensory_stimuli) {
-    this->sensory_stimulus_publisher->publish(sensory_stimulus);
-  }
-  this->sensory_stimuli.clear();
-
-  return true;
 }
 
 void EegDecider::publish_python_logs(double sample_time, bool is_initialization) {
@@ -720,8 +661,8 @@ void EegDecider::handle_pulse_delivered(const double_t pulse_delivered_time) {
 }
 
 void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
-  /* Return early if decider is not enabled. */
-  if (!this->is_enabled) {
+  /* Return early if decider is not enabled or initialized. */
+  if (!this->is_enabled || !this->is_initialized) {
     return;
   }
 

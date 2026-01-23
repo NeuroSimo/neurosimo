@@ -13,7 +13,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
-#include "module_utils/module_manager.h"
 
 #include "decider_wrapper.h"
 
@@ -117,7 +116,6 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
-  bool initialize_module();
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
 
@@ -172,11 +170,6 @@ private:
 
   /* Action server for initialization */
   rclcpp_action::Server<pipeline_interfaces::action::InitializeComponent>::SharedPtr initialize_action_server;
-
-  /* Module manager for handling module selection and project changes */
-  std::unique_ptr<module_utils::ModuleManager> module_manager;
-
-  bool is_session_ongoing = false;
 
   /* Initialization state */
   bool is_initialized = false;

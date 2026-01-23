@@ -14,8 +14,6 @@ const std::string HEALTHCHECK_TOPIC = "/experiment/coordinator/healthcheck";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
-const std::string DEFAULT_PROTOCOL_NAME = "example";
-
 ExperimentCoordinator::ExperimentCoordinator()
   : Node("experiment_coordinator"),
     protocol_loader(rclcpp::get_logger("protocol_loader")),
@@ -48,28 +46,10 @@ ExperimentCoordinator::ExperimentCoordinator()
     PULSE_EVENT_TOPIC,
     100,
     std::bind(&ExperimentCoordinator::handle_pulse_event, this, _1));
-  
-  /* Initialize module manager for protocol management. */
-  module_utils::ModuleManagerConfig module_config;
-  module_config.component_name = "experiment_coordinator";
-  module_config.projects_base_directory = PROJECTS_DIRECTORY;
-  module_config.module_subdirectory = "protocols";
-  module_config.file_extensions = {".yaml", ".yml"};
-  module_config.default_module_name = DEFAULT_PROTOCOL_NAME;
-  module_config.active_project_topic = "/projects/active";
-  module_config.set_module_service = "/experiment/protocol/set";
-  module_config.module_topic = "/experiment/protocol";
-  module_config.set_enabled_service = "/experiment/coordinator/enabled/set";
-  module_config.enabled_topic = "/experiment/coordinator/enabled";
-  
-  this->module_manager = std::make_unique<module_utils::ModuleManager>(this, module_config);
 
-  /* Clients for stopping EEG simulator or bridge when protocol completes. */
-  this->stop_simulator_client = this->create_client<std_srvs::srv::Trigger>(
-    "/eeg_simulator/stop");
-  
-  this->stop_bridge_client = this->create_client<std_srvs::srv::Trigger>(
-    "/eeg_bridge/stop");
+  /* Client for finishing the session. */
+  this->finish_session_client = this->create_client<std_srvs::srv::Trigger>(
+    "/session/finish");
   
   /* Services for pause/resume. */
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
@@ -115,12 +95,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
   /* Handle session start marker from EEG bridge/simulator. */
   if (msg->is_session_start) {
     RCLCPP_INFO(this->get_logger(), "Session started, resetting experiment state");
-    this->error_occurred = false;
-    this->is_simulation = msg->session.is_simulation;
-
-    /* Load protocol. */
-    std::string protocol_name = this->module_manager->get_module_name();
-    this->load_protocol(protocol_name);
 
     /* Reset experiment state. */
     reset_experiment_state();
@@ -129,15 +103,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
     state.is_session_ongoing = true;
 
     publish_experiment_state(0.0);
-  }
-
-  if (this->error_occurred) {
-    RCLCPP_INFO_THROTTLE(this->get_logger(),
-                      *this->get_clock(),
-                      1000,
-                      "An error occurred in experiment coordinator module, not processing EEG sample at time %.3f (s).",
-                      msg->time);
-    return;
   }
 
   double sample_time = msg->time;
@@ -279,11 +244,11 @@ void ExperimentCoordinator::handle_initialize_protocol(
     const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response) {
 
+  this->error_occurred = false;
+  this->is_protocol_initialized = false;
+
   RCLCPP_INFO(this->get_logger(), "Initializing protocol: project='%s', protocol='%s'",
     request->project_name.c_str(), request->protocol_filename.c_str());
-
-  /* Reset error state before initialization. */
-  this->error_occurred = false;
 
   /* Generate filepath from project name and protocol filename. */
   std::string filepath = PROJECTS_DIRECTORY + std::string("/") + request->project_name +
@@ -296,15 +261,16 @@ void ExperimentCoordinator::handle_initialize_protocol(
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s",
       result.error_message.c_str());
+
     this->error_occurred = true;
     response->success = false;
+
     return;
   }
+  RCLCPP_INFO(this->get_logger(), "Protocol loaded successfully: %s", request->protocol_filename.c_str());
 
   this->protocol = result.protocol;
-  this->protocol_name = request->protocol_filename;
-
-  RCLCPP_INFO(this->get_logger(), "Protocol loaded successfully: %s", request->protocol_filename.c_str());
+  this->is_protocol_initialized = true;
 
   /* Reset experiment state. */
   reset_experiment_state();
@@ -313,7 +279,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
 }
 
 void ExperimentCoordinator::update_experiment_state(double current_time) {
-  if (state.paused || !protocol.has_value()) {
+  if (state.paused || !this->is_protocol_initialized) {
     return;
   }
   
@@ -336,7 +302,7 @@ void ExperimentCoordinator::update_experiment_state(double current_time) {
 }
 
 void ExperimentCoordinator::advance_to_next_element() {
-  if (!protocol.has_value()) {
+  if (!this->is_protocol_initialized) {
     return;
   }
   
@@ -366,7 +332,7 @@ void ExperimentCoordinator::mark_protocol_complete() {
   
   state.protocol_complete = true;
   RCLCPP_INFO(this->get_logger(), "Protocol complete! Requesting session stop.");
-  request_stop_session();
+  request_finish_session();
   publish_experiment_state(state.last_sample_time);
 }
 
@@ -420,7 +386,7 @@ void ExperimentCoordinator::start_stage(const Stage& stage, double current_time)
 void ExperimentCoordinator::reset_experiment_state() {
   state = ExperimentState();
   
-  if (protocol.has_value() && !protocol->elements.empty()) {
+  if (this->is_protocol_initialized && this->protocol && !this->protocol->elements.empty()) {
     /* Start with first element at time 0.0. */
     const auto& first_element = protocol->elements[0];
     double initial_time = 0.0;
@@ -435,62 +401,34 @@ void ExperimentCoordinator::reset_experiment_state() {
   publish_experiment_state(0.0);
 }
 
-/* Protocol management */
-
-bool ExperimentCoordinator::load_protocol(const std::string& protocol_name) {
-  std::string filepath = this->module_manager->get_working_directory() + "/" + protocol_name + ".yaml";
-  
-  RCLCPP_INFO(this->get_logger(), "Loading protocol from: %s", filepath.c_str());
-  
-  LoadResult result = this->protocol_loader.load_from_file(filepath);
-  
-  if (!result.success) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s", 
-      result.error_message.c_str());
-    this->error_occurred = true;
-    return false;
-  }
-  
-  this->protocol = result.protocol;
-  this->protocol_name = protocol_name;
-  
-  RCLCPP_INFO(this->get_logger(), "Protocol loaded successfully: %s", protocol_name.c_str());
-  
-  return true;
-}
-
-void ExperimentCoordinator::request_stop_session() {
-  /* Choose the appropriate stop service based on whether we're in simulation mode. */
-  auto stop_client = this->is_simulation ? this->stop_simulator_client : this->stop_bridge_client;
-  const char* service_name = this->is_simulation ? "EEG simulator" : "EEG bridge";
-  
-  if (!stop_client) {
-    RCLCPP_ERROR(this->get_logger(), "%s stop client not initialized.", service_name);
+void ExperimentCoordinator::request_finish_session() {
+  if (!this->finish_session_client) {
+    RCLCPP_ERROR(this->get_logger(), "Finish session client not initialized.");
     return;
   }
   
-  if (!stop_client->service_is_ready()) {
-    RCLCPP_WARN(this->get_logger(), "%s stop service not available yet.", service_name);
+  if (!this->finish_session_client->service_is_ready()) {
+    RCLCPP_WARN(this->get_logger(), "Finish session client not available yet.");
   }
   
-  RCLCPP_INFO(this->get_logger(), "Requesting %s to stop streaming...", service_name);
+  RCLCPP_INFO(this->get_logger(), "Requesting session to finish...");
   
   auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
-  stop_client->async_send_request(
+  this->finish_session_client->async_send_request(
     request,
-    [this, service_name](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+    [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
       try {
         auto response = future.get();
         if (!response->success) {
-          RCLCPP_WARN(this->get_logger(), "%s stop service responded with failure: %s", 
-            service_name, response->message.c_str());
+          RCLCPP_ERROR(this->get_logger(), "Session finish service responded with failure: %s", 
+            response->message.c_str());
         } else {
-          RCLCPP_INFO(this->get_logger(), "%s stop requested successfully: %s",
-            service_name, response->message.c_str());
+          RCLCPP_INFO(this->get_logger(), "Session finished successfully: %s",
+            response->message.c_str());
         }
       } catch (const std::exception& e) {
-        RCLCPP_ERROR(this->get_logger(), "Error calling %s stop service: %s", 
-          service_name, e.what());
+        RCLCPP_ERROR(this->get_logger(), "Error calling session finish service: %s", 
+          e.what());
       }
     });
 }
@@ -502,7 +440,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   
   pipeline_interfaces::msg::ExperimentState msg;
   
-  const bool has_protocol = protocol.has_value();
+  const bool has_protocol = this->is_protocol_initialized;
   const bool ongoing = state.is_session_ongoing && !state.protocol_complete;
   const auto experiment_time = get_experiment_time(current_time);
   
@@ -538,9 +476,9 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   size_t stage_index = 0;
   uint32_t total_trials_in_stage = 0;
   
-  if (has_protocol) {
-    for (size_t i = 0; i < protocol->elements.size(); ++i) {
-      if (protocol->elements[i].type == ProtocolElement::Type::STAGE) {
+  if (this->is_protocol_initialized) {
+    for (size_t i = 0; i < this->protocol->elements.size(); ++i) {
+      if (this->protocol->elements[i].type == ProtocolElement::Type::STAGE) {
         if (i <= state.current_element_index) {
           stage_index = total_stages;
         }
@@ -548,8 +486,8 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
       }
     }
     
-    if (state.current_element_index < protocol->elements.size()) {
-      const auto& element = protocol->elements[state.current_element_index];
+    if (state.current_element_index < this->protocol->elements.size()) {
+      const auto& element = this->protocol->elements[state.current_element_index];
       if (element.type == ProtocolElement::Type::STAGE && element.stage.has_value()) {
         msg.stage_name = element.stage->name;
         total_trials_in_stage = element.stage->trials;

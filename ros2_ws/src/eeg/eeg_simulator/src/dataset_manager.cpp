@@ -42,7 +42,7 @@ void DatasetManager::handle_get_dataset_info(
   }
 
   /* Parse the dataset info directly from the JSON file */
-  auto [success, dataset_info] = parse_dataset_info(request->filename, data_directory_);
+  auto [success, dataset_info, pulse_times] = get_dataset_info(request->filename, data_directory_);
 
   if (!success) {
     response->success = false;
@@ -55,7 +55,7 @@ void DatasetManager::handle_get_dataset_info(
   RCLCPP_INFO(node_->get_logger(), "Dataset info requested for: %s", request->filename.c_str());
 }
 
-std::tuple<bool, project_interfaces::msg::DatasetInfo> DatasetManager::parse_dataset_info(
+std::tuple<bool, project_interfaces::msg::DatasetInfo, std::vector<double_t>> DatasetManager::get_dataset_info(
     const std::string& json_filename, const std::string& directory_path) {
 
   std::string json_file_path = directory_path + "/" + json_filename;
@@ -63,7 +63,7 @@ std::tuple<bool, project_interfaces::msg::DatasetInfo> DatasetManager::parse_dat
 
   if (!file.is_open()) {
     RCLCPP_ERROR(node_->get_logger(), "Error opening JSON file: %s", json_file_path.c_str());
-    return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+    return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
   }
 
   nlohmann::json json_data;
@@ -79,7 +79,7 @@ std::tuple<bool, project_interfaces::msg::DatasetInfo> DatasetManager::parse_dat
       dataset_msg.name = json_data["name"];
     } else {
       RCLCPP_ERROR(node_->get_logger(), "Mandatory field 'name' is missing or invalid in %s", json_filename.c_str());
-      return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+      return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
     }
 
     /* Validate "data_file" field. */
@@ -87,7 +87,7 @@ std::tuple<bool, project_interfaces::msg::DatasetInfo> DatasetManager::parse_dat
       dataset_msg.data_filename = json_data["data_file"];
     } else {
       RCLCPP_ERROR(node_->get_logger(), "Mandatory field 'data_file' is missing or invalid in %s", json_filename.c_str());
-      return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+      return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
     }
 
     /* Validate "session" object with sampling_frequency, num_eeg_channels, num_emg_channels. */
@@ -98,25 +98,25 @@ std::tuple<bool, project_interfaces::msg::DatasetInfo> DatasetManager::parse_dat
         dataset_msg.sampling_frequency = session["sampling_frequency"];
       } else {
         RCLCPP_ERROR(node_->get_logger(), "Mandatory field 'session.sampling_frequency' is missing or invalid in %s", json_filename.c_str());
-        return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+        return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
       }
 
       if (session.contains("num_eeg_channels") && session["num_eeg_channels"].is_number_integer()) {
         dataset_msg.num_eeg_channels = session["num_eeg_channels"];
       } else {
         RCLCPP_ERROR(node_->get_logger(), "Mandatory field 'session.num_eeg_channels' is missing or invalid in %s", json_filename.c_str());
-        return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+        return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
       }
 
       if (session.contains("num_emg_channels") && session["num_emg_channels"].is_number_integer()) {
         dataset_msg.num_emg_channels = session["num_emg_channels"];
       } else {
         RCLCPP_ERROR(node_->get_logger(), "Mandatory field 'session.num_emg_channels' is missing or invalid in %s", json_filename.c_str());
-        return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+        return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
       }
     } else {
       RCLCPP_ERROR(node_->get_logger(), "Mandatory object 'session' is missing or invalid in %s", json_filename.c_str());
-      return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+      return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
     }
 
     /* Read optional "loop" field, defaulting to false. */
@@ -153,16 +153,16 @@ std::tuple<bool, project_interfaces::msg::DatasetInfo> DatasetManager::parse_dat
 
     if (!success) {
       RCLCPP_ERROR(node_->get_logger(), "Error reading the dataset data file for %s, skipping...", json_filename.c_str());
-      return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+      return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
     }
 
     dataset_msg.duration = static_cast<double>(sample_count) / dataset_msg.sampling_frequency;
 
-    return std::make_tuple(true, dataset_msg);
+    return std::make_tuple(true, dataset_msg, parsed_pulse_times);
 
   } catch (const nlohmann::json::parse_error& ex) {
     RCLCPP_ERROR(node_->get_logger(), "JSON parse error in %s: %s", json_filename.c_str(), ex.what());
-    return std::make_tuple(false, project_interfaces::msg::DatasetInfo());
+    return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
   }
 }
 
@@ -181,4 +181,54 @@ std::tuple<bool, size_t> DatasetManager::get_sample_count(const std::string& dat
   }
 
   return std::make_tuple(true, line_count);
+}
+
+std::tuple<bool, std::string> DatasetManager::load_dataset(
+    const std::string& project_name,
+    const project_interfaces::msg::DatasetInfo& dataset_info,
+    std::vector<std::vector<double_t>>& buffer) {
+
+  /* Open and read data file. */
+  std::string data_filename = dataset_info.data_filename;
+  std::string data_file_path = "projects/" + project_name + "/eeg_simulator/" + data_filename;
+
+  RCLCPP_INFO(node_->get_logger(), "Loading dataset: %s", data_filename.c_str());
+
+  std::ifstream data_file(data_file_path);
+
+  if (!data_file.is_open()) {
+    std::string error_msg = "Error opening file: " + data_file_path;
+    RCLCPP_ERROR(node_->get_logger(), "%s", error_msg.c_str());
+    return std::make_tuple(false, error_msg);
+  }
+
+  buffer.clear();
+  std::string line;
+  uint32_t line_number = 0;
+  while (std::getline(data_file, line)) {
+    line_number++;
+    std::stringstream ss(line);
+    std::string number;
+    std::vector<double_t> data;
+    while (std::getline(ss, number, ',')) {
+      double_t value;
+      try {
+        value = std::stod(number);
+      } catch (const std::invalid_argument& e) {
+        std::string error_msg = "Error converting string to double on line " + std::to_string(line_number);
+        RCLCPP_ERROR(node_->get_logger(), "%s", error_msg.c_str());
+        RCLCPP_ERROR(node_->get_logger(), "Line contents: %s", line.c_str());
+        data_file.close();
+        return std::make_tuple(false, error_msg);
+      }
+      data.push_back(value);
+    }
+    buffer.push_back(data);
+  }
+
+  data_file.close();
+
+  RCLCPP_INFO(node_->get_logger(), "Finished loading data. Loaded %zu samples.", buffer.size());
+
+  return std::make_tuple(true, "");
 }

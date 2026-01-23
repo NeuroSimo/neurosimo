@@ -75,10 +75,15 @@ ExperimentCoordinator::ExperimentCoordinator()
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
     "/experiment/pause",
     std::bind(&ExperimentCoordinator::handle_pause, this, _1, _2));
-  
+
   this->resume_service = this->create_service<std_srvs::srv::Trigger>(
     "/experiment/resume",
     std::bind(&ExperimentCoordinator::handle_resume, this, _1, _2));
+
+  /* Service for protocol initialization. */
+  this->initialize_protocol_service = this->create_service<pipeline_interfaces::srv::InitializeProtocol>(
+    "/pipeline/protocol/initialize",
+    std::bind(&ExperimentCoordinator::handle_initialize_protocol, this, _1, _2));
   
   /* Create timers. */
   this->healthcheck_timer = this->create_wall_timer(
@@ -251,23 +256,60 @@ void ExperimentCoordinator::handle_resume(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void)request;  // Unused
-  
+
   if (!state.paused) {
     response->success = false;
     response->message = "Not paused";
     return;
   }
-  
+
   double pause_duration = state.last_sample_time - state.pause_start_time;
   state.total_pause_duration += pause_duration;
   state.paused = false;
-  
+
   RCLCPP_INFO(this->get_logger(), "Experiment resumed at %.2f s (paused for %.2f s)",
     get_experiment_time(state.last_sample_time), pause_duration);
-  
+
   response->success = true;
   response->message = "Experiment resumed";
   publish_experiment_state(state.last_sample_time);
+}
+
+void ExperimentCoordinator::handle_initialize_protocol(
+    const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response) {
+
+  RCLCPP_INFO(this->get_logger(), "Initializing protocol: project='%s', protocol='%s'",
+    request->project_name.c_str(), request->protocol_filename.c_str());
+
+  /* Reset error state before initialization. */
+  this->error_occurred = false;
+
+  /* Generate filepath from project name and protocol filename. */
+  std::string filepath = PROJECTS_DIRECTORY + std::string("/") + request->project_name +
+                         "/protocols/" + request->protocol_filename + ".yaml";
+
+  RCLCPP_INFO(this->get_logger(), "Loading protocol from: %s", filepath.c_str());
+
+  LoadResult result = this->protocol_loader.load_from_file(filepath);
+
+  if (!result.success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s",
+      result.error_message.c_str());
+    this->error_occurred = true;
+    response->success = false;
+    return;
+  }
+
+  this->protocol = result.protocol;
+  this->protocol_name = request->protocol_filename;
+
+  RCLCPP_INFO(this->get_logger(), "Protocol loaded successfully: %s", request->protocol_filename.c_str());
+
+  /* Reset experiment state. */
+  reset_experiment_state();
+
+  response->success = true;
 }
 
 void ExperimentCoordinator::update_experiment_state(double current_time) {

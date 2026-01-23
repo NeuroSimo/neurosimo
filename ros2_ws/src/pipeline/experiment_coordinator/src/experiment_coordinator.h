@@ -18,6 +18,7 @@
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 #include "pipeline_interfaces/msg/experiment_state.hpp"
+#include "pipeline_interfaces/srv/initialize_protocol.hpp"
 
 #include "protocol.h"
 #include "protocol_loader.h"
@@ -45,6 +46,7 @@ private:
   // Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_service;
+  rclcpp::Service<pipeline_interfaces::srv::InitializeProtocol>::SharedPtr initialize_protocol_service;
   
   /* Module manager for handling protocol selection and project changes */
   std::unique_ptr<module_utils::ModuleManager> module_manager;
@@ -80,6 +82,9 @@ private:
   void handle_resume(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void handle_initialize_protocol(
+    const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response);
   void request_stop_session();
   void mark_protocol_complete();
   void publish_experiment_state(double current_time);

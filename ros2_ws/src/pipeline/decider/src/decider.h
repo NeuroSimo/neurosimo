@@ -15,6 +15,8 @@
 #include "inotify_utils/inotify_watcher.h"
 #include "module_utils/module_manager.h"
 
+#include "decider_wrapper.h"
+
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/int32.hpp"
@@ -35,6 +37,7 @@
 #include "pipeline_interfaces/msg/decision_info.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
+#include "pipeline_interfaces/action/initialize_component.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -118,6 +121,16 @@ private:
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
 
+  rclcpp_action::GoalResponse handle_initialize_goal(
+    const rclcpp_action::GoalUUID & uuid,
+    std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal);
+  rclcpp_action::CancelResponse handle_initialize_cancel(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+  void handle_initialize_accepted(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+  void execute_initialize(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+
   void reset_decider_state();
 
   bool set_decider_enabled(bool enabled);
@@ -157,10 +170,20 @@ private:
 
   rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;
 
+  /* Action server for initialization */
+  rclcpp_action::Server<pipeline_interfaces::action::InitializeComponent>::SharedPtr initialize_action_server;
+
   /* Module manager for handling module selection and project changes */
   std::unique_ptr<module_utils::ModuleManager> module_manager;
 
   bool is_session_ongoing = false;
+
+  /* Initialization state */
+  bool is_initialized = false;
+  bool is_enabled = false;
+  std::string initialized_project_name;
+  std::string initialized_module_filename;
+  std::filesystem::path initialized_working_directory;
 
   double_t next_periodic_processing_time = UNSET_TIME;
 

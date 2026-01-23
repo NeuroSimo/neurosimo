@@ -129,6 +129,14 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
       [this] { publish_healthcheck(); },
       callback_group);
 
+  /* Initialize action server for simulator initialization */
+  this->initialize_action_server = rclcpp_action::create_server<eeg_interfaces::action::InitializeSimulator>(
+    this,
+    "/eeg/simulator/initialize",
+    std::bind(&EegSimulator::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&EegSimulator::handle_initialize_cancel, this, std::placeholders::_1),
+    std::bind(&EegSimulator::handle_initialize_accepted, this, std::placeholders::_1));
+
   /* Publish initial streamer state. */
   publish_streamer_state();
 }
@@ -159,6 +167,61 @@ void EegSimulator::publish_healthcheck() {
     healthcheck.actionable_message = "Start streaming to stream data.";
   }
   this->healthcheck_publisher->publish(healthcheck);
+}
+
+rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(
+  const rclcpp_action::GoalUUID & uuid,
+  std::shared_ptr<const eeg_interfaces::action::InitializeSimulator::Goal> goal) {
+  RCLCPP_INFO(this->get_logger(), "Received initialize goal: project='%s', dataset='%s', start_time=%.3f",
+              goal->project_name.c_str(), goal->dataset_filename.c_str(), goal->start_time);
+
+  // Accept all goals for now
+  (void)uuid;
+  return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+}
+
+rclcpp_action::CancelResponse EegSimulator::handle_initialize_cancel(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle) {
+  RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
+  (void)goal_handle;
+  return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void EegSimulator::handle_initialize_accepted(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle) {
+  // Execute the initialization in a new thread
+  std::thread{std::bind(&EegSimulator::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
+}
+
+void EegSimulator::execute_initialize(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle) {
+  const auto goal = goal_handle->get_goal();
+  auto result = std::make_shared<eeg_interfaces::action::InitializeSimulator::Result>();
+
+  // Store initialization parameters
+  this->initialized_project_name = goal->project_name;
+  this->initialized_dataset_filename = goal->dataset_filename;
+  this->initialized_start_time = goal->start_time;
+
+  // Set the dataset and start time
+  if (!set_dataset(goal->dataset_filename)) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to set dataset: %s", goal->dataset_filename.c_str());
+    result->success = false;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Set the start time
+  this->play_dataset_from = goal->start_time;
+
+  // Mark as initialized
+  this->is_initialized = true;
+
+  RCLCPP_INFO(this->get_logger(), "Simulator initialized successfully: project=%s, dataset=%s, start_time=%.3f",
+              goal->project_name.c_str(), goal->dataset_filename.c_str(), goal->start_time);
+
+  result->success = true;
+  goal_handle->succeed(result);
 }
 
 void EegSimulator::publish_streamer_state() {

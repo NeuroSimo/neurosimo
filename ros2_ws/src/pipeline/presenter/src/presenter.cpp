@@ -63,8 +63,106 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     "/pipeline/presenter/log",
     qos_keep_all_logs);
 
+  /* Initialize action server for component initialization */
+  this->initialize_action_server = rclcpp_action::create_server<pipeline_interfaces::action::InitializeComponent>(
+    this,
+    "/pipeline/presenter/initialize",
+    std::bind(&EegPresenter::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&EegPresenter::handle_initialize_cancel, this, std::placeholders::_1),
+    std::bind(&EegPresenter::handle_initialize_accepted, this, std::placeholders::_1));
+
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
+}
+
+rclcpp_action::GoalResponse EegPresenter::handle_initialize_goal(
+  const rclcpp_action::GoalUUID & uuid,
+  std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal) {
+  RCLCPP_INFO(this->get_logger(), "Received initialize goal: project='%s', module='%s', enabled=%s",
+              goal->project_name.c_str(), goal->module_filename.c_str(), goal->enabled ? "true" : "false");
+
+  // Accept all goals for now
+  (void)uuid;
+  return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+}
+
+rclcpp_action::CancelResponse EegPresenter::handle_initialize_cancel(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
+  (void)goal_handle;
+  return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void EegPresenter::handle_initialize_accepted(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  // Execute the initialization in a new thread
+  std::thread{std::bind(&EegPresenter::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
+}
+
+void EegPresenter::execute_initialize(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const auto goal = goal_handle->get_goal();
+  auto result = std::make_shared<pipeline_interfaces::action::InitializeComponent::Result>();
+
+  // Set enabled state
+  this->is_enabled = goal->enabled;
+
+  // If not enabled, just mark as disabled and return early
+  if (!goal->enabled) {
+    this->is_enabled = false;
+    RCLCPP_INFO(this->get_logger(), "Presenter marked as disabled: project=%s, module=%s",
+                goal->project_name.c_str(), goal->module_filename.c_str());
+    result->success = true;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Change to project working directory
+  std::filesystem::path project_path = std::filesystem::path(PROJECTS_DIRECTORY) / goal->project_name;
+  std::filesystem::path presenter_path = project_path / "presenter";
+  std::filesystem::path module_path = presenter_path / goal->module_filename;
+
+  if (!std::filesystem::exists(module_path)) {
+    RCLCPP_ERROR(this->get_logger(), "Module file does not exist: %s", module_path.c_str());
+    result->success = false;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Store initialization state
+  this->initialized_project_name = goal->project_name;
+  this->initialized_module_filename = goal->module_filename;
+  this->initialized_working_directory = presenter_path;
+
+  // Extract module name from filename (remove .py extension)
+  std::string module_name = goal->module_filename;
+  if (module_name.size() > 3 && module_name.substr(module_name.size() - 3) == ".py") {
+    module_name = module_name.substr(0, module_name.size() - 3);
+  }
+
+  // Initialize the presenter wrapper
+  bool success = this->presenter_wrapper->initialize_module(
+    this->initialized_working_directory.string(),
+    module_name);
+
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");
+    result->success = false;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Publish initialization logs from Python constructor
+  publish_python_logs(0.0, true);
+
+  // Mark as initialized
+  this->is_initialized = true;
+
+  RCLCPP_INFO(this->get_logger(), "Presenter initialized successfully: project=%s, module=%s",
+              goal->project_name.c_str(), goal->module_filename.c_str());
+
+  result->success = true;
+  goal_handle->succeed(result);
 }
 
 void EegPresenter::publish_python_logs(double sample_time, bool is_initialization) {
@@ -123,7 +221,7 @@ bool EegPresenter::initialize_presenter_module() {
 /* EEG sample handler (for session markers and time updates). */
 void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   /* Return early if the presenter is not enabled. */
-  if (!this->module_manager->is_enabled()) {
+  if (!this->is_enabled) {
     return;
   }
 
@@ -206,7 +304,7 @@ void EegPresenter::update_time(double_t time) {
 void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg) {
   RCLCPP_INFO(this->get_logger(), "Received sensory stimulus (type: %s, time: %.3f)", msg->type.c_str(), msg->time);
 
-  if (!this->module_manager->is_enabled()) {
+  if (!this->is_enabled) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
                          1000,

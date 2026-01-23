@@ -4,12 +4,14 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
 #include "rcl_interfaces/msg/parameter_type.hpp"
 #include "inotify_utils/inotify_watcher.h"
 
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/msg/eeg_info.hpp"
+#include "eeg_interfaces/action/initialize_simulator.hpp"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -54,6 +56,16 @@ private:
       std::shared_ptr<project_interfaces::srv::SetStartTime::Response> response);
 
   void initialize_streaming();
+
+  rclcpp_action::GoalResponse handle_initialize_goal(
+    const rclcpp_action::GoalUUID & uuid,
+    std::shared_ptr<const eeg_interfaces::action::InitializeSimulator::Goal> goal);
+  rclcpp_action::CancelResponse handle_initialize_cancel(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle);
+  void handle_initialize_accepted(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle);
+  void execute_initialize(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle);
 
   /* Publish a single sample at the given index with the specified session flags. */
   bool publish_single_sample(size_t sample_index, bool is_session_start, bool is_session_end);
@@ -118,6 +130,12 @@ private:
 
   std::string current_data_file_path = UNSET_STRING;
 
+  /* Initialization state */
+  bool is_initialized = false;
+  std::string initialized_project_name;
+  std::string initialized_dataset_filename;
+  double_t initialized_start_time;
+
   rclcpp::CallbackGroup::SharedPtr callback_group;
 
   rclcpp::Subscription<system_interfaces::msg::Healthcheck>::SharedPtr eeg_bridge_healthcheck_subscriber;
@@ -141,6 +159,9 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streaming_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streaming_service;
   rclcpp::TimerBase::SharedPtr stream_timer;
+
+  /* Action server for initialization */
+  rclcpp_action::Server<eeg_interfaces::action::InitializeSimulator>::SharedPtr initialize_action_server;
 
   /* Inotify watcher */
   std::unique_ptr<inotify_utils::InotifyWatcher> inotify_watcher;

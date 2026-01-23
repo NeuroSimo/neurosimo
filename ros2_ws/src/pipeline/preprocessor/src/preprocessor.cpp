@@ -148,9 +148,9 @@ void EegPreprocessor::execute_initialize(
   bool success = this->preprocessor_wrapper->initialize_module(
     this->initialized_working_directory.string(),
     module_name,
-    this->session_metadata.num_eeg_channels,
-    this->session_metadata.num_emg_channels,
-    this->session_metadata.sampling_frequency);
+    goal->num_eeg_channels,
+    goal->num_emg_channels,
+    goal->sampling_frequency);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize preprocessor module");

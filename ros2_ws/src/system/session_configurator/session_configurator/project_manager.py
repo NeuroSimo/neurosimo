@@ -65,6 +65,8 @@ class ProjectManager:
 
     def initialize_session_state(self, project_name):
         state = {
+            "notes": '',
+            "subject_id": '',
             "decider.module": 'example',
             "decider.enabled": False,
             "preprocessor.module": 'example',
@@ -83,6 +85,7 @@ class ProjectManager:
 
     def validate_session_state(self, state):
         required_keys = [
+            "notes", "subject_id",
             "decider.module", "decider.enabled",
             "preprocessor.module", "preprocessor.enabled",
             "presenter.module", "presenter.enabled",

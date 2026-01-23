@@ -21,8 +21,8 @@ interface DecisionInfo extends ROSLIB.Message {
   total_latency: number
 }
 
-interface ModuleList extends ROSLIB.Message {
-  modules: string[]
+export interface FilenameList extends ROSLIB.Message {
+  filenames: string[]
 }
 
 export interface ExperimentState extends ROSLIB.Message {
@@ -42,14 +42,6 @@ export interface ExperimentState extends ROSLIB.Message {
   rest_remaining: number
   next_stage_name: string
   next_is_rest: boolean
-}
-
-interface RosBoolean extends ROSLIB.Message {
-  data: boolean
-}
-
-interface RosString extends ROSLIB.Message {
-  data: string
 }
 
 export interface LogMessage extends ROSLIB.Message {
@@ -183,47 +175,47 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
 
   useEffect(() => {
     /* Subscriber for preprocessor list. */
-    const preprocessorListSubscriber = new Topic<ModuleList>({
+    const preprocessorListSubscriber = new Topic<FilenameList>({
       ros: ros,
       name: '/pipeline/preprocessor/list',
-      messageType: 'project_interfaces/ModuleList',
+      messageType: 'project_interfaces/FilenameList',
     })
 
     preprocessorListSubscriber.subscribe((message) => {
-      setPreprocessorList(message.modules)
+      setPreprocessorList(message.filenames)
     })
 
     /* Subscriber for decider list. */
-    const deciderListSubscriber = new Topic<ModuleList>({
+    const deciderListSubscriber = new Topic<FilenameList>({
       ros: ros,
       name: '/pipeline/decider/list',
-      messageType: 'project_interfaces/ModuleList',
+      messageType: 'project_interfaces/FilenameList',
     })
 
     deciderListSubscriber.subscribe((message) => {
-      setDeciderList(message.modules)
+      setDeciderList(message.filenames)
     })
 
     /* Subscriber for presenter list. */
-    const presenterListSubscriber = new Topic<ModuleList>({
+    const presenterListSubscriber = new Topic<FilenameList>({
       ros: ros,
       name: '/pipeline/presenter/list',
-      messageType: 'project_interfaces/ModuleList',
+      messageType: 'project_interfaces/FilenameList',
     })
 
     presenterListSubscriber.subscribe((message) => {
-      setPresenterList(message.modules)
+      setPresenterList(message.filenames)
     })
 
     /* Subscriber for available protocols. */
-    const protocolListSubscriber = new Topic<ModuleList>({
+    const protocolListSubscriber = new Topic<FilenameList>({
       ros: ros,
       name: '/experiment/protocol/list',
-      messageType: 'project_interfaces/ModuleList',
+      messageType: 'project_interfaces/FilenameList',
     })
 
     protocolListSubscriber.subscribe((message) => {
-      setProtocolList(message.modules)
+      setProtocolList(message.filenames)
     })
 
     /* Subscriber for timing latency. */

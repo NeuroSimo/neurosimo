@@ -3,6 +3,7 @@ import { Topic, Message } from 'roslib'
 
 import { ros } from 'ros/ros'
 import { useParameters } from './ParameterProvider'
+import { FilenameList } from './PipelineProvider'
 
 export enum StreamerStateValue {
   READY = 0,
@@ -24,7 +25,7 @@ interface Dataset extends ROSLIB.Message {
 }
 
 interface DatasetList extends ROSLIB.Message {
-  datasets: Dataset[]
+  datasets: string[]
 }
 
 interface RosString extends ROSLIB.Message {
@@ -44,7 +45,7 @@ interface RosStreamerState extends ROSLIB.Message {
 }
 
 interface EegSimulatorContextType {
-  datasetList: Dataset[]
+  datasetList: string[]
   dataset: string
   startTime: number
   streamerState: StreamerStateValue
@@ -66,7 +67,7 @@ interface EegSimulatorProviderProps {
 export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ children }) => {
   const { simulator } = useParameters()
 
-  const [datasetList, setDatasetList] = useState<Dataset[]>([])
+  const [datasetList, setDatasetList] = useState<string[]>([])
   const [streamerState, setStreamerState] = useState<StreamerStateValue>(StreamerStateValue.READY)
 
   // Get parameter values from structured parameter store
@@ -75,14 +76,14 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
 
   useEffect(() => {
     /* Subscriber for dataset list. */
-    const datasetListSubscriber = new Topic<DatasetList>({
+    const datasetListSubscriber = new Topic<FilenameList>({
       ros: ros,
       name: '/eeg_simulator/dataset/list',
-      messageType: 'project_interfaces/DatasetList',
+      messageType: 'project_interfaces/FilenameList',
     })
 
-    datasetListSubscriber.subscribe((message: DatasetList) => {
-      setDatasetList(message.datasets)
+    datasetListSubscriber.subscribe((message: FilenameList) => {
+      setDatasetList(message.filenames)
     })
 
     /* Subscriber for simulator state. */

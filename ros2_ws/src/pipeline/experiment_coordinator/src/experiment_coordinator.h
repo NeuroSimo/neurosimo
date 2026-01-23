@@ -15,7 +15,7 @@
 #include "std_srvs/srv/trigger.hpp"
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
-#include "project_interfaces/msg/module_list.hpp"
+#include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 #include "pipeline_interfaces/msg/experiment_state.hpp"
 

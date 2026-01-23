@@ -8,8 +8,11 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
 #include "module_utils/module_manager.h"
+
+#include "preprocessor_wrapper.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -26,6 +29,7 @@
 
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
+#include "pipeline_interfaces/action/initialize_component.hpp"
 
 #include "ring_buffer.h"
 
@@ -83,6 +87,15 @@ private:
   void handle_session_end();
 
   bool initialize_module();
+  rclcpp_action::GoalResponse handle_initialize_goal(
+    const rclcpp_action::GoalUUID & uuid,
+    std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal);
+  rclcpp_action::CancelResponse handle_initialize_cancel(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+  void handle_initialize_accepted(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+  void execute_initialize(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
   void publish_python_logs(double sample_time, bool is_initialization);
   void publish_sentinel_sample(double_t sample_time);
 
@@ -103,9 +116,19 @@ private:
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
+  /* Action server for initialization */
+  rclcpp_action::Server<pipeline_interfaces::action::InitializeComponent>::SharedPtr initialize_action_server;
+
   /* Module manager for handling module selection and project changes */
   std::unique_ptr<module_utils::ModuleManager> module_manager;
   bool is_session_ongoing = false;
+
+  /* Initialization state */
+  bool is_initialized = false;
+  bool is_enabled = false;
+  std::string initialized_project_name;
+  std::string initialized_module_filename;
+  std::filesystem::path initialized_working_directory;
 
   bool error_occurred = false;
 

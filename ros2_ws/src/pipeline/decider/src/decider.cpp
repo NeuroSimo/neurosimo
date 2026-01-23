@@ -169,9 +169,133 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
 
+  /* Initialize action server for component initialization */
+  this->initialize_action_server = rclcpp_action::create_server<pipeline_interfaces::action::InitializeComponent>(
+    this,
+    "/pipeline/decider/initialize",
+    std::bind(&EegDecider::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&EegDecider::handle_initialize_cancel, this, std::placeholders::_1),
+    std::bind(&EegDecider::handle_initialize_accepted, this, std::placeholders::_1));
+
   this->healthcheck_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegDecider::publish_healthcheck, this));
+}
+
+rclcpp_action::GoalResponse EegDecider::handle_initialize_goal(
+  const rclcpp_action::GoalUUID & uuid,
+  std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal) {
+  RCLCPP_INFO(this->get_logger(), "Received initialize goal: project='%s', module='%s', enabled=%s",
+              goal->project_name.c_str(), goal->module_filename.c_str(), goal->enabled ? "true" : "false");
+
+  // Accept all goals for now
+  (void)uuid;
+  return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+}
+
+rclcpp_action::CancelResponse EegDecider::handle_initialize_cancel(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
+  (void)goal_handle;
+  return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void EegDecider::handle_initialize_accepted(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  // Execute the initialization in a new thread
+  std::thread{std::bind(&EegDecider::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
+}
+
+void EegDecider::execute_initialize(
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const auto goal = goal_handle->get_goal();
+  auto result = std::make_shared<pipeline_interfaces::action::InitializeComponent::Result>();
+
+  // Set enabled state
+  this->is_enabled = goal->enabled;
+
+  // If not enabled, just mark as disabled and return early
+  if (!goal->enabled) {
+    this->is_enabled = false;
+    RCLCPP_INFO(this->get_logger(), "Decider marked as disabled: project=%s, module=%s",
+                goal->project_name.c_str(), goal->module_filename.c_str());
+    result->success = true;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Change to project working directory
+  std::filesystem::path project_path = std::filesystem::path(PROJECTS_DIRECTORY) / goal->project_name;
+  std::filesystem::path decider_path = project_path / "decider";
+  std::filesystem::path module_path = decider_path / goal->module_filename;
+
+  if (!std::filesystem::exists(module_path)) {
+    RCLCPP_ERROR(this->get_logger(), "Module file does not exist: %s", module_path.c_str());
+    result->success = false;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Store initialization state
+  this->initialized_project_name = goal->project_name;
+  this->initialized_module_filename = goal->module_filename;
+  this->initialized_working_directory = decider_path;
+
+  // Extract module name from filename (remove .py extension)
+  std::string module_name = goal->module_filename;
+  if (module_name.size() > 3 && module_name.substr(module_name.size() - 3) == ".py") {
+    module_name = module_name.substr(0, module_name.size() - 3);
+  }
+
+  // Initialize the decider wrapper
+  bool success = this->decider_wrapper->initialize_module(
+    PROJECTS_DIRECTORY,
+    this->initialized_working_directory.string(),
+    module_name,
+    this->session_metadata.num_eeg_channels,
+    this->session_metadata.num_emg_channels,
+    this->session_metadata.sampling_frequency,
+    this->sensory_stimuli,
+    this->event_queue,
+    this->event_queue_mutex);
+
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module");
+    result->success = false;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Publish initialization logs from Python constructor
+  publish_python_logs(0.0, true);
+
+  // Get buffer size and set up sample buffer
+  size_t buffer_size = this->decider_wrapper->get_buffer_size();
+  this->sample_buffer.reset(buffer_size);
+
+  /* Perform warm-up if requested by the Python module */
+  bool was_warmup_successful = this->decider_wrapper->warm_up();
+  if (!was_warmup_successful) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
+    result->success = false;
+    goal_handle->succeed(result);
+    return;
+  }
+
+  // Send the initial sensory stimuli to the presenter
+  for (auto& sensory_stimulus : this->sensory_stimuli) {
+    this->sensory_stimulus_publisher->publish(sensory_stimulus);
+  }
+  this->sensory_stimuli.clear();
+
+  // Mark as initialized
+  this->is_initialized = true;
+
+  RCLCPP_INFO(this->get_logger(), "Decider initialized successfully: project=%s, module=%s",
+              goal->project_name.c_str(), goal->module_filename.c_str());
+
+  result->success = true;
+  goal_handle->succeed(result);
 }
 
 void EegDecider::publish_healthcheck() {
@@ -596,8 +720,8 @@ void EegDecider::handle_pulse_delivered(const double_t pulse_delivered_time) {
 }
 
 void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
-  /* Return early if decider module is not enabled. */
-  if (!this->module_manager->is_enabled()) {
+  /* Return early if decider is not enabled. */
+  if (!this->is_enabled) {
     return;
   }
 

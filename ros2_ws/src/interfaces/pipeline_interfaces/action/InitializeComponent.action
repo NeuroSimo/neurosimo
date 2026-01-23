@@ -1,0 +1,13 @@
+# Initialize pipeline component action
+# Goal: Component initialization parameters
+string project_name
+string module_filename
+bool enabled
+
+---
+# Result: Initialization outcome
+bool success
+
+---
+# Feedback: Initialization progress
+float32 progress  # 0.0 to 1.0

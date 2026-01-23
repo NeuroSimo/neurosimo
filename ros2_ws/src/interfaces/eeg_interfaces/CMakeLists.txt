@@ -30,6 +30,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   "msg/EegStatistics.msg"
 
+  "action/InitializeSimulator.action"
+
   DEPENDENCIES builtin_interfaces
 )
 

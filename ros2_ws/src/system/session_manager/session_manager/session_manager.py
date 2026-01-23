@@ -17,6 +17,7 @@ from system_interfaces.action import RunSession
 from pipeline_interfaces.action import InitializeComponent
 from pipeline_interfaces.srv import InitializeProtocol
 from eeg_interfaces.action import InitializeSimulator
+from eeg_interfaces.msg import EegInfo
 
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
@@ -58,6 +59,23 @@ class SessionManagerNode(Node):
             1,
             callback_group=self.callback_group
         )
+
+        # Subscribe to EEG device info
+        qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST
+        )
+        self.eeg_info_subscriber = self.create_subscription(
+            EegInfo,
+            '/eeg_device/info',
+            self.eeg_info_callback,
+            qos,
+            callback_group=self.callback_group
+        )
+
+        # EEG device information
+        self.eeg_info = EegInfo()
 
         # Create clients for initialization operations
         self.protocol_init_client = self.create_client(
@@ -227,6 +245,11 @@ class SessionManagerNode(Node):
         """Callback for active project topic updates."""
         self.current_project_name = msg.data
         self.logger.info(f"Active project updated: {self.current_project_name}")
+
+    def eeg_info_callback(self, msg):
+        """Callback for EEG device info updates."""
+        self.eeg_info = msg
+        self.logger.debug(f"EEG info updated: sampling_freq={msg.sampling_frequency}, eeg_channels={msg.num_eeg_channels}, emg_channels={msg.num_emg_channels}")
 
     def finish_session_callback(self, request, response):
         """Service callback to finish/stop an ongoing session."""
@@ -423,9 +446,10 @@ class SessionManagerNode(Node):
             self.logger.error(f'Cannot initialize {component_name}: no active project set')
             return False
 
-        # Get module filename and enabled status from ROS parameters
+        # Get ROS parameters
         module_filename = self.session_config.get(f'{component_name}.module', '')
         enabled = self.session_config.get(f'{component_name}.enabled', False)
+        subject_id = self.session_config.get('subject_id', '')
 
         if not module_filename:
             self.logger.error(f'Cannot initialize {component_name}: no module filename configured')
@@ -435,6 +459,10 @@ class SessionManagerNode(Node):
         goal.project_name = self.current_project_name
         goal.module_filename = module_filename
         goal.enabled = enabled
+        goal.subject_id = subject_id
+        goal.sampling_frequency = self.eeg_info.sampling_frequency
+        goal.num_eeg_channels = self.eeg_info.num_eeg_channels
+        goal.num_emg_channels = self.eeg_info.num_emg_channels
 
         result = self.call_action_with_cancel_propagation(client, goal, goal_handle, action_name)
 
@@ -445,7 +473,7 @@ class SessionManagerNode(Node):
             self.logger.error(f'{component_name} initialization failed')
             return False
 
-        self.logger.info(f'{component_name} initialized successfully: project={self.current_project_name}, module={module_filename}, enabled={enabled}')
+        self.logger.info(f'{component_name} initialized successfully: project={self.current_project_name}, module={module_filename}, enabled={enabled}, sampling_freq={goal.sampling_frequency}, eeg_channels={goal.num_eeg_channels}, emg_channels={goal.num_emg_channels}, subject_id={goal.subject_id}')
         return True
 
     def initialize_protocol(self, goal_handle):

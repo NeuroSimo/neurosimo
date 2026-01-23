@@ -5,8 +5,11 @@
 #include <queue>
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
 #include "module_utils/module_manager.h"
+
+#include "presenter_wrapper.h"
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -16,6 +19,7 @@
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
+#include "pipeline_interfaces/action/initialize_component.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -47,6 +51,16 @@ private:
   void publish_python_logs(double sample_time, bool is_initialization);
   void unset_presenter_module();
 
+  rclcpp_action::GoalResponse handle_initialize_goal(
+    const rclcpp_action::GoalUUID & uuid,
+    std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal);
+  rclcpp_action::CancelResponse handle_initialize_cancel(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+  void handle_initialize_accepted(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+  void execute_initialize(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+
   void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
   void update_time(double_t time);
@@ -60,8 +74,18 @@ private:
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
+  /* Action server for initialization */
+  rclcpp_action::Server<pipeline_interfaces::action::InitializeComponent>::SharedPtr initialize_action_server;
+
   /* Module manager for handling module selection and project changes */
   std::unique_ptr<module_utils::ModuleManager> module_manager;
+
+  /* Initialization state */
+  bool is_initialized = false;
+  bool is_enabled = false;
+  std::string initialized_project_name;
+  std::string initialized_module_filename;
+  std::filesystem::path initialized_working_directory;
 
   /* State variables */
   bool error_occurred = false;

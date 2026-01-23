@@ -10,7 +10,7 @@ from project_interfaces.srv import (
     ListProjects,
     SetActiveProject,
 )
-from project_interfaces.msg import ModuleList
+from project_interfaces.msg import FilenameList
 
 from std_msgs.msg import String
 from rcl_interfaces.msg import SetParametersResult
@@ -69,10 +69,11 @@ class SessionConfiguratorNode(Node):
                          history=HistoryPolicy.KEEP_LAST)
         self.active_project_publisher = self.create_publisher(String, "/projects/active", qos, callback_group=self.callback_group)
 
-        self.decider_module_list_publisher = self.create_publisher(ModuleList, "/pipeline/decider/list", qos, callback_group=self.callback_group)
-        self.preprocessor_module_list_publisher = self.create_publisher(ModuleList, "/pipeline/preprocessor/list", qos, callback_group=self.callback_group)
-        self.presenter_module_list_publisher = self.create_publisher(ModuleList, "/pipeline/presenter/list", qos, callback_group=self.callback_group)
-        self.protocol_list_publisher = self.create_publisher(ModuleList, "/experiment/protocol/list", qos, callback_group=self.callback_group)
+        self.decider_list_publisher = self.create_publisher(FilenameList, "/pipeline/decider/list", qos, callback_group=self.callback_group)
+        self.preprocessor_list_publisher = self.create_publisher(FilenameList, "/pipeline/preprocessor/list", qos, callback_group=self.callback_group)
+        self.presenter_list_publisher = self.create_publisher(FilenameList, "/pipeline/presenter/list", qos, callback_group=self.callback_group)
+        self.protocol_list_publisher = self.create_publisher(FilenameList, "/experiment/protocol/list", qos, callback_group=self.callback_group)
+        self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos, callback_group=self.callback_group)
 
         # Set active project
         active_project = self.project_manager.get_active_project()
@@ -113,10 +114,11 @@ class SessionConfiguratorNode(Node):
         ])
 
         # Publish the lists of modules for the new project
-        self.publish_module_list(project_name, "decider", [".py"], self.decider_module_list_publisher, "decider")
-        self.publish_module_list(project_name, "preprocessor", [".py"], self.preprocessor_module_list_publisher, "preprocessor")
-        self.publish_module_list(project_name, "presenter", [".py"], self.presenter_module_list_publisher, "presenter")
-        self.publish_module_list(project_name, "protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol")
+        self.publish_filename_list(project_name, "decider", [".py"], self.decider_list_publisher, "decider")
+        self.publish_filename_list(project_name, "preprocessor", [".py"], self.preprocessor_list_publisher, "preprocessor")
+        self.publish_filename_list(project_name, "presenter", [".py"], self.presenter_list_publisher, "presenter")
+        self.publish_filename_list(project_name, "protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol")
+        self.publish_filename_list(project_name, "eeg_simulator", [".json"], self.dataset_list_publisher, "dataset")
 
         return True
 
@@ -150,13 +152,13 @@ class SessionConfiguratorNode(Node):
             self.logger.error(f"Error listing modules for project '{project_name}'/{subdirectory}: {e}")
             return []
 
-    def publish_module_list(self, project_name, subdirectory, file_extensions, publisher, component_name):
+    def publish_filename_list(self, project_name, subdirectory, file_extensions, publisher, component_name):
         """Publish the list of modules for the specified project and component."""
         modules = self.list_modules(project_name, subdirectory, file_extensions)
 
-        # Create and publish ModuleList message
-        msg = ModuleList()
-        msg.modules = modules
+        # Create and publish FilenameList message
+        msg = FilenameList()
+        msg.filenames = modules
         publisher.publish(msg)
 
         self.logger.info(f"Published {component_name} module list for project '{project_name}': {modules}")

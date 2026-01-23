@@ -1,0 +1,23 @@
+# Action to run a complete session lifecycle
+# Goal: Parameters needed to initialize and start the session
+string subject_id
+string notes
+string data_source  # "simulator", "device", or "playback"
+string protocol  # protocol name
+string dataset_filename  # for simulator mode
+float64 start_time  # for simulator mode
+
+---
+# Result: Outcome of the session run
+bool success
+string reason
+# Summary statistics
+float64 session_duration  # seconds
+uint64 total_samples_processed
+uint64 dropped_samples
+
+---
+# Feedback: Current phase/state of session execution
+string phase  # INITIALIZING, ARMED, STREAMING, RUNNING, FINALIZING
+string status_message
+uint64 samples_processed

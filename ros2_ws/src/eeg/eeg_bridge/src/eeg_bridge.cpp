@@ -130,11 +130,11 @@ void EegBridge::create_publishers() {
 
   /* Services for starting/stopping streaming. */
   this->start_streaming_service = this->create_service<std_srvs::srv::Trigger>(
-    "/eeg_bridge/start",
+    "/eeg_device/streaming/start",
     std::bind(&EegBridge::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
   this->stop_streaming_service = this->create_service<std_srvs::srv::Trigger>(
-    "/eeg_bridge/stop",
+    "/eeg_device/streaming/stop",
     std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Publish initial states. */

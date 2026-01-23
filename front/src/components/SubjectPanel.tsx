@@ -5,6 +5,7 @@ import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, CONFIG_PANEL_WIDTH }
 import { useParameters } from 'providers/ParameterProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { CommittableTextInput } from './CommittableTextInput'
+import { CommittableNumericInput } from './CommittableNumericInput'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -37,12 +38,13 @@ export const SubjectPanel: React.FC = () => {
       <SmallerTitle>Subject</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Subject ID:</ConfigLabel>
-        <CommittableTextInput
+        <CommittableNumericInput
           value={metadata.subject_id}
           onCommit={handleSubjectIdCommit}
-          placeholder="Enter ID"
-          disabled={false}
-          width="130px"
+          prefix="S"
+          maxLength={3}
+          placeholder="001"
+          disabled={isExperimentOngoing}
         />
       </ConfigRow>
       <ConfigRow>
@@ -51,7 +53,7 @@ export const SubjectPanel: React.FC = () => {
           value={metadata.notes}
           onCommit={handleNotesCommit}
           placeholder="Enter notes"
-          disabled={false}
+          disabled={isExperimentOngoing}
           multiline={true}
           width="315px"
         />

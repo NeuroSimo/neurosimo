@@ -54,11 +54,16 @@ class SessionManagerNode(Node):
         )
 
         # Subscribe to active project topic
+        project_qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST
+        )
         self.active_project_subscriber = self.create_subscription(
             String,
             '/projects/active',
             self.active_project_callback,
-            1,
+            project_qos,
             callback_group=self.callback_group
         )
 
@@ -90,6 +95,9 @@ class SessionManagerNode(Node):
             self, InitializeComponent, '/pipeline/presenter/initialize', callback_group=self.callback_group)
 
         # Create clients for streaming start operations
+        self.playback_streaming_start_client = self.create_client(
+            # TODO: Replace with playback service once implemented
+            Trigger, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_simulator_streaming_start_client = self.create_client(
             Trigger, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_device_streaming_start_client = self.create_client(
@@ -199,6 +207,15 @@ class SessionManagerNode(Node):
                 self.publish_session_state()
                 return
 
+            # PHASE: STARTING_STREAMING
+            self.session_phase = 'STARTING_STREAMING'
+            self.publish_session_state()
+            if not self.start_data_streaming():
+                self.session_phase = ''
+                self.session_running = False
+                self.publish_session_state()
+                return
+
             # PHASE: RUNNING
             self.session_phase = 'RUNNING'
             self.publish_session_state()
@@ -235,17 +252,18 @@ class SessionManagerNode(Node):
                 return False
 
             # Extract parameter values
+            # ROS2 parameter types: NOT_SET=0, BOOL=1, INTEGER=2, DOUBLE=3, STRING=4
             for i, param in enumerate(response.values):
                 param_name = param_names[i]
                 self.logger.debug(f"Received parameter {param_name}: type={param.type}, value={param}")
-                if param.type == 1:  # STRING
-                    self.session_config[param_name] = param.string_value
-                elif param.type == 2:  # BOOL
+                if param.type == 1:  # BOOL
                     self.session_config[param_name] = param.bool_value
-                elif param.type == 3:  # INTEGER
+                elif param.type == 2:  # INTEGER
                     self.session_config[param_name] = param.integer_value
-                elif param.type == 4:  # DOUBLE
+                elif param.type == 3:  # DOUBLE
                     self.session_config[param_name] = param.double_value
+                elif param.type == 4:  # STRING
+                    self.session_config[param_name] = param.string_value
                 else:
                     self.logger.error(f'Unsupported parameter type {param.type} for {param_name}')
                     return False
@@ -343,6 +361,38 @@ class SessionManagerNode(Node):
         self.logger.info(f'Protocol initialized successfully')
         return True
 
+    def start_data_streaming(self):
+        """Start the data streaming service."""
+        data_source = self.session_config['data_source']
+
+        # Choose the appropriate streaming service based on data source
+        if data_source == 'playback':
+            client = self.playback_streaming_start_client
+            service_name = '/playback/streaming/start'
+        elif data_source == 'simulator':
+            client = self.eeg_simulator_streaming_start_client
+            service_name = '/eeg_simulator/streaming/start'
+        elif data_source == 'eeg_device':
+            client = self.eeg_device_streaming_start_client
+            service_name = '/eeg_device/streaming/start'
+        else:
+            self.logger.error(f'Unknown data source: {data_source}')
+            return False
+
+        # Call the streaming service
+        request = Trigger.Request()
+        response = self.call_service(request, client, service_name)
+
+        if response is None:
+            return False
+
+        if not response.success:
+            self.logger.error(f'Data streaming start failed: {response.message}')
+            return False
+
+        self.current_data_source = data_source
+        return True
+
     def run_session_loop(self):
         """Run the main session loop until completion or cancellation."""
         while rclpy.ok() and self.session_running:
@@ -396,7 +446,7 @@ class SessionManagerNode(Node):
 
                 time.sleep(0.01)
 
-            result = result_future.result()
+            result = result_future.result().result
             return result
 
         except Exception as e:

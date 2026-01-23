@@ -252,7 +252,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
 
   /* Generate filepath from project name and protocol filename. */
   std::string filepath = PROJECTS_DIRECTORY + std::string("/") + request->project_name +
-                         "/protocols/" + request->protocol_filename + ".yaml";
+                         "/protocols/" + request->protocol_filename;
 
   RCLCPP_INFO(this->get_logger(), "Loading protocol from: %s", filepath.c_str());
 

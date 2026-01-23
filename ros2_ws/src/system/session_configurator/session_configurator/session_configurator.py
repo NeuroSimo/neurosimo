@@ -34,22 +34,22 @@ class SessionConfiguratorNode(Node):
         self.declare_parameter('subject_id', '')
 
         # Decider parameters
-        self.declare_parameter('decider.module', 'example')
+        self.declare_parameter('decider.module', '')
         self.declare_parameter('decider.enabled', False)
 
         # Preprocessor parameters
-        self.declare_parameter('preprocessor.module', 'example')
+        self.declare_parameter('preprocessor.module', '')
         self.declare_parameter('preprocessor.enabled', False)
 
         # Presenter parameters
-        self.declare_parameter('presenter.module', 'example')
+        self.declare_parameter('presenter.module', '')
         self.declare_parameter('presenter.enabled', False)
 
         # Experiment parameters
-        self.declare_parameter('experiment.protocol', 'example')
+        self.declare_parameter('experiment.protocol', '')
 
         # Simulator parameters
-        self.declare_parameter('simulator.dataset_filename', 'random_data_1_khz.json')
+        self.declare_parameter('simulator.dataset_filename', '')
         self.declare_parameter('simulator.start_time', 0.0)
 
         # Playback parameters
@@ -111,6 +111,9 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_state["experiment.protocol"]),
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_state["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_state["simulator.start_time"]),
+            rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_state["data_source"]),
+            rclpy.parameter.Parameter('playback.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_state["playback.bag_filename"]),
+            rclpy.parameter.Parameter('playback.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_state["playback.is_preprocessed"]),
         ])
 
         # Publish the lists of modules for the new project

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
 
 import { ValidatedInput } from 'components/ValidatedInput'
@@ -20,6 +20,7 @@ import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
+import { getDatasetInfoRos, DatasetInfo } from 'ros/eeg_simulator'
 
 const SimulatorPanel = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
@@ -55,11 +56,29 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   const { eegInfo } = useContext(EegStreamContext)
   const { setSimulatorDataset, setSimulatorStartTime } = useParameters()
 
+  const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
+
   const eegSimulatorHealthcheckOk = eegSimulatorHealthcheck?.status.value === HealthcheckStatus.READY
   const isRunning = streamerState === StreamerStateValue.RUNNING
   const isLoading = streamerState === StreamerStateValue.LOADING
   const isExperimentOngoing = experimentState?.ongoing ?? false
   const isEegStreaming = eegInfo?.is_streaming || false
+
+  // Fetch dataset info when dataset changes
+  useEffect(() => {
+    if (!dataset || dataset.trim() === '') {
+      setSelectedDatasetInfo(null)
+      return
+    }
+    getDatasetInfoRos(dataset, (datasetInfo) => {
+      if (!datasetInfo) {
+        console.error('Failed to get dataset info for:', dataset)
+        setSelectedDatasetInfo(null)
+        return
+      }
+      setSelectedDatasetInfo(datasetInfo)
+    })
+  }, [dataset])
 
   const setDataset = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newDataset = event.target.value
@@ -70,30 +89,13 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   }
 
   const setStartTime = (startTime: number) => {
-    if (startTime < 0 || startTime > (selectedDataset?.duration || 0)) {
-      console.error('Start time must be between 0 and ' + selectedDataset?.duration + ' seconds')
+    if (startTime < 0 || startTime > (selectedDatasetInfo?.duration || 0)) {
+      console.error('Start time must be between 0 and ' + selectedDatasetInfo?.duration + ' seconds')
       return
     }
     setSimulatorStartTime(startTime, () => {
       console.log('Start time set to ' + startTime)
     })
-  }
-
-  /*
-  const selectedDataset = datasetList.find(
-    (d: typeof datasetList[number]) => d.json_filename === dataset
-  )
-  */
-  // Just a dummy for now
-  const selectedDataset = {
-    name: 'Dummy Dataset',
-    json_filename: 'dummy_dataset.json',
-    duration: 100,
-    sampling_frequency: 100,
-    num_eeg_channels: 1,
-    num_emg_channels: 0,
-    loop: false,
-    pulse_count: 0,
   }
     
 
@@ -121,25 +123,25 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       <CompactRow>
         <ConfigLabel>Length:</ConfigLabel>
         <ConfigValue>
-          {selectedDataset?.loop
+          {selectedDatasetInfo?.loop
             ? 'Continuous'
-            : `${formatTime(selectedDataset?.duration)}${selectedDataset?.pulse_count ? `, ${selectedDataset.pulse_count} pulses` : ''}`}
+            : `${formatTime(selectedDatasetInfo?.duration)}${selectedDatasetInfo?.pulse_count ? `, ${selectedDatasetInfo.pulse_count} pulses` : ''}`}
         </ConfigValue>
       </CompactRow>
       <SectionStartRow>
         <ConfigLabel>Sampling rate:</ConfigLabel>
-        <ConfigValue>{formatFrequency(selectedDataset?.sampling_frequency)}</ConfigValue>
+        <ConfigValue>{formatFrequency(selectedDatasetInfo?.sampling_frequency)}</ConfigValue>
       </SectionStartRow>
       <CompactRow>
         <ConfigLabel>Channels:</ConfigLabel>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
-        <ConfigValue>{selectedDataset?.num_eeg_channels}</ConfigValue>
+        <ConfigValue>{selectedDatasetInfo?.num_eeg_channels}</ConfigValue>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
-        <ConfigValue>{selectedDataset?.num_emg_channels}</ConfigValue>
+        <ConfigValue>{selectedDatasetInfo?.num_emg_channels}</ConfigValue>
       </CompactRow>
       <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Start time (s)</ConfigLabel>
@@ -148,7 +150,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
             type='number'
             value={startTime}
             min={0}
-            max={selectedDataset?.duration || 0}
+            max={selectedDatasetInfo?.duration || 0}
             onChange={setStartTime}
             disabled={isExperimentOngoing || isEegStreaming}
           />

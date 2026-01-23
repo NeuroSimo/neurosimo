@@ -18,6 +18,9 @@
 #include "project_interfaces/msg/dataset_info.hpp"
 #include "project_interfaces/srv/set_dataset.hpp"
 #include "project_interfaces/srv/set_start_time.hpp"
+#include "project_interfaces/srv/get_dataset_info.hpp"
+
+#include "dataset_manager.h"
 
 #include "std_srvs/srv/trigger.hpp"
 
@@ -128,6 +131,8 @@ private:
 
   rclcpp::Service<project_interfaces::srv::SetStartTime>::SharedPtr start_time_service;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr start_time_publisher;
+
+  std::unique_ptr<DatasetManager> dataset_manager_;
 
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_publisher;
   rclcpp::Publisher<eeg_interfaces::msg::EegInfo>::SharedPtr eeg_info_publisher;

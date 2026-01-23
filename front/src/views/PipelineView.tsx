@@ -6,6 +6,7 @@ import { SubjectPanel } from 'components/SubjectPanel'
 import { ExperimentPanel } from 'components/pipeline/ExperimentConfigPanel'
 import { PipelineDiagram } from 'components/pipeline/PipelineDiagram'
 import { PipelineLayout } from 'components/pipeline/PipelineLayout'
+import { SessionPanel } from 'components/SessionPanel'
 
 export const PipelineView = () => {
   return (
@@ -16,6 +17,7 @@ export const PipelineView = () => {
           <SubjectPanel />
           <ExperimentPanel />
           <DataSourceDisplay />
+          <SessionPanel />
         </>
       }
       pipeline={

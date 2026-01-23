@@ -24,8 +24,8 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Healthcheck.msg"
   "msg/HealthcheckStatus.msg"
+  "msg/SessionState.msg"
   "msg/StreamerState.msg"
-  "action/RunSession.action"
 )
 
 ament_package()

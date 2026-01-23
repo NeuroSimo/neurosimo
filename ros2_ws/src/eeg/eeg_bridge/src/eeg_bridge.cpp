@@ -20,7 +20,7 @@ using namespace std::placeholders;
 
 /* Publisher topics */
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
-const std::string EEG_INFO_TOPIC = "/eeg/info";
+const std::string EEG_INFO_TOPIC = "/eeg_device/info";
 const std::string HEALTHCHECK_TOPIC = "/eeg/healthcheck";
 const std::string LATENCY_MEASUREMENT_TRIGGER_TOPIC = "/pipeline/latency_measurement_trigger";
 

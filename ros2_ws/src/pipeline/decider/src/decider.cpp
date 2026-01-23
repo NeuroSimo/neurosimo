@@ -252,9 +252,9 @@ void EegDecider::execute_initialize(
     PROJECTS_DIRECTORY,
     this->initialized_working_directory.string(),
     module_name,
-    this->session_metadata.num_eeg_channels,
-    this->session_metadata.num_emg_channels,
-    this->session_metadata.sampling_frequency,
+    goal->num_eeg_channels,
+    goal->num_emg_channels,
+    goal->sampling_frequency,
     this->sensory_stimuli,
     this->event_queue,
     this->event_queue_mutex);

@@ -18,7 +18,7 @@ const StyledInput = styled.input<{ width?: string }>`
 
 const StyledTextarea = styled.textarea<{ width?: string }>`
   width: ${props => props.width || '315px'};
-  height: 60px;
+  height: 24px;
   padding: 5px;
   border: 1px solid #ccc;
   border-radius: 3px;

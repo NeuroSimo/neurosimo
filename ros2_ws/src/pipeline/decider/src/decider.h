@@ -11,7 +11,6 @@
 #include <mutex>
 
 #include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
 
 #include "decider_wrapper.h"
@@ -36,7 +35,7 @@
 #include "pipeline_interfaces/msg/decision_info.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
-#include "pipeline_interfaces/action/initialize_decider.hpp"
+#include "pipeline_interfaces/srv/initialize_decider.hpp"
 #include "pipeline_interfaces/srv/finalize_decider.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
@@ -120,15 +119,9 @@ private:
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
 
-  rclcpp_action::GoalResponse handle_initialize_goal(
-    const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const pipeline_interfaces::action::InitializeDecider::Goal> goal);
-  rclcpp_action::CancelResponse handle_initialize_cancel(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle);
-  void handle_initialize_accepted(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle);
-  void execute_initialize(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle);
+  void handle_initialize_decider(
+    const std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Response> response);
 
   void handle_finalize_decider(
     const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
@@ -166,8 +159,8 @@ private:
 
   rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;
 
-  /* Action server for initialization */
-  rclcpp_action::Server<pipeline_interfaces::action::InitializeDecider>::SharedPtr initialize_action_server;
+  /* Service server for initialization */
+  rclcpp::Service<pipeline_interfaces::srv::InitializeDecider>::SharedPtr initialize_service_server;
 
   /* Service server for finalization */
   rclcpp::Service<pipeline_interfaces::srv::FinalizeDecider>::SharedPtr finalize_service_server;

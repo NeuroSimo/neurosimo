@@ -49,13 +49,10 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     "/pipeline/presenter/log",
     qos_keep_all_logs);
 
-  /* Initialize action server for component initialization */
-  this->initialize_action_server = rclcpp_action::create_server<pipeline_interfaces::action::InitializePresenter>(
-    this,
+  /* Initialize service server for component initialization */
+  this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializePresenter>(
     "/pipeline/presenter/initialize",
-    std::bind(&EegPresenter::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
-    std::bind(&EegPresenter::handle_initialize_cancel, this, std::placeholders::_1),
-    std::bind(&EegPresenter::handle_initialize_accepted, this, std::placeholders::_1));
+    std::bind(&EegPresenter::handle_initialize_presenter, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Finalize service server */
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePresenter>(
@@ -66,67 +63,40 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
 }
 
-rclcpp_action::GoalResponse EegPresenter::handle_initialize_goal(
-  const rclcpp_action::GoalUUID & uuid,
-  std::shared_ptr<const pipeline_interfaces::action::InitializePresenter::Goal> goal) {
-  RCLCPP_INFO(this->get_logger(), "Received initialize goal: project='%s', module='%s', enabled=%s",
-              goal->project_name.c_str(), goal->module_filename.c_str(), goal->enabled ? "true" : "false");
-
-  // Accept all goals for now
-  (void)uuid;
-  return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-}
-
-rclcpp_action::CancelResponse EegPresenter::handle_initialize_cancel(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle) {
-  RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
-  (void)goal_handle;
-  return rclcpp_action::CancelResponse::ACCEPT;
-}
-
-void EegPresenter::handle_initialize_accepted(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle) {
-  // Execute the initialization in a new thread
-  std::thread{std::bind(&EegPresenter::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
-}
-
-void EegPresenter::execute_initialize(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle) {
-  const auto goal = goal_handle->get_goal();
-  auto result = std::make_shared<pipeline_interfaces::action::InitializePresenter::Result>();
-
+void EegPresenter::handle_initialize_presenter(
+  const std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Request> request,
+  std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Response> response) {
+  
   // Set enabled state
-  this->is_enabled = goal->enabled;
+  this->is_enabled = request->enabled;
 
   // If not enabled, just mark as disabled and return early
-  if (!goal->enabled) {
+  if (!request->enabled) {
     this->is_enabled = false;
     RCLCPP_INFO(this->get_logger(), "Presenter marked as disabled: project=%s, module=%s",
-                goal->project_name.c_str(), goal->module_filename.c_str());
-    result->success = true;
-    goal_handle->succeed(result);
+                request->project_name.c_str(), request->module_filename.c_str());
+    response->success = true;
     return;
   }
 
   // Change to project working directory
-  std::filesystem::path project_path = std::filesystem::path(PROJECTS_DIRECTORY) / goal->project_name;
+  std::filesystem::path project_path = std::filesystem::path(PROJECTS_DIRECTORY) / request->project_name;
   std::filesystem::path presenter_path = project_path / "presenter";
-  std::filesystem::path module_path = presenter_path / goal->module_filename;
+  std::filesystem::path module_path = presenter_path / request->module_filename;
 
   if (!std::filesystem::exists(module_path)) {
     RCLCPP_ERROR(this->get_logger(), "Module file does not exist: %s", module_path.c_str());
-    result->success = false;
-    goal_handle->succeed(result);
+    response->success = false;
     return;
   }
 
   // Store initialization state
-  this->initialized_project_name = goal->project_name;
-  this->initialized_module_filename = goal->module_filename;
+  this->initialized_project_name = request->project_name;
+  this->initialized_module_filename = request->module_filename;
   this->initialized_working_directory = presenter_path;
 
   // Extract module name from filename (remove .py extension)
-  std::string module_name = goal->module_filename;
+  std::string module_name = request->module_filename;
   if (module_name.size() > 3 && module_name.substr(module_name.size() - 3) == ".py") {
     module_name = module_name.substr(0, module_name.size() - 3);
   }
@@ -142,8 +112,7 @@ void EegPresenter::execute_initialize(
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");
-    result->success = false;
-    goal_handle->succeed(result);
+    response->success = false;
     return;
   }
 
@@ -154,10 +123,9 @@ void EegPresenter::execute_initialize(
   this->is_initialized = true;
 
   RCLCPP_INFO(this->get_logger(), "Presenter initialized successfully: project=%s, module=%s",
-              goal->project_name.c_str(), goal->module_filename.c_str());
+              request->project_name.c_str(), request->module_filename.c_str());
 
-  result->success = true;
-  goal_handle->succeed(result);
+  response->success = true;
 }
 
 void EegPresenter::handle_finalize_presenter(

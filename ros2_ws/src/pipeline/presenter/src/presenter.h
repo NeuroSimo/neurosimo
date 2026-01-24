@@ -5,7 +5,6 @@
 #include <queue>
 
 #include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
 
 #include "presenter_wrapper.h"
@@ -18,7 +17,7 @@
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
-#include "pipeline_interfaces/action/initialize_presenter.hpp"
+#include "pipeline_interfaces/srv/initialize_presenter.hpp"
 #include "pipeline_interfaces/srv/finalize_presenter.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
@@ -49,15 +48,9 @@ public:
 private:
   void publish_python_logs(double sample_time, bool is_initialization);
 
-  rclcpp_action::GoalResponse handle_initialize_goal(
-    const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const pipeline_interfaces::action::InitializePresenter::Goal> goal);
-  rclcpp_action::CancelResponse handle_initialize_cancel(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
-  void handle_initialize_accepted(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
-  void execute_initialize(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
+  void handle_initialize_presenter(
+    const std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Response> response);
   void handle_finalize_presenter(
     const std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Response> response);
@@ -75,8 +68,8 @@ private:
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
-  /* Action server for initialization */
-  rclcpp_action::Server<pipeline_interfaces::action::InitializePresenter>::SharedPtr initialize_action_server;
+  /* Service server for initialization */
+  rclcpp::Service<pipeline_interfaces::srv::InitializePresenter>::SharedPtr initialize_service_server;
 
   /* Service server for finalization */
   rclcpp::Service<pipeline_interfaces::srv::FinalizePresenter>::SharedPtr finalize_service_server;

@@ -20,7 +20,6 @@ find_package(system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
 find_package(inotify_utils REQUIRED)
 find_package(filesystem_utils REQUIRED)
-find_package(module_utils REQUIRED)
 
 find_package(pybind11 QUIET)
 if(NOT pybind11_FOUND)
@@ -67,7 +66,6 @@ ament_target_dependencies(presenter
   realtime_utils
   inotify_utils
   filesystem_utils
-  module_utils
 )
 
 target_link_libraries(presenter
@@ -75,7 +73,6 @@ target_link_libraries(presenter
   realtime_utils::utils
   inotify_utils::inotify_watcher
   filesystem_utils::filesystem_utils
-  module_utils::module_utils
 )
 
 install(TARGETS

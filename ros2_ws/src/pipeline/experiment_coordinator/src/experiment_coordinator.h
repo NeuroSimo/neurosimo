@@ -7,8 +7,6 @@
 #include <filesystem>
 
 #include "rclcpp/rclcpp.hpp"
-#include "inotify_utils/inotify_watcher.h"
-#include "module_utils/module_manager.h"
 #include "eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"

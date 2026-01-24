@@ -16,23 +16,24 @@ Environment=RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 Environment=CYCLONEDDS_URI={{ repo_root }}/ros2_ws/config/cyclonedds.xml
 Environment=DISPLAY={{ display_number }}
 Environment=COMPOSE_PROJECT_NAME=neurosimo
+Environment=COMPOSE_LOCK=/run/neurosimo-compose.lock
 
 LimitRTPRIO=99
 LimitMEMLOCK=10000000000
 
-# Check X server readiness and allow Docker to connect
-ExecStartPre=/bin/bash -c 'for i in {1..30}; do if xhost >& /dev/null; then break; else sleep 1; fi; done'
+# Check X server readiness (fail if not ready) and allow Docker to connect
+ExecStartPre=/bin/bash -lc 'for i in {1..30}; do xhost >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStartPre=/usr/bin/xhost +local:docker
 
 # Start containers
 {% if use_gpu | bool %}
-ExecStart=/usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile gpu up -d --remove-orphans
+ExecStart=/usr/bin/flock -w 120 ${COMPOSE_LOCK} /usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile gpu up -d --remove-orphans
 {% else %}
-ExecStart=/usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile non-gpu up -d --remove-orphans
+ExecStart=/usr/bin/flock -w 120 ${COMPOSE_LOCK} /usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile non-gpu up -d --remove-orphans
 {% endif %}
 
 # Stop containers
-ExecStop=/usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml down --remove-orphans
+ExecStop=/usr/bin/flock -w 120 ${COMPOSE_LOCK} /usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml down --remove-orphans
 
 TimeoutStartSec=0
 TimeoutStopSec=120

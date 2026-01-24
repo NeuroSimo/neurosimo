@@ -112,6 +112,14 @@
         group: root
         mode: "0644"
 
+    - name: Copy NeuroSimo log follower service
+      template:
+        src: files/neurosimo-logs.service.j2
+        dest: /etc/systemd/system/neurosimo-logs.service
+        owner: root
+        group: root
+        mode: "0644"
+
     - name: Copy set-cpupower.service
       copy:
         src: files/set-cpupower.service
@@ -124,10 +132,13 @@
       systemd:
         daemon_reload: yes
 
-    - name: Enable NeuroSimo service
+    - name: Enable NeuroSimo services
       systemd:
-        name: neurosimo.service
+        name: "{{ item }}"
         enabled: yes
+      loop:
+        - neurosimo.service
+        - neurosimo-logs.service
 
     - name: Enable set-cpupower.service
       systemd:

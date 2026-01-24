@@ -619,7 +619,9 @@ bool DeciderWrapper::warm_up() {
       RCLCPP_INFO(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
       RCLCPP_INFO(*logger_ptr, " ");
       log_section_header("Operation");
-      return false;
+
+      // Return true to indicate that warm-up was successful (even though it was disabled).
+      return true;
     }
 
     RCLCPP_INFO(*logger_ptr, "Starting %d warm-up rounds...", warm_up_rounds);

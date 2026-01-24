@@ -162,8 +162,7 @@ bool DeciderWrapper::initialize_module(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<std::pair<double, std::string>,
                        std::vector<std::pair<double, std::string>>,
-                       std::greater<std::pair<double, std::string>>>& event_queue,
-    std::mutex& event_queue_mutex) {
+                       std::greater<std::pair<double, std::string>>>& event_queue) {
 
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
@@ -393,16 +392,13 @@ bool DeciderWrapper::initialize_module(
     /* Extract predefined_events (optional). */
     if (config.contains("predefined_events")) {
       py::list events = config["predefined_events"].cast<py::list>();
-      {
-        std::lock_guard<std::mutex> lock(event_queue_mutex);
-        for (const auto& event : events) {
-          py::dict event_dict = event.cast<py::dict>();
+      for (const auto& event : events) {
+        py::dict event_dict = event.cast<py::dict>();
 
-          std::string event_type = event_dict["type"].cast<std::string>();
-          double event_time = event_dict["time"].cast<double>();
+        std::string event_type = event_dict["type"].cast<std::string>();
+        double event_time = event_dict["time"].cast<double>();
 
-          event_queue.push(std::make_pair(event_time, event_type));
-        }
+        event_queue.push(std::make_pair(event_time, event_type));
       }
     }
 
@@ -895,7 +891,6 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     std::priority_queue<std::pair<double, std::string>,
                        std::vector<std::pair<double, std::string>>,
                        std::greater<std::pair<double, std::string>>>& event_queue,
-    std::mutex& event_queue_mutex,
     bool is_coil_at_target) {
 
   bool success = true;
@@ -1046,16 +1041,13 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     }
 
     py::list events = dict_result["events"].cast<py::list>();
-    {
-      std::lock_guard<std::mutex> lock(event_queue_mutex);
-      for (const auto& event : events) {
-        py::dict event_dict = event.cast<py::dict>();
+    for (const auto& event : events) {
+      py::dict event_dict = event.cast<py::dict>();
 
-        std::string event_type = event_dict["type"].cast<std::string>();
-        double event_time = event_dict["time"].cast<double>();
+      std::string event_type = event_dict["type"].cast<std::string>();
+      double event_time = event_dict["time"].cast<double>();
 
-        event_queue.push(std::make_pair(event_time, event_type));
-      }
+      event_queue.push(std::make_pair(event_time, event_type));
     }
   }
 

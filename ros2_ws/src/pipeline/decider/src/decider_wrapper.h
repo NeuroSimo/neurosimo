@@ -60,8 +60,7 @@ public:
       std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
       std::priority_queue<std::pair<double, std::string>,
                          std::vector<std::pair<double, std::string>>,
-                         std::greater<std::pair<double, std::string>>>& event_queue,
-      std::mutex& event_queue_mutex);
+                         std::greater<std::pair<double, std::string>>>& event_queue);
 
   bool reset_module_state();
 
@@ -80,7 +79,6 @@ public:
     std::priority_queue<std::pair<double, std::string>,
                        std::vector<std::pair<double, std::string>>,
                        std::greater<std::pair<double, std::string>>>& event_queue,
-    std::mutex& event_queue_mutex,
     bool is_coil_at_target);
 
   std::vector<std::string> get_internal_imports() const;

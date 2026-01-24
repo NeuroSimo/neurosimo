@@ -242,8 +242,7 @@ void EegDecider::handle_initialize_decider(
     request->stream_info.num_emg_channels,
     request->stream_info.sampling_frequency,
     this->sensory_stimuli,
-    this->event_queue,
-    this->event_queue_mutex);
+    this->event_queue);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module");
@@ -406,8 +405,6 @@ void EegDecider::publish_python_logs(double sample_time, bool is_initialization)
 }
 
 std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t current_time) {
-  std::lock_guard<std::mutex> lock(this->event_queue_mutex);
-
   if (this->event_queue.empty()) {
     return std::make_tuple(false, 0.0, "");
   }
@@ -440,7 +437,6 @@ std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t cu
 }
 
 void EegDecider::pop_event() {
-  std::lock_guard<std::mutex> lock(this->event_queue_mutex);
   if (!this->event_queue.empty()) {
     this->event_queue.pop();
   }
@@ -507,7 +503,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     request.has_event,
     request.event_type,
     this->event_queue,
-    this->event_queue_mutex,
     this->is_coil_at_target);
 
   /* Publish buffered Python logs after process() completes to avoid interfering with timing */

@@ -37,6 +37,7 @@
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
 #include "pipeline_interfaces/action/initialize_decider.hpp"
+#include "pipeline_interfaces/srv/finalize_decider.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -129,6 +130,10 @@ private:
   void execute_initialize(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle);
 
+  void handle_finalize_decider(
+    const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response);
+
   void handle_pulse_delivered(const double_t pulse_delivered_time);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
@@ -163,6 +168,9 @@ private:
 
   /* Action server for initialization */
   rclcpp_action::Server<pipeline_interfaces::action::InitializeDecider>::SharedPtr initialize_action_server;
+
+  /* Service server for finalization */
+  rclcpp::Service<pipeline_interfaces::srv::FinalizeDecider>::SharedPtr finalize_service_server;
 
   /* Initialization state */
   bool is_initialized = false;

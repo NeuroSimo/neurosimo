@@ -183,7 +183,7 @@ void EegPreprocessor::handle_finalize_preprocessor(
   const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
 
-  RCLCPP_INFO(this->get_logger(), "Received finalize request for session: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Received finalize request");
 
   // Finalize the preprocessor module if initialized
   if (this->is_initialized && this->preprocessor_wrapper) {
@@ -212,7 +212,7 @@ void EegPreprocessor::handle_finalize_preprocessor(
   // Reset session metadata
   this->session_metadata = SessionMetadataState{};
 
-  RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully for session: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully");
   response->success = true;
 }
 

@@ -3,7 +3,8 @@ import numpy as np
 
 
 class Decider:
-    def __init__(self, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: float):
+    def __init__(self, subject_id: str, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: float):
+        self.subject_id = subject_id
         self.num_eeg_channels = num_eeg_channels
         self.num_emg_channels = num_emg_channels
         self.sampling_frequency = sampling_frequency
@@ -11,7 +12,7 @@ class Decider:
         # Number of warm-up rounds to prevent first-call delays (see README.md for details)
         self.warm_up_rounds = 2
 
-        print("Decider initialized with sampling frequency: ", sampling_frequency, "Hz")
+        print("Decider initialized for subject ", subject_id, "with sampling frequency ", sampling_frequency, "Hz.")
 
     def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """Return configuration dictionary for the pipeline."""

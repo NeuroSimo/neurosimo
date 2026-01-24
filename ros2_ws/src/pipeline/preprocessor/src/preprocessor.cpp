@@ -117,6 +117,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
   bool success = this->preprocessor_wrapper->initialize_module(
     this->initialized_working_directory.string(),
     module_name,
+    request->subject_id,
     request->stream_info.num_eeg_channels,
     request->stream_info.num_emg_channels,
     request->stream_info.sampling_frequency);

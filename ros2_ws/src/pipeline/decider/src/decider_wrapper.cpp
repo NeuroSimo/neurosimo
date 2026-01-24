@@ -155,6 +155,7 @@ bool DeciderWrapper::initialize_module(
     const std::string& project_directory,
     const std::string& module_directory,
     const std::string& module_name,
+    const std::string& subject_id,
     const size_t eeg_size,
     const size_t emg_size,
     const uint16_t sampling_frequency,
@@ -230,7 +231,7 @@ bool DeciderWrapper::initialize_module(
 
   /* Initialize Decider instance. */
   try {
-    auto instance = decider_module->attr("Decider")(eeg_size, emg_size, sampling_frequency);
+    auto instance = decider_module->attr("Decider")(subject_id, eeg_size, emg_size, sampling_frequency);
     decider_instance = std::make_unique<py::object>(instance);
 
   } catch (const py::error_already_set &e) {

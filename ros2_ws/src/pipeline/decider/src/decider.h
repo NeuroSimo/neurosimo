@@ -83,10 +83,9 @@ public:
 private:
   rclcpp::CallbackGroup::SharedPtr callback_group;
 
-  void publish_healthcheck();
+  bool reset_state();
 
-  void handle_session_start();
-  void handle_session_end();
+  void publish_healthcheck();
 
   void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);

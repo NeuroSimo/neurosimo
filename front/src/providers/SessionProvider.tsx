@@ -1,5 +1,5 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
-import { startSessionRos, stopSessionRos, subscribeToSessionState, SessionState as SessionStateMessage, SessionStage } from 'ros/session'
+import { startSessionRos, abortSessionRos, subscribeToSessionState, SessionState as SessionStateMessage, SessionStage } from 'ros/session'
 
 interface SessionState {
   isRunning: boolean
@@ -9,7 +9,7 @@ interface SessionState {
 interface SessionContextType {
   sessionState: SessionState
   startSession: (callback?: (success: boolean, message?: string) => void) => void
-  stopSession: (callback?: (success: boolean, message?: string) => void) => void
+  abortSession: (callback?: (success: boolean, message?: string) => void) => void
 }
 
 // Default state
@@ -21,7 +21,7 @@ const defaultSessionState: SessionContextType = {
     stage: SessionStage.STOPPED,
   },
   startSession: noopCallback,
-  stopSession: noopCallback,
+  abortSession: noopCallback,
 }
 
 export const SessionContext = createContext<SessionContextType>(defaultSessionState)
@@ -54,14 +54,14 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) =>
     startSessionRos(callback)
   }
 
-  const stopSession = (callback: (success: boolean, message?: string) => void = noopCallback) => {
-    stopSessionRos(callback)
+  const abortSession = (callback: (success: boolean, message?: string) => void = noopCallback) => {
+    abortSessionRos(callback)
   }
 
   const contextValue: SessionContextType = {
     sessionState,
     startSession,
-    stopSession,
+    abortSession,
   }
 
   return (

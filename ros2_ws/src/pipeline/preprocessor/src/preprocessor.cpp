@@ -222,7 +222,7 @@ void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMet
 }
 
 void EegPreprocessor::handle_session_end() {
-  RCLCPP_INFO(this->get_logger(), "Session stopped");
+  RCLCPP_INFO(this->get_logger(), "Session aborted");
 
   /* Mark that we need to carry forward the session end marker to the next published sample. */
   this->pending_session_end = true;

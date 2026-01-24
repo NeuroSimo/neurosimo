@@ -137,7 +137,6 @@ private:
   uint64_t session_sample_index = 0;
 
   double_t time_offset = UNSET_TIME;     // in seconds
-  double_t session_start_time = UNSET_TIME;  // Unix timestamp when streaming started
 
   /* Healthcheck */
   uint8_t status = system_interfaces::msg::HealthcheckStatus::NOT_READY;

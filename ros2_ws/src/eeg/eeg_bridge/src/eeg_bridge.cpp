@@ -192,7 +192,6 @@ void EegBridge::handle_start_streaming(
     return;
   }
 
-  this->session_start_time = this->get_clock()->now().seconds();
   this->session_sample_index = 0;
   this->time_offset = UNSET_TIME;
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
@@ -335,7 +334,6 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
     RCLCPP_INFO(this->get_logger(), "Session end sample published, stopping streaming.");
     this->is_session_end = false;  // Reset the flag since we've handled it
     this->streamer_state = system_interfaces::msg::StreamerState::READY;
-    this->session_start_time = UNSET_TIME;
     this->session_sample_index = 0;
     this->time_offset = UNSET_TIME;
     this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;

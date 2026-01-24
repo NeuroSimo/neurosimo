@@ -7,12 +7,25 @@
   vars:
     docker_keyring_path: /etc/apt/keyrings/docker.gpg
     docker_repo_url: https://download.docker.com/linux/ubuntu
-    target_user: "{{ lookup('env', 'USER') }}"
+    docker_repo_file: /etc/apt/sources.list.d/docker.list
+    target_user: "{{ lookup('env', 'SUDO_USER') | default(lookup('env','USER'), true) }}"
     enable_docker_compose_legacy_alias: true
 
   tasks:
+    # -------------------------------------------------------------------------
+    # 0) Guardrails / sanity checks
+    # -------------------------------------------------------------------------
+    - name: Assert Ubuntu 22.04 / jammy
+      assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_release == "jammy"
+        fail_msg: "This playbook is intended for Ubuntu 22.04 (jammy). Detected {{ ansible_distribution }} {{ ansible_distribution_release }}"
 
-    - name: Ensure dependencies are installed
+    # -------------------------------------------------------------------------
+    # 1) Install prerequisites
+    # -------------------------------------------------------------------------
+    - name: Ensure prerequisites are installed
       apt:
         name:
           - ca-certificates
@@ -20,48 +33,84 @@
           - gnupg
           - lsb-release
         state: present
-        update_cache: yes
 
-    - name: Create directory for APT keyrings
+    # -------------------------------------------------------------------------
+    # 2) Docker repo hygiene: remove legacy/conflicting Docker source definitions
+    # -------------------------------------------------------------------------
+    - name: Remove legacy Docker apt source files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/docker.list
+        - /etc/apt/sources.list.d/docker-ce.list
+        - /etc/apt/sources.list.d/docker-engine.list
+      ignore_errors: true
+
+    - name: Remove any Docker repo lines from main sources.list
+      lineinfile:
+        path: /etc/apt/sources.list
+        regexp: '.*download\.docker\.com/linux/ubuntu.*'
+        state: absent
+      ignore_errors: true
+
+    - name: Ensure directory for APT keyrings exists
       file:
         path: /etc/apt/keyrings
         state: directory
         mode: '0755'
 
-    - name: Download Docker GPG key
-      get_url:
-        url: "{{ docker_repo_url }}/gpg"
-        dest: /etc/apt/keyrings/docker.gpg
+
+    # ------------------------------------------------------------------------
+    # 3) Install Docker GPG key deterministically
+    # -------------------------------------------------------------------------
+    - name: Install Docker GPG key
+      shell: |
+        set -euo pipefail
+        curl -fsSL "{{ docker_repo_url }}/gpg" \
+          | gpg --batch --yes --dearmor -o "{{ docker_keyring_path }}"
+        chmod 0644 "{{ docker_keyring_path }}"
+      args:
+        executable: /bin/bash
+
+    # -------------------------------------------------------------------------
+    # 4) Write canonical Docker repo file
+    # -------------------------------------------------------------------------
+    - name: Configure Docker apt repository
+      copy:
+        dest: "{{ docker_repo_file }}"
         mode: '0644'
+        content: |
+          deb [arch=amd64 signed-by={{ docker_keyring_path }}] {{ docker_repo_url }} {{ ansible_lsb.codename }} stable
 
-    - name: Add Docker APT repository
-      apt_repository:
-        repo: >
-          deb [arch=amd64 signed-by={{ docker_keyring_path }}]
-          {{ docker_repo_url }} {{ ansible_lsb.codename }} stable
-        filename: docker
-        state: present
-
-    - name: Update APT cache after adding Docker repo
+    # -------------------------------------------------------------------------
+    # 5) Update cache
+    # -------------------------------------------------------------------------
+    - name: Update apt cache
       apt:
         update_cache: yes
+        cache_valid_time: 3600
 
-    - name: Install Docker Engine and Compose plugin
+    # -------------------------------------------------------------------------
+    # 6) Install Docker packages
+    # -------------------------------------------------------------------------
+    - name: Install Docker packages
       apt:
         name:
           - docker-ce
           - docker-ce-cli
           - containerd.io
           - docker-buildx-plugin
-          - docker compose-plugin
+          - docker-compose-plugin
         state: present
 
-    - name: Optionally install docker compose legacy alias
-      when: enable_docker_compose_legacy_alias
-      file:
-        src: /usr/bin/docker
-        dest: /usr/local/bin/docker compose
-        state: link
+    # -------------------------------------------------------------------------
+    # 7) Ensure user is in docker group
+    # -------------------------------------------------------------------------
+    - name: Ensure docker group exists
+      group:
+        name: docker
+        state: present
 
     - name: Add user to docker group
       user:
@@ -69,6 +118,9 @@
         groups: docker
         append: yes
 
+    # -------------------------------------------------------------------------
+    # 8) Enable and start service
+    # -------------------------------------------------------------------------
     - name: Ensure Docker service is enabled and started
       service:
         name: docker

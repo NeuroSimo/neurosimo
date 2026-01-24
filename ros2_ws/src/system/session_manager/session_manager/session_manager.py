@@ -118,6 +118,36 @@ class SessionManagerNode(Node):
         self.get_parameters_client = self.create_client(
             GetParameters, '/session_configurator/get_parameters', callback_group=self.callback_group)
 
+        # Wait for all clients to be available
+        action_clients = [
+            (self.simulator_stream_init_client, '/eeg_simulator/initialize'),
+            (self.playback_stream_init_client, '/playback/initialize'),
+        ]
+        for client, topic in action_clients:
+            while not client.wait_for_server(timeout_sec=1.0):
+                self.get_logger().info(f'Action {topic} not available, waiting...')
+
+        service_clients = [
+            (self.protocol_init_client, '/pipeline/protocol/initialize'),
+            (self.preprocessor_init_client, '/pipeline/preprocessor/initialize'),
+            (self.decider_init_client, '/pipeline/decider/initialize'),
+            (self.presenter_init_client, '/pipeline/presenter/initialize'),
+            (self.eeg_device_stream_init_client, '/eeg_device/initialize'),
+            (self.preprocessor_finalize_client, '/pipeline/preprocessor/finalize'),
+            (self.decider_finalize_client, '/pipeline/decider/finalize'),
+            (self.presenter_finalize_client, '/pipeline/presenter/finalize'),
+            (self.playback_streaming_start_client, '/eeg_simulator/streaming/start'),
+            (self.eeg_simulator_streaming_start_client, '/eeg_simulator/streaming/start'),
+            (self.eeg_device_streaming_start_client, '/eeg_device/streaming/start'),
+            (self.playback_streaming_stop_client, '/eeg_simulator/streaming/stop'),
+            (self.eeg_simulator_streaming_stop_client, '/eeg_simulator/streaming/stop'),
+            (self.eeg_device_streaming_stop_client, '/eeg_device/streaming/stop'),
+            (self.get_parameters_client, '/session_configurator/get_parameters'),
+        ]
+        for client, topic in service_clients:
+            while not client.wait_for_service(timeout_sec=1.0):
+                self.get_logger().info(f'Service {topic} not available, waiting...')
+
         # External state
         self._current_project_name = None
 

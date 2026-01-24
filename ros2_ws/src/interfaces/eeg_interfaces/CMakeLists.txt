@@ -23,15 +23,18 @@ endif()
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/EegInfo.msg"
+  "msg/StreamInfo.msg"
+  "msg/EegDeviceInfo.msg"
 
   "msg/Sample.msg"
   "msg/SessionMetadata.msg"
 
   "msg/EegStatistics.msg"
 
-  "action/InitializeSimulator.action"
+  "action/InitializeSimulatorStream.action"
+  "action/InitializePlaybackStream.action"
 
+  "srv/InitializeEegDeviceStream.srv"
   "srv/StartStreaming.srv"
   "srv/StopStreaming.srv"
 

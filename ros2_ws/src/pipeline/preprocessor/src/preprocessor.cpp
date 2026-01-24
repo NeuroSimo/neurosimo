@@ -99,6 +99,13 @@ void EegPreprocessor::handle_initialize_preprocessor(
   this->initialized_module_filename = request->module_filename;
   this->initialized_working_directory = preprocessor_path;
 
+  // Change working directory to the module directory
+  if (!filesystem_utils::change_working_directory(preprocessor_path.string(), this->get_logger())) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s", preprocessor_path.string().c_str());
+    response->success = false;
+    return;
+  }
+
   // Extract module name from filename (remove .py extension)
   std::string module_name = request->module_filename;
   if (module_name.size() > 3 && module_name.substr(module_name.size() - 3) == ".py") {

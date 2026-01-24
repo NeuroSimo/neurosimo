@@ -129,11 +129,6 @@ private:
   void execute_initialize(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle);
 
-  void reset_decider_state();
-
-  bool set_decider_enabled(bool enabled);
-  void handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg::Bool> msg);
-
   void handle_pulse_delivered(const double_t pulse_delivered_time);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
@@ -150,8 +145,6 @@ private:
 
   rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
-
-  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr preprocessor_enabled_subscriber;
 
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
@@ -197,8 +190,6 @@ private:
   std::unique_ptr<DeciderWrapper> decider_wrapper;
 
   bool is_processing_timed_trigger = false;
-
-  bool is_preprocessor_enabled = false;
 
   double_t timing_latency = 0.0;
 

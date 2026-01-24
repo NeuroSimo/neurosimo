@@ -19,7 +19,7 @@ const PipelinePanel = styled.div`
   display: grid;
   grid-template-rows: repeat(4, 1fr);
   grid-template-columns: repeat(2, 1fr);
-  width: 475px;
+  width: 500px;
   height: 400px;
   gap: 30px;
   position: relative;
@@ -82,9 +82,9 @@ interface PipelineDiagramProps {
 }
 
 export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
-  enabledTitleX = 140,
+  enabledTitleX = 145,
   enabledTitleY = 85,
-  moduleTitleX = 280,
+  moduleTitleX = 252,
   moduleTitleY = 85,
 }) => (
   <PipelineContainer>

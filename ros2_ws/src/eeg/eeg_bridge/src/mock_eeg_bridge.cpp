@@ -67,6 +67,9 @@ class MockEegBridge : public rclcpp::Node {
         message.time = this->time_;
         this->time_ += this->sampling_interval_;
 
+        /* Set arrival time to current ROS clock time. */
+        message.arrival_time = this->get_clock()->now().seconds();
+
         this->publisher_data_->publish(message);
 
         auto stream_msg = std_msgs::msg::Bool();

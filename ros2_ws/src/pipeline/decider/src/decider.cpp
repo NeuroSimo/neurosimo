@@ -196,6 +196,9 @@ void EegDecider::handle_initialize_decider(
   this->initialized_module_filename = request->module_filename;
   this->initialized_working_directory = decider_path;
 
+  // Store stream info
+  this->stream_info = request->stream_info;
+
   // Change working directory to the module directory
   if (!filesystem_utils::change_working_directory(decider_path.string(), this->get_logger())) {
     RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s", decider_path.string().c_str());
@@ -315,9 +318,6 @@ void EegDecider::handle_finalize_decider(
   this->next_periodic_processing_time = UNSET_TIME;
   this->timing_latency = 0.0;
 
-  // Reset session metadata
-  this->session_metadata = SessionMetadataState{};
-
   RCLCPP_INFO(this->get_logger(), "Decider finalized successfully");
   response->success = true;
 }
@@ -341,7 +341,7 @@ void EegDecider::publish_healthcheck() {
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
+void EegDecider::handle_session_start() {
   RCLCPP_INFO(this->get_logger(), "Session started");
 
   this->previous_stimulation_time = UNSET_TIME;
@@ -357,8 +357,6 @@ void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata
   while (!this->deferred_processing_queue.empty()) {
     this->deferred_processing_queue.pop();
   }
-
-  this->session_metadata.update(metadata);
 }
 
 void EegDecider::handle_session_end() {
@@ -424,7 +422,7 @@ std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t cu
     event_time = event.first;
     event_type = event.second;
 
-    if (event_time - this->TOLERANCE_S >= current_time - this->session_metadata.sampling_period) {
+    if (event_time - this->TOLERANCE_S >= current_time - 1.0 / this->stream_info.sampling_frequency) {
       break;
     }
     this->event_queue.pop();
@@ -554,8 +552,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* If the decision is negative, publish the decision info and return. */
   if (!is_decision_positive) {
     rclcpp::Time now = this->get_clock()->now();
-    double_t sample_absolute_time = this->session_metadata.session_start_time + request.triggering_sample->time;
-    double_t total_latency = now.seconds() - sample_absolute_time;
+    double_t total_latency = now.seconds() - request.triggering_sample->arrival_time;
 
     auto decision_info = pipeline_interfaces::msg::DecisionInfo();
     decision_info.stimulate = false;
@@ -591,7 +588,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
   request_msg->timed_trigger = *timed_trigger;
   request_msg->decision_time = sample_time;
-  request_msg->system_time_for_sample = this->session_metadata.session_start_time + request.triggering_sample->time;
+  request_msg->sample_arrival_time = request.triggering_sample->arrival_time;
   request_msg->preprocessor_latency = request.triggering_sample->preprocessing_duration;
   request_msg->decider_latency = decider_processing_duration;
 
@@ -627,7 +624,7 @@ void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::
   /* Calculate the time when we'll have enough look-ahead samples.
      If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
      Each sample takes sampling_period time. */
-  request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
+  request.scheduled_time = sample_time + (look_ahead_samples * 1.0 / this->stream_info.sampling_frequency);
 
   /* Add to deferred processing queue. */
   this->deferred_processing_queue.push(request);
@@ -687,21 +684,12 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Handle session start marker from upstream. */
   if (msg->is_session_start) {
-    handle_session_start(msg->session);
+    handle_session_start();
   }
 
   /* Handle session end marker from upstream. */
   if (msg->is_session_end) {
     handle_session_end();
-  }
-
-  /* Ensure session metadata stays constant within a session. */
-  if (!this->session_metadata.matches(msg->session)) {
-    this->error_occurred = true;
-    RCLCPP_ERROR(this->get_logger(),
-                 "Session metadata changed mid-session. Rejecting sample at %.3f (s).",
-                 sample_time);
-    return;
   }
 
   /* Check that no error has occurred. */

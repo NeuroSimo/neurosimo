@@ -20,6 +20,7 @@
 #include "std_msgs/msg/empty.hpp"
 
 #include "eeg_interfaces/msg/sample.hpp"
+#include "eeg_interfaces/msg/stream_info.hpp"
 
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
@@ -49,29 +50,7 @@ const uint8_t UNSET_NUM_OF_CHANNELS = 255;
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
 
-struct SessionMetadataState {
-  uint16_t sampling_frequency = UNSET_SAMPLING_FREQUENCY;
-  uint8_t num_eeg_channels = UNSET_NUM_OF_CHANNELS;
-  uint8_t num_emg_channels = UNSET_NUM_OF_CHANNELS;
-  double_t session_start_time = UNSET_TIME;
-  double_t sampling_period = 0.0;
-
-  void update(const eeg_interfaces::msg::SessionMetadata& msg) {
-    sampling_frequency = msg.sampling_frequency;
-    num_eeg_channels = msg.num_eeg_channels;
-    num_emg_channels = msg.num_emg_channels;
-    session_start_time = msg.start_time;
-    sampling_period = sampling_frequency ? 1.0 / sampling_frequency : 0.0;
-  }
-
-  bool matches(const eeg_interfaces::msg::SessionMetadata& msg) const {
-    return msg.sampling_frequency == sampling_frequency &&
-           msg.num_eeg_channels == num_eeg_channels &&
-           msg.num_emg_channels == num_emg_channels &&
-           msg.start_time == session_start_time;
-  }
-};
-
+using StreamInfo = eeg_interfaces::msg::StreamInfo;
 
 struct DeferredProcessingRequest {
   /* The time when processing should actually occur (after look-ahead samples have arrived). */
@@ -106,7 +85,7 @@ private:
 
   void publish_healthcheck();
 
-  void handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata);
+  void handle_session_start();
   void handle_session_end();
 
   void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
@@ -182,7 +161,7 @@ private:
 
   double_t timing_latency_threshold;
 
-  SessionMetadataState session_metadata;
+  StreamInfo stream_info;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;
   std::vector<pipeline_interfaces::msg::SensoryStimulus> sensory_stimuli;

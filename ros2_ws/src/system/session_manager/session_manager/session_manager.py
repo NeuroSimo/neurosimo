@@ -128,7 +128,9 @@ class SessionManagerNode(Node):
         # Wait for all clients to be available
         action_clients = [
             (self.simulator_stream_init_client, '/eeg_simulator/initialize'),
-            (self.playback_stream_init_client, '/playback/initialize'),
+# TODO: Check playback stream initialization client once implemented
+#
+#            (self.playback_stream_init_client, '/playback/initialize'),
         ]
         for client, topic in action_clients:
             while not client.wait_for_server(timeout_sec=1.0):

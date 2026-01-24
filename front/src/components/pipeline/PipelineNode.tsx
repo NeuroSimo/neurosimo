@@ -6,7 +6,7 @@ import { ToggleSwitch } from 'components/ToggleSwitch'
 import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
-  width: 355px;
+  width: 450px;
   height: 20px;
   background-color: #e6ebf2;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 3px 10px rgba(0, 0, 0, 0.14);
@@ -29,6 +29,9 @@ const Title = styled(SmallerTitle)<{ $enabled: boolean }>`
 
 const PipelineSelect = styled(Select)`
   margin-left: 40px;
+  width: 200px;
+  min-width: 200px;
+  flex-shrink: 0;
 `
 
 interface PipelineNodeProps {

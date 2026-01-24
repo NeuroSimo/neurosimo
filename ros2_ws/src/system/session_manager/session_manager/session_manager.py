@@ -1,4 +1,5 @@
 import rclpy
+import re
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.action import ActionClient
@@ -191,8 +192,8 @@ class SessionManagerNode(Node):
 
         # Fetch session parameters
         session_config = self.get_session_parameters()
-        if session_config is None:
-            self.logger.error('Failed to get session parameters')
+        if session_config is None or not self.validate_session_config(session_config):
+            self.logger.error('Failed to get or validate session parameters')
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
@@ -311,6 +312,41 @@ class SessionManagerNode(Node):
         except Exception as e:
             self.logger.error(f'Failed to fetch session parameters: {e}')
             return None
+
+    def validate_session_config(self, config):
+        """Validate session configuration."""
+        # Subject ID validation: S[0-9][0-9][0-9]
+        subject_id = config.get('subject_id', '')
+        if not re.match(r"^S[0-9]{3}$", subject_id):
+            self.logger.error(f"Invalid subject ID: {subject_id}. Must be 'S' followed by 3 digits.")
+            return False
+
+        # Module validations: must end with .py if not empty
+        for component in ['decider', 'preprocessor', 'presenter']:
+            module = config.get(f'{component}.module', '')
+            if module and not module.endswith('.py'):
+                self.logger.error(f"Invalid {component} module: {module}. Must end with '.py'.")
+                return False
+
+        # Simulator dataset validation: must end with .json if not empty
+        dataset = config.get('simulator.dataset_filename', '')
+        if dataset and not dataset.endswith('.json'):
+            self.logger.error(f"Invalid simulator dataset: {dataset}. Must end with '.json'.")
+            return False
+
+        # Experiment protocol validation: must end with .yml or .yaml
+        protocol = config.get('experiment.protocol', '')
+        if not (protocol.endswith('.yml') or protocol.endswith('.yaml')):
+            self.logger.error(f"Invalid experiment protocol: {protocol}. Must end with '.yml' or '.yaml'.")
+            return False
+
+        # Data source validation
+        data_source = config.get('data_source', '')
+        if data_source not in ["simulator", "playback", "eeg_device"]:
+            self.logger.error(f"Invalid data source: {data_source}. Must be 'simulator', 'playback', or 'eeg_device'.")
+            return False
+
+        return True
 
     def initialize_stream(self, session_id, session_config, project_name):
         """Initialize the data stream source (simulator, device, or playback)."""

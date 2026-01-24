@@ -66,7 +66,7 @@ class ProjectManager:
     def initialize_session_state(self, project_name):
         state = {
             "notes": '',
-            "subject_id": '',
+            "subject_id": 'S001',
             "decider.module": 'example.py',
             "decider.enabled": False,
             "preprocessor.module": 'example.py',

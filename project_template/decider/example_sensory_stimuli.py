@@ -12,7 +12,7 @@ class Decider:
         # Number of warm-up rounds to prevent first-call delays (see README.md for details)
         self.warm_up_rounds = 2
 
-        print("Decider initialized for subject ", subject_id, "with sampling frequency ", sampling_frequency, "Hz.")
+        print("Decider initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")
 
     def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """Return configuration dictionary for the pipeline."""

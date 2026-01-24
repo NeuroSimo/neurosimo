@@ -7,7 +7,7 @@ class Presenter:
     def __init__(self, subject_id: str) -> None:
         self.subject_id = subject_id
         self.win = visual.Window(size=[400, 400], pos=[0, 0], allowGUI=False, units='norm')
-        print(f"Presenter initialized for subject ", subject_id, ".")
+        print(f"Presenter initialized for subject", subject_id, ".")
 
     def __del__(self) -> None:
         self.win.close()

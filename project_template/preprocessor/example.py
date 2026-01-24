@@ -16,7 +16,7 @@ class Preprocessor:
         # Configure sample window for buffering
         self.sample_window = [-0.005, 0.0]  # 5 ms look-back, 0 ms look-ahead
 
-        print("Preprocessor initialized for subject ", subject_id, "with sampling frequency ", sampling_frequency, "Hz.")
+        print("Preprocessor initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")
 
     def process(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,

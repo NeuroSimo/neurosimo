@@ -167,7 +167,14 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 void EegDecider::handle_initialize_decider(
   const std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Response> response) {
-  
+
+  // Reset state
+  if (!this->reset_state()) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to reset decider state while initializing");
+    response->success = false;
+    return;
+  }
+
   // Set enabled state
   this->is_enabled = request->enabled;
 
@@ -285,41 +292,55 @@ void EegDecider::handle_finalize_decider(
   const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response) {
 
-  RCLCPP_INFO(this->get_logger(), "Received finalize request");
+  response->success = this->reset_state();
 
-  // Finalize the decider module if initialized
-  if (this->is_initialized && this->decider_wrapper) {
-    bool success = this->decider_wrapper->reset_module_state();
-    if (!success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to reset decider module state");
-      response->success = false;
-      return;
-    }
+  if (!response->success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to reset decider state");
   }
+}
 
-  // Reset initialization state
-  this->is_initialized = false;
-  this->is_enabled = false;
+bool EegDecider::reset_state() {
+  bool success = true;
+
   this->initialized_project_name = UNSET_STRING;
   this->initialized_module_filename = UNSET_STRING;
   this->initialized_working_directory = "";
 
-  // Clear buffers and state
-  this->sample_buffer.reset(0);
-  this->sensory_stimuli.clear();
-  this->event_queue = std::priority_queue<std::pair<double, std::string>,
-                                          std::vector<std::pair<double, std::string>>,
-                                          std::greater<std::pair<double, std::string>>>();
+  this->is_initialized = false;
+  this->is_enabled = false;
   this->error_occurred = false;
-
-  // Reset timing state
   this->previous_stimulation_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
   this->next_periodic_processing_time = UNSET_TIME;
   this->timing_latency = 0.0;
 
-  RCLCPP_INFO(this->get_logger(), "Decider finalized successfully");
-  response->success = true;
+  /* Clear the event queue. */
+  {
+    decltype(this->event_queue) empty;
+    this->event_queue.swap(empty);
+  }
+
+  /* Clear deferred processing queue. */
+  {
+    decltype(this->deferred_processing_queue) empty;
+    this->deferred_processing_queue.swap(empty);
+  }
+
+  /* Reset decider wrapper. */
+  if (this->decider_wrapper) {
+    success &= this->decider_wrapper->reset_module_state();
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to reset decider module state");
+    }
+  }
+
+  /* Reset sample buffer. */
+  this->sample_buffer.reset(0);
+
+  /* Clear sensory stimuli. */
+  this->sensory_stimuli.clear();
+
+  return success;
 }
 
 void EegDecider::publish_healthcheck() {
@@ -339,28 +360,6 @@ void EegDecider::publish_healthcheck() {
       break; 
   }
   this->healthcheck_publisher->publish(healthcheck);
-}
-
-void EegDecider::handle_session_start() {
-  RCLCPP_INFO(this->get_logger(), "Session started");
-
-  this->previous_stimulation_time = UNSET_TIME;
-  this->pulse_lockout_end_time = UNSET_TIME;
-  this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
-
-  /* Clear the event queue. */
-  while (!this->event_queue.empty()) {
-    this->event_queue.pop();
-  }
-
-  /* Clear deferred processing queue. */
-  while (!this->deferred_processing_queue.empty()) {
-    this->deferred_processing_queue.pop();
-  }
-}
-
-void EegDecider::handle_session_end() {
-  RCLCPP_INFO(this->get_logger(), "Session aborted");
 }
 
 void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg) {
@@ -677,20 +676,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   if (!this->is_enabled || !this->is_initialized) {
     return;
   }
-
-  auto start_time = std::chrono::high_resolution_clock::now();
-
   double_t sample_time = msg->time;
-
-  /* Handle session start marker from upstream. */
-  if (msg->is_session_start) {
-    handle_session_start();
-  }
-
-  /* Handle session end marker from upstream. */
-  if (msg->is_session_end) {
-    handle_session_end();
-  }
 
   /* Check that no error has occurred. */
   if (this->error_occurred) {
@@ -713,6 +699,12 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   /* Check if periodic processing should trigger based on time comparison. */
   bool periodic_processing_triggered = false;
   if (this->decider_wrapper->is_processing_interval_enabled()) {
+    // Initialize next periodic processing time if not already set.
+    if (std::isnan(this->next_periodic_processing_time)) {
+      this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
+    }
+
+    // Check if it's time to trigger periodic processing.
     if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE_S) {
       /* Move to next processing time and mark that periodic processing should occur. */
       this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();

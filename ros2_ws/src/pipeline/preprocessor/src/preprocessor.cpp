@@ -71,6 +71,13 @@ void EegPreprocessor::handle_initialize_preprocessor(
   const std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Response> response) {
   
+  // Reset state
+  if (!this->reset_state()) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor state while initializing");
+    response->success = false;
+    return;
+  }
+
   // Set enabled state
   this->is_enabled = request->enabled;
 
@@ -162,34 +169,43 @@ void EegPreprocessor::handle_finalize_preprocessor(
   const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
 
-  RCLCPP_INFO(this->get_logger(), "Received finalize request");
+  response->success = this->reset_state();
 
-  // Finalize the preprocessor module if initialized
-  if (this->is_initialized && this->preprocessor_wrapper) {
-    bool success = this->preprocessor_wrapper->reset_module_state();
-    if (!success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor module state");
-      response->success = false;
-      return;
-    }
+  if (!response->success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor state");
   }
+}
 
-  // Reset initialization state
-  this->is_initialized = false;
-  this->is_enabled = false;
+bool EegPreprocessor::reset_state() {
+  bool success = true;
+
   this->initialized_project_name = UNSET_STRING;
   this->initialized_module_filename = UNSET_STRING;
   this->initialized_working_directory = "";
 
-  // Clear buffers and state
-  this->sample_buffer.reset(0);
-  while (!this->deferred_processing_queue.empty()) {
-    this->deferred_processing_queue.pop();
-  }
+  this->is_initialized = false;
+  this->is_enabled = false;
   this->error_occurred = false;
+  this->pending_session_start = false;
+  this->pending_session_end = false;
 
-  RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully");
-  response->success = true;
+  /* Reset sample buffer. */
+  this->sample_buffer.reset(0);
+
+  /* Clear deferred processing queue. */
+  {
+    decltype(this->deferred_processing_queue) empty;
+    this->deferred_processing_queue.swap(empty);
+  }
+
+  /* Reset preprocessor wrapper. */
+  if (this->preprocessor_wrapper) {
+    success &= this->preprocessor_wrapper->reset_module_state();
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor module state");
+    }
+  }
+  return success;
 }
 
 void EegPreprocessor::publish_healthcheck() {
@@ -209,28 +225,6 @@ void EegPreprocessor::publish_healthcheck() {
       break;
   } 
   this->healthcheck_publisher->publish(healthcheck);
-}
-
-void EegPreprocessor::handle_session_start() {
-  RCLCPP_INFO(this->get_logger(), "Session started");
-
-  /* Clear deferred processing queue when session starts. */
-  while (!this->deferred_processing_queue.empty()) {
-    this->deferred_processing_queue.pop();
-  }
-
-  /* Clear any stale session markers from previous session. */
-  this->pending_session_end = false;
-
-  /* Mark that we need to carry forward the session start marker to the next published sample. */
-  this->pending_session_start = true;
-}
-
-void EegPreprocessor::handle_session_end() {
-  RCLCPP_INFO(this->get_logger(), "Session aborted");
-
-  /* Mark that we need to carry forward the session end marker to the next published sample. */
-  this->pending_session_end = true;
 }
 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {
@@ -397,14 +391,14 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   double_t sample_time = msg->time;
 
-  /* Handle session start marker from upstream. */
+  /* Handle session start marker by marking that we need to carry it over to the next published sample. */
   if (msg->is_session_start) {
-    handle_session_start();
+    this->pending_session_start = true;
   }
 
-  /* Handle session end marker from upstream. */
+  /* Handle session end marker similarly. */
   if (msg->is_session_end) {
-    handle_session_end();
+    this->pending_session_end = true;
   }
 
   /* Check that no error has occurred. */
@@ -431,8 +425,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   process_ready_deferred_requests(sample_time);
 
   /* If there's a pending session end marker, meaning that this is the last sample of the session,
-     publish a sentinel sample with the marker. Otherwise, downstream nodes will not know when the
-     session ends. */
+     publish a sentinel sample with the marker for downstream nodes. */
   if (this->pending_session_end) {
     publish_sentinel_sample(sample_time);
   }

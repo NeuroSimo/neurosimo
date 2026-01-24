@@ -1,9 +1,9 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
-import { startSessionRos, stopSessionRos, subscribeToSessionState, SessionState as SessionStateMessage } from 'ros/session'
+import { startSessionRos, stopSessionRos, subscribeToSessionState, SessionState as SessionStateMessage, SessionStage } from 'ros/session'
 
 interface SessionState {
   isRunning: boolean
-  phase: string
+  stage: SessionStage
 }
 
 interface SessionContextType {
@@ -18,7 +18,7 @@ const noopCallback = () => {}
 const defaultSessionState: SessionContextType = {
   sessionState: {
     isRunning: false,
-    phase: '',
+    stage: SessionStage.STOPPED,
   },
   startSession: noopCallback,
   stopSession: noopCallback,
@@ -33,7 +33,7 @@ interface SessionProviderProps {
 export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) => {
   const [sessionState, setSessionState] = useState<SessionState>({
     isRunning: false,
-    phase: '',
+    stage: SessionStage.STOPPED,
   })
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) =>
     const topic = subscribeToSessionState((state: SessionStateMessage) => {
       setSessionState({
         isRunning: state.is_running,
-        phase: state.phase,
+        stage: state.stage,
       })
     })
 

@@ -90,9 +90,9 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
       callback_group);
 
   /* Initialize action server for simulator initialization */
-  this->initialize_action_server = rclcpp_action::create_server<eeg_interfaces::action::InitializeSimulator>(
+  this->initialize_action_server = rclcpp_action::create_server<eeg_interfaces::action::InitializeSimulatorStream>(
     this,
-    "/eeg/simulator/initialize",
+    "/eeg_simulator/initialize",
     std::bind(&EegSimulator::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
     std::bind(&EegSimulator::handle_initialize_cancel, this, std::placeholders::_1),
     std::bind(&EegSimulator::handle_initialize_accepted, this, std::placeholders::_1));
@@ -119,7 +119,7 @@ void EegSimulator::publish_healthcheck() {
 
 rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(
   const rclcpp_action::GoalUUID & uuid,
-  std::shared_ptr<const eeg_interfaces::action::InitializeSimulator::Goal> goal) {
+  std::shared_ptr<const eeg_interfaces::action::InitializeSimulatorStream::Goal> goal) {
   RCLCPP_INFO(this->get_logger(), "Initializing simulator with dataset '%s' and start time %.3f",
               goal->dataset_filename.c_str(), goal->start_time);
 
@@ -129,22 +129,22 @@ rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(
 }
 
 rclcpp_action::CancelResponse EegSimulator::handle_initialize_cancel(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
   RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
   (void)goal_handle;
   return rclcpp_action::CancelResponse::ACCEPT;
 }
 
 void EegSimulator::handle_initialize_accepted(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
   // Execute the initialization in a new thread
   std::thread{std::bind(&EegSimulator::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
 }
 
 void EegSimulator::execute_initialize(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
   const auto goal = goal_handle->get_goal();
-  auto result = std::make_shared<eeg_interfaces::action::InitializeSimulator::Result>();
+  auto result = std::make_shared<eeg_interfaces::action::InitializeSimulatorStream::Result>();
 
   // Store initialization parameters
   this->initialized_project_name = goal->project_name;
@@ -156,8 +156,7 @@ void EegSimulator::execute_initialize(
   auto [success, dataset_info, pulse_times] = this->dataset_manager_->get_dataset_info(goal->dataset_filename, data_directory);
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to get dataset info: %s", goal->dataset_filename.c_str());
-    result->success = false;
-    goal_handle->succeed(result);
+    goal_handle->abort(result);
     return;
   }
   this->dataset_info = dataset_info;
@@ -173,8 +172,7 @@ void EegSimulator::execute_initialize(
     this->streamer_state = system_interfaces::msg::StreamerState::ERROR;
     this->error_message = error_msg;
     publish_streamer_state();
-    result->success = false;
-    goal_handle->succeed(result);
+    goal_handle->abort(result);
     return;
   }
 
@@ -184,8 +182,6 @@ void EegSimulator::execute_initialize(
   this->current_index = 0;
   this->current_pulse_index = 0;
   this->time_offset = 0.0;
-
-  RCLCPP_INFO(this->get_logger(), "Finished loading data.");
 
   /* Log pulse times info if present. */
   if (!this->pulse_times.empty()) {
@@ -205,7 +201,10 @@ void EegSimulator::execute_initialize(
   RCLCPP_INFO(this->get_logger(), "Simulator initialized successfully: project=%s, dataset=%s, start_time=%.3f",
               goal->project_name.c_str(), goal->dataset_filename.c_str(), goal->start_time);
 
-  result->success = true;
+  result->stream_info.sampling_frequency = this->dataset_info.sampling_frequency;
+  result->stream_info.num_eeg_channels = this->dataset_info.num_eeg_channels;
+  result->stream_info.num_emg_channels = this->dataset_info.num_emg_channels;
+
   goal_handle->succeed(result);
 }
 

@@ -9,7 +9,8 @@
 #include "rcl_interfaces/msg/parameter_type.hpp"
 
 #include "eeg_interfaces/msg/sample.hpp"
-#include "eeg_interfaces/action/initialize_simulator.hpp"
+#include "eeg_interfaces/msg/stream_info.hpp"
+#include "eeg_interfaces/action/initialize_simulator_stream.hpp"
 #include "eeg_interfaces/srv/start_streaming.hpp"
 #include "eeg_interfaces/srv/stop_streaming.hpp"
 
@@ -38,13 +39,13 @@ private:
 
   rclcpp_action::GoalResponse handle_initialize_goal(
     const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const eeg_interfaces::action::InitializeSimulator::Goal> goal);
+    std::shared_ptr<const eeg_interfaces::action::InitializeSimulatorStream::Goal> goal);
   rclcpp_action::CancelResponse handle_initialize_cancel(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle);
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle);
   void handle_initialize_accepted(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle);
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle);
   void execute_initialize(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulator>> goal_handle);
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle);
 
   /* Publish a single sample at the given index with the specified session flags. */
   bool publish_single_sample(size_t sample_index, bool is_session_start, bool is_session_end);
@@ -112,7 +113,7 @@ private:
   rclcpp::TimerBase::SharedPtr stream_timer;
 
   /* Action server for initialization */
-  rclcpp_action::Server<eeg_interfaces::action::InitializeSimulator>::SharedPtr initialize_action_server;
+  rclcpp_action::Server<eeg_interfaces::action::InitializeSimulatorStream>::SharedPtr initialize_action_server;
 };
 
 #endif //EEG_SIMULATOR_H

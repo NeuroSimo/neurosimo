@@ -2,7 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic, Message } from 'roslib'
 import { ros } from 'ros/ros'
 
-interface EegInfo extends Message {
+interface EegDeviceInfo extends Message {
   is_streaming: boolean
   sampling_frequency: number
   num_eeg_channels: number
@@ -10,7 +10,7 @@ interface EegInfo extends Message {
 }
 
 interface EegStreamContextType {
-  eegInfo: EegInfo | null
+  eegInfo: EegDeviceInfo | null
 }
 
 const defaultEegStreamState: EegStreamContextType = {
@@ -24,13 +24,13 @@ interface EegStreamProviderProps {
 }
 
 export const EegStreamProvider: React.FC<EegStreamProviderProps> = ({ children }) => {
-  const [eegInfo, setEegInfo] = useState<EegInfo | null>(null)
+  const [eegInfo, setEegInfo] = useState<EegDeviceInfo | null>(null)
 
   useEffect(() => {
-    const eegInfoSubscriber = new Topic<EegInfo>({
+    const eegInfoSubscriber = new Topic<EegDeviceInfo>({
       ros: ros,
       name: '/eeg_device/info',
-      messageType: 'eeg_interfaces/EegInfo',
+      messageType: 'eeg_interfaces/EegDeviceInfo',
     })
 
     eegInfoSubscriber.subscribe((message) => {

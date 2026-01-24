@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
@@ -13,18 +13,35 @@ const Container = styled(StyledPanel)`
   left: 0;
 `
 
-const SessionStatus = styled.div`
-  font-size: 10px;
-  font-weight: bold;
-  color: #666;
-  text-align: center;
-  margin-top: 4px;
-  padding: 2px;
-`
+const getStageDisplayText = (stage: SessionStage): string => {
+  switch (stage) {
+    case SessionStage.STOPPED:
+      return 'Stopped'
+    case SessionStage.INITIALIZING:
+      return 'Initializing'
+    case SessionStage.RUNNING:
+      return 'Running'
+    case SessionStage.FINALIZING:
+      return 'Finalizing'
+    default:
+      return 'Unknown'
+  }
+}
 
 export const SessionPanel: React.FC = () => {
   const { sessionState, startSession, stopSession } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [displayedStage, setDisplayedStage] = useState(sessionState.stage)
+
+  /* Add 500ms hysteresis to prevent rapid flashing of stage changes,
+     as stages (like INITIALIZING, FINALIZING) may sometimes change very quickly. */
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDisplayedStage(sessionState.stage)
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [sessionState.stage])
 
   const handleStartSession = () => {
     setIsLoading(true)
@@ -83,11 +100,10 @@ export const SessionPanel: React.FC = () => {
         </ButtonComponent>
       </StateRow>
 
-      {sessionState.stage !== SessionStage.STOPPED && (
-        <SessionStatus>
-          Stage: {SessionStage[sessionState.stage]}
-        </SessionStatus>
-      )}
+      <StateRow>
+        <StateTitle>Stage:</StateTitle>
+        <StateValue>{getStageDisplayText(displayedStage)}</StateValue>
+      </StateRow>
     </Container>
   )
 }

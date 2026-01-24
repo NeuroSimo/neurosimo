@@ -77,7 +77,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   /* Publisher for healthcheck. */
   this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
 
-  /* Note: The EEG subscriber will be created by handle_preprocessor_enabled based on preprocessor state. */
+  /* Note: The EEG subscriber will be during initialization based on whether preprocessor is enabled. */
 
   /* Set up QoS profile for persistent state topics */
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
@@ -89,12 +89,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     IS_COIL_AT_TARGET_TOPIC,
     qos_persist_latest,
     std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
-
-  /* Subscriber for preprocessor enabled message. */
-  this->preprocessor_enabled_subscriber = this->create_subscription<std_msgs::msg::Bool>(
-    "/pipeline/preprocessor/enabled",
-    qos_persist_latest,
-    std::bind(&EegDecider::handle_preprocessor_enabled, this, _1));
 
   /* Publisher for timing error. */
   this->timing_error_publisher = this->create_publisher<pipeline_interfaces::msg::TimingError>(
@@ -233,6 +227,17 @@ void EegDecider::execute_initialize(
     module_name = module_name.substr(0, module_name.size() - 3);
   }
 
+  /* Create the EEG subscriber based on whether preprocessor is enabled. */
+  this->eeg_subscriber.reset();
+
+  std::string topic = goal->preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
+  this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
+    topic,
+    /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
+    EEG_QUEUE_LENGTH,
+    std::bind(&EegDecider::process_sample, this, _1));
+  
+  // Print section header
   log_section_header("Loading decider: " + module_name);
 
   // Initialize the decider wrapper
@@ -621,23 +626,6 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
 }
 
 /* Initialization and reset functions */
-
-void EegDecider::handle_preprocessor_enabled(const std::shared_ptr<std_msgs::msg::Bool> msg) {
-  this->is_preprocessor_enabled = msg->data;
-
-  /* Destroy existing subscriber. */
-  this->eeg_subscriber.reset();
-
-  /* Create the subscriber based on preprocessor state. */
-  std::string topic = this->is_preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
-  this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
-    topic,
-    /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
-    EEG_QUEUE_LENGTH,
-    std::bind(&EegDecider::process_sample, this, _1));
-
-  RCLCPP_DEBUG(this->get_logger(), "Reading %s EEG data.", this->is_preprocessor_enabled ? "preprocessed" : "raw");
-}
 
 void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg) {
   this->is_coil_at_target = msg->data;

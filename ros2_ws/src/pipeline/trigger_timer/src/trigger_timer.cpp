@@ -198,7 +198,7 @@ void TriggerTimer::handle_request_timed_trigger(
   /* In case of a positive stimulation decision, the total latency can only be calculated by Trigger Timer -
      it cannot be calculated by Decider due to the additional component (Trigger Timer) on the pathway. */
   rclcpp::Time now = this->get_clock()->now();
-  double_t total_latency = now.seconds() - request->system_time_for_sample;
+  double_t total_latency = now.seconds() - request->sample_arrival_time;
 
   msg.total_latency = total_latency;
   this->decision_info_publisher->publish(msg);

@@ -283,12 +283,6 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.time = adapter_sample.time;
   sample.pulse_delivered = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
 
-  sample.session.sampling_frequency = device_info.sampling_frequency;
-  sample.session.num_eeg_channels = device_info.num_eeg_channels;
-  sample.session.num_emg_channels = device_info.num_emg_channels;
-  sample.session.is_simulation = false;
-  sample.session.start_time = this->session_start_time;
-
   return sample;
 }
 
@@ -327,6 +321,9 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   sample.valid = true;
+
+  /* Set arrival time to current ROS clock time. */
+  sample.arrival_time = this->get_clock()->now().seconds();
 
   this->eeg_sample_publisher->publish(sample);
 

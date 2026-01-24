@@ -2,7 +2,7 @@
 TimedTrigger timed_trigger
 
 # Unix timestamp (seconds since epoch) when the sample was taken.
-float64 system_time_for_sample
+float64 sample_arrival_time
 
 float64 preprocessor_latency
 float64 decider_latency

@@ -99,6 +99,9 @@ void EegPreprocessor::handle_initialize_preprocessor(
   this->initialized_module_filename = request->module_filename;
   this->initialized_working_directory = preprocessor_path;
 
+  // Store stream info
+  this->stream_info = request->stream_info;
+
   // Change working directory to the module directory
   if (!filesystem_utils::change_working_directory(preprocessor_path.string(), this->get_logger())) {
     RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s", preprocessor_path.string().c_str());
@@ -185,9 +188,6 @@ void EegPreprocessor::handle_finalize_preprocessor(
   }
   this->error_occurred = false;
 
-  // Reset session metadata
-  this->session_metadata = SessionMetadataState{};
-
   RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully");
   response->success = true;
 }
@@ -211,10 +211,8 @@ void EegPreprocessor::publish_healthcheck() {
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void EegPreprocessor::handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata) {
+void EegPreprocessor::handle_session_start() {
   RCLCPP_INFO(this->get_logger(), "Session started");
-
-  this->session_metadata.update(metadata);
 
   /* Clear deferred processing queue when session starts. */
   while (!this->deferred_processing_queue.empty()) {
@@ -346,12 +344,8 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     return;
   }
 
-  /* Copy session information from the triggering sample. */
-  preprocessed_sample.session.sampling_frequency = triggering_sample->session.sampling_frequency;
-  preprocessed_sample.session.num_eeg_channels = triggering_sample->session.num_eeg_channels;
-  preprocessed_sample.session.num_emg_channels = triggering_sample->session.num_emg_channels;
-  preprocessed_sample.session.is_simulation = triggering_sample->session.is_simulation;
-  preprocessed_sample.session.start_time = triggering_sample->session.start_time;
+  /* Copy arrival time from the triggering sample. */
+  preprocessed_sample.arrival_time = triggering_sample->arrival_time;
 
   /* Copy hardware trigger information. */
   preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
@@ -383,7 +377,7 @@ void EegPreprocessor::enqueue_deferred_request(const std::shared_ptr<eeg_interfa
      If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
      Each sample takes sampling period time. */
   if (look_ahead_samples > 0) {
-    request.scheduled_time = sample_time + (look_ahead_samples * this->session_metadata.sampling_period);
+    request.scheduled_time = sample_time + (look_ahead_samples * 1.0 / this->stream_info.sampling_frequency);
   } else {
     /* If look-ahead is 0 or negative, no look-ahead is needed, process immediately. */
     request.scheduled_time = sample_time;
@@ -405,7 +399,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   /* Handle session start marker from upstream. */
   if (msg->is_session_start) {
-    handle_session_start(msg->session);
+    handle_session_start();
   }
 
   /* Handle session end marker from upstream. */
@@ -420,15 +414,6 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
                          1000,
                          "An error occurred in preprocessor module, not processing EEG sample at time %.3f (s).",
                          sample_time);
-    return;
-  }
-
-  /* Check that session metadata stays constant within a session. */
-  if (!this->session_metadata.matches(msg->session)) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Session metadata changed mid-session. Rejecting sample at %.3f (s).",
-                 sample_time);
-    this->error_occurred = true;
     return;
   }
 

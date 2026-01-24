@@ -37,4 +37,4 @@ float64 preprocessing_duration  # Time spent in preprocessing (seconds)
 # ============================================================================
 # Metadata
 # ============================================================================
-SessionMetadata session
+float64 arrival_time            # Unix timestamp when sample arrived

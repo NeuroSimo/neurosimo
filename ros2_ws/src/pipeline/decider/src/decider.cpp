@@ -220,6 +220,7 @@ void EegDecider::handle_initialize_decider(
     PROJECTS_DIRECTORY,
     this->initialized_working_directory.string(),
     module_name,
+    request->subject_id,
     request->stream_info.num_eeg_channels,
     request->stream_info.num_emg_channels,
     request->stream_info.sampling_frequency,

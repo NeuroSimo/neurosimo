@@ -45,6 +45,7 @@ builtins.print_throttle = print_throttle
 bool PreprocessorWrapper::initialize_module(
     const std::string& directory,
     const std::string& module_name,
+    const std::string& subject_id,
     const size_t eeg_size,
     const size_t emg_size,
     const uint16_t sampling_frequency) {
@@ -75,7 +76,7 @@ bool PreprocessorWrapper::initialize_module(
   try {
     auto imported_module = py::module::import(module_name.c_str());
     preprocessor_module = std::make_unique<py::module>(imported_module);
-    auto instance = preprocessor_module->attr("Preprocessor")(eeg_size, emg_size, sampling_frequency);
+    auto instance = preprocessor_module->attr("Preprocessor")(subject_id, eeg_size, emg_size, sampling_frequency);
     preprocessor_instance = std::make_unique<py::object>(instance);
 
   } catch(const py::error_already_set& e) {

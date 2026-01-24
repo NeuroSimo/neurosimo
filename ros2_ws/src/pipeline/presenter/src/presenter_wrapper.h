@@ -33,7 +33,8 @@ public:
 
   bool initialize_module(
       const std::string& directory,
-      const std::string& module_name);
+      const std::string& module_name,
+      const std::string& subject_id);
 
   bool reset_module_state();
 

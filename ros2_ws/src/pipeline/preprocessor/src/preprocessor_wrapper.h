@@ -38,6 +38,7 @@ public:
   bool initialize_module(
       const std::string& directory,
       const std::string& module_name,
+      const std::string& subject_id,
       const size_t eeg_size,
       const size_t emg_size,
       const uint16_t sampling_frequency);

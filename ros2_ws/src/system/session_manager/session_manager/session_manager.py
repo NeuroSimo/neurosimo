@@ -10,6 +10,7 @@ from system_interfaces.msg import SessionState
 from pipeline_interfaces.action import InitializeDecider, InitializePreprocessor, InitializePresenter
 from pipeline_interfaces.srv import InitializeProtocol
 from eeg_interfaces.action import InitializeSimulator
+from eeg_interfaces.srv import StartStreaming
 from eeg_interfaces.msg import EegInfo
 
 from std_msgs.msg import String
@@ -17,6 +18,7 @@ from std_srvs.srv import Trigger
 from rcl_interfaces.srv import GetParameters
 from threading import Lock
 import time
+import uuid
 
 
 class SessionManagerNode(Node):
@@ -93,15 +95,17 @@ class SessionManagerNode(Node):
             self, InitializeDecider, '/pipeline/decider/initialize', callback_group=self.callback_group)
         self.presenter_init_client = ActionClient(
             self, InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
+        self.simulator_init_client = ActionClient(
+            self, InitializeSimulator, '/eeg_simulator/initialize', callback_group=self.callback_group)
 
         # Create clients for streaming start operations
         self.playback_streaming_start_client = self.create_client(
             # TODO: Replace with playback service once implemented
-            Trigger, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
+            StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_simulator_streaming_start_client = self.create_client(
-            Trigger, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
+            StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_device_streaming_start_client = self.create_client(
-            Trigger, '/eeg_device/streaming/start', callback_group=self.callback_group)
+            StartStreaming, '/eeg_device/streaming/start', callback_group=self.callback_group)
 
         # Create client for getting parameters from session configurator
         self.get_parameters_client = self.create_client(
@@ -110,6 +114,7 @@ class SessionManagerNode(Node):
         # Session state
         self.session_lock = Lock()
         self.session_running = False
+        self.session_id = None
         self.current_data_source = None
         self.current_project_name = None
         self.session_phase = ''
@@ -187,6 +192,7 @@ class SessionManagerNode(Node):
         """Run a complete session lifecycle."""
         with self.session_lock:
             self.session_running = True
+            self.session_id = str(uuid.uuid4())
             self.session_phase = 'FETCHING_PARAMS'
             self.publish_session_state()
 
@@ -195,6 +201,7 @@ class SessionManagerNode(Node):
             if not self.fetch_session_parameters():
                 self.session_phase = ''
                 self.session_running = False
+                self.session_id = None
                 self.publish_session_state()
                 return
 
@@ -204,6 +211,7 @@ class SessionManagerNode(Node):
             if not self.initialize_session_components():
                 self.session_phase = ''
                 self.session_running = False
+                self.session_id = None
                 self.publish_session_state()
                 return
 
@@ -213,6 +221,7 @@ class SessionManagerNode(Node):
             if not self.start_data_streaming():
                 self.session_phase = ''
                 self.session_running = False
+                self.session_id = None
                 self.publish_session_state()
                 return
 
@@ -225,6 +234,7 @@ class SessionManagerNode(Node):
             self.logger.error(f'Error during session run: {str(e)}')
         finally:
             self.session_running = False
+            self.session_id = None
             self.session_phase = ''
             self.publish_session_state()
 
@@ -237,7 +247,8 @@ class SessionManagerNode(Node):
                 'decider.module', 'decider.enabled',
                 'preprocessor.module', 'preprocessor.enabled',
                 'presenter.module', 'presenter.enabled',
-                'experiment.protocol', 'data_source'
+                'experiment.protocol', 'data_source',
+                'simulator.dataset_filename', 'simulator.start_time'
             ]
 
             # Create service request
@@ -296,6 +307,12 @@ class SessionManagerNode(Node):
         if not self.initialize_component(self.presenter_init_client, '/pipeline/presenter/initialize', 'presenter'):
             return False
 
+        # Initialize simulator if data source is simulator
+        data_source = self.session_config.get('data_source', '')
+        if data_source == 'simulator':
+            if not self.initialize_simulator():
+                return False
+
         return True
 
     def initialize_component(self, client, action_name, component_name):
@@ -323,6 +340,7 @@ class SessionManagerNode(Node):
             self.logger.error(f'Unknown component name: {component_name}')
             return False
 
+        goal.session_id = self.session_id
         goal.project_name = self.current_project_name
         goal.module_filename = module_filename
         goal.enabled = enabled
@@ -360,6 +378,7 @@ class SessionManagerNode(Node):
             return False
 
         request = InitializeProtocol.Request()
+        request.session_id = self.session_id
         request.project_name = self.current_project_name
         request.protocol_filename = protocol_filename
 
@@ -373,6 +392,37 @@ class SessionManagerNode(Node):
             return False
 
         self.logger.info(f'Protocol initialized successfully')
+        return True
+
+    def initialize_simulator(self):
+        """Initialize simulator with project name, dataset filename, and start time."""
+        if self.current_project_name is None:
+            self.logger.error('Cannot initialize simulator: no active project set')
+            return False
+
+        dataset_filename = self.session_config.get('simulator.dataset_filename', '')
+        start_time = self.session_config.get('simulator.start_time', 0.0)
+
+        if not dataset_filename:
+            self.logger.error('Cannot initialize simulator: no dataset filename configured')
+            return False
+
+        goal = InitializeSimulator.Goal()
+        goal.session_id = self.session_id
+        goal.project_name = self.current_project_name
+        goal.dataset_filename = dataset_filename
+        goal.start_time = start_time
+
+        result = self.call_action(self.simulator_init_client, goal, '/eeg_simulator/initialize')
+
+        if result is None:
+            return False
+
+        if not result.success:
+            self.logger.error('Simulator initialization failed')
+            return False
+
+        self.logger.info('Simulator initialized successfully')
         return True
 
     def start_data_streaming(self):
@@ -394,7 +444,8 @@ class SessionManagerNode(Node):
             return False
 
         # Call the streaming service
-        request = Trigger.Request()
+        request = StartStreaming.Request()
+        request.session_id = self.session_id
         response = self.call_service(request, client, service_name)
 
         if response is None:

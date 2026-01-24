@@ -18,6 +18,7 @@ import { EegSimulatorContext, StreamerStateValue } from 'providers/EegSimulatorP
 import { PipelineContext } from 'providers/PipelineProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useParameters } from 'providers/ParameterProvider'
+import { useSession, SessionStage } from 'providers/SessionProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
 import { getDatasetInfoRos, DatasetInfo } from 'ros/eeg_simulator'
@@ -55,13 +56,11 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   const { experimentState } = useContext(PipelineContext)
   const { eegInfo } = useContext(EegStreamContext)
   const { setSimulatorDataset, setSimulatorStartTime } = useParameters()
+  const { sessionState } = useSession()
 
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
 
-  const eegSimulatorHealthcheckOk = eegSimulatorHealthcheck?.status.value === HealthcheckStatus.READY
-  const isRunning = streamerState === StreamerStateValue.RUNNING
-  const isLoading = streamerState === StreamerStateValue.LOADING
-  const isExperimentOngoing = experimentState?.ongoing ?? false
+  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
   const isEegStreaming = eegInfo?.is_streaming || false
 
   // Fetch dataset info when dataset changes
@@ -112,7 +111,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     <SimulatorPanel isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Dataset:</ConfigLabel>
-        <DatasetSelect onChange={setDataset} value={dataset} disabled={isExperimentOngoing || isEegStreaming}>
+        <DatasetSelect onChange={setDataset} value={dataset} disabled={isSessionRunning || isEegStreaming}>
           {datasetList.map((datasetFilename: typeof datasetList[number], index: number) => (
             <option key={index} value={datasetFilename}>
               {datasetFilename}
@@ -152,7 +151,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
             min={0}
             max={selectedDatasetInfo?.duration || 0}
             onChange={setStartTime}
-            disabled={isExperimentOngoing || isEegStreaming}
+            disabled={isSessionRunning || isEegStreaming}
           />
         </div>
       </CompactRow>

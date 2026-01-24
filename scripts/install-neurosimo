@@ -15,10 +15,14 @@ read -s -p "Enter sudo password: " SUDO_PASS
 echo ""
 
 # Run the Docker installation playbook
-ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-docker.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+ansible-playbook -i 'localhost,' ansible/install-docker.yml \
+  --connection=local --become \
+  --extra-vars "ansible_become_password=$SUDO_PASS"
 
 # Run the ROS installation playbook
-ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-ros.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+ansible-playbook -i 'localhost,' ansible/install-ros.yml \
+  --connection=local --become \
+  --extra-vars "ansible_become_password=$SUDO_PASS"
 
 # Function to check if the kernel is preempt_rt
 is_preempt_rt() {
@@ -92,7 +96,9 @@ if [ "$USE_GPU" = true ]; then
             read -p "Press Enter to continue..."
             echo ""
 
-            ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+            ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml \
+              --connection=local --become \
+              --extra-vars "ansible_become_password=$SUDO_PASS"
         fi
     else
         # Standard kernel - install drivers using package manager
@@ -102,7 +108,9 @@ if [ "$USE_GPU" = true ]; then
             echo
             if [[ ! $REPLY =~ ^[Nn]$ ]]; then
                 echo "Installing NVIDIA drivers..."
-                ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+                ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers.yml \
+                  --connection=local --become \
+                  --extra-vars "ansible_become_password=$SUDO_PASS"
                 echo ""
                 echo "NVIDIA drivers installed. A reboot is required for the drivers to take effect."
             fi
@@ -112,11 +120,15 @@ if [ "$USE_GPU" = true ]; then
     fi
 
     # Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
-    ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml --extra-vars "ansible_become_password=$SUDO_PASS"
+    ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml \
+      --connection=local --become \
+      --extra-vars "ansible_become_password=$SUDO_PASS"
 fi
 
 # Run the NeuroSimo setup playbook with GPU flag
-ANSIBLE_BECOME_PASS=$SUDO_PASS ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml --extra-vars "ansible_become_password=$SUDO_PASS use_gpu=$USE_GPU"
+ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml \
+  --connection=local --become \
+  --extra-vars "ansible_become_password=$SUDO_PASS use_gpu=$USE_GPU"
 
 # Source environment to get ROS base installation
 source ~/.bash_env > /dev/null

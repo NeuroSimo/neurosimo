@@ -1,10 +1,11 @@
 #!/bin/bash
+set -euo pipefail
 
 # Usage examples:
-# ./log [container_name] --from "YYYY-MM-DD HH:MM:SS" --to "YYYY-MM-DD HH:MM:SS"
-# ./log [container_name] --last-hour
-# ./log [container_name] --save output.log
-# ./log [container_name] -n 50
+# ./log [service_name] --from "YYYY-MM-DD HH:MM:SS" --to "YYYY-MM-DD HH:MM:SS"
+# ./log [service_name] --last-hour
+# ./log [service_name] --save output.log
+# ./log [service_name] -n 50
 
 CONTAINER_NAME=""
 FROM=""
@@ -14,40 +15,61 @@ SAVE_TO=""
 TIME_FILTERS=false   # Indicator for specific time filters
 TAIL_LINES="100"     # Default to the last 100 lines
 
-# Get list of running containers
-function get_running_containers() {
-    docker compose -f "$NEUROSIMO_ROOT/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | sort
+# ---- Config ----
+
+# Prefer explicit NEUROSIMO_ROOT; otherwise infer from script location.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NEUROSIMO_ROOT="${NEUROSIMO_ROOT:-$SCRIPT_DIR}"
+COMPOSE_FILE="${NEUROSIMO_ROOT}/docker-compose.yml"
+
+# The journald unit that streams compose logs.
+LOG_UNIT="${LOG_UNIT:-neurosimo-logs.service}"
+
+# Match systemd unit/project naming.
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-neurosimo}"
+
+# ---- Helpers ----
+
+function die() { echo "ERROR: $*" >&2; exit 1; }
+
+function ensure_compose_file() {
+    [[ -f "$COMPOSE_FILE" ]] || die "Compose file not found: $COMPOSE_FILE (set NEUROSIMO_ROOT or place script in repo root)"
 }
 
-# Print available containers
+# List services known to compose. This is better than "running containers" because logs can be useful even if exited.
+function get_services() {
+    ensure_compose_file
+    docker compose -f "$COMPOSE_FILE" config --services 2>/dev/null | sort
+}
+
 function print_available_containers() {
-    local containers=$(get_running_containers)
-    if [ -z "$containers" ]; then
-        echo "ERROR: No running containers found."
+    local services
+    services="$(get_services || true)"
+    if [[ -z "${services:-}" ]]; then
+        echo "ERROR: No compose services found (is Docker running? is compose file valid?)."
     else
-        echo "Available containers:"
+        echo "Available services:"
         echo ""
-        echo "$containers" | sed 's/^/  - /'
+        echo "$services" | sed 's/^/  - /'
         echo ""
     fi
 }
 
-# Print usage
 function print_usage() {
     echo ""
     echo "Usage examples:"
-    echo "./log [container_name] -n 1000       # Show the last 1000 lines, default is 100"
-    echo "./log [container_name] --save output.log  # Save logs to a file"
-    echo "./log [container_name] --last-hour        # Show logs from the last hour"
-    echo "./log [container_name] --from \"YYYY-MM-DD HH:MM:SS\" --to \"YYYY-MM-DD HH:MM:SS\""
+    echo "./log [service] -n 1000                 # Show last 1000 lines (default 100)"
+    echo "./log [service] --save output.log       # Save logs to a file"
+    echo "./log [service] --last-hour             # Logs from last hour"
+    echo "./log [service] --from \"YYYY-MM-DD HH:MM:SS\" --to \"YYYY-MM-DD HH:MM:SS\""
     echo ""
-    echo "If no container name is provided, logs from all containers will be shown."
+    echo "If no service is provided, logs from all services will be shown (via journald follower: ${LOG_UNIT})."
     echo ""
     print_available_containers
     exit 0
 }
 
-# Parse arguments
+# ---- Parse args ----
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --from) FROM=$2; FOLLOW=false; TIME_FILTERS=true; shift 2;;
@@ -56,33 +78,32 @@ while [[ "$#" -gt 0 ]]; do
         --last-day) FROM="1 day ago"; FOLLOW=false; TIME_FILTERS=true; shift;;
         --last-minute) FROM="1 minute ago"; FOLLOW=false; TIME_FILTERS=true; shift;;
         --save) SAVE_TO=$2; shift 2;;
-        --follow) FOLLOW=true; shift;;
-        -f) FOLLOW=true; shift;;
+        --follow|-f) FOLLOW=true; shift;;
         -n) TAIL_LINES=$2; shift 2;;
         --help|-h) print_usage;;
         *)
             if [[ -z "$CONTAINER_NAME" ]]; then
                 CONTAINER_NAME=$1
             else
-                echo "Unknown parameter passed: $1"; exit 1;
+                die "Unknown parameter passed: $1"
             fi
             shift;;
     esac
 done
 
-# Validate container name if provided
-if [ -n "$CONTAINER_NAME" ]; then
-    running_containers=$(get_running_containers)
-    if ! echo "$running_containers" | grep -q "^${CONTAINER_NAME}$"; then
-        echo "Error: Container '$CONTAINER_NAME' not found."
+# Validate service name if provided
+if [[ -n "$CONTAINER_NAME" ]]; then
+    services="$(get_services)"
+    if ! echo "$services" | grep -qx "$CONTAINER_NAME"; then
+        echo "Error: Service '$CONTAINER_NAME' not found in compose config."
         echo ""
         print_available_containers
         exit 1
     fi
 fi
 
-# Check if the save file exists and prompt for overwrite if necessary
-if [ ! -z "$SAVE_TO" ] && [ -f "$SAVE_TO" ]; then
+# Check if save file exists and prompt for overwrite
+if [[ -n "${SAVE_TO}" && -f "${SAVE_TO}" ]]; then
     read -p "$SAVE_TO exists. Overwrite? (y/N) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -91,88 +112,70 @@ if [ ! -z "$SAVE_TO" ] && [ -f "$SAVE_TO" ]; then
     fi
 fi
 
-# XXX: Use a non-breaking space to add padding between the timestamp and the log message. For some reason,
-#   the default space character does not work as expected.
+# ---- Formatting pipeline ----
 
-# Define sed command for timestamp formatting
-
-# Define ANSI color codes
 COLOR_RESET=$(echo -e '\033[0m')
-COLOR_CONTAINER=$(echo -e '\033[0;36m')  # Cyan for container name
-COLOR_TIMESTAMP=$(echo -e '\033[0;33m')  # Yellow for timestamp
-COLOR_DEFAULT=$(echo -e '\033[0;37m')    # White for the rest of the text
-COLOR_HIGH_INTENSITY_WHITE=$(echo -e '\033[0;97m')  # High-intensity white
+COLOR_CONTAINER=$(echo -e '\033[0;36m')
+COLOR_TIMESTAMP=$(echo -e '\033[0;33m')
+COLOR_DEFAULT=$(echo -e '\033[0;37m')
+COLOR_HIGH_INTENSITY_WHITE=$(echo -e '\033[0;97m')
 
-# XXX: Use a non-breaking space to add padding between the timestamp and the log message. For some reason,
-#   the default space character does not work as expected.
 NON_BREAKING_SPACE=$(echo -e '\xC2\xA0')
 
-# Remove "-1" suffix from container name and add color (handles underscores and hyphens correctly)
 REMOVE_SUFFIX_CMD="sed -E \"s/^([[:alnum:]_-]+)-1(\s+\|)/${COLOR_CONTAINER}\1\2${COLOR_DEFAULT}/\" --unbuffered"
-
-# Format timestamp, add non-breaking spaces, and color
 FORMAT_TIMESTAMP_CMD="sed -E \"s/([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3})\+[0-9]{2}:[0-9]{2}/${COLOR_TIMESTAMP}\1 \2${COLOR_DEFAULT}${NON_BREAKING_SPACE}${NON_BREAKING_SPACE}${NON_BREAKING_SPACE}/g\" --unbuffered"
-
-# Remove numeric suffixes from log labels (e.g., "[decider-1]" becomes "[decider]")
-CLEAN_LABELS_CMD="sed -E 's/\[([[:alnum:]_-]+)-[0-9]+\]/[\1]/g' --unbuffered"
-
-# Remove ROS2 timestamps (e.g., "[1726757089.965811963]")
-REMOVE_ROS_TIMESTAMPS_CMD="sed -E 's/\[[0-9]+\.[0-9]+\]\s+//g' --unbuffered"
-
-# Pad INFO and WARN messages to align with ERROR
-PAD_MESSAGE_TYPES_CMD="sed -E 's/\[(INFO|WARN)\]/[\1 ]/g' --unbuffered"
-
-# Change color to high-intensity white after the third colon
+CLEAN_LABELS_CMD="sed -E 's/\\[([[:alnum:]_-]+)-[0-9]+\\]/[\\1]/g' --unbuffered"
+REMOVE_ROS_TIMESTAMPS_CMD="sed -E 's/\\[[0-9]+\\.[0-9]+\\]\\s+//g' --unbuffered"
+PAD_MESSAGE_TYPES_CMD="sed -E 's/\\[(INFO|WARN)\\]/[\\1 ]/g' --unbuffered"
 HIGHLIGHT_AFTER_THIRD_COLON_CMD="sed \"s/\\(:[^:]*:[^:]*:\\)\\(.*\\)$/\\1${COLOR_HIGH_INTENSITY_WHITE}\\2/\" --unbuffered"
-
-# Add default color to the beginning of each line
 ADD_DEFAULT_COLOR_CMD="sed \"s/^/${COLOR_DEFAULT}/\" --unbuffered"
-
-# Reset color at the end of each line
 RESET_COLOR_CMD="sed \"s/$/${COLOR_RESET}/\" --unbuffered"
 
-# Combine all formatting commands
 FORMAT_CMD="$REMOVE_SUFFIX_CMD | $FORMAT_TIMESTAMP_CMD | $CLEAN_LABELS_CMD | $REMOVE_ROS_TIMESTAMPS_CMD | $PAD_MESSAGE_TYPES_CMD | $HIGHLIGHT_AFTER_THIRD_COLON_CMD | $ADD_DEFAULT_COLOR_CMD | $RESET_COLOR_CMD"
 
+# Filter out known-noise
+NOISE_FILTER="grep -v 'Failed to parse type hash'"
 
-# Use docker compose logs if a container name is provided, otherwise use journalctl. This is because it is
-# difficult to filter the last n lines of logs outputted by a given container using journalctl.
-if [ -n "$CONTAINER_NAME" ] && [ "$TIME_FILTERS" = false ]; then
-    CMD="docker compose -f $NEUROSIMO_ROOT/docker-compose.yml logs --timestamps --tail $TAIL_LINES"
-    [ "$FOLLOW" = true ] && CMD="$CMD -f"
-    CMD="$CMD $CONTAINER_NAME"
+# ---- Logging logic ----
+# Rationale:
+# - For "single service + tail lines + no time filters": docker compose logs is best (precise tail).
+# - For time filters and "all services": journald from neurosimo-logs.service is best.
 
-    # XXX: Use a custom script to convert UTC to local time. This is a workaround for docker compose not
-    #   supporting local timezones in logs.
-    CMD="$CMD | docker-compose-logs-localtime"
+if [[ -n "$CONTAINER_NAME" && "$TIME_FILTERS" == false ]]; then
+    # Compose logs path (single service)
+    ensure_compose_file
+    CMD="/usr/bin/docker compose -f \"$COMPOSE_FILE\" logs --timestamps --tail \"$TAIL_LINES\""
+    [[ "$FOLLOW" == true ]] && CMD="$CMD -f"
+    CMD="$CMD \"$CONTAINER_NAME\""
 
-    CMD="$CMD | $FORMAT_CMD"
+    # Convert UTC->local if available; fall back if the helper isn't installed.
+    if command -v docker-compose-logs-localtime >/dev/null 2>&1; then
+        CMD="$CMD | docker-compose-logs-localtime"
+    fi
 
-    # XXX: Filter out the "Failed to parse type hash" messages. These are not useful; should look more closely
-    #   into what generates them.
-    CMD="$CMD | grep -v 'Failed to parse type hash'"
+    CMD="$CMD | $FORMAT_CMD | $NOISE_FILTER"
+    [[ -n "$SAVE_TO" ]] && CMD="$CMD | tee \"$SAVE_TO\""
 
-    [ ! -z "$SAVE_TO" ] && CMD="$CMD | tee $SAVE_TO"
-
-    eval $CMD
+    eval "$CMD"
 else
-    CMD="journalctl -u neurosimo -b"
-    if [ "$TIME_FILTERS" = false ]; then
-        CMD="$CMD --lines $TAIL_LINES"
+    # Journald path (aggregated logs from the follower service)
+    CMD="journalctl -u \"$LOG_UNIT\" -b"
+
+    if [[ "$TIME_FILTERS" == false ]]; then
+        CMD="$CMD --lines \"$TAIL_LINES\""
     fi
-    [ ! -z "$FROM" ] && CMD="$CMD --since \"$FROM\""
-    [ ! -z "$TO" ] && CMD="$CMD --until \"$TO\""
-    [ "$FOLLOW" = true ] && CMD="$CMD -f"
+    [[ -n "$FROM" ]] && CMD="$CMD --since \"$FROM\""
+    [[ -n "$TO" ]] && CMD="$CMD --until \"$TO\""
+    [[ "$FOLLOW" == true ]] && CMD="$CMD -f"
 
-    if [ -n "$CONTAINER_NAME" ]; then
-        CMD="$CMD | grep \"neurosimo-${CONTAINER_NAME}-1\""
+    # If service name is provided, filter by the prefix compose uses in its logs output.
+    # Compose logs output typically includes "<service>-1  | ..." or "<service>-1 | ...".
+    if [[ -n "$CONTAINER_NAME" ]]; then
+        CMD="$CMD | grep -E \"^${CONTAINER_NAME}-[0-9]+\\s+\\|\""
     fi
 
-    # XXX: Filter out the "Failed to parse type hash" messages. These are not useful; should look more closely
-    #   into what generates them.
-    CMD="$CMD | grep -v 'Failed to parse type hash'"
+    CMD="$CMD | $FORMAT_CMD | $NOISE_FILTER"
+    [[ -n "$SAVE_TO" ]] && CMD="$CMD | tee \"$SAVE_TO\""
 
-    [ ! -z "$SAVE_TO" ] && CMD="$CMD | tee $SAVE_TO"
-
-    eval $CMD
+    eval "$CMD"
 fi

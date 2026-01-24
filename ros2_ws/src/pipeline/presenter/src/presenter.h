@@ -56,8 +56,6 @@ private:
     std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Response> response);
 
   void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
-
-  void update_time(double_t time);
   void handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg);
 
   rclcpp::Logger logger;
@@ -89,9 +87,6 @@ private:
     std::vector<std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>>, StimulusCompare> sensory_stimuli;
 
   std::unique_ptr<PresenterWrapper> presenter_wrapper;
-
-  /* Track session state internally based on session markers from EEG samples. */
-  bool session_started = false;
 };
 
 #endif //EEG_PROCESSOR_PRESENTER_H

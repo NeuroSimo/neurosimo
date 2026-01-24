@@ -307,7 +307,7 @@ void EegDecider::handle_finalize_decider(
   const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response) {
 
-  RCLCPP_INFO(this->get_logger(), "Received finalize request for session: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Received finalize request");
 
   // Finalize the decider module if initialized
   if (this->is_initialized && this->decider_wrapper) {
@@ -343,7 +343,7 @@ void EegDecider::handle_finalize_decider(
   // Reset session metadata
   this->session_metadata = SessionMetadataState{};
 
-  RCLCPP_INFO(this->get_logger(), "Decider finalized successfully for session: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Decider finalized successfully");
   response->success = true;
 }
 

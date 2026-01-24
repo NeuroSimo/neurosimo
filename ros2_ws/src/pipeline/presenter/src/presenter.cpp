@@ -164,7 +164,7 @@ void EegPresenter::handle_finalize_presenter(
   const std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Response> response) {
 
-  RCLCPP_INFO(this->get_logger(), "Received finalize request for session: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Received finalize request");
 
   // Finalize the presenter module if initialized
   if (this->is_initialized && this->presenter_wrapper) {
@@ -192,7 +192,7 @@ void EegPresenter::handle_finalize_presenter(
   this->session_started = false;
   this->error_occurred = false;
 
-  RCLCPP_INFO(this->get_logger(), "Presenter finalized successfully for session: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Presenter finalized successfully");
   response->success = true;
 }
 

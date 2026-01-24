@@ -1,6 +1,6 @@
 # Initialize simulator action
 # Goal: Simulator initialization parameters
-string session_id
+uint8[16] session_id
 
 string project_name
 string dataset_filename

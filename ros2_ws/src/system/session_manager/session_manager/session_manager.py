@@ -209,7 +209,7 @@ class SessionManagerNode(Node):
         """Run a complete session lifecycle."""
         with self.session_lock:
             self.session_running = True
-            self.session_id = str(uuid.uuid4())
+            self.session_id = list(uuid.uuid4().bytes)
             self.session_stage = SessionState.INITIALIZING
             self.publish_session_state()
 
@@ -446,7 +446,7 @@ class SessionManagerNode(Node):
         except Exception as e:
             self.logger.error(f'Error finalizing preprocessor: {e}')
 
-        self.logger.info(f'Session finalization completed for session: {session_id}')
+        self.logger.info(f'Session finalization completed')
 
     def stop_data_streaming(self, session_id):
         """Stop the data streaming service."""

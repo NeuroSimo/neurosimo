@@ -224,7 +224,7 @@ void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 void EegSimulator::handle_start_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
       std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
-  RCLCPP_INFO(this->get_logger(), "Received start streaming request for session_id: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Received start streaming request");
   if (!this->is_initialized) {
     response->success = false;
     return;
@@ -241,7 +241,7 @@ void EegSimulator::handle_start_streaming(
 void EegSimulator::handle_stop_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
       std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
-  RCLCPP_INFO(this->get_logger(), "Received stop streaming request for session_id: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     response->success = true;

@@ -1,12 +1,6 @@
 import ROSLIB from 'roslib'
 import { ros } from './ros'
-
-export enum SessionStage {
-  STOPPED = 0,
-  INITIALIZING = 1,
-  RUNNING = 2,
-  FINALIZING = 3,
-}
+import { SessionStage } from 'providers/SessionProvider'
 
 export interface SessionState extends ROSLIB.Message {
   is_running: boolean

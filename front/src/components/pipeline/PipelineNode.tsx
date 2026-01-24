@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { StyledPanel, SmallerTitle, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { PipelineContext } from 'providers/PipelineProvider'
+import { useSession, SessionStage } from 'providers/SessionProvider'
 
 const Container = styled(StyledPanel)`
   width: 450px;
@@ -51,8 +52,8 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
   onToggle,
   onModuleChange,
 }) => {
-  const { experimentState } = useContext(PipelineContext)
-  const isExperimentOngoing = experimentState?.ongoing ?? false
+  const { sessionState } = useSession()
+  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
 
   const handleModuleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     onModuleChange(event.target.value)
@@ -62,8 +63,8 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
     <Container>
       <HorizontalRow>
         <Title $enabled={enabled}>{title}:</Title>
-        <ToggleSwitch type='flat' checked={enabled} onChange={onToggle} disabled={isExperimentOngoing} />
-        <PipelineSelect onChange={handleModuleChange} value={module} disabled={isExperimentOngoing}>
+        <ToggleSwitch type='flat' checked={enabled} onChange={onToggle} disabled={isSessionRunning} />
+        <PipelineSelect onChange={handleModuleChange} value={module} disabled={isSessionRunning}>
           {modules.map((mod, index) => (
             <option key={index} value={mod}>
               {mod}

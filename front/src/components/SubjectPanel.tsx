@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
-import { PipelineContext } from 'providers/PipelineProvider'
+import { useSession, SessionStage } from 'providers/SessionProvider'
 import { CommittableTextInput } from './CommittableTextInput'
 import { CommittableNumericInput } from './CommittableNumericInput'
 
@@ -16,10 +16,10 @@ const Container = styled(StyledPanel)`
 `
 
 export const SubjectPanel: React.FC = () => {
-  const { experimentState } = useContext(PipelineContext)
   const { metadata, setSubjectId, setNotes } = useParameters()
+  const { sessionState } = useSession()
 
-  const isExperimentOngoing = experimentState?.ongoing ?? false
+  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
 
   const handleSubjectIdCommit = (value: string) => {
     setSubjectId(value, () => {
@@ -44,7 +44,7 @@ export const SubjectPanel: React.FC = () => {
           prefix="S"
           maxLength={3}
           placeholder="001"
-          disabled={isExperimentOngoing}
+          disabled={isSessionRunning}
         />
       </ConfigRow>
       <ConfigRow>
@@ -53,7 +53,7 @@ export const SubjectPanel: React.FC = () => {
           value={metadata.notes}
           onCommit={handleNotesCommit}
           placeholder="Enter notes"
-          disabled={isExperimentOngoing}
+          disabled={isSessionRunning}
           multiline={true}
           width="315px"
         />

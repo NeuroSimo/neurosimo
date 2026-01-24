@@ -12,9 +12,9 @@ import {
   CONFIG_PANEL_WIDTH,
 } from 'styles/General'
 
-import { PipelineContext } from 'providers/PipelineProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useParameters } from 'providers/ParameterProvider'
+import { useSession, SessionStage } from 'providers/SessionProvider'
 
 const PlaybackContainer = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
@@ -41,15 +41,15 @@ const CompactRow = styled(ConfigRow)`
 `
 
 export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
-  const { experimentState } = useContext(PipelineContext)
   const { eegInfo } = useContext(EegStreamContext)
   const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useParameters()
+  const { sessionState } = useSession()
 
   // For playback tab - these would come from a playback context in the future
   const [playbackBagFilename, setPlaybackBagFilenameState] = useState<string>('')
   const [playbackIsPreprocessed, setPlaybackIsPreprocessedState] = useState<boolean>(false)
 
-  const isExperimentOngoing = experimentState?.ongoing ?? false
+  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
   const isEegStreaming = eegInfo?.is_streaming || false
 
   const setPlaybackBagFilenameHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -71,7 +71,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
     <PlaybackContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Experiment:</ConfigLabel>
-        <ExperimentSelect onChange={setPlaybackBagFilenameHandler} value={playbackBagFilename} disabled={isExperimentOngoing || isEegStreaming}>
+        <ExperimentSelect onChange={setPlaybackBagFilenameHandler} value={playbackBagFilename} disabled={isSessionRunning || isEegStreaming}>
           <option value="">Select experiment...</option>
           {/* TODO: Add experiment options here */}
         </ExperimentSelect>
@@ -83,7 +83,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
             type="flat"
             checked={playbackIsPreprocessed}
             onChange={setPlaybackIsPreprocessedHandler}
-            disabled={isExperimentOngoing || isEegStreaming}
+            disabled={isSessionRunning || isEegStreaming}
           />
         </SwitchWrapper>
       </CompactRow>

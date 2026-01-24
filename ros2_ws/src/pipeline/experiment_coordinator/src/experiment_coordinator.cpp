@@ -143,7 +143,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
 
   /* Handle session end marker from EEG bridge/simulator (after publishing enriched sample). */
   if (msg->is_session_end) {
-    RCLCPP_INFO(this->get_logger(), "Session stopped");
+    RCLCPP_INFO(this->get_logger(), "Session aborted");
     state.is_session_ongoing = false;
     publish_experiment_state(state.last_sample_time);
   }

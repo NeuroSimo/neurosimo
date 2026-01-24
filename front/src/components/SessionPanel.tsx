@@ -29,7 +29,7 @@ const getStageDisplayText = (stage: SessionStage): string => {
 }
 
 export const SessionPanel: React.FC = () => {
-  const { sessionState, startSession, stopSession } = useSession()
+  const { sessionState, startSession, abortSession } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [displayedStage, setDisplayedStage] = useState(sessionState.stage)
 
@@ -56,22 +56,22 @@ export const SessionPanel: React.FC = () => {
     })
   }
 
-  const handleStopSession = () => {
+  const handleAbortSession = () => {
     setIsLoading(true)
 
-    stopSession((success: boolean, message?: string) => {
+    abortSession((success: boolean, message?: string) => {
       setIsLoading(false)
       if (success) {
-        console.log('Session stop requested successfully')
+        console.log('Session abort requested successfully')
       } else {
-        console.log('Failed to stop session:', message)
+        console.log('Failed to abort session:', message)
       }
     })
   }
 
   const handleButtonClick = () => {
     if (sessionState.isRunning) {
-      handleStopSession()
+      handleAbortSession()
     } else {
       handleStartSession()
     }

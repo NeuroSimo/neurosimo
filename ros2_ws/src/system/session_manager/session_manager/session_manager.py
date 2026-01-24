@@ -40,8 +40,15 @@ class SessionManagerNode(Node):
 
         self.create_service(
             Trigger,
-            '/session/stop',
-            self.stop_session_callback,
+            '/session/abort',
+            self.abort_session_callback,
+            callback_group=self.callback_group
+        )
+
+        self.create_service(
+            Trigger,
+            '/session/finish',
+            self.finish_session_callback,
             callback_group=self.callback_group
         )
 
@@ -196,20 +203,40 @@ class SessionManagerNode(Node):
 
         return response
 
-    def stop_session_callback(self, request, response):
-        """Handle stop session service calls."""
-        self.logger.info('Received stop session request')
+    def abort_session_callback(self, request, response):
+        """Handle abort session service calls."""
+        self.logger.info('Received abort session request')
 
         with self._thread_lock:
             if self._session_thread is None or not self._session_thread.is_alive():
-                self.logger.info('No session running to stop')
+                self.logger.info('No session running to abort')
                 response.success = False
                 return response
 
             self._stop_event.set()
 
             response.success = True
-            self.logger.info('Session stop request accepted')
+            self.logger.info('Session abort request accepted')
+
+        return response
+
+    def finish_session_callback(self, request, response):
+        """Handle finish session service calls."""
+        self.logger.info('Received finish session request')
+
+        with self._thread_lock:
+            if self._session_thread is None or not self._session_thread.is_alive():
+                self.logger.info('No session running to finish')
+                response.success = False
+                return response
+
+            # TODO: Thus far, aborting (manually from the UI) and finishing (automatically when the
+            #       protocol is complete) are the same operation. In the future, we may want to
+            #       separate them.
+            self._stop_event.set()
+
+            response.success = True
+            self.logger.info('Session finish request accepted')
 
         return response
 

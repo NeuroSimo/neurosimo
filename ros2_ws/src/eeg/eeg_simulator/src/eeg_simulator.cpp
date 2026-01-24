@@ -371,7 +371,7 @@ bool EegSimulator::publish_until(double_t until_time) {
     bool is_last_sample = !this->dataset_info.loop && 
                           (this->current_index == dataset_buffer.size() - 1);
     if (is_last_sample) {
-      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session stop.");
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session abort.");
       this->is_session_end = true;
     }
 

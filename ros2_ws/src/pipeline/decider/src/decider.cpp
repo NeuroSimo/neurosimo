@@ -355,7 +355,7 @@ void EegDecider::handle_session_start(const eeg_interfaces::msg::SessionMetadata
 }
 
 void EegDecider::handle_session_end() {
-  RCLCPP_INFO(this->get_logger(), "Session stopped");
+  RCLCPP_INFO(this->get_logger(), "Session aborted");
 }
 
 void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg) {

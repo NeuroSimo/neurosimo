@@ -301,12 +301,6 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
   msg.is_session_start = is_session_start;
   msg.is_session_end = is_session_end;
 
-  msg.session.sampling_frequency = this->dataset_info.sampling_frequency;
-  msg.session.num_eeg_channels = this->dataset_info.num_eeg_channels;
-  msg.session.num_emg_channels = this->dataset_info.num_emg_channels;
-  msg.session.is_simulation = true;
-  msg.session.start_time = this->session_start_time;
-
   msg.time = time;
 
   /* Set the sample index. */
@@ -336,6 +330,9 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
       }
     }
   }
+
+  /* Set arrival time to current ROS clock time. */
+  msg.arrival_time = this->get_clock()->now().seconds();
 
   eeg_publisher->publish(msg);
 

@@ -27,7 +27,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/EegDeviceInfo.msg"
 
   "msg/Sample.msg"
-  "msg/SessionMetadata.msg"
 
   "msg/EegStatistics.msg"
 

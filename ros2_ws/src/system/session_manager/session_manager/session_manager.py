@@ -7,8 +7,10 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
-from pipeline_interfaces.action import InitializeDecider, InitializePreprocessor, InitializePresenter
-from pipeline_interfaces.srv import InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter
+from pipeline_interfaces.srv import (
+    InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
+    InitializeDecider, InitializePreprocessor, InitializePresenter
+)
 from eeg_interfaces.action import InitializeSimulatorStream, InitializePlaybackStream
 from eeg_interfaces.srv import InitializeEegDeviceStream, StartStreaming, StopStreaming
 from eeg_interfaces.msg import StreamInfo, EegDeviceInfo
@@ -72,12 +74,12 @@ class SessionManagerNode(Node):
         # Create clients for initialization operations
         self.protocol_init_client = self.create_client(
             InitializeProtocol, '/pipeline/protocol/initialize', callback_group=self.callback_group)
-        self.preprocessor_init_client = ActionClient(
-            self, InitializePreprocessor, '/pipeline/preprocessor/initialize', callback_group=self.callback_group)
-        self.decider_init_client = ActionClient(
-            self, InitializeDecider, '/pipeline/decider/initialize', callback_group=self.callback_group)
-        self.presenter_init_client = ActionClient(
-            self, InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
+        self.preprocessor_init_client = self.create_client(
+            InitializePreprocessor, '/pipeline/preprocessor/initialize', callback_group=self.callback_group)
+        self.decider_init_client = self.create_client(
+            InitializeDecider, '/pipeline/decider/initialize', callback_group=self.callback_group)
+        self.presenter_init_client = self.create_client(
+            InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
         self.simulator_stream_init_client = ActionClient(
             self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
         self.eeg_device_stream_init_client = self.create_client(
@@ -274,7 +276,7 @@ class SessionManagerNode(Node):
             request.names = param_names
 
             # Call service on session configurator
-            response = self.call_service(request, self.get_parameters_client, '/session_configurator/get_parameters')
+            response = self.call_service(self.get_parameters_client, request, '/session_configurator/get_parameters')
 
             if response is None:
                 self.logger.error('Failed to get parameters from session configurator')
@@ -333,7 +335,7 @@ class SessionManagerNode(Node):
             request = InitializeEegDeviceStream.Request()
             # Request is currently empty as per requirement
             
-            response = self.call_service(request, self.eeg_device_stream_init_client, '/eeg_device/initialize')
+            response = self.call_service(self.eeg_device_stream_init_client, request, '/eeg_device/initialize')
             if response is None:
                 return None
             stream_info = response.stream_info
@@ -353,42 +355,40 @@ class SessionManagerNode(Node):
         self.logger.info(f'Stream initialized successfully. Stream info: {stream_info.sampling_frequency}Hz, {stream_info.num_eeg_channels} EEG channels')
         return stream_info
 
-    def initialize_component(self, client, action_name, component_name, session_config, session_id, project_name, stream_info):
+    def initialize_component(self, client, service_name, component_name, session_config, session_id, project_name, stream_info):
         """Initialize a single pipeline component."""
         module_filename = session_config.get(f'{component_name}.module', '')
         enabled = session_config.get(f'{component_name}.enabled', False)
         subject_id = session_config.get('subject_id', '')
 
         if component_name == 'preprocessor':
-            goal = InitializePreprocessor.Goal()
+            request = InitializePreprocessor.Request()
         elif component_name == 'decider':
-            goal = InitializeDecider.Goal()
+            request = InitializeDecider.Request()
         elif component_name == 'presenter':
-            goal = InitializePresenter.Goal()
+            request = InitializePresenter.Request()
         else:
             self.logger.error(f'Unknown component name: {component_name}')
             return False
 
-        goal.session_id = session_id
-        goal.project_name = project_name
-        goal.module_filename = module_filename
-        goal.enabled = enabled
-        goal.subject_id = subject_id
+        request.session_id = session_id
+        request.project_name = project_name
+        request.module_filename = module_filename
+        request.enabled = enabled
+        request.subject_id = subject_id
 
         if component_name == 'preprocessor' or component_name == 'decider':
-            goal.sampling_frequency = stream_info.sampling_frequency
-            goal.num_eeg_channels = stream_info.num_eeg_channels
-            goal.num_emg_channels = stream_info.num_emg_channels
+            request.stream_info = stream_info
 
         if component_name == 'decider':
-            goal.preprocessor_enabled = session_config.get('preprocessor.enabled', False)
+            request.preprocessor_enabled = session_config.get('preprocessor.enabled', False)
 
-        result = self.call_action(client, goal, action_name)
+        response = self.call_service(client, request, service_name)
 
-        if result is None:
+        if response is None:
             return False
 
-        if not result.success:
+        if not response.success:
             self.logger.error(f'{component_name} initialization failed')
             return False
 
@@ -403,7 +403,7 @@ class SessionManagerNode(Node):
         request.project_name = project_name
         request.protocol_filename = protocol_filename
 
-        response = self.call_service(request, self.protocol_init_client, '/pipeline/protocol/initialize')
+        response = self.call_service(self.protocol_init_client, request, '/pipeline/protocol/initialize')
 
         if response is None:
             return False
@@ -422,7 +422,7 @@ class SessionManagerNode(Node):
         try:
             request = FinalizePresenter.Request()
             request.session_id = session_id
-            self.call_service(request, self.presenter_finalize_client, '/pipeline/presenter/finalize')
+            self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize')
         except Exception as e:
             self.logger.error(f'Error finalizing presenter: {e}')
 
@@ -430,7 +430,7 @@ class SessionManagerNode(Node):
         try:
             request = FinalizeDecider.Request()
             request.session_id = session_id
-            self.call_service(request, self.decider_finalize_client, '/pipeline/decider/finalize')
+            self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
         except Exception as e:
             self.logger.error(f'Error finalizing decider: {e}')
 
@@ -438,7 +438,7 @@ class SessionManagerNode(Node):
         try:
             request = FinalizePreprocessor.Request()
             request.session_id = session_id
-            self.call_service(request, self.preprocessor_finalize_client, '/pipeline/preprocessor/finalize')
+            self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
         except Exception as e:
             self.logger.error(f'Error finalizing preprocessor: {e}')
 
@@ -466,7 +466,7 @@ class SessionManagerNode(Node):
         # Call the streaming service
         request = StartStreaming.Request()
         request.session_id = session_id
-        response = self.call_service(request, client, service_name)
+        response = self.call_service(client, request, service_name)
 
         if response is None:
             return False
@@ -499,7 +499,7 @@ class SessionManagerNode(Node):
         try:
             request = StopStreaming.Request()
             request.session_id = session_id
-            self.call_service(request, client, service_name)
+            self.call_service(client, request, service_name)
             self.logger.info(f'Stopped streaming for data source: {data_source}')
         except Exception as e:
             self.logger.error(f'Error stopping streaming for {data_source}: {e}')
@@ -559,7 +559,7 @@ class SessionManagerNode(Node):
             self.logger.error(f'Action call to {action_name} failed: {e}')
             return None
 
-    def call_service(self, request, client, service_name, timeout_sec=30.0):
+    def call_service(self, client, request, service_name, timeout_sec=30.0):
         """Call a service."""
         if not client.wait_for_service(timeout_sec=5.0):
             return None

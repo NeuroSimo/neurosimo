@@ -12,6 +12,3 @@ string subject_id
 ---
 # Result: Initialization outcome
 bool success
----
-# Feedback: Initialization progress
-float32 progress  # 0.0 to 1.0

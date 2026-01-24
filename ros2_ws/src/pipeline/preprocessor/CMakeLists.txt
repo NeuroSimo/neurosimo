@@ -11,7 +11,6 @@ include_directories(${Python3_INCLUDE_DIRS})
 find_package(ament_cmake REQUIRED)
 find_package(pybind11_vendor REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(eeg_interfaces REQUIRED)
@@ -46,7 +45,6 @@ target_link_libraries(preprocessor
 ament_target_dependencies(
   preprocessor
   rclcpp
-  rclcpp_action
   std_msgs
   std_srvs
   eeg_interfaces
@@ -90,7 +88,6 @@ ament_target_dependencies(
   cpp_bindings
   pybind11_vendor
   rclcpp
-  rclcpp_action
   std_msgs
   std_srvs
   eeg_interfaces

@@ -8,7 +8,6 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
-#include "inotify_utils/inotify_watcher.h"
 
 #include "preprocessor_wrapper.h"
 

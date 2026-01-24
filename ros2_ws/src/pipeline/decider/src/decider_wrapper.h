@@ -62,7 +62,7 @@ public:
                          std::greater<std::pair<double, std::string>>>& event_queue,
       std::mutex& event_queue_mutex);
 
-  void reset_module_state();
+  bool reset_module_state();
 
   bool warm_up();
 

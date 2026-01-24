@@ -179,13 +179,11 @@ void EegBridge::handle_start_streaming(
 
   if (this->eeg_device_state != EegDeviceState::EEG_DEVICE_STREAMING) {
     response->success = false;
-    response->message = "EEG device is not streaming. Please start measurement on the device.";
     return;
   }
 
   if (this->error_state != ErrorState::NO_ERROR) {
     response->success = false;
-    response->message = "EEG bridge is in error state. Please resolve the error first.";
     return;
   }
 
@@ -200,7 +198,6 @@ void EegBridge::handle_start_streaming(
   publish_streamer_state();
   
   response->success = true;
-  response->message = "EEG bridge streaming started.";
 }
 
 void EegBridge::handle_stop_streaming(
@@ -210,13 +207,11 @@ void EegBridge::handle_stop_streaming(
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     response->success = true;
-    response->message = "EEG bridge is not running.";
     return;
   }
 
   this->is_session_end = true;
   response->success = true;
-  response->message = "EEG bridge streaming will stop after next sample.";
 }
 
 

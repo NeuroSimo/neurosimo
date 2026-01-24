@@ -62,13 +62,13 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
     "/eeg_simulator/streaming/start",
     std::bind(&EegSimulator::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2),
-    rmw_qos_profile_services_default,
+    rclcpp::ServicesQoS(),
     callback_group);
 
   this->stop_streaming_service = this->create_service<eeg_interfaces::srv::StopStreaming>(
     "/eeg_simulator/streaming/stop",
     std::bind(&EegSimulator::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2),
-    rmw_qos_profile_services_default,
+    rclcpp::ServicesQoS(),
     callback_group);
 
   /* Publisher for EEG samples.
@@ -227,7 +227,6 @@ void EegSimulator::handle_start_streaming(
   RCLCPP_INFO(this->get_logger(), "Received start streaming request for session_id: %s", request->session_id.c_str());
   if (!this->is_initialized) {
     response->success = false;
-    response->message = "EEG simulator is not initialized.";
     return;
   }
   this->session_start_time = this->get_clock()->now().seconds();
@@ -236,7 +235,6 @@ void EegSimulator::handle_start_streaming(
   this->is_session_end = false;
   this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
   response->success = true;
-  response->message = "EEG simulator streaming started.";
   publish_streamer_state();
 }
 
@@ -247,13 +245,11 @@ void EegSimulator::handle_stop_streaming(
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     response->success = true;
-    response->message = "EEG simulator is not running.";
     return;
   }
 
   this->is_session_end = true;
   response->success = true;
-  response->message = "EEG simulator streaming will stop after next sample.";
 }
 
 

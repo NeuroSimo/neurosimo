@@ -144,7 +144,7 @@ AdapterSample NeurOneAdapter::handle_sample_packet(const uint8_t* buffer) {
   return adapter_sample;
 }
 
-AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, size_t buffer_size) {
+AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unused]] size_t buffer_size) {
   /* Return variables */
   AdapterPacket packet;
   packet.result = INTERNAL;

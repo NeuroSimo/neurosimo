@@ -1,3 +1,5 @@
+string session_id
+
 string project_name
 string protocol_filename
 ---

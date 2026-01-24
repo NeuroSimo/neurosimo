@@ -18,7 +18,7 @@
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
-#include "pipeline_interfaces/action/initialize_component.hpp"
+#include "pipeline_interfaces/action/initialize_presenter.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -50,13 +50,13 @@ private:
 
   rclcpp_action::GoalResponse handle_initialize_goal(
     const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal);
+    std::shared_ptr<const pipeline_interfaces::action::InitializePresenter::Goal> goal);
   rclcpp_action::CancelResponse handle_initialize_cancel(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
   void handle_initialize_accepted(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
   void execute_initialize(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle);
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
 
   void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
@@ -72,7 +72,7 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
   /* Action server for initialization */
-  rclcpp_action::Server<pipeline_interfaces::action::InitializeComponent>::SharedPtr initialize_action_server;
+  rclcpp_action::Server<pipeline_interfaces::action::InitializePresenter>::SharedPtr initialize_action_server;
 
   /* Initialization state */
   bool is_initialized = false;

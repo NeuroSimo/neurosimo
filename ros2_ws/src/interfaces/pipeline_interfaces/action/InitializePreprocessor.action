@@ -1,0 +1,22 @@
+# Initialize pipeline component: preprocessor
+
+# Goal: Component initialization parameters
+string session_id
+
+string project_name
+string module_filename
+bool enabled
+
+# Stream info
+uint32 sampling_frequency
+uint8 num_eeg_channels
+uint8 num_emg_channels
+
+# Metadata
+string subject_id
+---
+# Result: Initialization outcome
+bool success
+---
+# Feedback: Initialization progress
+float32 progress  # 0.0 to 1.0

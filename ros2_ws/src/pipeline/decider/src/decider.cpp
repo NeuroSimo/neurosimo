@@ -156,7 +156,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
 
   /* Initialize action server for component initialization */
-  this->initialize_action_server = rclcpp_action::create_server<pipeline_interfaces::action::InitializeComponent>(
+  this->initialize_action_server = rclcpp_action::create_server<pipeline_interfaces::action::InitializeDecider>(
     this,
     "/pipeline/decider/initialize",
     std::bind(&EegDecider::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
@@ -170,7 +170,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
 rclcpp_action::GoalResponse EegDecider::handle_initialize_goal(
   const rclcpp_action::GoalUUID & uuid,
-  std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal) {
+  std::shared_ptr<const pipeline_interfaces::action::InitializeDecider::Goal> goal) {
   RCLCPP_INFO(this->get_logger(), "Received initialize goal: project='%s', module='%s', enabled=%s",
               goal->project_name.c_str(), goal->module_filename.c_str(), goal->enabled ? "true" : "false");
 
@@ -180,22 +180,22 @@ rclcpp_action::GoalResponse EegDecider::handle_initialize_goal(
 }
 
 rclcpp_action::CancelResponse EegDecider::handle_initialize_cancel(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle) {
   RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
   (void)goal_handle;
   return rclcpp_action::CancelResponse::ACCEPT;
 }
 
 void EegDecider::handle_initialize_accepted(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle) {
   // Execute the initialization in a new thread
   std::thread{std::bind(&EegDecider::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
 }
 
 void EegDecider::execute_initialize(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeDecider>> goal_handle) {
   const auto goal = goal_handle->get_goal();
-  auto result = std::make_shared<pipeline_interfaces::action::InitializeComponent::Result>();
+  auto result = std::make_shared<pipeline_interfaces::action::InitializeDecider::Result>();
 
   // Set enabled state
   this->is_enabled = goal->enabled;

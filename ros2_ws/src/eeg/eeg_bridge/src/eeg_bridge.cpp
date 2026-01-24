@@ -175,7 +175,7 @@ void EegBridge::publish_eeg_healthcheck() {
 void EegBridge::handle_start_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
       std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
-  RCLCPP_INFO(this->get_logger(), "Received start streaming request for session_id: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Received start streaming request");
 
   if (this->eeg_device_state != EegDeviceState::EEG_DEVICE_STREAMING) {
     response->success = false;
@@ -203,7 +203,7 @@ void EegBridge::handle_start_streaming(
 void EegBridge::handle_stop_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
       std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
-  RCLCPP_INFO(this->get_logger(), "Received stop streaming request for session_id: %s", request->session_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     response->success = true;

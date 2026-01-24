@@ -32,6 +32,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   "action/InitializeSimulator.action"
 
+  "srv/StartStreaming.srv"
+  "srv/StopStreaming.srv"
+
   DEPENDENCIES builtin_interfaces
 )
 

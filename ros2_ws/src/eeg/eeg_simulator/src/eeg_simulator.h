@@ -10,6 +10,8 @@
 
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/action/initialize_simulator.hpp"
+#include "eeg_interfaces/srv/start_streaming.hpp"
+#include "eeg_interfaces/srv/stop_streaming.hpp"
 
 #include "std_msgs/msg/string.hpp"
 
@@ -54,11 +56,11 @@ private:
   void publish_streamer_state();
   void stream_timer_callback();
   void handle_start_streaming(
-      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
+      std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response);
   void handle_stop_streaming(
-      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
+      std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response);
 
   project_interfaces::msg::DatasetInfo dataset_info;
 
@@ -105,8 +107,8 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_publisher;
 
   rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_streaming_service;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_streaming_service;
+  rclcpp::Service<eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service;
+  rclcpp::Service<eeg_interfaces::srv::StopStreaming>::SharedPtr stop_streaming_service;
   rclcpp::TimerBase::SharedPtr stream_timer;
 
   /* Action server for initialization */

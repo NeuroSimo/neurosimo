@@ -59,13 +59,13 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   this->dataset_manager_ = std::make_unique<DatasetManager>(this);
 
   /* Services for starting/stopping streaming. */
-  this->start_streaming_service = this->create_service<std_srvs::srv::Trigger>(
+  this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
     "/eeg_simulator/streaming/start",
     std::bind(&EegSimulator::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
     callback_group);
 
-  this->stop_streaming_service = this->create_service<std_srvs::srv::Trigger>(
+  this->stop_streaming_service = this->create_service<eeg_interfaces::srv::StopStreaming>(
     "/eeg_simulator/streaming/stop",
     std::bind(&EegSimulator::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rmw_qos_profile_services_default,
@@ -222,9 +222,9 @@ void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg
 }
 
 void EegSimulator::handle_start_streaming(
-      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  (void) request;
+      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
+      std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
+  RCLCPP_INFO(this->get_logger(), "Received start streaming request for session_id: %s", request->session_id.c_str());
   if (!this->is_initialized) {
     response->success = false;
     response->message = "EEG simulator is not initialized.";
@@ -241,9 +241,9 @@ void EegSimulator::handle_start_streaming(
 }
 
 void EegSimulator::handle_stop_streaming(
-      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  (void) request;
+      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
+      std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
+  RCLCPP_INFO(this->get_logger(), "Received stop streaming request for session_id: %s", request->session_id.c_str());
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     response->success = true;

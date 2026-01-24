@@ -129,11 +129,11 @@ void EegBridge::create_publishers() {
       std::chrono::milliseconds(500), [this] { publish_eeg_healthcheck(); });
 
   /* Services for starting/stopping streaming. */
-  this->start_streaming_service = this->create_service<std_srvs::srv::Trigger>(
+  this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
     "/eeg_device/streaming/start",
     std::bind(&EegBridge::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
-  this->stop_streaming_service = this->create_service<std_srvs::srv::Trigger>(
+  this->stop_streaming_service = this->create_service<eeg_interfaces::srv::StopStreaming>(
     "/eeg_device/streaming/stop",
     std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -173,9 +173,9 @@ void EegBridge::publish_eeg_healthcheck() {
 }
 
 void EegBridge::handle_start_streaming(
-      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  (void) request;
+      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
+      std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
+  RCLCPP_INFO(this->get_logger(), "Received start streaming request for session_id: %s", request->session_id.c_str());
 
   if (this->eeg_device_state != EegDeviceState::EEG_DEVICE_STREAMING) {
     response->success = false;
@@ -204,9 +204,9 @@ void EegBridge::handle_start_streaming(
 }
 
 void EegBridge::handle_stop_streaming(
-      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  (void) request;
+      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
+      std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
+  RCLCPP_INFO(this->get_logger(), "Received stop streaming request for session_id: %s", request->session_id.c_str());
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     response->success = true;

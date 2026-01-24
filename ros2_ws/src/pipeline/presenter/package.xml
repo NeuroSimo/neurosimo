@@ -18,7 +18,6 @@
   <depend>project_interfaces</depend>
   <depend>system_interfaces</depend>
   <depend>realtime_utils</depend>
-  <depend>inotify_utils</depend>
   <depend>filesystem_utils</depend>
 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>

@@ -11,7 +11,6 @@
 #include <mutex>
 
 #include "rclcpp/rclcpp.hpp"
-#include "inotify_utils/inotify_watcher.h"
 
 #include "decider_wrapper.h"
 

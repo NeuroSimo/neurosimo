@@ -137,6 +137,11 @@ void EegBridge::create_publishers() {
     "/eeg_device/streaming/stop",
     std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
+  /* Initialize service */
+  this->initialize_service = this->create_service<eeg_interfaces::srv::InitializeEegDeviceStream>(
+    "/eeg_device/initialize",
+    std::bind(&EegBridge::handle_initialize, this, std::placeholders::_1, std::placeholders::_2));
+
   /* Publish initial states. */
   publish_streamer_state();
   publish_device_info();
@@ -212,6 +217,23 @@ void EegBridge::handle_stop_streaming(
 
   this->is_session_end = true;
   response->success = true;
+}
+
+void EegBridge::handle_initialize(
+    const std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Request> request,
+    std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Response> response) {
+  RCLCPP_INFO(this->get_logger(), "Initializing EEG device stream");
+
+  // Get device info and create stream info
+  auto device_info = this->eeg_adapter->get_device_info();
+
+  response->stream_info.sampling_frequency = device_info.sampling_frequency;
+  response->stream_info.num_eeg_channels = device_info.num_eeg_channels;
+  response->stream_info.num_emg_channels = device_info.num_emg_channels;
+
+  // Set streamer state to ready
+  this->streamer_state = system_interfaces::msg::StreamerState::READY;
+  publish_streamer_state();
 }
 
 

@@ -47,7 +47,7 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     qos_keep_all_logs);
 
   /* Initialize action server for component initialization */
-  this->initialize_action_server = rclcpp_action::create_server<pipeline_interfaces::action::InitializeComponent>(
+  this->initialize_action_server = rclcpp_action::create_server<pipeline_interfaces::action::InitializePreprocessor>(
     this,
     "/pipeline/preprocessor/initialize",
     std::bind(&EegPreprocessor::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
@@ -67,7 +67,7 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
 
 rclcpp_action::GoalResponse EegPreprocessor::handle_initialize_goal(
   const rclcpp_action::GoalUUID & uuid,
-  std::shared_ptr<const pipeline_interfaces::action::InitializeComponent::Goal> goal) {
+  std::shared_ptr<const pipeline_interfaces::action::InitializePreprocessor::Goal> goal) {
   RCLCPP_INFO(this->get_logger(), "Received initialize goal: project='%s', module='%s', enabled=%s",
               goal->project_name.c_str(), goal->module_filename.c_str(), goal->enabled ? "true" : "false");
 
@@ -77,22 +77,22 @@ rclcpp_action::GoalResponse EegPreprocessor::handle_initialize_goal(
 }
 
 rclcpp_action::CancelResponse EegPreprocessor::handle_initialize_cancel(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle) {
   RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
   (void)goal_handle;
   return rclcpp_action::CancelResponse::ACCEPT;
 }
 
 void EegPreprocessor::handle_initialize_accepted(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle) {
   // Execute the initialization in a new thread
   std::thread{std::bind(&EegPreprocessor::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
 }
 
 void EegPreprocessor::execute_initialize(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializeComponent>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle) {
   const auto goal = goal_handle->get_goal();
-  auto result = std::make_shared<pipeline_interfaces::action::InitializeComponent::Result>();
+  auto result = std::make_shared<pipeline_interfaces::action::InitializePreprocessor::Result>();
 
   // Set enabled state
   this->is_enabled = goal->enabled;

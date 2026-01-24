@@ -21,7 +21,6 @@
   <depend>realtime_utils</depend>
   <depend>inotify_utils</depend>
   <depend>filesystem_utils</depend>
-  <depend>module_utils</depend>
 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 

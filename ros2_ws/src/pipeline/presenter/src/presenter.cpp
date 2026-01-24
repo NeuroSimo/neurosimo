@@ -144,9 +144,10 @@ void EegPresenter::handle_finalize_presenter(
     }
   }
 
-  // Reset initialization state
+  // Reset state
   this->is_initialized = false;
   this->is_enabled = false;
+  this->error_occurred = false;
   this->initialized_project_name = UNSET_STRING;
   this->initialized_module_filename = UNSET_STRING;
   this->initialized_working_directory = "";
@@ -155,10 +156,6 @@ void EegPresenter::handle_finalize_presenter(
   while (!this->sensory_stimuli.empty()) {
     this->sensory_stimuli.pop();
   }
-
-  // Reset session state
-  this->session_started = false;
-  this->error_occurred = false;
 
   RCLCPP_INFO(this->get_logger(), "Presenter finalized successfully");
   response->success = true;
@@ -198,38 +195,20 @@ void EegPresenter::publish_python_logs(double sample_time, bool is_initializatio
 
 /* EEG sample handler (for session markers and time updates). */
 void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
-  /* Return early if the presenter is not enabled or initialized. */
+  // Return early if the presenter is not enabled or initialized.
   if (!this->is_enabled || !this->is_initialized) {
     return;
   }
 
-  /* Handle session start marker. */
-  if (msg->is_session_start) {
-    RCLCPP_INFO(this->get_logger(), "Session started");
-    this->session_started = true;
-
-    /* Clear the sensory stimuli queue. */
-    while (!this->sensory_stimuli.empty()) {
-      this->sensory_stimuli.pop();
-    }
+  // Check that no error has occurred.
+  if (this->error_occurred) {
+    RCLCPP_INFO_THROTTLE(this->get_logger(),
+                         *this->get_clock(),
+                         1000,
+                         "An error occurred in presenter module. Ignoring EEG sample.");
+    return;
   }
 
-  /* Handle session end marker. */
-  if (msg->is_session_end) {
-    RCLCPP_INFO(this->get_logger(), "Session stopped");
-    this->session_started = false;
-
-    /* Reset the state of the existing module so that any windows etc. created by the Python module are closed. */
-    this->presenter_wrapper->reset_module_state();
-  }
-
-  /* Update time for stimulus presentation. */
-  if (this->session_started && !this->error_occurred) {
-    update_time(msg->time);
-  }
-}
-
-void EegPresenter::update_time(double_t time) {
   // Return early if no stimuli are queued
   if (this->sensory_stimuli.empty()) {
     return;
@@ -239,7 +218,7 @@ void EegPresenter::update_time(double_t time) {
   double_t stimulus_time = stimulus->time;
 
   // If the stimulus time is in the future, return early
-  if (time <= stimulus_time) {
+  if (msg->time <= stimulus_time) {
     return;
   }
 

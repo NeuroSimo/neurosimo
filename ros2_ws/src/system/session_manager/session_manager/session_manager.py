@@ -209,9 +209,12 @@ class SessionManagerNode(Node):
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
-        # Initialize preprocessor
-        if not self.initialize_component(self.preprocessor_init_client, '/pipeline/preprocessor/initialize', 'preprocessor', session_config, session_id, project_name, stream_info):
-            self.logger.error('Preprocessor initialization failed')
+        # Initialize presenter.
+        #
+        # Note: Presenter must be initialized before decider to ensure that potential sensory stimuli sent by decider
+        #       during initialization are properly queued.
+        if not self.initialize_component(self.presenter_init_client, '/pipeline/presenter/initialize', 'presenter', session_config, session_id, project_name, stream_info):
+            self.logger.error('Presenter initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
@@ -221,9 +224,9 @@ class SessionManagerNode(Node):
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
-        # Initialize presenter
-        if not self.initialize_component(self.presenter_init_client, '/pipeline/presenter/initialize', 'presenter', session_config, session_id, project_name, stream_info):
-            self.logger.error('Presenter initialization failed')
+        # Initialize preprocessor
+        if not self.initialize_component(self.preprocessor_init_client, '/pipeline/preprocessor/initialize', 'preprocessor', session_config, session_id, project_name, stream_info):
+            self.logger.error('Preprocessor initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
 

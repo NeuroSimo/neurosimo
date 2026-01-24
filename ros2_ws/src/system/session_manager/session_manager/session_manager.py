@@ -7,7 +7,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
-from pipeline_interfaces.action import InitializeComponent
+from pipeline_interfaces.action import InitializeDecider, InitializePreprocessor, InitializePresenter
 from pipeline_interfaces.srv import InitializeProtocol
 from eeg_interfaces.action import InitializeSimulator
 from eeg_interfaces.msg import EegInfo
@@ -88,11 +88,11 @@ class SessionManagerNode(Node):
         self.protocol_init_client = self.create_client(
             InitializeProtocol, '/pipeline/protocol/initialize', callback_group=self.callback_group)
         self.preprocessor_init_client = ActionClient(
-            self, InitializeComponent, '/pipeline/preprocessor/initialize', callback_group=self.callback_group)
+            self, InitializePreprocessor, '/pipeline/preprocessor/initialize', callback_group=self.callback_group)
         self.decider_init_client = ActionClient(
-            self, InitializeComponent, '/pipeline/decider/initialize', callback_group=self.callback_group)
+            self, InitializeDecider, '/pipeline/decider/initialize', callback_group=self.callback_group)
         self.presenter_init_client = ActionClient(
-            self, InitializeComponent, '/pipeline/presenter/initialize', callback_group=self.callback_group)
+            self, InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
 
         # Create clients for streaming start operations
         self.playback_streaming_start_client = self.create_client(
@@ -313,14 +313,28 @@ class SessionManagerNode(Node):
             self.logger.error(f'Cannot initialize {component_name}: no module filename configured')
             return False
 
-        goal = InitializeComponent.Goal()
+        if component_name == 'preprocessor':
+            goal = InitializePreprocessor.Goal()
+        elif component_name == 'decider':
+            goal = InitializeDecider.Goal()
+        elif component_name == 'presenter':
+            goal = InitializePresenter.Goal()
+        else:
+            self.logger.error(f'Unknown component name: {component_name}')
+            return False
+
         goal.project_name = self.current_project_name
         goal.module_filename = module_filename
         goal.enabled = enabled
         goal.subject_id = subject_id
-        goal.sampling_frequency = self.eeg_info.sampling_frequency
-        goal.num_eeg_channels = self.eeg_info.num_eeg_channels
-        goal.num_emg_channels = self.eeg_info.num_emg_channels
+
+        if component_name == 'preprocessor' or component_name == 'decider':
+            goal.sampling_frequency = self.eeg_info.sampling_frequency
+            goal.num_eeg_channels = self.eeg_info.num_eeg_channels
+            goal.num_emg_channels = self.eeg_info.num_emg_channels
+
+        if component_name == 'decider':
+            goal.preprocessor_enabled = self.session_config.get('preprocessor.enabled', False)
 
         result = self.call_action(client, goal, action_name)
 

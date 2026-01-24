@@ -38,7 +38,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/RequestTimedTrigger.srv"
   "srv/InitializeProtocol.srv"
 
-  "action/InitializeComponent.action"
+  "action/InitializePreprocessor.action"
+  "action/InitializeDecider.action"
+  "action/InitializePresenter.action"
 
   DEPENDENCIES
     diagnostic_msgs

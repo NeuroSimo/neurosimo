@@ -286,7 +286,7 @@ void ExperimentCoordinator::update_experiment_state(double current_time) {
   /* Check if we're in a rest period. */
   if (state.in_rest && state.rest_target_time.has_value()) {
     /* Check if rest period is complete. */
-    if (current_time >= state.rest_target_time.value()) {
+    if (get_experiment_time(current_time) >= state.rest_target_time.value()) {
       end_rest();
       
       /* Advance to next element if there is one. */
@@ -338,36 +338,36 @@ void ExperimentCoordinator::mark_protocol_complete() {
 
 void ExperimentCoordinator::start_rest(const Rest& rest, double current_time) {
   state.in_rest = true;
-  state.rest_start_time = current_time;
+  state.rest_start_time = get_experiment_time(current_time);
   
   /* Calculate target time for rest. */
   if (rest.duration.has_value()) {
-    state.rest_target_time = current_time + rest.duration.value();
+    state.rest_target_time = state.rest_start_time + rest.duration.value();
     RCLCPP_INFO(this->get_logger(), "Rest started (duration: %.1f s)", rest.duration.value());
   } else if (rest.wait_until.has_value()) {
     const auto& wu = rest.wait_until.value();
     
     /* Look up anchor stage start time. */
-    if (state.stage_start_times.count(wu.anchor) == 0) {
+    if (state.stage_start_experiment_times.count(wu.anchor) == 0) {
       RCLCPP_ERROR(this->get_logger(), "Cannot find start time for anchor stage: %s", 
         wu.anchor.c_str());
-      state.rest_target_time = current_time;  // End rest immediately
+      state.rest_target_time = state.rest_start_time;  // End rest immediately
       return;
     }
     
-    double anchor_time = state.stage_start_times[wu.anchor];
-    state.rest_target_time = anchor_time + wu.offset;
+    double anchor_experiment_time = state.stage_start_experiment_times[wu.anchor];
+    state.rest_target_time = anchor_experiment_time + wu.offset;
     
     RCLCPP_INFO(this->get_logger(), "Rest started (wait_until: %s + %.1f s, target: %.1f s)",
       wu.anchor.c_str(), wu.offset, state.rest_target_time.value());
   } else {
     RCLCPP_ERROR(this->get_logger(), "Rest has neither duration nor wait_until");
-    state.rest_target_time = current_time;  // End rest immediately
+    state.rest_target_time = get_experiment_time(current_time);  // End rest immediately
   }
 }
 
 void ExperimentCoordinator::end_rest() {
-  double rest_duration = state.last_sample_time - state.rest_start_time;
+  double rest_duration = get_experiment_time(state.last_sample_time) - state.rest_start_time;
   RCLCPP_INFO(this->get_logger(), "Rest ended (duration: %.1f s)", rest_duration);
   
   state.in_rest = false;
@@ -378,6 +378,7 @@ void ExperimentCoordinator::start_stage(const Stage& stage, double current_time)
   state.stage_name = stage.name;
   state.trial = 0;
   state.stage_start_times[stage.name] = current_time;
+  state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
   
   RCLCPP_INFO(this->get_logger(), "Stage '%s' started (%u trials)", 
     stage.name.c_str(), stage.trials);
@@ -502,9 +503,8 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   
   /* Stage timing */
   double stage_start_experiment_time = 0.0;
-  if (!msg.stage_name.empty() && state.stage_start_times.count(msg.stage_name)) {
-    double stage_start_sample_time = state.stage_start_times[msg.stage_name];
-    stage_start_experiment_time = get_experiment_time(stage_start_sample_time);
+  if (!msg.stage_name.empty() && state.stage_start_experiment_times.count(msg.stage_name)) {
+    stage_start_experiment_time = state.stage_start_experiment_times[msg.stage_name];
   }
   msg.stage_start_time = stage_start_experiment_time;
   msg.stage_elapsed_time = experiment_time - stage_start_experiment_time;
@@ -519,11 +519,11 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
     
     if (state.rest_target_time.has_value()) {
       rest_duration = state.rest_target_time.value() - state.rest_start_time;
-      rest_remaining = state.rest_target_time.value() - current_time;
+      rest_remaining = state.rest_target_time.value() - experiment_time;
     }
     
     msg.rest_duration = rest_duration;
-    msg.rest_elapsed = current_time - state.rest_start_time;
+    msg.rest_elapsed = experiment_time - state.rest_start_time;
     msg.rest_remaining = std::max(0.0, rest_remaining);
   } else {
     msg.rest_duration = 0.0;
@@ -556,8 +556,9 @@ double ExperimentCoordinator::get_experiment_time(double sample_time) {
   /* Calculate experiment time as sample time minus total pause duration. */
   double experiment_time = sample_time - state.total_pause_duration;
   
-  /* If currently paused, also subtract the ongoing pause. */
-  if (state.paused) {
+  /* If currently paused, also subtract the ongoing pause, but only if the 
+     sample_time is after the pause started. */
+  if (state.paused && sample_time > state.pause_start_time) {
     experiment_time -= (sample_time - state.pause_start_time);
   }
   

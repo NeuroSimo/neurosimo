@@ -82,12 +82,13 @@ struct ExperimentState {
   
   // Stage tracking
   std::string stage_name;
-  std::map<std::string, double> stage_start_times;  // Map stage name -> start time
+  std::map<std::string, double> stage_start_times;             // Map stage name -> sample start time
+  std::map<std::string, double> stage_start_experiment_times;  // Map stage name -> experiment start time
   
   // Rest tracking
   bool in_rest = false;
-  double rest_start_time = 0.0;
-  std::optional<double> rest_target_time;  // For wait_until or duration-based rest
+  double rest_start_time = 0.0;            // Experiment time when rest started
+  std::optional<double> rest_target_time;  // Experiment target time
   
   // Pause tracking
   bool paused = false;

@@ -521,6 +521,25 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto end_time = std::chrono::high_resolution_clock::now();
   double_t decider_processing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
+  /* Publish sensory stimuli if the vector is not empty. */
+  if (!this->sensory_stimuli.empty()) {
+    auto sensory_stimulus_count = this->sensory_stimuli.size();
+    RCLCPP_INFO(this->get_logger(), "Requesting %zu sensory stimuli at time %.3f (s).", sensory_stimulus_count, sample_time);
+
+    for (const auto& sensory_stimulus : this->sensory_stimuli) {
+      this->sensory_stimulus_publisher->publish(sensory_stimulus);
+    }
+    this->sensory_stimuli.clear();
+  }
+  
+  /* Publish coil target if it is set. */
+  if (!coil_target.empty()) {
+    auto coil_target_msg = pipeline_interfaces::msg::CoilTarget();
+    coil_target_msg.target_name = coil_target;
+    RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
+    this->coil_target_publisher->publish(coil_target_msg);
+  }
+
   /* Check if the decision is positive. */
   bool is_decision_positive = (timed_trigger != nullptr);
 
@@ -577,25 +596,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   
   /* Set the pulse lockout end time. */
   this->pulse_lockout_end_time = timed_trigger->time + this->decider_wrapper->get_pulse_lockout_duration();
-
-  /* Publish sensory stimuli if the vector is not empty. */
-  if (!this->sensory_stimuli.empty()) {
-    auto sensory_stimulus_count = this->sensory_stimuli.size();
-    RCLCPP_INFO(this->get_logger(), "Requesting %zu sensory stimuli at time %.3f (s).", sensory_stimulus_count, sample_time);
-
-    for (const auto& sensory_stimulus : this->sensory_stimuli) {
-      this->sensory_stimulus_publisher->publish(sensory_stimulus);
-    }
-    this->sensory_stimuli.clear();
-  }
-  
-  /* Publish coil target if it is set. */
-  if (!coil_target.empty()) {
-    auto coil_target_msg = pipeline_interfaces::msg::CoilTarget();
-    coil_target_msg.target_name = coil_target;
-    RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
-    this->coil_target_publisher->publish(coil_target_msg);
-  }
 }
 
 void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, bool has_event, const std::string& event_type) {

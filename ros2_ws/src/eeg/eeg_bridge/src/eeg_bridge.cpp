@@ -177,8 +177,22 @@ void EegBridge::publish_eeg_healthcheck() {
   this->healthcheck_publisher->publish(healtcheck);
 }
 
+bool EegBridge::reset_state() {
+  this->session_sample_index = 0;
+  this->time_offset = UNSET_TIME;
+  this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
+  this->is_session_start = false;
+  this->is_session_end = false;
+  this->error_state = ErrorState::NO_ERROR;
+
+  this->streamer_state = system_interfaces::msg::StreamerState::READY;
+  publish_streamer_state();
+
+  return true;
+}
+
 void EegBridge::handle_start_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
+      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> [[maybe_unused]] request,
       std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received start streaming request");
 
@@ -192,20 +206,15 @@ void EegBridge::handle_start_streaming(
     return;
   }
 
-  this->session_sample_index = 0;
-  this->time_offset = UNSET_TIME;
-  this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
-  this->is_session_start = true;
-  this->is_session_end = false;
   this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
-
   publish_streamer_state();
-  
+
+  this->is_session_start = true;
   response->success = true;
 }
 
 void EegBridge::handle_stop_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
+      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> [[maybe_unused]] request,
       std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
@@ -219,7 +228,7 @@ void EegBridge::handle_stop_streaming(
 }
 
 void EegBridge::handle_initialize(
-    const std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Request> request,
+    const std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Request> [[maybe_unused]] request,
     std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Initializing EEG device stream");
 
@@ -230,9 +239,7 @@ void EegBridge::handle_initialize(
   response->stream_info.num_eeg_channels = device_info.num_eeg_channels;
   response->stream_info.num_emg_channels = device_info.num_emg_channels;
 
-  // Set streamer state to ready
-  this->streamer_state = system_interfaces::msg::StreamerState::READY;
-  publish_streamer_state();
+  this->reset_state();
 }
 
 
@@ -275,7 +282,7 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
 }
 
 eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
-                                                    const eeg_interfaces::msg::EegDeviceInfo& device_info) {
+                                                    const eeg_interfaces::msg::EegDeviceInfo& [[maybe_unused]] device_info) {
   auto sample = eeg_interfaces::msg::Sample();
   sample.eeg = adapter_sample.eeg;
   sample.emg = adapter_sample.emg;
@@ -329,16 +336,10 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   /* Clear the session start marker after publishing. */
   this->is_session_start = false;
 
-  /* If we just published a sample ending the session, stop streaming. */
+  /* If we just published a sample ending the session, reset state. */
   if (is_session_end) {
     RCLCPP_INFO(this->get_logger(), "Session end sample published, stopping streaming.");
-    this->is_session_end = false;  // Reset the flag since we've handled it
-    this->streamer_state = system_interfaces::msg::StreamerState::READY;
-    this->session_sample_index = 0;
-    this->time_offset = UNSET_TIME;
-    this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
-    this->error_state = ErrorState::NO_ERROR;
-    publish_streamer_state();
+    this->reset_state();
   }
 }
 

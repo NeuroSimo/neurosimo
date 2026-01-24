@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
-import { useSession } from 'providers/SessionProvider'
-import { SessionStage } from 'ros/session'
+import { useSession, SessionStage } from 'providers/SessionProvider'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;

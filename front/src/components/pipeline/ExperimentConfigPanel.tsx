@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
+import { useSession, SessionStage } from 'providers/SessionProvider'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -14,10 +15,11 @@ const Container = styled(StyledPanel)`
 `
 
 export const ExperimentPanel: React.FC = () => {
-  const { protocolName, protocolList, experimentState } = useContext(PipelineContext)
+  const { protocolName, protocolList } = useContext(PipelineContext)
   const { setExperimentProtocol } = useParameters()
+  const { sessionState } = useSession()
 
-  const isExperimentOngoing = experimentState?.ongoing ?? false
+  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
 
   const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const protocol = event.target.value
@@ -31,7 +33,7 @@ export const ExperimentPanel: React.FC = () => {
       <SmallerTitle>Experiment</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Protocol:</ConfigLabel>
-        <Select onChange={handleProtocolChange} value={protocolName} disabled={isExperimentOngoing}>
+        <Select onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
           {protocolList.map((protocol, index) => (
             <option key={index} value={protocol}>
               {protocol}

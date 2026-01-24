@@ -1,5 +1,12 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
-import { startSessionRos, abortSessionRos, subscribeToSessionState, SessionState as SessionStateMessage, SessionStage } from 'ros/session'
+import { startSessionRos, abortSessionRos, subscribeToSessionState, SessionState as SessionStateMessage } from 'ros/session'
+
+export enum SessionStage {
+  STOPPED = 0,
+  INITIALIZING = 1,
+  RUNNING = 2,
+  FINALIZING = 3,
+}
 
 interface SessionState {
   isRunning: boolean

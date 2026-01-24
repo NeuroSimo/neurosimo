@@ -134,7 +134,7 @@ class SessionManagerNode(Node):
         self.session_id = None
         self.current_data_source = None
         self.current_project_name = None
-        self.session_phase = ''
+        self.session_stage = SessionState.STOPPED
 
         # Session configuration (fetched from ROS parameters)
         self.session_config = {}
@@ -148,7 +148,7 @@ class SessionManagerNode(Node):
         """Publish current session state."""
         msg = SessionState()
         msg.is_running = self.session_running
-        msg.phase = self.session_phase
+        msg.stage = self.session_stage
         self.session_state_publisher.publish(msg)
 
     def start_session_callback(self, request, response):
@@ -210,46 +210,49 @@ class SessionManagerNode(Node):
         with self.session_lock:
             self.session_running = True
             self.session_id = str(uuid.uuid4())
-            self.session_phase = 'FETCHING_PARAMS'
+            self.session_stage = SessionState.INITIALIZING
             self.publish_session_state()
 
         try:
             # PHASE: FETCHING_PARAMS
             if not self.fetch_session_parameters():
-                self.session_phase = ''
+                self.session_stage = SessionState.STOPPED
                 self.session_running = False
                 self.session_id = None
                 self.publish_session_state()
                 return
 
             # PHASE: INITIALIZING
-            self.session_phase = 'INITIALIZING'
+            self.session_stage = SessionState.INITIALIZING
             self.publish_session_state()
             if not self.initialize_session_components():
-                self.session_phase = ''
+                self.session_stage = SessionState.STOPPED
                 self.session_running = False
                 self.session_id = None
                 self.publish_session_state()
                 return
 
             # PHASE: STARTING_STREAMING
-            self.session_phase = 'STARTING_STREAMING'
+            self.session_stage = SessionState.INITIALIZING
             self.publish_session_state()
             if not self.start_data_streaming():
-                self.session_phase = ''
+                self.session_stage = SessionState.STOPPED
                 self.session_running = False
                 self.session_id = None
                 self.publish_session_state()
                 return
 
             # PHASE: RUNNING
-            self.session_phase = 'RUNNING'
+            self.session_stage = SessionState.RUNNING
             self.publish_session_state()
             self.run_session_loop()
 
         except Exception as e:
             self.logger.error(f'Error during session run: {str(e)}')
         finally:
+            self.session_stage = SessionState.FINALIZING
+            self.publish_session_state()
+
             # Stop data streaming first
             self.stop_data_streaming(self.session_id)
 
@@ -258,7 +261,7 @@ class SessionManagerNode(Node):
 
             self.session_running = False
             self.session_id = None
-            self.session_phase = ''
+            self.session_stage = SessionState.STOPPED
             self.publish_session_state()
 
     def fetch_session_parameters(self):

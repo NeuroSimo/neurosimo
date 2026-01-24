@@ -50,7 +50,12 @@ ExperimentCoordinator::ExperimentCoordinator()
   /* Client for finishing the session. */
   this->finish_session_client = this->create_client<std_srvs::srv::Trigger>(
     "/session/finish");
-  
+
+  // Wait for service client to be available
+  while (!this->finish_session_client->wait_for_service(std::chrono::duration<double>(1.0))) {
+    RCLCPP_INFO(this->get_logger(), "Service /session/finish not available, waiting...");
+  }
+
   /* Services for pause/resume. */
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
     "/experiment/pause",

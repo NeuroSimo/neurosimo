@@ -61,8 +61,7 @@ public:
 private:
   void publish_healthcheck();
 
-  void handle_session_start();
-  void handle_session_end();
+  bool reset_state();
 
   void handle_initialize_preprocessor(
     const std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Request> request,

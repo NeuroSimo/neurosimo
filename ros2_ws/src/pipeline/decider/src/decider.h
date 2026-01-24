@@ -8,7 +8,6 @@
 #include <deque>
 #include <cmath>
 #include <queue>
-#include <mutex>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -189,7 +188,6 @@ private:
   std::priority_queue<std::pair<double, std::string>,
                       std::vector<std::pair<double, std::string>>,
                       std::greater<std::pair<double, std::string>>> event_queue;
-  std::mutex event_queue_mutex;
 
   /* Deferred processing queue for handling look-ahead samples. */
   std::priority_queue<DeferredProcessingRequest,

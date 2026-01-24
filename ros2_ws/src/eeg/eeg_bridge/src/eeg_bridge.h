@@ -70,6 +70,8 @@ public:
   void spin();
 
 private:
+  bool reset_state();
+
   void process_eeg_packet();
   void update_healthcheck(uint8_t status, std::string status_message,
                           std::string actionable_message);

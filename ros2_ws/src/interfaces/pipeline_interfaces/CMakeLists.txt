@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
+find_package(eeg_interfaces REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -42,13 +43,14 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/FinalizeDecider.srv"
   "srv/FinalizePresenter.srv"
 
-  "action/InitializePreprocessor.action"
-  "action/InitializeDecider.action"
-  "action/InitializePresenter.action"
+  "srv/InitializePreprocessor.srv"
+  "srv/InitializeDecider.srv"
+  "srv/InitializePresenter.srv"
 
   DEPENDENCIES
     diagnostic_msgs
     std_msgs
+    eeg_interfaces
 )
 
 ament_package()

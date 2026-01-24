@@ -8,7 +8,6 @@
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 #include "inotify_utils/inotify_watcher.h"
 
 #include "preprocessor_wrapper.h"
@@ -28,7 +27,7 @@
 
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
-#include "pipeline_interfaces/action/initialize_preprocessor.hpp"
+#include "pipeline_interfaces/srv/initialize_preprocessor.hpp"
 #include "pipeline_interfaces/srv/finalize_preprocessor.hpp"
 
 #include "ring_buffer.h"
@@ -86,15 +85,9 @@ private:
   void handle_session_start(const eeg_interfaces::msg::SessionMetadata& metadata);
   void handle_session_end();
 
-  rclcpp_action::GoalResponse handle_initialize_goal(
-    const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const pipeline_interfaces::action::InitializePreprocessor::Goal> goal);
-  rclcpp_action::CancelResponse handle_initialize_cancel(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle);
-  void handle_initialize_accepted(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle);
-  void execute_initialize(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle);
+  void handle_initialize_preprocessor(
+    const std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Response> response);
   void handle_finalize_preprocessor(
     const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response);
@@ -118,8 +111,8 @@ private:
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
-  /* Action server for initialization */
-  rclcpp_action::Server<pipeline_interfaces::action::InitializePreprocessor>::SharedPtr initialize_action_server;
+  /* Service server for initialization */
+  rclcpp::Service<pipeline_interfaces::srv::InitializePreprocessor>::SharedPtr initialize_service_server;
 
   /* Service server for finalization */
   rclcpp::Service<pipeline_interfaces::srv::FinalizePreprocessor>::SharedPtr finalize_service_server;

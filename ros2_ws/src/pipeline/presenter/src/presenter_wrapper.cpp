@@ -145,10 +145,12 @@ bool PresenterWrapper::initialize_module(
   return true;
 }
 
-void PresenterWrapper::reset_module_state() {
+bool PresenterWrapper::reset_module_state() {
   presenter_module = nullptr;
   presenter_instance = nullptr;
   stimulus_processors.clear();
+
+  return true;
 }
 
 bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {

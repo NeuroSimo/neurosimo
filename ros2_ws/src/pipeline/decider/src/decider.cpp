@@ -311,9 +311,9 @@ void EegDecider::handle_finalize_decider(
 
   // Finalize the decider module if initialized
   if (this->is_initialized && this->decider_wrapper) {
-    bool finalize_success = this->decider_wrapper->finalize_module();
-    if (!finalize_success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to finalize decider module");
+    bool success = this->decider_wrapper->reset_module_state();
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to reset decider module state");
       response->success = false;
       return;
     }
@@ -329,7 +329,9 @@ void EegDecider::handle_finalize_decider(
   // Clear buffers and state
   this->sample_buffer.reset(0);
   this->sensory_stimuli.clear();
-  this->event_queue = std::queue<std::string>();
+  this->event_queue = std::priority_queue<std::pair<double, std::string>,
+                                          std::vector<std::pair<double, std::string>>,
+                                          std::greater<std::pair<double, std::string>>>();
   this->error_occurred = false;
 
   // Reset timing state
@@ -512,6 +514,9 @@ bool EegDecider::is_sample_window_valid() const {
 }
 
 void EegDecider::process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time) {
+  /* Suppress unused parameter warning */
+  (void)current_sample_time;
+
   /* Validate that the current sample window is suitable for processing. */
   if (!is_sample_window_valid()) {
     return;

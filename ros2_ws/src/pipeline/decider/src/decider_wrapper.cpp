@@ -171,7 +171,11 @@ bool DeciderWrapper::initialize_module(
   }
 
   /* Reset the module state. */
-  reset_module_state();
+  bool success = reset_module_state();
+  if (!success) {
+    return false;
+  }
+
   /* Local storage for logging */
   double default_window_earliest_seconds = 0.0;
   double default_window_latest_seconds = 0.0;
@@ -582,15 +586,17 @@ bool DeciderWrapper::initialize_module(
   return true;
 }
 
-void DeciderWrapper::reset_module_state() {
+bool DeciderWrapper::reset_module_state() {
   decider_instance = nullptr;
   decider_module = nullptr;
 
   py_time_offsets.reset();
   py_eeg.reset();
   py_emg.reset();
-  
+
   event_arrays.clear();
+
+  return true;
 }
 
 bool DeciderWrapper::warm_up() {

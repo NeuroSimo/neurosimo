@@ -5,7 +5,6 @@
 #include <queue>
 
 #include "rclcpp/rclcpp.hpp"
-#include "inotify_utils/inotify_watcher.h"
 
 #include "presenter_wrapper.h"
 

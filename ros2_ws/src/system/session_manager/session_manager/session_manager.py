@@ -10,7 +10,7 @@ from system_interfaces.msg import SessionState
 from pipeline_interfaces.action import InitializeDecider, InitializePreprocessor, InitializePresenter
 from pipeline_interfaces.srv import InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter
 from eeg_interfaces.action import InitializeSimulator
-from eeg_interfaces.srv import StartStreaming
+from eeg_interfaces.srv import StartStreaming, StopStreaming
 from eeg_interfaces.msg import EegInfo
 
 from std_msgs.msg import String
@@ -114,6 +114,15 @@ class SessionManagerNode(Node):
             StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_device_streaming_start_client = self.create_client(
             StartStreaming, '/eeg_device/streaming/start', callback_group=self.callback_group)
+
+        # Create clients for streaming stop operations
+        self.playback_streaming_stop_client = self.create_client(
+            # TODO: Replace with playback service once implemented
+            StopStreaming, '/eeg_simulator/streaming/stop', callback_group=self.callback_group)
+        self.eeg_simulator_streaming_stop_client = self.create_client(
+            StopStreaming, '/eeg_simulator/streaming/stop', callback_group=self.callback_group)
+        self.eeg_device_streaming_stop_client = self.create_client(
+            StopStreaming, '/eeg_device/streaming/stop', callback_group=self.callback_group)
 
         # Create client for getting parameters from session configurator
         self.get_parameters_client = self.create_client(
@@ -241,9 +250,11 @@ class SessionManagerNode(Node):
         except Exception as e:
             self.logger.error(f'Error during session run: {str(e)}')
         finally:
+            # Stop data streaming first
+            self.stop_data_streaming(self.session_id)
+
             # Finalize session components
-            if self.session_id:
-                self.finalize_session_components(self.session_id)
+            self.finalize_session_components(self.session_id)
 
             self.session_running = False
             self.session_id = None
@@ -433,6 +444,33 @@ class SessionManagerNode(Node):
             self.logger.error(f'Error finalizing preprocessor: {e}')
 
         self.logger.info(f'Session finalization completed for session: {session_id}')
+
+    def stop_data_streaming(self, session_id):
+        """Stop the data streaming service."""
+        data_source = self.current_data_source
+
+        # Choose the appropriate streaming stop service based on data source
+        if data_source == 'playback':
+            client = self.playback_streaming_stop_client
+            service_name = '/eeg_simulator/streaming/stop'  # TODO: Replace with playback service once implemented
+        elif data_source == 'simulator':
+            client = self.eeg_simulator_streaming_stop_client
+            service_name = '/eeg_simulator/streaming/stop'
+        elif data_source == 'eeg_device':
+            client = self.eeg_device_streaming_stop_client
+            service_name = '/eeg_device/streaming/stop'
+        else:
+            self.logger.error(f'Unknown data source for stopping: {data_source}')
+            return
+
+        # Call the stop streaming service
+        try:
+            request = StopStreaming.Request()
+            request.session_id = session_id
+            self.call_service(request, client, service_name)
+            self.logger.info(f'Stopped streaming for data source: {data_source}')
+        except Exception as e:
+            self.logger.error(f'Error stopping streaming for {data_source}: {e}')
 
     def initialize_simulator(self):
         """Initialize simulator with project name, dataset filename, and start time."""

@@ -3,6 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
 import { useSession } from 'providers/SessionProvider'
+import { SessionStage } from 'ros/session'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -82,9 +83,9 @@ export const SessionPanel: React.FC = () => {
         </ButtonComponent>
       </StateRow>
 
-      {sessionState.phase && (
+      {sessionState.stage !== SessionStage.STOPPED && (
         <SessionStatus>
-          Phase: {sessionState.phase}
+          Stage: {SessionStage[sessionState.stage]}
         </SessionStatus>
       )}
     </Container>

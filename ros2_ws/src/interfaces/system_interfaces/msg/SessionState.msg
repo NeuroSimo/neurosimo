@@ -1,2 +1,7 @@
+uint8 STOPPED = 0
+uint8 INITIALIZING = 1
+uint8 RUNNING = 2
+uint8 FINALIZING = 3
+
 bool is_running
-string phase
+uint8 stage

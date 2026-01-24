@@ -42,7 +42,7 @@ public:
       const size_t emg_size,
       const uint16_t sampling_frequency);
 
-  void reset_module_state();
+  bool reset_module_state();
 
   bool process(
       eeg_interfaces::msg::Sample& output_sample,

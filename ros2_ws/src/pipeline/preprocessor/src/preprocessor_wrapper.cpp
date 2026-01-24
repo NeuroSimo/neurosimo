@@ -156,7 +156,7 @@ bool PreprocessorWrapper::initialize_module(
   return true;
 }
 
-void PreprocessorWrapper::reset_module_state() {
+bool PreprocessorWrapper::reset_module_state() {
   preprocessor_module = nullptr;
   preprocessor_instance = nullptr;
 
@@ -165,6 +165,7 @@ void PreprocessorWrapper::reset_module_state() {
   py_emg.reset();
 
   RCLCPP_INFO(*logger_ptr, "Preprocessor reset.");
+  return true;
 }
 
 PreprocessorWrapper::~PreprocessorWrapper() {

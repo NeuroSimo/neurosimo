@@ -187,9 +187,9 @@ void EegPreprocessor::handle_finalize_preprocessor(
 
   // Finalize the preprocessor module if initialized
   if (this->is_initialized && this->preprocessor_wrapper) {
-    bool finalize_success = this->preprocessor_wrapper->finalize_module();
-    if (!finalize_success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to finalize preprocessor module");
+    bool success = this->preprocessor_wrapper->reset_module_state();
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor module state");
       response->success = false;
       return;
     }

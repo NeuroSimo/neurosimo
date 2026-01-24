@@ -168,9 +168,9 @@ void EegPresenter::handle_finalize_presenter(
 
   // Finalize the presenter module if initialized
   if (this->is_initialized && this->presenter_wrapper) {
-    bool finalize_success = this->presenter_wrapper->finalize_module();
-    if (!finalize_success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to finalize presenter module");
+    bool success = this->presenter_wrapper->reset_module_state();
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to reset presenter module state");
       response->success = false;
       return;
     }

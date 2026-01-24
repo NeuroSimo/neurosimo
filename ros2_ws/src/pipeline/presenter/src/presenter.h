@@ -19,6 +19,7 @@
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
 #include "pipeline_interfaces/action/initialize_presenter.hpp"
+#include "pipeline_interfaces/srv/finalize_presenter.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -57,6 +58,9 @@ private:
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
   void execute_initialize(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePresenter>> goal_handle);
+  void handle_finalize_presenter(
+    const std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Response> response);
 
   void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
@@ -73,6 +77,9 @@ private:
 
   /* Action server for initialization */
   rclcpp_action::Server<pipeline_interfaces::action::InitializePresenter>::SharedPtr initialize_action_server;
+
+  /* Service server for finalization */
+  rclcpp::Service<pipeline_interfaces::srv::FinalizePresenter>::SharedPtr finalize_service_server;
 
   /* Initialization state */
   bool is_initialized = false;

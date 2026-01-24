@@ -29,6 +29,7 @@
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
 #include "pipeline_interfaces/action/initialize_preprocessor.hpp"
+#include "pipeline_interfaces/srv/finalize_preprocessor.hpp"
 
 #include "ring_buffer.h"
 
@@ -94,6 +95,9 @@ private:
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle);
   void execute_initialize(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<pipeline_interfaces::action::InitializePreprocessor>> goal_handle);
+  void handle_finalize_preprocessor(
+    const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response);
   void publish_python_logs(double sample_time, bool is_initialization);
   void publish_sentinel_sample(double_t sample_time);
 
@@ -116,6 +120,9 @@ private:
 
   /* Action server for initialization */
   rclcpp_action::Server<pipeline_interfaces::action::InitializePreprocessor>::SharedPtr initialize_action_server;
+
+  /* Service server for finalization */
+  rclcpp::Service<pipeline_interfaces::srv::FinalizePreprocessor>::SharedPtr finalize_service_server;
 
   /* Initialization state */
   bool is_initialized = false;

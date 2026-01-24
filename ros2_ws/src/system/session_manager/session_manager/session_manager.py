@@ -8,7 +8,7 @@ from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
 from pipeline_interfaces.action import InitializeDecider, InitializePreprocessor, InitializePresenter
-from pipeline_interfaces.srv import InitializeProtocol
+from pipeline_interfaces.srv import InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter
 from eeg_interfaces.action import InitializeSimulator
 from eeg_interfaces.srv import StartStreaming
 from eeg_interfaces.msg import EegInfo
@@ -97,6 +97,14 @@ class SessionManagerNode(Node):
             self, InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
         self.simulator_init_client = ActionClient(
             self, InitializeSimulator, '/eeg_simulator/initialize', callback_group=self.callback_group)
+
+        # Create clients for finalization operations
+        self.preprocessor_finalize_client = self.create_client(
+            FinalizePreprocessor, '/pipeline/preprocessor/finalize', callback_group=self.callback_group)
+        self.decider_finalize_client = self.create_client(
+            FinalizeDecider, '/pipeline/decider/finalize', callback_group=self.callback_group)
+        self.presenter_finalize_client = self.create_client(
+            FinalizePresenter, '/pipeline/presenter/finalize', callback_group=self.callback_group)
 
         # Create clients for streaming start operations
         self.playback_streaming_start_client = self.create_client(
@@ -233,6 +241,10 @@ class SessionManagerNode(Node):
         except Exception as e:
             self.logger.error(f'Error during session run: {str(e)}')
         finally:
+            # Finalize session components
+            if self.session_id:
+                self.finalize_session_components(self.session_id)
+
             self.session_running = False
             self.session_id = None
             self.session_phase = ''
@@ -393,6 +405,34 @@ class SessionManagerNode(Node):
 
         self.logger.info(f'Protocol initialized successfully')
         return True
+
+    def finalize_session_components(self, session_id):
+        """Finalize all session components in reverse order."""
+        # Finalize presenter
+        try:
+            request = FinalizePresenter.Request()
+            request.session_id = session_id
+            self.call_service(request, self.presenter_finalize_client, '/pipeline/presenter/finalize')
+        except Exception as e:
+            self.logger.error(f'Error finalizing presenter: {e}')
+
+        # Finalize decider
+        try:
+            request = FinalizeDecider.Request()
+            request.session_id = session_id
+            self.call_service(request, self.decider_finalize_client, '/pipeline/decider/finalize')
+        except Exception as e:
+            self.logger.error(f'Error finalizing decider: {e}')
+
+        # Finalize preprocessor
+        try:
+            request = FinalizePreprocessor.Request()
+            request.session_id = session_id
+            self.call_service(request, self.preprocessor_finalize_client, '/pipeline/preprocessor/finalize')
+        except Exception as e:
+            self.logger.error(f'Error finalizing preprocessor: {e}')
+
+        self.logger.info(f'Session finalization completed for session: {session_id}')
 
     def initialize_simulator(self):
         """Initialize simulator with project name, dataset filename, and start time."""

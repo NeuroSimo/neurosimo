@@ -44,7 +44,8 @@ builtins.print_throttle = print_throttle
 
 bool PresenterWrapper::initialize_module(
     const std::string& directory,
-    const std::string& module_name) {
+    const std::string& module_name,
+    const std::string& subject_id) {
 
   /* If we have an existing presenter instance, release it which will call the destructor */
   presenter_instance = nullptr;
@@ -65,7 +66,7 @@ bool PresenterWrapper::initialize_module(
   try {
     auto imported_module = py::module::import(module_name.c_str());
     presenter_module = std::make_unique<py::module>(imported_module);
-    auto instance = presenter_module->attr("Presenter")();
+    auto instance = presenter_module->attr("Presenter")(subject_id);
     presenter_instance = std::make_unique<py::object>(instance);
 
   } catch(const py::error_already_set& e) {

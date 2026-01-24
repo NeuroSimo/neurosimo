@@ -59,15 +59,17 @@ class Decider:
     of EEG signals and schedules triggers based on target phase detection.
     """
     
-    def __init__(self, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: float):
+    def __init__(self, subject_id: str, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: float):
         """
         Initialize the Decider with parameters and filter design.
         
         Args:
+            subject_id: ID of the subject
             num_eeg_channels: Number of EEG channels (unused but kept for interface compatibility)
             num_emg_channels: Number of EMG channels (unused but kept for interface compatibility)
             sampling_frequency: Sampling frequency in Hz
         """
+        self.subject_id = subject_id
         self.sampling_frequency = sampling_frequency
 
         # Phastimate algorithm parameters
@@ -96,7 +98,7 @@ class Decider:
         # Number of warm-up rounds to prevent first-call delays (see README.md for details)
         self.warm_up_rounds = 2
 
-        print("Phastimate decider initialized")
+        print("Phastimate decider initialized for subject ", subject_id, "with sampling frequency ", sampling_frequency, "Hz.")
 
     def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
         """

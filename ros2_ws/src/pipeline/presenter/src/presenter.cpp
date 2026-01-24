@@ -108,7 +108,8 @@ void EegPresenter::handle_initialize_presenter(
   // Initialize the presenter wrapper
   bool success = this->presenter_wrapper->initialize_module(
     this->initialized_working_directory.string(),
-    module_name);
+    module_name,
+    request->subject_id);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");

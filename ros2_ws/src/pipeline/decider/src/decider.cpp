@@ -157,6 +157,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     std::bind(&EegDecider::handle_initialize_cancel, this, std::placeholders::_1),
     std::bind(&EegDecider::handle_initialize_accepted, this, std::placeholders::_1));
 
+  /* Finalize service server */
+  this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizeDecider>(
+    "/pipeline/decider/finalize",
+    std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2));
+
   this->healthcheck_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegDecider::publish_healthcheck, this));
@@ -296,6 +301,48 @@ void EegDecider::execute_initialize(
 
   result->success = true;
   goal_handle->succeed(result);
+}
+
+void EegDecider::handle_finalize_decider(
+  const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
+  std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response) {
+
+  RCLCPP_INFO(this->get_logger(), "Received finalize request for session: %s", request->session_id.c_str());
+
+  // Finalize the decider module if initialized
+  if (this->is_initialized && this->decider_wrapper) {
+    bool finalize_success = this->decider_wrapper->finalize_module();
+    if (!finalize_success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to finalize decider module");
+      response->success = false;
+      return;
+    }
+  }
+
+  // Reset initialization state
+  this->is_initialized = false;
+  this->is_enabled = false;
+  this->initialized_project_name = UNSET_STRING;
+  this->initialized_module_filename = UNSET_STRING;
+  this->initialized_working_directory = "";
+
+  // Clear buffers and state
+  this->sample_buffer.reset(0);
+  this->sensory_stimuli.clear();
+  this->event_queue = std::queue<std::string>();
+  this->error_occurred = false;
+
+  // Reset timing state
+  this->previous_stimulation_time = UNSET_TIME;
+  this->pulse_lockout_end_time = UNSET_TIME;
+  this->next_periodic_processing_time = UNSET_TIME;
+  this->timing_latency = 0.0;
+
+  // Reset session metadata
+  this->session_metadata = SessionMetadataState{};
+
+  RCLCPP_INFO(this->get_logger(), "Decider finalized successfully for session: %s", request->session_id.c_str());
+  response->success = true;
 }
 
 void EegDecider::publish_healthcheck() {

@@ -36,7 +36,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ExperimentState.msg"
 
   "srv/RequestTimedTrigger.srv"
+
   "srv/InitializeProtocol.srv"
+  "srv/FinalizePreprocessor.srv"
+  "srv/FinalizeDecider.srv"
+  "srv/FinalizePresenter.srv"
 
   "action/InitializePreprocessor.action"
   "action/InitializeDecider.action"

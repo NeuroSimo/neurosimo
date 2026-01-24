@@ -54,6 +54,11 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     std::bind(&EegPreprocessor::handle_initialize_cancel, this, std::placeholders::_1),
     std::bind(&EegPreprocessor::handle_initialize_accepted, this, std::placeholders::_1));
 
+  /* Finalize service server */
+  this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePreprocessor>(
+    "/pipeline/preprocessor/finalize",
+    std::bind(&EegPreprocessor::handle_finalize_preprocessor, this, std::placeholders::_1, std::placeholders::_2));
+
   /* Initialize variables. */
   this->preprocessor_wrapper = std::make_unique<PreprocessorWrapper>(logger);
 
@@ -172,6 +177,43 @@ void EegPreprocessor::execute_initialize(
 
   result->success = true;
   goal_handle->succeed(result);
+}
+
+void EegPreprocessor::handle_finalize_preprocessor(
+  const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
+  std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
+
+  RCLCPP_INFO(this->get_logger(), "Received finalize request for session: %s", request->session_id.c_str());
+
+  // Finalize the preprocessor module if initialized
+  if (this->is_initialized && this->preprocessor_wrapper) {
+    bool finalize_success = this->preprocessor_wrapper->finalize_module();
+    if (!finalize_success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to finalize preprocessor module");
+      response->success = false;
+      return;
+    }
+  }
+
+  // Reset initialization state
+  this->is_initialized = false;
+  this->is_enabled = false;
+  this->initialized_project_name = UNSET_STRING;
+  this->initialized_module_filename = UNSET_STRING;
+  this->initialized_working_directory = "";
+
+  // Clear buffers and state
+  this->sample_buffer.reset(0);
+  while (!this->deferred_processing_queue.empty()) {
+    this->deferred_processing_queue.pop();
+  }
+  this->error_occurred = false;
+
+  // Reset session metadata
+  this->session_metadata = SessionMetadataState{};
+
+  RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully for session: %s", request->session_id.c_str());
+  response->success = true;
 }
 
 void EegPreprocessor::publish_healthcheck() {

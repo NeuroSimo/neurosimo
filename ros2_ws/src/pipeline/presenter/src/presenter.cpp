@@ -57,6 +57,11 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     std::bind(&EegPresenter::handle_initialize_cancel, this, std::placeholders::_1),
     std::bind(&EegPresenter::handle_initialize_accepted, this, std::placeholders::_1));
 
+  /* Finalize service server */
+  this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePresenter>(
+    "/pipeline/presenter/finalize",
+    std::bind(&EegPresenter::handle_finalize_presenter, this, std::placeholders::_1, std::placeholders::_2));
+
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
 }
@@ -153,6 +158,42 @@ void EegPresenter::execute_initialize(
 
   result->success = true;
   goal_handle->succeed(result);
+}
+
+void EegPresenter::handle_finalize_presenter(
+  const std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Request> request,
+  std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Response> response) {
+
+  RCLCPP_INFO(this->get_logger(), "Received finalize request for session: %s", request->session_id.c_str());
+
+  // Finalize the presenter module if initialized
+  if (this->is_initialized && this->presenter_wrapper) {
+    bool finalize_success = this->presenter_wrapper->finalize_module();
+    if (!finalize_success) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to finalize presenter module");
+      response->success = false;
+      return;
+    }
+  }
+
+  // Reset initialization state
+  this->is_initialized = false;
+  this->is_enabled = false;
+  this->initialized_project_name = UNSET_STRING;
+  this->initialized_module_filename = UNSET_STRING;
+  this->initialized_working_directory = "";
+
+  // Clear sensory stimuli queue
+  while (!this->sensory_stimuli.empty()) {
+    this->sensory_stimuli.pop();
+  }
+
+  // Reset session state
+  this->session_started = false;
+  this->error_occurred = false;
+
+  RCLCPP_INFO(this->get_logger(), "Presenter finalized successfully for session: %s", request->session_id.c_str());
+  response->success = true;
 }
 
 void EegPresenter::publish_python_logs(double sample_time, bool is_initialization) {

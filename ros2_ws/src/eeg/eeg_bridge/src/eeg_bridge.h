@@ -9,7 +9,7 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/string.hpp"
 
-#include "eeg_interfaces/msg/eeg_info.hpp"
+#include "eeg_interfaces/msg/eeg_device_info.hpp"
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/srv/start_streaming.hpp"
 #include "eeg_interfaces/srv/stop_streaming.hpp"
@@ -74,7 +74,7 @@ private:
                           std::string actionable_message);
 
   eeg_interfaces::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
-                                          const eeg_interfaces::msg::EegInfo& eeg_info);
+                                          const eeg_interfaces::msg::EegDeviceInfo& device_info);
 
   void handle_sample(eeg_interfaces::msg::Sample sample);
   bool check_for_dropped_samples(uint64_t device_sample_index);
@@ -82,10 +82,10 @@ private:
   void create_publishers();
 
   void publish_eeg_healthcheck();
-  void publish_eeg_info();
+  void publish_device_info();
   void publish_streamer_state();
 
-  void set_eeg_device_state(EegDeviceState new_state);
+  void set_device_state(EegDeviceState new_state);
 
   void handle_start_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
@@ -104,12 +104,12 @@ private:
   uint8_t buffer[BUFFER_SIZE] = {0};
 
   /* State */
-  EegDeviceState eeg_device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
+  EegDeviceState device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
   ErrorState error_state = ErrorState::NO_ERROR;
 
   /* Publishers */
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;
-  rclcpp::Publisher<eeg_interfaces::msg::EegInfo>::SharedPtr eeg_info_publisher;
+  rclcpp::Publisher<eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LatencyMeasurementTrigger>::SharedPtr latency_measurement_trigger_publisher;

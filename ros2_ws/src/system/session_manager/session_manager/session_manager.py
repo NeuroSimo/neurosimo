@@ -9,14 +9,14 @@ from rclpy.executors import MultiThreadedExecutor
 from system_interfaces.msg import SessionState
 from pipeline_interfaces.action import InitializeDecider, InitializePreprocessor, InitializePresenter
 from pipeline_interfaces.srv import InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter
-from eeg_interfaces.action import InitializeSimulator
-from eeg_interfaces.srv import StartStreaming, StopStreaming
-from eeg_interfaces.msg import EegInfo
+from eeg_interfaces.action import InitializeSimulatorStream, InitializePlaybackStream
+from eeg_interfaces.srv import InitializeEegDeviceStream, StartStreaming, StopStreaming
+from eeg_interfaces.msg import StreamInfo, EegDeviceInfo
 
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 from rcl_interfaces.srv import GetParameters
-from threading import Lock
+from threading import Lock, Event, Thread, current_thread
 import time
 import uuid
 
@@ -69,23 +69,6 @@ class SessionManagerNode(Node):
             callback_group=self.callback_group
         )
 
-        # Subscribe to EEG device info
-        qos = QoSProfile(
-            depth=1,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
-            history=HistoryPolicy.KEEP_LAST
-        )
-        self.eeg_info_subscriber = self.create_subscription(
-            EegInfo,
-            '/eeg_device/info',
-            self.eeg_info_callback,
-            qos,
-            callback_group=self.callback_group
-        )
-
-        # EEG device information
-        self.eeg_info = EegInfo()
-
         # Create clients for initialization operations
         self.protocol_init_client = self.create_client(
             InitializeProtocol, '/pipeline/protocol/initialize', callback_group=self.callback_group)
@@ -95,8 +78,12 @@ class SessionManagerNode(Node):
             self, InitializeDecider, '/pipeline/decider/initialize', callback_group=self.callback_group)
         self.presenter_init_client = ActionClient(
             self, InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
-        self.simulator_init_client = ActionClient(
-            self, InitializeSimulator, '/eeg_simulator/initialize', callback_group=self.callback_group)
+        self.simulator_stream_init_client = ActionClient(
+            self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
+        self.eeg_device_stream_init_client = self.create_client(
+            InitializeEegDeviceStream, '/eeg_device/initialize', callback_group=self.callback_group)
+        self.playback_stream_init_client = ActionClient(
+            self, InitializePlaybackStream, '/playback/initialize', callback_group=self.callback_group)
 
         # Create clients for finalization operations
         self.preprocessor_finalize_client = self.create_client(
@@ -128,48 +115,50 @@ class SessionManagerNode(Node):
         self.get_parameters_client = self.create_client(
             GetParameters, '/session_configurator/get_parameters', callback_group=self.callback_group)
 
-        # Session state
-        self.session_lock = Lock()
-        self.session_running = False
-        self.session_id = None
-        self.current_data_source = None
-        self.current_project_name = None
-        self.session_stage = SessionState.STOPPED
+        # External state
+        self._current_project_name = None
 
-        # Session configuration (fetched from ROS parameters)
-        self.session_config = {}
+        # Session state
+        self._session_thread = None
+        self._thread_lock = Lock()
+        self._stop_event = Event()
 
         # Publish initial idle state
-        self.publish_session_state()
+        self.publish_session_state(False, SessionState.STOPPED)
 
         self.logger.info("Session Manager initialized")
 
-    def publish_session_state(self):
+    # Helper functions
+    def publish_session_state(self, is_running, stage):
         """Publish current session state."""
         msg = SessionState()
-        msg.is_running = self.session_running
-        msg.stage = self.session_stage
+        msg.is_running = is_running
+        msg.stage = stage
         self.session_state_publisher.publish(msg)
 
+    # Callbacks for external state updates
+    def active_project_callback(self, msg):
+        """Callback for active project topic updates."""
+        self._current_project_name = msg.data
+        self.logger.info(f"Active project updated: {self._current_project_name}")
+
+    # Service callbacks
     def start_session_callback(self, request, response):
         """Handle start session service calls."""
         self.logger.info('Received start session request')
 
-        with self.session_lock:
-            if self.session_running:
+        with self._thread_lock:
+            if self._session_thread is not None and self._session_thread.is_alive():
                 self.logger.warn('Session already running, ignoring start request')
                 response.success = False
-                response.message = 'Session already running'
                 return response
 
-            # Start session in background thread
-            import threading
-            session_thread = threading.Thread(target=self.run_session)
-            session_thread.daemon = True
-            session_thread.start()
+            self._stop_event.clear()
+
+            self._session_thread = Thread(target=self.run_session, args=(self._current_project_name,), daemon=True)
+            self._session_thread.start()
 
             response.success = True
-            response.message = 'Session started'
             self.logger.info('Session start request accepted')
 
         return response
@@ -178,95 +167,98 @@ class SessionManagerNode(Node):
         """Handle stop session service calls."""
         self.logger.info('Received stop session request')
 
-        with self.session_lock:
-            if not self.session_running:
+        with self._thread_lock:
+            if self._session_thread is None or not self._session_thread.is_alive():
                 self.logger.info('No session running to stop')
                 response.success = False
-                response.message = 'No session running'
                 return response
 
-            # Signal session to stop
-            self.session_running = False
-            self.publish_session_state()
+            self._stop_event.set()
 
             response.success = True
-            response.message = 'Session stop requested'
             self.logger.info('Session stop request accepted')
 
         return response
 
-    def active_project_callback(self, msg):
-        """Callback for active project topic updates."""
-        self.current_project_name = msg.data
-        self.logger.info(f"Active project updated: {self.current_project_name}")
-
-    def eeg_info_callback(self, msg):
-        """Callback for EEG device info updates."""
-        self.eeg_info = msg
-        self.logger.debug(f"EEG info updated: sampling_freq={msg.sampling_frequency}, eeg_channels={msg.num_eeg_channels}, emg_channels={msg.num_emg_channels}")
-
-    def run_session(self):
+    def run_session(self, project_name):
         """Run a complete session lifecycle."""
-        with self.session_lock:
-            self.session_running = True
-            self.session_id = list(uuid.uuid4().bytes)
-            self.session_stage = SessionState.INITIALIZING
-            self.publish_session_state()
+        session_id = list(uuid.uuid4().bytes)
 
+        # Set session state to initializing
+        self.publish_session_state(True, SessionState.INITIALIZING)
+
+        # Fetch session parameters
+        session_config = self.get_session_parameters()
+        if session_config is None:
+            self.logger.error('Failed to get session parameters')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Initialize data stream first to get stream info
+        stream_info = self.initialize_stream(session_id, session_config, project_name)
+        if stream_info is None:
+            self.logger.error('Stream initialization failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Initialize protocol
+        if not self.initialize_protocol(session_id, session_config, project_name):
+            self.logger.error('Protocol initialization failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Initialize preprocessor
+        if not self.initialize_component(self.preprocessor_init_client, '/pipeline/preprocessor/initialize', 'preprocessor', session_config, session_id, project_name, stream_info):
+            self.logger.error('Preprocessor initialization failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Initialize decider
+        if not self.initialize_component(self.decider_init_client, '/pipeline/decider/initialize', 'decider', session_config, session_id, project_name, stream_info):
+            self.logger.error('Decider initialization failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Initialize presenter
+        if not self.initialize_component(self.presenter_init_client, '/pipeline/presenter/initialize', 'presenter', session_config, session_id, project_name, stream_info):
+            self.logger.error('Presenter initialization failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Start data streaming
+        if not self.start_data_streaming(session_config, session_id):
+            self.logger.error('Data streaming start failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Set session state to running
+        self.publish_session_state(True, SessionState.RUNNING)
+
+        # Run session loop
+        while rclpy.ok() and not self._stop_event.wait(timeout=0.1):
+            pass
+
+        self.publish_session_state(False, SessionState.FINALIZING)
+
+        # Stop data streaming first
+        self.stop_data_streaming(session_config, session_id)
+
+        # Finalize session components
+        self.finalize_session_components(session_id)
+
+        # Publish stopped state
+        self.publish_session_state(False, SessionState.STOPPED)
+
+        # Clear thread reference
+        with self._thread_lock:
+            if self._session_thread is current_thread():
+                self._session_thread = None
+
+    def get_session_parameters(self):
+        """Get session parameters from session configurator."""
         try:
-            # PHASE: FETCHING_PARAMS
-            if not self.fetch_session_parameters():
-                self.session_stage = SessionState.STOPPED
-                self.session_running = False
-                self.session_id = None
-                self.publish_session_state()
-                return
+            session_config = {}
 
-            # PHASE: INITIALIZING
-            self.session_stage = SessionState.INITIALIZING
-            self.publish_session_state()
-            if not self.initialize_session_components():
-                self.session_stage = SessionState.STOPPED
-                self.session_running = False
-                self.session_id = None
-                self.publish_session_state()
-                return
-
-            # PHASE: STARTING_STREAMING
-            self.session_stage = SessionState.INITIALIZING
-            self.publish_session_state()
-            if not self.start_data_streaming():
-                self.session_stage = SessionState.STOPPED
-                self.session_running = False
-                self.session_id = None
-                self.publish_session_state()
-                return
-
-            # PHASE: RUNNING
-            self.session_stage = SessionState.RUNNING
-            self.publish_session_state()
-            self.run_session_loop()
-
-        except Exception as e:
-            self.logger.error(f'Error during session run: {str(e)}')
-        finally:
-            self.session_stage = SessionState.FINALIZING
-            self.publish_session_state()
-
-            # Stop data streaming first
-            self.stop_data_streaming(self.session_id)
-
-            # Finalize session components
-            self.finalize_session_components(self.session_id)
-
-            self.session_running = False
-            self.session_id = None
-            self.session_stage = SessionState.STOPPED
-            self.publish_session_state()
-
-    def fetch_session_parameters(self):
-        """Fetch session parameters from session configurator."""
-        try:
             # Parameter names to fetch from session configurator
             param_names = [
                 'notes', 'subject_id',
@@ -286,7 +278,7 @@ class SessionManagerNode(Node):
 
             if response is None:
                 self.logger.error('Failed to get parameters from session configurator')
-                return False
+                return None
 
             # Extract parameter values
             # ROS2 parameter types: NOT_SET=0, BOOL=1, INTEGER=2, DOUBLE=3, STRING=4
@@ -294,67 +286,78 @@ class SessionManagerNode(Node):
                 param_name = param_names[i]
                 self.logger.debug(f"Received parameter {param_name}: type={param.type}, value={param}")
                 if param.type == 1:  # BOOL
-                    self.session_config[param_name] = param.bool_value
+                    session_config[param_name] = param.bool_value
                 elif param.type == 2:  # INTEGER
-                    self.session_config[param_name] = param.integer_value
+                    session_config[param_name] = param.integer_value
                 elif param.type == 3:  # DOUBLE
-                    self.session_config[param_name] = param.double_value
+                    session_config[param_name] = param.double_value
                 elif param.type == 4:  # STRING
-                    self.session_config[param_name] = param.string_value
+                    session_config[param_name] = param.string_value
                 else:
                     self.logger.error(f'Unsupported parameter type {param.type} for {param_name}')
-                    return False
+                    return None
 
-            self.logger.info(f'Fetched session config: subject={self.session_config["subject_id"]}, '
-                           f'data_source={self.session_config["data_source"]}, '
-                           f'protocol={self.session_config["experiment.protocol"]}')
+            self.logger.info(f'Fetched session config: subject={session_config["subject_id"]}, '
+                           f'data_source={session_config["data_source"]}, '
+                           f'protocol={session_config["experiment.protocol"]}')
 
-            return True
+            return session_config
 
         except Exception as e:
             self.logger.error(f'Failed to fetch session parameters: {e}')
-            return False
+            return None
 
-    def initialize_session_components(self):
-        """Initialize all session components in sequence."""
-        # Initialize protocol
-        if not self.initialize_protocol():
-            return False
+    def initialize_stream(self, session_id, session_config, project_name):
+        """Initialize the data stream source (simulator, device, or playback)."""
+        data_source = session_config.get('data_source', '')
+        self.logger.info(f'Initializing stream source: {data_source}')
 
-        # Initialize preprocessor
-        if not self.initialize_component(self.preprocessor_init_client, '/pipeline/preprocessor/initialize', 'preprocessor'):
-            return False
+        stream_info = StreamInfo()
 
-        # Initialize decider
-        if not self.initialize_component(self.decider_init_client, '/pipeline/decider/initialize', 'decider'):
-            return False
-
-        # Initialize presenter
-        if not self.initialize_component(self.presenter_init_client, '/pipeline/presenter/initialize', 'presenter'):
-            return False
-
-        # Initialize simulator if data source is simulator
-        data_source = self.session_config.get('data_source', '')
         if data_source == 'simulator':
-            if not self.initialize_simulator():
-                return False
+            dataset_filename = session_config.get('simulator.dataset_filename', '')
+            start_time = session_config.get('simulator.start_time', 0.0)
 
-        return True
+            goal = InitializeSimulatorStream.Goal()
+            goal.session_id = session_id
+            goal.project_name = project_name
+            goal.dataset_filename = dataset_filename
+            goal.start_time = start_time
 
-    def initialize_component(self, client, action_name, component_name):
+            result = self.call_action(self.simulator_stream_init_client, goal, '/eeg_simulator/initialize')
+            if result is None:
+                return None
+            stream_info = result.stream_info
+
+        elif data_source == 'eeg_device':
+            request = InitializeEegDeviceStream.Request()
+            # Request is currently empty as per requirement
+            
+            response = self.call_service(request, self.eeg_device_stream_init_client, '/eeg_device/initialize')
+            if response is None:
+                return None
+            stream_info = response.stream_info
+
+        elif data_source == 'playback':
+            # Playback initialization is dummy for now
+            self.logger.info('Playback initialization (dummy)')
+            stream_info = StreamInfo()
+            stream_info.sampling_frequency = 0
+            stream_info.num_eeg_channels = 0
+            stream_info.num_emg_channels = 0
+
+        else:
+            self.logger.error(f'Unknown data source: {data_source}')
+            return None
+
+        self.logger.info(f'Stream initialized successfully. Stream info: {stream_info.sampling_frequency}Hz, {stream_info.num_eeg_channels} EEG channels')
+        return stream_info
+
+    def initialize_component(self, client, action_name, component_name, session_config, session_id, project_name, stream_info):
         """Initialize a single pipeline component."""
-        if self.current_project_name is None:
-            self.logger.error(f'Cannot initialize {component_name}: no active project set')
-            return False
-
-        # Get ROS parameters
-        module_filename = self.session_config.get(f'{component_name}.module', '')
-        enabled = self.session_config.get(f'{component_name}.enabled', False)
-        subject_id = self.session_config.get('subject_id', '')
-
-        if not module_filename:
-            self.logger.error(f'Cannot initialize {component_name}: no module filename configured')
-            return False
+        module_filename = session_config.get(f'{component_name}.module', '')
+        enabled = session_config.get(f'{component_name}.enabled', False)
+        subject_id = session_config.get('subject_id', '')
 
         if component_name == 'preprocessor':
             goal = InitializePreprocessor.Goal()
@@ -366,19 +369,19 @@ class SessionManagerNode(Node):
             self.logger.error(f'Unknown component name: {component_name}')
             return False
 
-        goal.session_id = self.session_id
-        goal.project_name = self.current_project_name
+        goal.session_id = session_id
+        goal.project_name = project_name
         goal.module_filename = module_filename
         goal.enabled = enabled
         goal.subject_id = subject_id
 
         if component_name == 'preprocessor' or component_name == 'decider':
-            goal.sampling_frequency = self.eeg_info.sampling_frequency
-            goal.num_eeg_channels = self.eeg_info.num_eeg_channels
-            goal.num_emg_channels = self.eeg_info.num_emg_channels
+            goal.sampling_frequency = stream_info.sampling_frequency
+            goal.num_eeg_channels = stream_info.num_eeg_channels
+            goal.num_emg_channels = stream_info.num_emg_channels
 
         if component_name == 'decider':
-            goal.preprocessor_enabled = self.session_config.get('preprocessor.enabled', False)
+            goal.preprocessor_enabled = session_config.get('preprocessor.enabled', False)
 
         result = self.call_action(client, goal, action_name)
 
@@ -392,20 +395,12 @@ class SessionManagerNode(Node):
         self.logger.info(f'{component_name} initialized successfully')
         return True
 
-    def initialize_protocol(self):
-        """Initialize protocol with project name and protocol filename."""
-        if self.current_project_name is None:
-            self.logger.error('No active project set')
-            return False
-
-        protocol_filename = self.session_config.get('experiment.protocol', '')
-        if not protocol_filename:
-            self.logger.error('No protocol filename configured')
-            return False
+    def initialize_protocol(self, session_id, session_config, project_name):
+        protocol_filename = session_config.get('experiment.protocol', '')
 
         request = InitializeProtocol.Request()
-        request.session_id = self.session_id
-        request.project_name = self.current_project_name
+        request.session_id = session_id
+        request.project_name = project_name
         request.protocol_filename = protocol_filename
 
         response = self.call_service(request, self.protocol_init_client, '/pipeline/protocol/initialize')
@@ -420,6 +415,7 @@ class SessionManagerNode(Node):
         self.logger.info(f'Protocol initialized successfully')
         return True
 
+    # Finalization functions
     def finalize_session_components(self, session_id):
         """Finalize all session components in reverse order."""
         # Finalize presenter
@@ -448,9 +444,42 @@ class SessionManagerNode(Node):
 
         self.logger.info(f'Session finalization completed')
 
-    def stop_data_streaming(self, session_id):
+    # Streaming functions
+    def start_data_streaming(self, session_config, session_id):
+        """Start the data streaming service."""
+        data_source = session_config.get('data_source', '')
+
+        # Choose the appropriate streaming service based on data source
+        if data_source == 'playback':
+            client = self.playback_streaming_start_client
+            service_name = '/playback/streaming/start'
+        elif data_source == 'simulator':
+            client = self.eeg_simulator_streaming_start_client
+            service_name = '/eeg_simulator/streaming/start'
+        elif data_source == 'eeg_device':
+            client = self.eeg_device_streaming_start_client
+            service_name = '/eeg_device/streaming/start'
+        else:
+            self.logger.error(f'Unknown data source: {data_source}')
+            return False
+
+        # Call the streaming service
+        request = StartStreaming.Request()
+        request.session_id = session_id
+        response = self.call_service(request, client, service_name)
+
+        if response is None:
+            return False
+
+        if not response.success:
+            self.logger.error(f'Data streaming start failed: {response.message}')
+            return False
+
+        return True
+
+    def stop_data_streaming(self, session_config, session_id):
         """Stop the data streaming service."""
-        data_source = self.current_data_source
+        data_source = session_config.get('data_source', '')
 
         # Choose the appropriate streaming stop service based on data source
         if data_source == 'playback':
@@ -475,75 +504,6 @@ class SessionManagerNode(Node):
         except Exception as e:
             self.logger.error(f'Error stopping streaming for {data_source}: {e}')
 
-    def initialize_simulator(self):
-        """Initialize simulator with project name, dataset filename, and start time."""
-        if self.current_project_name is None:
-            self.logger.error('Cannot initialize simulator: no active project set')
-            return False
-
-        dataset_filename = self.session_config.get('simulator.dataset_filename', '')
-        start_time = self.session_config.get('simulator.start_time', 0.0)
-
-        if not dataset_filename:
-            self.logger.error('Cannot initialize simulator: no dataset filename configured')
-            return False
-
-        goal = InitializeSimulator.Goal()
-        goal.session_id = self.session_id
-        goal.project_name = self.current_project_name
-        goal.dataset_filename = dataset_filename
-        goal.start_time = start_time
-
-        result = self.call_action(self.simulator_init_client, goal, '/eeg_simulator/initialize')
-
-        if result is None:
-            return False
-
-        if not result.success:
-            self.logger.error('Simulator initialization failed')
-            return False
-
-        self.logger.info('Simulator initialized successfully')
-        return True
-
-    def start_data_streaming(self):
-        """Start the data streaming service."""
-        data_source = self.session_config['data_source']
-
-        # Choose the appropriate streaming service based on data source
-        if data_source == 'playback':
-            client = self.playback_streaming_start_client
-            service_name = '/playback/streaming/start'
-        elif data_source == 'simulator':
-            client = self.eeg_simulator_streaming_start_client
-            service_name = '/eeg_simulator/streaming/start'
-        elif data_source == 'eeg_device':
-            client = self.eeg_device_streaming_start_client
-            service_name = '/eeg_device/streaming/start'
-        else:
-            self.logger.error(f'Unknown data source: {data_source}')
-            return False
-
-        # Call the streaming service
-        request = StartStreaming.Request()
-        request.session_id = self.session_id
-        response = self.call_service(request, client, service_name)
-
-        if response is None:
-            return False
-
-        if not response.success:
-            self.logger.error(f'Data streaming start failed: {response.message}')
-            return False
-
-        self.current_data_source = data_source
-        return True
-
-    def run_session_loop(self):
-        """Run the main session loop until completion or cancellation."""
-        while rclpy.ok() and self.session_running:
-            time.sleep(0.1)  # Check every 100ms
-
     def call_action(self, client, goal, action_name, timeout_sec=30.0):
         """Call an action."""
         if not client.wait_for_server(timeout_sec=1.0):
@@ -555,7 +515,7 @@ class SessionManagerNode(Node):
 
         # Wait for goal acceptance
         while not send_goal_future.done():
-            if not self.session_running:
+            if self._stop_event.is_set():
                 return None
 
             if time.time() - start_time > timeout_sec:
@@ -575,7 +535,7 @@ class SessionManagerNode(Node):
 
             # Wait for result
             while not result_future.done():
-                if not self.session_running:
+                if self._stop_event.is_set():
                     try:
                         action_goal_handle.cancel_goal_async()
                     except:

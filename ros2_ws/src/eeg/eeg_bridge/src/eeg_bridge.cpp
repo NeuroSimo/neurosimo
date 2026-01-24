@@ -20,7 +20,7 @@ using namespace std::placeholders;
 
 /* Publisher topics */
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
-const std::string EEG_INFO_TOPIC = "/eeg_device/info";
+const std::string DEVICE_INFO_TOPIC = "/eeg_device/info";
 const std::string HEALTHCHECK_TOPIC = "/eeg/healthcheck";
 const std::string LATENCY_MEASUREMENT_TRIGGER_TOPIC = "/pipeline/latency_measurement_trigger";
 
@@ -113,8 +113,8 @@ void EegBridge::create_publishers() {
   this->eeg_sample_publisher =
       this->create_publisher<eeg_interfaces::msg::Sample>(EEG_RAW_TOPIC, EEG_QUEUE_LENGTH);
 
-  this->eeg_info_publisher =
-      this->create_publisher<eeg_interfaces::msg::EegInfo>(EEG_INFO_TOPIC, qos_persist_latest);
+  this->device_info_publisher =
+      this->create_publisher<eeg_interfaces::msg::EegDeviceInfo>(DEVICE_INFO_TOPIC, qos_persist_latest);
 
   this->streamer_state_publisher =
       this->create_publisher<system_interfaces::msg::StreamerState>("/eeg_bridge/state", qos_persist_latest);
@@ -139,13 +139,13 @@ void EegBridge::create_publishers() {
 
   /* Publish initial states. */
   publish_streamer_state();
-  publish_eeg_info();
+  publish_device_info();
 }
 
-void EegBridge::publish_eeg_info() {
-  auto eeg_info = this->eeg_adapter->get_eeg_info();
-  eeg_info.is_streaming = (this->eeg_device_state == EegDeviceState::EEG_DEVICE_STREAMING);
-  this->eeg_info_publisher->publish(eeg_info);
+void EegBridge::publish_device_info() {
+  auto device_info = this->eeg_adapter->get_device_info();
+  device_info.is_streaming = (this->device_state == EegDeviceState::EEG_DEVICE_STREAMING);
+  this->device_info_publisher->publish(device_info);
 }
 
 void EegBridge::publish_streamer_state() {
@@ -154,11 +154,11 @@ void EegBridge::publish_streamer_state() {
   this->streamer_state_publisher->publish(msg);
 }
 
-void EegBridge::set_eeg_device_state(EegDeviceState new_state) {
-  EegDeviceState previous_state = this->eeg_device_state;
-  this->eeg_device_state = new_state;
-  if (previous_state != this->eeg_device_state) {
-    publish_eeg_info();
+void EegBridge::set_device_state(EegDeviceState new_state) {
+  EegDeviceState previous_state = this->device_state;
+  this->device_state = new_state;
+  if (previous_state != this->device_state) {
+    publish_device_info();
   }
 }
 
@@ -177,7 +177,7 @@ void EegBridge::handle_start_streaming(
       std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received start streaming request");
 
-  if (this->eeg_device_state != EegDeviceState::EEG_DEVICE_STREAMING) {
+  if (this->device_state != EegDeviceState::EEG_DEVICE_STREAMING) {
     response->success = false;
     return;
   }
@@ -254,16 +254,16 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
 }
 
 eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
-                                                    const eeg_interfaces::msg::EegInfo& eeg_info) {
+                                                    const eeg_interfaces::msg::EegDeviceInfo& device_info) {
   auto sample = eeg_interfaces::msg::Sample();
   sample.eeg = adapter_sample.eeg;
   sample.emg = adapter_sample.emg;
   sample.time = adapter_sample.time;
   sample.pulse_delivered = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
 
-  sample.session.sampling_frequency = eeg_info.sampling_frequency;
-  sample.session.num_eeg_channels = eeg_info.num_eeg_channels;
-  sample.session.num_emg_channels = eeg_info.num_emg_channels;
+  sample.session.sampling_frequency = device_info.sampling_frequency;
+  sample.session.num_eeg_channels = device_info.num_eeg_channels;
+  sample.session.num_emg_channels = device_info.num_emg_channels;
   sample.session.is_simulation = false;
   sample.session.start_time = this->session_start_time;
 
@@ -271,7 +271,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
 }
 
 void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
-  set_eeg_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
+  set_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
 
   if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
@@ -333,7 +333,7 @@ void EegBridge::process_eeg_packet() {
     // Interpret timeout as the end of the stream. This can happen at the end of an actual stream
     // when using TurboLink, as the device does not send any data after the stream ends, or e.g.,
     // if the ethernet cable is disconnected in the middle of a stream.
-    set_eeg_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
+    set_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
 
     return;
   }
@@ -341,9 +341,9 @@ void EegBridge::process_eeg_packet() {
   // Process the packet
   AdapterPacket packet = this->eeg_adapter->process_packet(this->buffer, BUFFER_SIZE);
 
-  auto eeg_info = this->eeg_adapter->get_eeg_info();
+  auto device_info = this->eeg_adapter->get_device_info();
 
-  if (eeg_info.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
+  if (device_info.sampling_frequency == UNSET_SAMPLING_FREQUENCY) {
     RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "No sampling frequency set");
     return;
   }
@@ -357,7 +357,7 @@ void EegBridge::process_eeg_packet() {
       break;
     }
 
-    auto ros_sample = create_ros_sample(packet.sample, eeg_info);
+    auto ros_sample = create_ros_sample(packet.sample, device_info);
 
     // Handle trigger_a (latency measurement trigger) if present
     if (packet.sample.trigger_a) {
@@ -389,12 +389,12 @@ void EegBridge::process_eeg_packet() {
 
   case ERROR:
     RCLCPP_ERROR(this->get_logger(), "Error reading data packet.");
-    set_eeg_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
+    set_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
     break;
 
   case END:
     RCLCPP_INFO(this->get_logger(), "EEG device measurement stopped.");
-    set_eeg_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
+    set_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
     break;
 
   default:

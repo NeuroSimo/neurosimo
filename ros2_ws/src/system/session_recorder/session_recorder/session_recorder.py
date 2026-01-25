@@ -1,1 +1,306 @@
-# TBD
+import rclpy
+from rclpy.node import Node
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import SingleThreadedExecutor
+from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
+
+from system_interfaces.srv import StartRecording, StopRecording
+from system_interfaces.msg import RecorderState, SessionConfig
+
+import os
+import json
+import uuid
+import signal
+import subprocess
+from datetime import datetime
+import time
+
+
+# Topics to record during a session
+TOPICS_TO_RECORD = [
+    # EEG data flow
+    '/eeg/raw',
+    '/eeg/enriched',
+    '/eeg/preprocessed',
+
+    # Pipeline outputs
+    '/pipeline/decision_info',
+    '/pipeline/timing_latency',
+    '/pipeline/experiment_state',
+    '/sensory_stimulus',
+
+    # Session state
+    '/session/state',
+
+    # Healthchecks (for debugging)
+    '/healthcheck/eeg_bridge',
+    '/healthcheck/preprocessor',
+    '/healthcheck/decider',
+    '/healthcheck/experiment_coordinator',
+]
+
+
+class SessionRecorderNode(Node):
+    def __init__(self):
+        super().__init__('session_recorder')
+        self.logger = self.get_logger()
+        self.callback_group = MutuallyExclusiveCallbackGroup()
+
+        # Recording state
+        self._is_recording = False
+        self._current_session_id = None
+        self._bag_path = None
+        self._recording_config = None
+        self._process = None
+        self._monitor_timer = None
+
+        # Create service servers
+        self.create_service(
+            StartRecording,
+            '/session_recorder/start',
+            self.start_recording_callback,
+            callback_group=self.callback_group
+        )
+
+        self.create_service(
+            StopRecording,
+            '/session_recorder/stop',
+            self.stop_recording_callback,
+            callback_group=self.callback_group
+        )
+
+        # Create state publisher (latched)
+        state_qos = QoSProfile(
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
+        self._state_publisher = self.create_publisher(
+            RecorderState,
+            '/session_recorder/state',
+            state_qos
+        )
+
+        # Publish initial STOPPED state
+        self._publish_state(RecorderState.STOPPED)
+
+        self.logger.info('Session Recorder initialized')
+
+    def start_recording_callback(self, request, response):
+        """Handle start recording service calls."""
+        self.logger.info('Received start recording request')
+
+        if self._is_recording:
+            self.logger.warn('Already recording, ignoring start request')
+            response.success = False
+            response.message = 'Already recording'
+            return response
+
+        # Store session configuration
+        self._current_session_id = bytes(request.session_id)
+        session_uuid = uuid.UUID(bytes=self._current_session_id)
+
+        self._recording_config = {
+            'session_id': session_uuid.hex,
+            'session_config': request.config.to_dict(),
+            'stream_info': request.stream_info.to_dict(),
+            'start_time': datetime.now().isoformat(),
+        }
+
+        # Create bag directory
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        bag_name = f'{timestamp}_{request.config.subject_id}'
+        project_bags_dir = f'/app/projects/{request.config.project_name}/recordings'
+
+        os.makedirs(project_bags_dir, exist_ok=True)
+        self._bag_path = os.path.join(project_bags_dir, bag_name)
+
+        # Build ros2 bag record command
+        cmd = [
+            'ros2', 'bag', 'record',
+            '--output', self._bag_path,
+            '--storage', 'mcap',
+        ]
+
+        # Add topics
+        for topic in TOPICS_TO_RECORD:
+            cmd.append(topic)
+
+        self.logger.info(f'Starting ros2 bag record: {" ".join(cmd)}')
+
+        # Start the recording process
+        self._process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid,  # Create new process group for clean shutdown
+        )
+
+        # Wait briefly and check if process started successfully
+        time.sleep(0.5)
+        if self._process.poll() is not None:
+            # Process exited immediately - read error
+            _, stderr = self._process.communicate()
+            error_msg = stderr.decode().strip() if stderr else 'Unknown error'
+            self.logger.error(f'ros2 bag record failed to start: {error_msg}')
+            response.success = False
+            response.message = f'Failed to start recording: {error_msg}'
+            self._cleanup_recording()
+            return response
+
+        # Write initial session metadata
+        self._write_session_metadata()
+
+        # Start monitor timer (5 Hz)
+        self._monitor_timer = self.create_timer(0.2, self._monitor_process_callback)
+
+        # Publish RECORDING state now that process is confirmed alive
+        self._publish_state(RecorderState.RECORDING)
+
+        self._is_recording = True
+
+        self.logger.info(f'Started recording to {self._bag_path}')
+        response.success = True
+        response.message = f'Recording started: {self._bag_path}'
+
+        return response
+
+    def stop_recording_callback(self, request, response):
+        """Handle stop recording service calls."""
+        self.logger.info('Received stop recording request')
+
+        if not self._is_recording:
+            self.logger.warn('Not currently recording')
+            response.success = False
+            response.bag_path = ''
+            return response
+
+        # Verify session ID matches
+        session_id = bytes(request.session_id)
+        if session_id != self._current_session_id:
+            self.logger.warn('Session ID mismatch, ignoring stop request')
+            response.success = False
+            response.bag_path = ''
+            return response
+
+        # Record end time
+        if self._recording_config:
+            self._recording_config['end_time'] = datetime.now().isoformat()
+
+        # Stop the recording process gracefully
+        bag_path = self._bag_path
+        self._stop_process()
+
+        # Publish STOPPED state
+        self._publish_state(RecorderState.STOPPED)
+
+        # Write final session metadata
+        self._write_session_metadata()
+
+        self._cleanup_recording()
+
+        self.logger.info(f'Stopped recording: {bag_path}')
+        response.success = True
+        response.bag_path = bag_path
+
+        return response
+
+    def _stop_process(self):
+        """Stop the recording process gracefully."""
+        process = self._process
+        if process is None:
+            return
+
+        try:
+            pgid = os.getpgid(process.pid)
+        except ProcessLookupError:
+            return
+
+        def _signal_and_wait(sig, timeout):
+            try:
+                os.killpg(pgid, sig)
+                process.wait(timeout=timeout)
+                return True
+            except subprocess.TimeoutExpired:
+                return False
+            except ProcessLookupError:
+                return True
+
+        # SIGINT: graceful shutdown
+        if _signal_and_wait(signal.SIGINT, timeout=5.0):
+            self.logger.info('Recording process stopped cleanly')
+            return
+
+        # SIGTERM: stronger request
+        self.logger.warn('Recording process did not stop, sending SIGTERM')
+        if _signal_and_wait(signal.SIGTERM, timeout=2.0):
+            return
+
+        # SIGKILL: last resort
+        self.logger.warn('Recording process still running, sending SIGKILL')
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+        process.wait()
+
+    def _publish_state(self, state):
+        """Publish recorder state."""
+        msg = RecorderState()
+        msg.state = state
+        self._state_publisher.publish(msg)
+
+    def _monitor_process_callback(self):
+        """Monitor the recording process for unexpected exits."""
+        if not self._is_recording or self._process is None:
+            return
+
+        # Check if process has exited
+        if self._process.poll() is None:
+            return
+
+        # Process has exited unexpectedly
+        exit_code = self._process.returncode
+        self.logger.error(f'Recording process exited unexpectedly with code {exit_code}')
+
+        # Publish ERROR state
+        self._publish_state(RecorderState.ERROR)
+
+        self._cleanup_recording()
+
+    def _write_session_metadata(self):
+        """Write session configuration to a sidecar JSON file."""
+        if self._bag_path and self._recording_config:
+            metadata_path = f'{self._bag_path}.session.json'
+            with open(metadata_path, 'w') as f:
+                json.dump(self._recording_config, f, indent=2)
+            self.logger.info(f'Wrote session metadata to {metadata_path}')
+
+    def _cleanup_recording(self):
+        """Clean up recording state."""
+        # Stop and cleanup monitor timer
+        if self._monitor_timer:
+            self._monitor_timer.cancel()
+            self._monitor_timer = None
+
+        self._process = None
+        self._is_recording = False
+        self._current_session_id = None
+        self._bag_path = None
+        self._recording_config = None
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = SessionRecorderNode()
+
+    executor = SingleThreadedExecutor()
+    executor.add_node(node)
+    executor.spin()
+
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

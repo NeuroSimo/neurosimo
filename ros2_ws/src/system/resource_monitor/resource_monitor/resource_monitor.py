@@ -8,7 +8,7 @@ from system_interfaces.msg import DiskStatus
 from .utils import parse_size_string
 
 
-# Hard-coded configuration for MVP
+# Hard-coded path to monitor disk space
 MONITORED_PATH = '/app/projects'
 CHECK_INTERVAL_SEC = 5.0
 

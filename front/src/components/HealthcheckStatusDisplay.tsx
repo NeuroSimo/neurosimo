@@ -13,7 +13,7 @@ const HealthcheckPanel = styled(StyledPanel)`
   height: 25px;
   position: fixed;
   top: 6px;
-  right: 3px;
+  right: 280px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-gap: 6px;

@@ -602,7 +602,7 @@ class SessionManagerNode(Node):
         if not response.success:
             self.logger.error('Recording start failed')
             return False
-
+ 
         self.logger.info('Recording started')
         return True
 

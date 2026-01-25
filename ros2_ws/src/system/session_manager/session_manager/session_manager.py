@@ -259,19 +259,19 @@ class SessionManagerNode(Node):
         #
         # Note: Presenter must be initialized before decider to ensure that potential sensory stimuli sent by decider
         #       during initialization are properly queued.
-        if not self.initialize_component(self.presenter_init_client, '/pipeline/presenter/initialize', 'presenter', session_config, session_id, stream_info):
+        if not self.initialize_presenter(session_config, session_id, stream_info):
             self.logger.error('Presenter initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
         # Initialize decider
-        if not self.initialize_component(self.decider_init_client, '/pipeline/decider/initialize', 'decider', session_config, session_id, stream_info):
+        if not self.initialize_decider(session_config, session_id, stream_info):
             self.logger.error('Decider initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
         # Initialize preprocessor
-        if not self.initialize_component(self.preprocessor_init_client, '/pipeline/preprocessor/initialize', 'preprocessor', session_config, session_id, stream_info):
+        if not self.initialize_preprocessor(session_config, session_id, stream_info):
             self.logger.error('Preprocessor initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
@@ -411,55 +411,68 @@ class SessionManagerNode(Node):
         self.logger.info(f'Stream initialized successfully. Stream info: {stream_info.sampling_frequency}Hz, {stream_info.num_eeg_channels} EEG channels')
         return stream_info
 
-    def initialize_component(self, client, service_name, component_name, session_config, session_id, stream_info):
-        """Initialize a single pipeline component."""
-        if component_name == 'decider':
-            module_filename = session_config.decider_module
-            enabled = session_config.decider_enabled
-        elif component_name == 'preprocessor':
-            module_filename = session_config.preprocessor_module
-            enabled = session_config.preprocessor_enabled
-        elif component_name == 'presenter':
-            module_filename = session_config.presenter_module
-            enabled = session_config.presenter_enabled
-        else:
-            module_filename = ''
-            enabled = False
-        subject_id = session_config.subject_id
-        project_name = session_config.project_name
-
-        if component_name == 'preprocessor':
-            request = InitializePreprocessor.Request()
-        elif component_name == 'decider':
-            request = InitializeDecider.Request()
-        elif component_name == 'presenter':
-            request = InitializePresenter.Request()
-        else:
-            self.logger.error(f'Unknown component name: {component_name}')
-            return False
-
+    def initialize_decider(self, session_config, session_id, stream_info):
+        """Initialize the decider component."""
+        request = InitializeDecider.Request()
         request.session_id = session_id
-        request.project_name = project_name
-        request.module_filename = module_filename
-        request.enabled = enabled
-        request.subject_id = subject_id
+        request.stream_info = stream_info
 
-        if component_name == 'preprocessor' or component_name == 'decider':
-            request.stream_info = stream_info
+        request.project_name = session_config.project_name
+        request.subject_id = session_config.subject_id
 
-        if component_name == 'decider':
-            request.preprocessor_enabled = session_config.preprocessor_enabled
+        request.module_filename = session_config.decider_module
+        request.enabled = session_config.decider_enabled
 
-        response = self.call_service(client, request, service_name)
+        request.preprocessor_enabled = session_config.preprocessor_enabled
 
-        if response is None:
+        response = self.call_service(self.decider_init_client, request, '/pipeline/decider/initialize')
+
+        if response is None or not response.success:
+            self.logger.error('Decider initialization failed')
             return False
 
-        if not response.success:
-            self.logger.error(f'{component_name} initialization failed')
+        self.logger.info('Decider initialized successfully')
+        return True
+
+    def initialize_preprocessor(self, session_config, session_id, stream_info):
+        """Initialize the preprocessor component."""
+        request = InitializePreprocessor.Request()
+        request.session_id = session_id
+        request.stream_info = stream_info
+
+        request.project_name = session_config.project_name
+        request.subject_id = session_config.subject_id
+
+        request.module_filename = session_config.preprocessor_module
+        request.enabled = session_config.preprocessor_enabled
+
+        response = self.call_service(self.preprocessor_init_client, request, '/pipeline/preprocessor/initialize')
+
+        if response is None or not response.success:
+            self.logger.error('Preprocessor initialization failed')
             return False
 
-        self.logger.info(f'{component_name} initialized successfully')
+        self.logger.info('Preprocessor initialized successfully')
+        return True
+
+    def initialize_presenter(self, session_config, session_id, stream_info):
+        """Initialize the presenter component."""
+        request = InitializePresenter.Request()
+        request.session_id = session_id
+
+        request.project_name = session_config.project_name
+        request.subject_id = session_config.subject_id
+
+        request.module_filename = session_config.presenter_module
+        request.enabled = session_config.presenter_enabled
+
+        response = self.call_service(self.presenter_init_client, request, '/pipeline/presenter/initialize')
+
+        if response is None or not response.success:
+            self.logger.error('Presenter initialization failed')
+            return False
+
+        self.logger.info('Presenter initialized successfully')
         return True
 
     def initialize_protocol(self, session_id, session_config):

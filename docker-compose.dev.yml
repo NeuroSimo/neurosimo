@@ -14,14 +14,3 @@ services:
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
-
-  bag_recorder:
-    build:
-      context: .
-      dockerfile: ros2_ws/src/utils/bag_recorder/Dockerfile
-    environment:
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - ROS_DOMAIN_ID
-    volumes:
-      - '$PROJECTS_ROOT:/app/projects'
-    network_mode: host

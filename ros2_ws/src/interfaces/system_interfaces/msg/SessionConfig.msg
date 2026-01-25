@@ -16,3 +16,7 @@ string protocol_filename
 
 # Data source info
 string data_source
+
+# Simulator parameters
+string simulator_dataset_filename
+float64 simulator_start_time

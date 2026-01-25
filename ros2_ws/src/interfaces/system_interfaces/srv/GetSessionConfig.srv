@@ -1,0 +1,5 @@
+# Get the current session configuration
+
+---
+bool success
+SessionConfig config

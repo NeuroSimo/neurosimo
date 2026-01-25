@@ -189,7 +189,7 @@ class SessionConfiguratorNode(Node):
         # Get current parameter values
         config = SessionConfig()
 
-            config.project_name = self.project_manager.get_active_project()
+        config.project_name = self.project_manager.get_active_project()
         config.subject_id = self.get_parameter('subject_id').get_parameter_value().string_value
         config.notes = self.get_parameter('notes').get_parameter_value().string_value
 
@@ -202,14 +202,14 @@ class SessionConfiguratorNode(Node):
         config.presenter_module = self.get_parameter('presenter.module').get_parameter_value().string_value
         config.presenter_enabled = self.get_parameter('presenter.enabled').get_parameter_value().bool_value
 
-            config.protocol_filename = self.get_parameter('experiment.protocol').get_parameter_value().string_value
-            config.data_source = self.get_parameter('data_source').get_parameter_value().string_value
-            config.simulator_dataset_filename = self.get_parameter('simulator.dataset_filename').get_parameter_value().string_value
-            config.simulator_start_time = self.get_parameter('simulator.start_time').get_parameter_value().double_value
+        config.protocol_filename = self.get_parameter('experiment.protocol').get_parameter_value().string_value
+        config.data_source = self.get_parameter('data_source').get_parameter_value().string_value
+        config.simulator_dataset_filename = self.get_parameter('simulator.dataset_filename').get_parameter_value().string_value
+        config.simulator_start_time = self.get_parameter('simulator.start_time').get_parameter_value().double_value
 
         response.config = config
         response.success = True
-
+ 
         self.logger.info(f"Returned session config: subject={config.subject_id}, data_source={config.data_source}")
 
         return response

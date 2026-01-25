@@ -10,6 +10,7 @@
   <depend>rclpy</depend>
   <depend>std_srvs</depend>
 
+  <depend>eeg_interfaces</depend>
   <depend>project_interfaces</depend>
   <depend>system_interfaces</depend>
   <depend>pipeline_interfaces</depend>

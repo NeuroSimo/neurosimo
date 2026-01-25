@@ -1,0 +1,6 @@
+# Stop recording and finalize the bag
+
+uint8[16] session_id
+---
+bool success
+string bag_path

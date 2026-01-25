@@ -6,9 +6,9 @@ import { StyledPanel } from 'styles/General'
 
 const HealthcheckMessagePanel = styled(StyledPanel)`
   width: 246px;
-  height: 40px;
+  height: 28px;
   position: fixed;
-  top: 75px;
+  top: 3px;
   right: 3px;
   z-index: 1000;
 `

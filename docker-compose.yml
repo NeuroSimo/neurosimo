@@ -158,6 +158,32 @@ services:
       - ROS_DOMAIN_ID
     network_mode: host
 
+  session_recorder:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/system/session_recorder/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
+  session_player:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/system/session_player/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
   trigger_timer:
     build:
       context: .

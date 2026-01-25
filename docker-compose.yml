@@ -134,6 +134,17 @@ services:
       # Provide access to sound devices
       - "/dev/snd:/dev/snd"
 
+  resource_monitor:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/system/resource_monitor/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID
+    network_mode: host
+
   session_configurator:
     build:
       context: .

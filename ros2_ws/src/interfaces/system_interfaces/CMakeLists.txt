@@ -23,6 +23,7 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(eeg_interfaces REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/DiskStatus.msg"
   "msg/Healthcheck.msg"
   "msg/HealthcheckStatus.msg"
   "msg/RecorderState.msg"

@@ -29,6 +29,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SessionConfig.msg"
   "msg/SessionState.msg"
   "msg/StreamerState.msg"
+  "srv/GetSessionConfig.srv"
   "srv/StartRecording.srv"
   "srv/StopRecording.srv"
   DEPENDENCIES eeg_interfaces

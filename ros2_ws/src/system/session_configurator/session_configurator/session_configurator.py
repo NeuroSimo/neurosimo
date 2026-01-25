@@ -10,6 +10,8 @@ from project_interfaces.srv import (
     ListProjects,
     SetActiveProject,
 )
+from system_interfaces.srv import GetSessionConfig
+from system_interfaces.msg import SessionConfig
 from project_interfaces.msg import FilenameList
 
 from std_msgs.msg import String
@@ -62,6 +64,7 @@ class SessionConfiguratorNode(Node):
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
         self.create_service(SetActiveProject, '/projects/active/set', self.set_active_project_callback, callback_group=self.callback_group)
+        self.create_service(GetSessionConfig, '/session_configurator/get_config', self.get_session_config_callback, callback_group=self.callback_group)
 
         # Publishers
         qos = QoSProfile(depth=1,
@@ -179,6 +182,36 @@ class SessionConfiguratorNode(Node):
             return response
 
         response.success = True
+        return response
+
+    def get_session_config_callback(self, request, response):
+        """Return the current session configuration."""
+        # Get current parameter values
+        config = SessionConfig()
+
+            config.project_name = self.project_manager.get_active_project()
+        config.subject_id = self.get_parameter('subject_id').get_parameter_value().string_value
+        config.notes = self.get_parameter('notes').get_parameter_value().string_value
+
+        config.decider_module = self.get_parameter('decider.module').get_parameter_value().string_value
+        config.decider_enabled = self.get_parameter('decider.enabled').get_parameter_value().bool_value
+
+        config.preprocessor_module = self.get_parameter('preprocessor.module').get_parameter_value().string_value
+        config.preprocessor_enabled = self.get_parameter('preprocessor.enabled').get_parameter_value().bool_value
+
+        config.presenter_module = self.get_parameter('presenter.module').get_parameter_value().string_value
+        config.presenter_enabled = self.get_parameter('presenter.enabled').get_parameter_value().bool_value
+
+            config.protocol_filename = self.get_parameter('experiment.protocol').get_parameter_value().string_value
+            config.data_source = self.get_parameter('data_source').get_parameter_value().string_value
+            config.simulator_dataset_filename = self.get_parameter('simulator.dataset_filename').get_parameter_value().string_value
+            config.simulator_start_time = self.get_parameter('simulator.start_time').get_parameter_value().double_value
+
+        response.config = config
+        response.success = True
+
+        self.logger.info(f"Returned session config: subject={config.subject_id}, data_source={config.data_source}")
+
         return response
 
     def parameter_change_callback(self, params):

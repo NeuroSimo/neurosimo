@@ -8,6 +8,8 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
+from system_interfaces.srv import StartRecording, StopRecording
+from system_interfaces.msg import SessionConfig
 from pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter
@@ -103,6 +105,12 @@ class SessionManagerNode(Node):
         self.presenter_finalize_client = self.create_client(
             FinalizePresenter, '/pipeline/presenter/finalize', callback_group=self.callback_group)
 
+        # Create clients for session recording
+        self.recording_start_client = self.create_client(
+            StartRecording, '/session_recorder/start', callback_group=self.callback_group)
+        self.recording_stop_client = self.create_client(
+            StopRecording, '/session_recorder/stop', callback_group=self.callback_group)
+
         # Create clients for streaming start operations
         self.playback_streaming_start_client = self.create_client(
             # TODO: Replace with playback service once implemented
@@ -152,6 +160,8 @@ class SessionManagerNode(Node):
             (self.eeg_simulator_streaming_stop_client, '/eeg_simulator/streaming/stop'),
             (self.eeg_device_streaming_stop_client, '/eeg_device/streaming/stop'),
             (self.get_parameters_client, '/session_configurator/get_parameters'),
+            (self.recording_start_client, '/session_recorder/start'),
+            (self.recording_stop_client, '/session_recorder/stop'),
         ]
         for client, topic in service_clients:
             while not client.wait_for_service(timeout_sec=1.0):
@@ -290,9 +300,16 @@ class SessionManagerNode(Node):
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
+        # Start recording
+        if not self.start_recording(session_id, session_config, project_name, stream_info):
+            self.logger.error('Recording start failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
         # Start data streaming
         if not self.start_data_streaming(session_config, session_id):
             self.logger.error('Data streaming start failed')
+            self.stop_recording(session_id)  # Clean up recording on failure
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
@@ -307,6 +324,9 @@ class SessionManagerNode(Node):
 
         # Stop data streaming first
         self.stop_data_streaming(session_config, session_id)
+
+        # Stop recording
+        self.stop_recording(session_id)
 
         # Finalize session components
         self.finalize_session_components(session_id)
@@ -601,6 +621,56 @@ class SessionManagerNode(Node):
             self.logger.info(f'Stopped streaming for data source: {data_source}')
         except Exception as e:
             self.logger.error(f'Error stopping streaming for {data_source}: {e}')
+
+    # Recording functions
+    def start_recording(self, session_id, session_config, project_name, stream_info):
+        """Start session recording."""
+        request = StartRecording.Request()
+        request.session_id = session_id
+
+        # Create session config message
+        config = SessionConfig()
+        config.project_name = project_name
+        config.subject_id = session_config.get('subject_id', '')
+        config.notes = session_config.get('notes', '')
+        config.decider_module = session_config.get('decider.module', '')
+        config.decider_enabled = session_config.get('decider.enabled', False)
+        config.preprocessor_module = session_config.get('preprocessor.module', '')
+        config.preprocessor_enabled = session_config.get('preprocessor.enabled', False)
+        config.presenter_module = session_config.get('presenter.module', '')
+        config.presenter_enabled = session_config.get('presenter.enabled', False)
+        config.protocol_filename = session_config.get('experiment.protocol', '')
+        config.data_source = session_config.get('data_source', '')
+        request.config = config
+        request.stream_info = stream_info
+
+        response = self.call_service(self.recording_start_client, request, '/session_recorder/start')
+
+        if response is None:
+            return False
+
+        if not response.success:
+            self.logger.error('Recording start failed')
+            return False
+
+        self.logger.info('Recording started')
+        return True
+
+    def stop_recording(self, session_id):
+        """Stop session recording."""
+        request = StopRecording.Request()
+        request.session_id = session_id
+
+        response = self.call_service(self.recording_stop_client, request, '/session_recorder/stop')
+
+        if response is None:
+            self.logger.warn('Failed to stop recording (no response)')
+            return
+
+        if response.success:
+            self.logger.info(f'Recording stopped: {response.bag_path}')
+        else:
+            self.logger.warn('Recording stop returned failure')
 
     def call_action(self, client, goal, action_name, timeout_sec=30.0):
         """Call an action."""

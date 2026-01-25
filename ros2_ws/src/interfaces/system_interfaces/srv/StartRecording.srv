@@ -1,0 +1,7 @@
+# Start recording a session bag
+
+uint8[16] session_id
+SessionConfig config
+eeg_interfaces/StreamInfo stream_info
+---
+bool success

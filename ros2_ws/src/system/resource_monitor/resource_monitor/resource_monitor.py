@@ -5,11 +5,11 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
 from system_interfaces.msg import DiskStatus
+from .utils import parse_size_string
 
 
 # Hard-coded configuration for MVP
 MONITORED_PATH = '/app/projects'
-THRESHOLD_BYTES = 20 * 1024 * 1024 * 1024  # 20 GiB
 CHECK_INTERVAL_SEC = 5.0
 
 
@@ -17,6 +17,17 @@ class ResourceMonitorNode(Node):
     def __init__(self):
         super().__init__('resource_monitor')
         self.logger = self.get_logger()
+
+        # Declare ROS parameters (no defaults - will fail if not provided)
+        self.declare_parameter('disk.warning_threshold', '')
+        self.declare_parameter('disk.error_threshold', '')
+
+        # Get parameter values and parse them to bytes
+        warning_threshold_str = self.get_parameter('disk.warning_threshold').value
+        error_threshold_str = self.get_parameter('disk.error_threshold').value
+
+        self._warning_threshold_bytes = parse_size_string(warning_threshold_str)
+        self._error_threshold_bytes = parse_size_string(error_threshold_str)
 
         # Create latched publisher for disk status
         status_qos = QoSProfile(
@@ -38,33 +49,36 @@ class ResourceMonitorNode(Node):
 
         self.logger.info(
             f'Resource Monitor initialized: monitoring {MONITORED_PATH}, '
-            f'threshold={THRESHOLD_BYTES / (1024**3):.1f} GiB'
+            f'warning_threshold="{warning_threshold_str}" ({self._warning_threshold_bytes / (1024**3):.1f} GiB), '
+            f'error_threshold="{error_threshold_str}" ({self._error_threshold_bytes / (1024**3):.1f} GiB)'
         )
 
     def _check_disk_space(self):
         """Check disk space and publish status."""
         msg = DiskStatus()
-        msg.path = MONITORED_PATH
-        msg.threshold_bytes = THRESHOLD_BYTES
+        msg.warning_threshold_bytes = self._warning_threshold_bytes
+        msg.error_threshold_bytes = self._error_threshold_bytes
 
         try:
             usage = shutil.disk_usage(MONITORED_PATH)
             msg.free_bytes = usage.free
             msg.total_bytes = usage.total
-            msg.free_percent = (usage.free / usage.total) * 100.0 if usage.total > 0 else 0.0
-            msg.is_ok = usage.free >= THRESHOLD_BYTES
+            msg.is_ok = usage.free >= self._error_threshold_bytes
 
-            if not msg.is_ok:
-                self.logger.warn(
+            if usage.free < self._warning_threshold_bytes:
+                log_level = self.logger.warn if usage.free >= self._error_threshold_bytes else self.logger.error
+                threshold_name = 'warning' if usage.free >= self._error_threshold_bytes else 'error'
+                threshold_bytes = self._warning_threshold_bytes if usage.free >= self._error_threshold_bytes else self._error_threshold_bytes
+
+                log_level(
                     f'Low disk space: {msg.free_bytes / (1024**3):.1f} GiB free, '
-                    f'threshold is {THRESHOLD_BYTES / (1024**3):.1f} GiB'
+                    f'{threshold_name} threshold is {threshold_bytes / (1024**3):.1f} GiB'
                 )
 
         except OSError as e:
             self.logger.error(f'Failed to check disk space for {MONITORED_PATH}: {e}')
             msg.free_bytes = 0
             msg.total_bytes = 0
-            msg.free_percent = 0.0
             msg.is_ok = False
 
         self._disk_status_publisher.publish(msg)

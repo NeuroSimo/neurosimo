@@ -143,6 +143,8 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
 
   session_configurator:

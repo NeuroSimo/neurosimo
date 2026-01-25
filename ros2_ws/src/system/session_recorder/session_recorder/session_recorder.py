@@ -5,7 +5,7 @@ from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
 from system_interfaces.srv import StartRecording, StopRecording
-from system_interfaces.msg import RecorderState, SessionConfig
+from system_interfaces.msg import RecorderState, SessionConfig, DiskStatus
 
 import os
 import json
@@ -54,6 +54,9 @@ class SessionRecorderNode(Node):
         self._process = None
         self._monitor_timer = None
 
+        # Disk status tracking
+        self._disk_space_ok = False
+
         # Create service servers
         self.create_service(
             StartRecording,
@@ -84,7 +87,24 @@ class SessionRecorderNode(Node):
         # Publish initial STOPPED state
         self._publish_state(RecorderState.STOPPED)
 
+        # Subscribe to disk status with latched QoS to match publisher
+        disk_status_qos = QoSProfile(
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
+        self._disk_status_subscriber = self.create_subscription(
+            DiskStatus,
+            '/system/disk_status',
+            self._disk_status_callback,
+            disk_status_qos
+        )
+
         self.logger.info('Session Recorder initialized')
+
+    def _disk_status_callback(self, msg):
+        """Handle disk status updates."""
+        self._disk_space_ok = msg.is_ok
 
     def start_recording_callback(self, request, response):
         """Handle start recording service calls."""
@@ -93,7 +113,12 @@ class SessionRecorderNode(Node):
         if self._is_recording:
             self.logger.warn('Already recording, ignoring start request')
             response.success = False
-            response.message = 'Already recording'
+            return response
+
+        # Check disk status before allowing recording
+        if not self._disk_space_ok:
+            self.logger.warn('Disk space is insufficient, cannot start recording')
+            response.success = False
             return response
 
         # Store session configuration
@@ -144,7 +169,6 @@ class SessionRecorderNode(Node):
             error_msg = stderr.decode().strip() if stderr else 'Unknown error'
             self.logger.error(f'ros2 bag record failed to start: {error_msg}')
             response.success = False
-            response.message = f'Failed to start recording: {error_msg}'
             self._cleanup_recording()
             return response
 
@@ -161,7 +185,6 @@ class SessionRecorderNode(Node):
 
         self.logger.info(f'Started recording to {self._bag_path}')
         response.success = True
-        response.message = f'Recording started: {self._bag_path}'
 
         return response
 

@@ -46,6 +46,62 @@ DATA_TYPE_TO_NAME = {
     ExportDataType.SENSORY_STIMULI: 'sensory_stimuli',
 }
 
+# EEG export field definitions
+EEG_FIELDS_RAW = [
+    'sample_index',
+    'time',
+    'arrival_time',
+    'is_session_start',
+    'is_session_end',
+    'pulse_delivered',
+]
+
+EEG_FIELDS_ENRICHED = EEG_FIELDS_RAW + [
+    'in_rest',
+    'paused',
+    'experiment_time',
+    'stage_name',
+    'stage_index',
+    'trial',
+    'pulse_count',
+]
+
+EEG_FIELDS_PREPROCESSED = EEG_FIELDS_ENRICHED + [
+    'valid',
+    'preprocessing_duration',
+]
+
+# Mapping from topic to field list
+TOPIC_TO_FIELDS = {
+    '/eeg/raw': EEG_FIELDS_RAW,
+    '/eeg/enriched': EEG_FIELDS_ENRICHED,
+    '/eeg/preprocessed': EEG_FIELDS_PREPROCESSED,
+}
+
+# Decision info export fields
+DECISION_INFO_FIELDS = [
+    'decision_time',
+    'stimulate',
+    'feasible',
+    'decider_latency',
+    'preprocessor_latency',
+    'total_latency',
+]
+
+# Log export fields
+LOG_FIELDS = [
+    'sample_time',
+    'is_initialization',
+    'level',
+    'message',
+]
+
+# Sensory stimulus export fields (base fields, parameters added dynamically)
+SENSORY_STIMULUS_FIELDS = [
+    'time',
+    'type',
+]
+
 
 class SessionExporterNode(Node):
     def __init__(self):
@@ -276,7 +332,7 @@ class SessionExporterNode(Node):
             output_file = export_dir / f'{name}.csv'
             
             if topic in ['/eeg/raw', '/eeg/enriched', '/eeg/preprocessed']:
-                writers[topic] = self._create_eeg_writer(output_file)
+                writers[topic] = self._create_eeg_writer(output_file, topic)
             elif topic == '/pipeline/decision_info':
                 writers[topic] = self._create_decision_info_writer(output_file)
             elif topic in ['/pipeline/decider/log', '/pipeline/preprocessor/log', '/pipeline/presenter/log']:
@@ -352,7 +408,7 @@ class SessionExporterNode(Node):
 
         return exported_files
 
-    def _create_eeg_writer(self, output_file):
+    def _create_eeg_writer(self, output_file, topic):
         """Create a CSV writer for EEG messages with fixed columns."""
         f = open(output_file, 'w', newline='')
         return {
@@ -360,97 +416,50 @@ class SessionExporterNode(Node):
             'writer': None,  # Will be created after first message determines column count
             'path': output_file,
             'fieldnames': None,
+            'topic': topic,
         }
 
     def _write_eeg_message(self, writer_info, timestamp, msg):
         """Write a single EEG message to CSV."""
-        timestamp_s = timestamp / 1e9
+        topic = writer_info['topic']
         
-        # On first message, determine fixed columns
+        # On first message, determine fixed columns based on topic type
         if writer_info['writer'] is None:
-            fieldnames = ['timestamp_ns', 'timestamp_s', 'time']
-            
-            # Add metadata fields
-            if hasattr(msg, 'sample_number'):
-                fieldnames.append('sample_number')
-            if hasattr(msg, 'paused'):
-                fieldnames.append('paused')
-            if hasattr(msg, 'in_rest'):
-                fieldnames.append('in_rest')
-            if hasattr(msg, 'valid'):
-                fieldnames.append('valid')
-            if hasattr(msg, 'pulse_delivered'):
-                fieldnames.append('pulse_delivered')
-            if hasattr(msg, 'experiment_time'):
-                fieldnames.append('experiment_time')
-            if hasattr(msg, 'trial'):
-                fieldnames.append('trial')
-            if hasattr(msg, 'pulse_count'):
-                fieldnames.append('pulse_count')
-            if hasattr(msg, 'stage_name'):
-                fieldnames.append('stage_name')
+            # Get base fields from topic configuration
+            fieldnames = TOPIC_TO_FIELDS[topic].copy()
             
             # Add EEG channels
-            if hasattr(msg, 'eeg_data') and msg.eeg_data:
-                for i in range(len(msg.eeg_data)):
-                    fieldnames.append(f'eeg_{i}')
+            for i in range(len(msg.eeg)):
+                fieldnames.append(f'eeg_{i}')
             
             # Add EMG channels
-            if hasattr(msg, 'emg_data') and msg.emg_data:
-                for i in range(len(msg.emg_data)):
-                    fieldnames.append(f'emg_{i}')
+            for i in range(len(msg.emg)):
+                fieldnames.append(f'emg_{i}')
             
             writer_info['fieldnames'] = fieldnames
             writer_info['writer'] = csv.DictWriter(writer_info['file'], fieldnames=fieldnames)
             writer_info['writer'].writeheader()
         
-        # Build row with fixed columns
-        row_data = {
-            'timestamp_ns': timestamp,
-            'timestamp_s': timestamp_s,
-            'time': msg.time,
-        }
+        # Build row from message attributes
+        row_data = {}
         
-        # Add metadata if present
-        if 'sample_number' in writer_info['fieldnames']:
-            row_data['sample_number'] = msg.sample_number
-        if 'paused' in writer_info['fieldnames']:
-            row_data['paused'] = msg.paused
-        if 'in_rest' in writer_info['fieldnames']:
-            row_data['in_rest'] = msg.in_rest
-        if 'valid' in writer_info['fieldnames']:
-            row_data['valid'] = msg.valid
-        if 'pulse_delivered' in writer_info['fieldnames']:
-            row_data['pulse_delivered'] = msg.pulse_delivered
-        if 'experiment_time' in writer_info['fieldnames']:
-            row_data['experiment_time'] = msg.experiment_time
-        if 'trial' in writer_info['fieldnames']:
-            row_data['trial'] = msg.trial
-        if 'pulse_count' in writer_info['fieldnames']:
-            row_data['pulse_count'] = msg.pulse_count
-        if 'stage_name' in writer_info['fieldnames']:
-            row_data['stage_name'] = msg.stage_name
+        # Add all configured fields
+        for field in TOPIC_TO_FIELDS[topic]:
+            row_data[field] = getattr(msg, field)
         
         # Add channel data
-        if hasattr(msg, 'eeg_data') and msg.eeg_data:
-            for i, val in enumerate(msg.eeg_data):
-                row_data[f'eeg_{i}'] = val
+        for i, val in enumerate(msg.eeg):
+            row_data[f'eeg_{i}'] = val
         
-        if hasattr(msg, 'emg_data') and msg.emg_data:
-            for i, val in enumerate(msg.emg_data):
-                row_data[f'emg_{i}'] = val
+        for i, val in enumerate(msg.emg):
+            row_data[f'emg_{i}'] = val
         
         writer_info['writer'].writerow(row_data)
 
     def _create_decision_info_writer(self, output_file):
         """Create a CSV writer for decision info messages."""
         f = open(output_file, 'w', newline='')
-        fieldnames = [
-            'timestamp_ns', 'timestamp_s', 'decision_time',
-            'stimulate', 'feasible',
-            'decider_latency', 'preprocessor_latency', 'total_latency'
-        ]
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=DECISION_INFO_FIELDS)
         writer.writeheader()
         return {
             'file': f,
@@ -460,26 +469,13 @@ class SessionExporterNode(Node):
 
     def _write_decision_info_message(self, writer_info, timestamp, msg):
         """Write a single decision info message to CSV."""
-        timestamp_s = timestamp / 1e9
-        writer_info['writer'].writerow({
-            'timestamp_ns': timestamp,
-            'timestamp_s': timestamp_s,
-            'decision_time': msg.decision_time,
-            'stimulate': msg.stimulate,
-            'feasible': msg.feasible,
-            'decider_latency': msg.decider_latency,
-            'preprocessor_latency': msg.preprocessor_latency,
-            'total_latency': msg.total_latency,
-        })
+        row_data = {field: getattr(msg, field) for field in DECISION_INFO_FIELDS}
+        writer_info['writer'].writerow(row_data)
 
     def _create_log_writer(self, output_file):
         """Create a CSV writer for log messages."""
         f = open(output_file, 'w', newline='')
-        fieldnames = [
-            'timestamp_ns', 'timestamp_s', 'sample_time',
-            'level', 'message', 'is_initialization'
-        ]
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=LOG_FIELDS)
         writer.writeheader()
         return {
             'file': f,
@@ -489,18 +485,10 @@ class SessionExporterNode(Node):
 
     def _write_log_message(self, writer_info, timestamp, msg):
         """Write log messages to CSV."""
-        timestamp_s = timestamp / 1e9
         # LogMessages contains a list of LogMessage
-        if hasattr(msg, 'messages'):
-            for log_msg in msg.messages:
-                writer_info['writer'].writerow({
-                    'timestamp_ns': timestamp,
-                    'timestamp_s': timestamp_s,
-                    'sample_time': log_msg.sample_time,
-                    'level': log_msg.level,
-                    'message': log_msg.message,
-                    'is_initialization': log_msg.is_initialization,
-                })
+        for log_msg in msg.messages:
+            row_data = {field: getattr(log_msg, field) for field in LOG_FIELDS}
+            writer_info['writer'].writerow(row_data)
 
     def _create_sensory_stimulus_writer(self, output_file):
         """Create a CSV writer for sensory stimulus messages."""
@@ -514,33 +502,25 @@ class SessionExporterNode(Node):
 
     def _write_sensory_stimulus_message(self, writer_info, timestamp, msg):
         """Write a single sensory stimulus message to CSV."""
-        timestamp_s = timestamp / 1e9
-        
         # On first message, determine fixed columns based on parameter keys
         if writer_info['writer'] is None:
-            fieldnames = ['timestamp_ns', 'timestamp_s', 'time', 'type']
+            fieldnames = SENSORY_STIMULUS_FIELDS.copy()
             
             # Add parameter columns
-            if hasattr(msg, 'parameters'):
-                param_keys = sorted([param.key for param in msg.parameters])
-                for key in param_keys:
-                    fieldnames.append(f'param_{key}')
+            param_keys = sorted([param.key for param in msg.parameters])
+            for key in param_keys:
+                fieldnames.append(f'param_{key}')
             
             writer_info['fieldnames'] = fieldnames
             writer_info['writer'] = csv.DictWriter(writer_info['file'], fieldnames=fieldnames)
             writer_info['writer'].writeheader()
         
-        row_data = {
-            'timestamp_ns': timestamp,
-            'timestamp_s': timestamp_s,
-            'time': msg.time,
-            'type': msg.type,
-        }
+        # Build row with base fields
+        row_data = {field: getattr(msg, field) for field in SENSORY_STIMULUS_FIELDS}
         
         # Add parameters
-        if hasattr(msg, 'parameters'):
-            for param in msg.parameters:
-                row_data[f'param_{param.key}'] = param.value
+        for param in msg.parameters:
+            row_data[f'param_{param.key}'] = param.value
         
         writer_info['writer'].writerow(row_data)
 

@@ -99,58 +99,6 @@ void DeciderWrapper::remove_modules(const std::string& base_directory) {
   }
 }
 
-void DeciderWrapper::update_internal_imports(const std::string& base_directory) {
-  internal_imports.clear();
-
-  /* TODO: Modify this to use rcpputils instead of these ad-hoc lambda functions. */
-  auto has_prefix = [](const std::string& str, const std::string& prefix) -> bool {
-    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
-  };
-
-  auto has_suffix = [](const std::string& str, const std::string& suffix) -> bool {
-    return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-  };
-
-  auto normalize_path = [](const std::string& path) -> std::string {
-    std::string normalized = path;
-    std::replace(normalized.begin(), normalized.end(), '\\', '/');
-    return normalized;
-  };
-
-  auto get_filename = [](const std::string& path) -> std::string {
-    size_t pos = path.find_last_of("/\\");
-    return (pos == std::string::npos) ? path : path.substr(pos + 1);
-  };
-
-  py::module sys = py::module::import("sys");
-  py::dict modules = sys.attr("modules");
-
-  std::string normalized_base_dir = normalize_path(base_directory);
-
-  for (const auto& item : modules) {
-    py::handle key = item.first;
-    py::handle value = item.second;
-
-    if (py::hasattr(value, "__file__")) {
-      std::string file_path = py::str(value.attr("__file__"));
-      std::string normalized_file_path = normalize_path(file_path);
-
-      /* Basic check if the file is within the base directory. */
-      if (has_prefix(normalized_file_path, normalized_base_dir) &&
-          has_suffix(normalized_file_path, ".py")) {
-
-        /* Store only the filename for tracking. */
-        std::string filename = get_filename(file_path);
-        internal_imports.push_back(filename);
-      }
-    }
-  }
-
-  for (const auto& file : internal_imports) {
-    RCLCPP_DEBUG(*logger_ptr, "Tracking file: %s", file.c_str());
-  }
-}
-
 bool DeciderWrapper::initialize_module(
     const std::string& project_directory,
     const std::string& module_directory,
@@ -224,9 +172,6 @@ bool DeciderWrapper::initialize_module(
     
     return false;
   }
-
-  /* Update the list of internal imports to watch for changes. */
-  update_internal_imports(module_directory);
 
   /* Initialize Decider instance. */
   try {
@@ -715,10 +660,6 @@ std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
   std::vector<LogEntry> logs = std::move(log_buffer);
   log_buffer.clear();
   return logs;
-}
-
-std::vector<std::string> DeciderWrapper::get_internal_imports() const {
-  return this->internal_imports;
 }
 
 std::size_t DeciderWrapper::get_buffer_size() const {

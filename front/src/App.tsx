@@ -16,8 +16,19 @@ import { HealthcheckStatusDisplay } from 'components/HealthcheckStatusDisplay'
 import { PipelineView } from 'views/PipelineView'
 import { DashboardView } from 'views/DashboardView'
 import { ProjectProvider } from 'providers/ProjectProvider'
+import { DetachedExperimentView } from 'components/DetachedExperimentView'
 
 const App = () => {
+  const isDetached = new URLSearchParams(window.location.search).get('detached') === 'true'
+
+  if (isDetached) {
+    return (
+      <Providers>
+        <DetachedExperimentView />
+      </Providers>
+    )
+  }
+
   return (
     <Providers>
       <HealthcheckStatusDisplay />

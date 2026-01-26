@@ -2,6 +2,17 @@ import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { PipelineContext } from 'providers/PipelineProvider'
 
+const DragBar = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background-color: transparent;
+  -webkit-app-region: drag;
+  z-index: 9999;
+`
+
 const FullScreenContainer = styled.div`
   width: 100vw;
   height: 100vh;
@@ -40,34 +51,48 @@ export const DetachedExperimentView: React.FC = () => {
   }
 
   if (!experimentState || !experimentState.ongoing) {
-    return <FullScreenContainer />
+    return (
+      <>
+        <DragBar />
+        <FullScreenContainer />
+      </>
+    )
   }
 
   if (experimentState.paused) {
     return (
-      <FullScreenContainer>
-        Paused
-      </FullScreenContainer>
+      <>
+        <DragBar />
+        <FullScreenContainer>
+          Paused
+        </FullScreenContainer>
+      </>
     )
   }
 
   if (experimentState.in_rest) {
     return (
-      <FullScreenContainer>
-        <div>
-          <RestText>Rest</RestText>
-          <RestText style={{ fontSize: '48px', marginTop: '10px' }}>
-            Resuming in
-          </RestText>
-          <Timer>{formatTime(experimentState.rest_remaining)}</Timer>
-        </div>
-      </FullScreenContainer>
+      <>
+        <DragBar />
+        <FullScreenContainer>
+          <div>
+            <RestText>Rest</RestText>
+            <RestText style={{ fontSize: '48px', marginTop: '10px' }}>
+              Resuming in
+            </RestText>
+            <Timer>{formatTime(experimentState.rest_remaining)}</Timer>
+          </div>
+        </FullScreenContainer>
+      </>
     )
   }
 
   return (
-    <FullScreenContainer>
-      <Cross>+</Cross>
-    </FullScreenContainer>
+    <>
+      <DragBar />
+      <FullScreenContainer>
+        <Cross>+</Cross>
+      </FullScreenContainer>
+    </>
   )
 }

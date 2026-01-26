@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
@@ -118,6 +118,8 @@ const DATA_TYPE_LABELS: Record<ExportDataType, string> = {
   [ExportDataType.SENSORY_STIMULI]: 'Sensory Stimuli',
 }
 
+const STORAGE_KEY = 'exportModalSelectedTypes'
+
 interface ExportModalProps {
   isOpen: boolean
   onClose: () => void
@@ -133,6 +135,28 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 }) => {
   const [selectedTypes, setSelectedTypes] = useState<Set<ExportDataType>>(new Set())
 
+  // Load previously selected types from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        const parsedTypes: ExportDataType[] = JSON.parse(stored)
+        setSelectedTypes(new Set(parsedTypes))
+      }
+    } catch (error) {
+      console.warn('Failed to load export types from localStorage:', error)
+    }
+  }, [])
+
+  // Save selected types to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(selectedTypes)))
+    } catch (error) {
+      console.warn('Failed to save export types to localStorage:', error)
+    }
+  }, [selectedTypes])
+
   const handleTypeChange = (type: ExportDataType, checked: boolean) => {
     const newSelected = new Set(selectedTypes)
     if (checked) {
@@ -145,12 +169,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   const handleExport = () => {
     onExport(Array.from(selectedTypes))
-    setSelectedTypes(new Set())
     onClose()
   }
 
   const handleCancel = () => {
-    setSelectedTypes(new Set())
     onClose()
   }
 

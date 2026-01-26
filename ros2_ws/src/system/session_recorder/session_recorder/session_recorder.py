@@ -127,7 +127,7 @@ class SessionRecorderNode(Node):
         session_uuid = uuid.UUID(bytes=self._current_session_id)
 
         self._recording_config = {
-            'session_id': session_uuid.hex,
+            'session_id': str(session_uuid),
             'session_config': message_to_ordereddict(request.config),
             'stream_info': message_to_ordereddict(request.stream_info),
             'start_time': datetime.now().isoformat(),

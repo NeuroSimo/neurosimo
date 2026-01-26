@@ -139,7 +139,7 @@ class SessionConfiguratorNode(Node):
 
         return True
 
-    def list_modules(self, project_name, subdirectory, file_extensions):
+    def list_files(self, project_name, subdirectory, file_extensions):
         """List all files with specified extensions in the subdirectory of the specified project."""
         module_dir = os.path.join(self.project_manager.PROJECTS_ROOT, project_name, subdirectory)
 
@@ -154,6 +154,9 @@ class SessionConfiguratorNode(Node):
                 matching_files.extend([f for f in os.listdir(module_dir)
                                      if os.path.isfile(os.path.join(module_dir, f)) and f.endswith(ext)])
 
+            # Sort files alphabetically (chronological order for timestamp-based names)
+            matching_files.sort(reverse=True)
+
             self.logger.info(f"Found {len(matching_files)} modules in project '{project_name}'/{subdirectory}: {matching_files}")
             return matching_files
 
@@ -163,7 +166,7 @@ class SessionConfiguratorNode(Node):
 
     def publish_filename_list(self, project_name, subdirectory, file_extensions, publisher, component_name):
         """Publish the list of modules for the specified project and component."""
-        modules = self.list_modules(project_name, subdirectory, file_extensions)
+        modules = self.list_files(project_name, subdirectory, file_extensions)
 
         # Create and publish FilenameList message
         msg = FilenameList()

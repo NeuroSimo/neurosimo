@@ -1,0 +1,11 @@
+# Enum for export data types
+uint8 RAW_EEG = 0
+uint8 ENRICHED_EEG = 1
+uint8 PREPROCESSED_EEG = 2
+uint8 STIMULATION_DECISIONS = 3
+uint8 DECIDER_LOGS = 4
+uint8 PREPROCESSOR_LOGS = 5
+uint8 PRESENTER_LOGS = 6
+uint8 SENSORY_STIMULI = 7
+
+uint8 value

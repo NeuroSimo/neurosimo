@@ -100,17 +100,22 @@ const Button = styled.button<{ primary?: boolean }>`
   font-weight: 500;
   transition: background-color 0.2s;
 
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   ${props => props.primary ? `
     background-color: #007bff;
     color: white;
-    &:hover {
+    &:hover:not(:disabled) {
       background-color: #0056b3;
     }
   ` : `
     background-color: #f8f9fa;
     color: #333;
     border: 1px solid #ddd;
-    &:hover {
+    &:hover:not(:disabled) {
       background-color: #e9ecef;
     }
   `}

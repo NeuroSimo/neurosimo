@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'session_recorder'
+package_name = 'session_player'
 
 setup(
     name=package_name,
@@ -24,7 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'session_recorder = session_recorder.session_recorder:main',
+            'session_player = session_player.session_player:main',
         ],
     },
 )

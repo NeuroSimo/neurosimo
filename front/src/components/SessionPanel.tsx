@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
 import { useSession, SessionStage } from 'providers/SessionProvider'
+import { useParameters } from 'providers/ParameterProvider'
+import { PlaybackContext } from 'providers/PlaybackProvider'
+import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -29,6 +32,9 @@ const getStageDisplayText = (stage: SessionStage): string => {
 
 export const SessionPanel: React.FC = () => {
   const { sessionState, startSession, abortSession } = useSession()
+  const { dataSource } = useParameters()
+  const { recordingsList } = useContext(PlaybackContext)
+  const { datasetList } = useContext(EegSimulatorContext)
   const [isLoading, setIsLoading] = useState(false)
   const [displayedStage, setDisplayedStage] = useState(sessionState.stage)
 
@@ -83,6 +89,12 @@ export const SessionPanel: React.FC = () => {
     return sessionState.isRunning ? 'Stop' : 'Start'
   }
 
+  // Disable start button if no data is available for the selected data source
+  const isStartDisabled = !sessionState.isRunning && (
+    (dataSource === 'playback' && recordingsList.length === 0) ||
+    (dataSource === 'simulator' && datasetList.length === 0)
+  )
+
   const ButtonComponent = sessionState.isRunning ? StyledRedButton : StyledButton
 
   return (
@@ -92,7 +104,7 @@ export const SessionPanel: React.FC = () => {
         <StateTitle>Control:</StateTitle>
         <ButtonComponent
           onClick={handleButtonClick}
-          disabled={isLoading}
+          disabled={isLoading || isStartDisabled}
           style={{ marginRight: '9px' }}
         >
           {getButtonText()}

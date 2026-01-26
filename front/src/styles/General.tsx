@@ -151,6 +151,20 @@ export const ConfigValue = styled.div`
   margin-right: 20px;
 `
 
+export const NotesValue = styled.div`
+  width: 190px;
+  text-align: right;
+  font-size: 11px;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  color: #333;
+  margin-right: 20px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-height: 55px;
+  overflow-y: auto;
+`
+
 export const SmallerTitle = styled.h2`
   font-size: 12px;
   text-align: center;

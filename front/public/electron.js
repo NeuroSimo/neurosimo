@@ -54,13 +54,14 @@ function createDetachedWindow() {
     height: 600,
     backgroundColor: '#000000',
     fullscreenable: true,
+    frame: false,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js')
-    },
-    title: 'Experiment View'
+    }
   });
 
   if (isDev) {

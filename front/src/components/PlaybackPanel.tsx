@@ -19,6 +19,8 @@ import { useSession, SessionStage } from 'providers/SessionProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { exportSessionRos } from 'ros/session'
+import { getRecordingInfoRos, RecordingInfo } from 'ros/session_player'
+import { formatTime } from 'utils/utils'
 
 const PlaybackContainer = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
@@ -66,6 +68,8 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const { sessionState } = useSession()
   const { recordingsList } = useContext(PlaybackContext)
   const { activeProject } = useContext(ProjectContext)
+
+  const [selectedRecordingInfo, setSelectedRecordingInfo] = useState<RecordingInfo | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
 
   // For playback tab - these would come from a playback context in the future
@@ -74,6 +78,22 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
 
   const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
   const isEegStreaming = eegInfo?.is_streaming || false
+
+  // Fetch recording info when selected recording changes
+  useEffect(() => {
+    if (!playbackBagFilename || playbackBagFilename.trim() === '') {
+      setSelectedRecordingInfo(null)
+      return
+    }
+    getRecordingInfoRos(playbackBagFilename, (recordingInfo) => {
+      if (!recordingInfo) {
+        console.error('Failed to get recording info for:', playbackBagFilename)
+        setSelectedRecordingInfo(null)
+        return
+      }
+      setSelectedRecordingInfo(recordingInfo)
+    })
+  }, [playbackBagFilename])
 
   // Set default recording when recordings become available
   useEffect(() => {
@@ -148,7 +168,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
           <ConfigValue>No recordings</ConfigValue>
         )}
       </ConfigRow>
-      <CompactRow style={{ justifyContent: 'space-between' }}>
+      {/* <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Preprocessed:</ConfigLabel>
         <SwitchWrapper>
           <ToggleSwitch
@@ -158,11 +178,29 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
             disabled={isSessionRunning || isEegStreaming || recordingsList.length === 0}
           />
         </SwitchWrapper>
-      </CompactRow>
-      <CompactRow>
-        <ConfigLabel>Status:</ConfigLabel>
-        <ConfigValue>Ready</ConfigValue>
-      </CompactRow>
+      </CompactRow> */}
+      {selectedRecordingInfo && (
+        <>
+          <CompactRow>
+            <ConfigLabel>Preprocessor:</ConfigLabel>
+            <ConfigValue>{selectedRecordingInfo.preprocessor_enabled ? selectedRecordingInfo.preprocessor_module : '\u2013'}</ConfigValue>
+          </CompactRow>
+          <CompactRow>
+            <ConfigLabel>Decider:</ConfigLabel>
+            <ConfigValue>{selectedRecordingInfo.decider_enabled ? selectedRecordingInfo.decider_module : '\u2013'}</ConfigValue>
+          </CompactRow>
+          <CompactRow>
+            <ConfigLabel>Presenter:</ConfigLabel>
+            <ConfigValue>{selectedRecordingInfo.presenter_enabled ? selectedRecordingInfo.presenter_module : '\u2013'}</ConfigValue>
+          </CompactRow>
+        </>
+      )}
+      {selectedRecordingInfo && (
+        <CompactRow>
+          <ConfigLabel>Duration:</ConfigLabel>
+          <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
+        </CompactRow>
+      )}
       <CompactRow>
         <ExportButton
           disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming}

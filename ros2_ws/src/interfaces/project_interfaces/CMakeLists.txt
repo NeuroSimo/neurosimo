@@ -24,6 +24,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ListProjects.srv"
   "srv/SetActiveProject.srv"
+  "srv/CreateProject.srv"
 
   "srv/SetModule.srv"
 

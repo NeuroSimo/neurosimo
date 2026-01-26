@@ -28,6 +28,7 @@ export const DeciderNode: React.FC = () => {
       modules={deciderList}
       onToggle={handleToggle}
       onModuleChange={handleModuleChange}
+      folderName="decider"
     />
   )
 }

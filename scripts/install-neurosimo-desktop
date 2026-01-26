@@ -1,0 +1,48 @@
+#!/bin/bash
+# Install NeuroSimo desktop launcher
+
+set -e
+
+NEUROSIMO_DIR="$HOME/neurosimo"
+DESKTOP_FILE="$HOME/.local/share/applications/neurosimo.desktop"
+DESKTOP_ICON="$HOME/Desktop/neurosimo.desktop"
+USERNAME=$(whoami)
+
+DESKTOP_ENTRY="[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NeuroSimo
+Comment=Real-time EEG- and EMG-guided TMS platform
+Exec=$NEUROSIMO_DIR/front/dist-electron/linux-unpacked/neurosimo
+Icon=$NEUROSIMO_DIR/front/public/favicon.ico
+Terminal=false
+Categories=Science;Neuroscience;Electrophysiology;"
+
+# Create applications menu entry
+mkdir -p "$HOME/.local/share/applications"
+echo "$DESKTOP_ENTRY" > "$DESKTOP_FILE"
+chmod +x "$DESKTOP_FILE"
+
+# Create desktop icon if Desktop folder exists
+if [ -d "$HOME/Desktop" ]; then
+    echo "$DESKTOP_ENTRY" > "$DESKTOP_ICON"
+    chmod +x "$DESKTOP_ICON"
+    # Allow launching (Ubuntu/GNOME specific)
+    if command -v gio &> /dev/null; then
+        gio set "$DESKTOP_ICON" metadata::trusted true 2>/dev/null || true
+    fi
+fi
+
+# Update desktop database
+if command -v update-desktop-database &> /dev/null; then
+    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+fi
+
+echo ""
+echo "Desktop launcher installed successfully!"
+echo "You can now find NeuroSimo in:"
+echo "  - Applications menu"
+if [ -d "$HOME/Desktop" ]; then
+    echo "  - Desktop icon"
+fi
+echo ""

@@ -31,3 +31,6 @@ ARCHITECTURE.md
 
 # MacOS temporary file
 .DS_Store
+
+# Electron build output
+front/dist-electron/

@@ -233,21 +233,6 @@ services:
     network_mode: host
 
   # Frontend-related services
-  front:
-    build:
-      context: .
-      dockerfile: front/Dockerfile
-    env_file:
-      - .env
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_ROSBRIDGE_URL=ws://localhost:9090
-      - PORT=3000
-    volumes:
-      - './front/src:/app/src'
-      - './front/public:/app/public'
-    network_mode: host
-
   rosbridge:
     build:
       context: .

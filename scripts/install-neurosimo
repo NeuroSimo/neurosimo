@@ -157,6 +157,18 @@ echo "Building NeuroSimo..."
 # but only takes effect after a logout - hence the need for sg to run the script with the correct permissions.)
 sg docker -c "./scripts/build-neurosimo"
 
+# Build Electron app
+echo "Building NeuroSimo desktop app..."
+cd front
+npm install
+DISABLE_ESLINT_PLUGIN=true npm run build
+npm run electron-pack-linux
+cd ..
+
+# Install desktop launcher
+echo "Installing desktop launcher..."
+./scripts/install-neurosimo-desktop
+
 echo "Installation complete. Opening .env file for configuration..."
 
 # Check if gedit is available and we're in a graphical environment

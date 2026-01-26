@@ -21,6 +21,7 @@ string presenter_module
 string project_name
 string subject_id
 string protocol_name
+string notes
 
 # Timestamps
 string start_time

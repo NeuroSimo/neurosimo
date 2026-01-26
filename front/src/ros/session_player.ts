@@ -16,6 +16,7 @@ export interface RecordingInfo extends ROSLIB.Message {
   project_name: string
   subject_id: string
   protocol_name: string
+  notes: string
   start_time: string
   end_time: string
   git_commit: string

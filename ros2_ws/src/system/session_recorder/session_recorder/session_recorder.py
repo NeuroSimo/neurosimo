@@ -28,7 +28,12 @@ TOPICS_TO_RECORD = [
     '/pipeline/decision_info',
     '/pipeline/timing_latency',
     '/pipeline/experiment_state',
-    '/sensory_stimulus',
+    '/pipeline/sensory_stimulus',
+
+    # Pipeline logs
+    '/pipeline/decider/log',
+    '/pipeline/preprocessor/log',
+    '/pipeline/presenter/log',
 
     # Session state
     '/session/state',

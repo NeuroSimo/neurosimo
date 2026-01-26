@@ -1,5 +1,6 @@
 # Environment files
 .env
+.git_provenance.env
 
 # Directories created by the ROS2 build system, depending on which directory the build is run from.
 ros2_ws/src/install/

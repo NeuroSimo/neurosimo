@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPlus } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
@@ -7,6 +9,7 @@ import { PipelineContext } from 'providers/PipelineProvider'
 import { useSession, SessionStage } from 'providers/SessionProvider'
 import { CommittableTextInput } from 'components/CommittableTextInput'
 import { CommittableNumericInput } from 'components/CommittableNumericInput'
+import { CreateProjectModal } from 'components/CreateProjectModal'
 import { listProjects, setActiveProject } from 'ros/project'
 import { ProjectContext } from 'providers/ProjectProvider'
 
@@ -24,12 +27,17 @@ export const ExperimentPanel: React.FC = () => {
   const { sessionState } = useSession()
   const { activeProject } = useContext(ProjectContext)
   const [projects, setProjects] = useState<string[]>([])
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
 
   useEffect(() => {
     listProjects(setProjects)
   }, [])
+
+  const refreshProjects = () => {
+    listProjects(setProjects)
+  }
 
   const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const protocol = event.target.value
@@ -62,13 +70,35 @@ export const ExperimentPanel: React.FC = () => {
       <SmallerTitle>Experiment</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Project:</ConfigLabel>
-        <Select onChange={handleProjectChange} value={activeProject} disabled={isSessionRunning}>
-          {projects.map((project, index) => (
-            <option key={index} value={project}>
-              {project}
-            </option>
-          ))}
-        </Select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            disabled={isSessionRunning}
+            style={{
+              background: 'none',
+              border: '0.5px solid #666666',
+              borderRadius: '3px',
+              width: '18px',
+              height: '18px',
+              cursor: isSessionRunning ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#666666',
+              opacity: isSessionRunning ? 0.5 : 1,
+            }}
+            title="Create new project"
+          >
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          <Select onChange={handleProjectChange} value={activeProject} disabled={isSessionRunning}>
+            {projects.map((project, index) => (
+              <option key={index} value={project}>
+                {project}
+              </option>
+            ))}
+          </Select>
+        </div>
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Subject ID:</ConfigLabel>
@@ -103,6 +133,12 @@ export const ExperimentPanel: React.FC = () => {
           ))}
         </Select>
       </ConfigRow>
+
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onProjectCreated={refreshProjects}
+      />
     </Container>
   )
 }

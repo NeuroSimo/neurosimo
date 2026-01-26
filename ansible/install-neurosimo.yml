@@ -48,6 +48,34 @@
         cache_valid_time: 3600 # in seconds
 
     ########################################################################
+    # Install Node.js 18 LTS from NodeSource
+    ########################################################################
+    - name: Remove old Node.js packages
+      apt:
+        name:
+          - nodejs
+          - libnode-dev
+          - libnode72
+        state: absent
+        purge: yes
+      ignore_errors: yes
+
+    - name: Check if NodeSource repository is configured
+      stat:
+        path: /etc/apt/sources.list.d/nodesource.list
+      register: nodesource_repo
+
+    - name: Download and run NodeSource setup script
+      shell: curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+      when: not nodesource_repo.stat.exists
+
+    - name: Install Node.js 18 from NodeSource
+      apt:
+        name: nodejs
+        state: present
+        update_cache: yes
+
+    ########################################################################
     # Install extra packages (net-tools, Wireshark, etc.)
     ########################################################################
     - name: Install other tools, e.g., for troubleshooting
@@ -57,7 +85,6 @@
           - wireshark
           - wmctrl
           - python3-pip
-          - nodejs # Required by log script
         state: present
 
     ########################################################################

@@ -85,16 +85,7 @@ This command will:
 
 After the installation is complete, the script will prompt you to reboot the computer.
 
-After reboot, NeuroSimo should be installed and ready to use via the web interface at
-[http://localhost:3000](http://localhost:3000).
-
-## Web UI setup
-
-To create a desktop link to the NeuroSimo panel:
-
-- Open Chrome and navigate to [http://localhost:3000](http://localhost:3000).
-- Click "Install NeuroSimo panel"
-- Enable launching for desktop shortcut
+After reboot, NeuroSimo is ready to use. Launch it from your applications menu or run `neurosimo`.
 
 
 ## Troubleshooting

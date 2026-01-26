@@ -96,6 +96,7 @@ class SessionPlayerNode(Node):
             recording_info.project_name = session_config.get('project_name', '')
             recording_info.subject_id = session_config.get('subject_id', '')
             recording_info.protocol_name = session_config.get('protocol_name', '')
+            recording_info.notes = session_config.get('notes', '')
 
             # Extract pipeline component config from session_config
             recording_info.preprocessor_module = session_config.get('preprocessor_module', '')

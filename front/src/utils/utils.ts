@@ -35,3 +35,14 @@ export function formatFrequency(frequency: number | undefined): string {
   const frequencyInKHz = frequency / 1000
   return `${frequencyInKHz} kHz`
 }
+
+export function formatDateTime(dateTime: string | Date): string {
+  const date = new Date(dateTime)
+  const day = date.getDate()
+  const month = date.getMonth() + 1
+  const year = date.getFullYear()
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  const seconds = date.getSeconds().toString().padStart(2, '0')
+  return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`
+}

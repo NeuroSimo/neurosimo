@@ -20,7 +20,7 @@ import { PlaybackContext } from 'providers/PlaybackProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { exportSessionRos } from 'ros/session'
 import { getRecordingInfoRos, RecordingInfo } from 'ros/session_player'
-import { formatTime } from 'utils/utils'
+import { formatTime, formatDateTime } from 'utils/utils'
 
 const PlaybackContainer = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
@@ -56,6 +56,7 @@ const ExportButton = styled.button<{ disabled: boolean }>`
   font-size: 14px;
   font-weight: 500;
   margin-left: auto;
+  margin-right: 10px;
 
   &:hover {
     background-color: ${props => props.disabled ? '#cccccc' : '#0056b3'};
@@ -182,6 +183,30 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
       {selectedRecordingInfo && (
         <>
           <CompactRow>
+            <ConfigLabel>Subject ID:</ConfigLabel>
+            <ConfigValue>{selectedRecordingInfo.subject_id}</ConfigValue>
+          </CompactRow>
+          <CompactRow>
+            <ConfigLabel>Start Time:</ConfigLabel>
+            <ConfigValue>{formatDateTime(selectedRecordingInfo.start_time)}</ConfigValue>
+          </CompactRow>
+          {selectedRecordingInfo.notes && (
+            <CompactRow>
+              <ConfigLabel>Notes:</ConfigLabel>
+              <ConfigValue>{selectedRecordingInfo.notes}</ConfigValue>
+            </CompactRow>
+          )}
+
+          <div style={{ height: '8px' }} />
+
+          <CompactRow>
+            <ConfigLabel>Duration:</ConfigLabel>
+            <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
+          </CompactRow>
+
+          <div style={{ height: '8px' }} />
+
+          <CompactRow>
             <ConfigLabel>Preprocessor:</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.preprocessor_enabled ? selectedRecordingInfo.preprocessor_module : '\u2013'}</ConfigValue>
           </CompactRow>
@@ -193,20 +218,6 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
             <ConfigLabel>Presenter:</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.presenter_enabled ? selectedRecordingInfo.presenter_module : '\u2013'}</ConfigValue>
           </CompactRow>
-        </>
-      )}
-      {selectedRecordingInfo && (
-        <>
-          <CompactRow>
-            <ConfigLabel>Duration:</ConfigLabel>
-            <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
-          </CompactRow>
-          {selectedRecordingInfo.notes && (
-            <CompactRow>
-              <ConfigLabel>Notes:</ConfigLabel>
-              <ConfigValue>{selectedRecordingInfo.notes}</ConfigValue>
-            </CompactRow>
-          )}
         </>
       )}
       <CompactRow>

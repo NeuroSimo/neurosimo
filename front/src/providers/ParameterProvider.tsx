@@ -66,6 +66,7 @@ interface ParameterContextType {
   metadata: MetadataParameters
   pipeline: PipelineParameters
   simulator: SimulatorParameters
+  dataSource: string
 
   // Convenience setters
   setSubjectId: (subjectId: string, callback?: () => void) => Promise<void>
@@ -104,6 +105,7 @@ const defaultParameterState: ParameterContextType = {
     dataset_filename: '',
     start_time: 0,
   },
+  dataSource: 'simulator',
   setSubjectId: asyncNoop,
   setNotes: asyncNoop,
   setDeciderModule: asyncNoop,
@@ -158,6 +160,8 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
     start_time: (parameters.get('simulator.start_time') as number) || 0,
   }
 
+  const dataSource = (parameters.get('data_source') as string) || 'simulator'
+
   useEffect(() => {
     // Fetch initial parameter values on startup
     const fetchInitialParameters = async () => {
@@ -169,7 +173,8 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
           'preprocessor.module', 'preprocessor.enabled',
           'presenter.module', 'presenter.enabled',
           'experiment.protocol',
-          'simulator.dataset_filename', 'simulator.start_time'
+          'simulator.dataset_filename', 'simulator.start_time',
+          'data_source'
         ]
 
         const initialParams = await getParametersRos(parameterNames)
@@ -290,6 +295,7 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
         metadata,
         pipeline,
         simulator,
+        dataSource,
         setSubjectId,
         setNotes,
         setDeciderModule,

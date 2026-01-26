@@ -27,7 +27,7 @@ const PlaybackContainer = styled(StyledPanel)`
 
 const RecordingSelect = styled(Select)`
   margin-left: 6px;
-  width: 150px;
+  width: 180px;
 `
 
 const SwitchWrapper = styled.span`
@@ -77,7 +77,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
           <RecordingSelect onChange={setPlaybackBagFilenameHandler} value={playbackBagFilename} disabled={isSessionRunning || isEegStreaming}>
             {recordingsList.map((recordingFilename: typeof recordingsList[number], index: number) => (
               <option key={index} value={recordingFilename}>
-                {recordingFilename}
+                {recordingFilename.replace(/\.json$/, '')}
               </option>
             ))}
           </RecordingSelect>

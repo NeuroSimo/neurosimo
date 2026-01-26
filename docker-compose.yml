@@ -177,6 +177,7 @@ services:
       dockerfile: ros2_ws/src/system/session_recorder/Dockerfile
     env_file:
       - .env
+      - .git_provenance.env
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID

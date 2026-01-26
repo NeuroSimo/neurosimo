@@ -107,6 +107,50 @@ class SessionRecorderNode(Node):
         """Handle disk status updates."""
         self._disk_space_ok = msg.is_ok
 
+    def _get_software_provenance(self):
+        """Get software provenance information."""
+        provenance = {}
+
+        # Git commit
+        provenance['git_commit'] = os.environ.get('GIT_COMMIT') or 'unknown'
+
+        # Git state
+        state = (os.environ.get('GIT_STATE') or 'unknown').strip().lower()
+        if state not in ('clean', 'dirty', 'unknown'):
+            state = 'unknown'
+        provenance['git_state'] = state
+
+        # Version = git tag (+ dirty suffix if applicable)
+        tag = os.environ.get('GIT_TAG') or 'unknown'
+        if tag != 'unknown' and state == 'dirty':
+            provenance['version'] = f"{tag}-dirty"
+        else:
+            provenance['version'] = tag
+
+        return provenance
+
+    def _get_software_provenance(self):
+        """Get software provenance information."""
+        provenance = {}
+
+        # Git commit
+        provenance['git_commit'] = os.environ.get('GIT_COMMIT') or 'unknown'
+
+        # Git state
+        state = (os.environ.get('GIT_STATE') or 'unknown').strip().lower()
+        if state not in ('clean', 'dirty', 'unknown'):
+            state = 'unknown'
+        provenance['git_state'] = state
+
+        # Version = git tag (+ dirty suffix if applicable)
+        tag = os.environ.get('GIT_TAG') or 'unknown'
+        if tag != 'unknown' and state == 'dirty':
+            provenance['version'] = f"{tag}-dirty"
+        else:
+            provenance['version'] = tag
+
+        return provenance
+
     def start_recording_callback(self, request, response):
         """Handle start recording service calls."""
         self.logger.info('Received start recording request')
@@ -130,6 +174,7 @@ class SessionRecorderNode(Node):
             'session_id': str(session_uuid),
             'session_config': message_to_ordereddict(request.config),
             'stream_info': message_to_ordereddict(request.stream_info),
+            'software_provenance': self._get_software_provenance(),
             'start_time': datetime.now().isoformat(),
         }
 

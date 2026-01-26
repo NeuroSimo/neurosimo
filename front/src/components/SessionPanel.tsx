@@ -6,6 +6,7 @@ import { useSession, SessionStage } from 'providers/SessionProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
+import { PipelineContext } from 'providers/PipelineProvider'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -35,6 +36,7 @@ export const SessionPanel: React.FC = () => {
   const { dataSource } = useParameters()
   const { recordingsList } = useContext(PlaybackContext)
   const { datasetList } = useContext(EegSimulatorContext)
+  const { clearAllLogs } = useContext(PipelineContext)
   const [isLoading, setIsLoading] = useState(false)
   const [displayedStage, setDisplayedStage] = useState(sessionState.stage)
 
@@ -50,6 +52,9 @@ export const SessionPanel: React.FC = () => {
 
   const handleStartSession = () => {
     setIsLoading(true)
+
+    // Clear pipeline logs before starting the session
+    clearAllLogs()
 
     startSession((success: boolean, message?: string) => {
       setIsLoading(false)

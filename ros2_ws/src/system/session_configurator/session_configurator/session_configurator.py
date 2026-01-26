@@ -18,6 +18,7 @@ from std_msgs.msg import String
 from rcl_interfaces.msg import SetParametersResult
 
 from .project_manager import ProjectManager
+from .directory_watcher import DirectoryWatcher
 
 
 class SessionConfiguratorNode(Node):
@@ -28,6 +29,9 @@ class SessionConfiguratorNode(Node):
 
         # Initialize project manager
         self.project_manager = ProjectManager(self.logger)
+        
+        # Initialize directory watcher
+        self.directory_watcher = DirectoryWatcher(self.logger)
 
         # Declare ROS2 parameters
 
@@ -79,6 +83,16 @@ class SessionConfiguratorNode(Node):
         self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos, callback_group=self.callback_group)
         self.recordings_list_publisher = self.create_publisher(FilenameList, "/playback/recordings/list", qos, callback_group=self.callback_group)
 
+        # Define directory watch configurations
+        self.watch_configs = [
+            ("decider", [".py"], self.decider_list_publisher, "decider"),
+            ("preprocessor", [".py"], self.preprocessor_list_publisher, "preprocessor"),
+            ("presenter", [".py"], self.presenter_list_publisher, "presenter"),
+            ("protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol"),
+            ("eeg_simulator", [".json"], self.dataset_list_publisher, "dataset"),
+            ("recordings", [".json"], self.recordings_list_publisher, "recordings"),
+        ]
+
         # Set active project
         active_project = self.project_manager.get_active_project()
         self.set_active_project(active_project)
@@ -120,13 +134,8 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('playback.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_state["playback.is_preprocessed"]),
         ])
 
-        # Publish the lists of modules for the new project
-        self.publish_filename_list(project_name, "decider", [".py"], self.decider_list_publisher, "decider")
-        self.publish_filename_list(project_name, "preprocessor", [".py"], self.preprocessor_list_publisher, "preprocessor")
-        self.publish_filename_list(project_name, "presenter", [".py"], self.presenter_list_publisher, "presenter")
-        self.publish_filename_list(project_name, "protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol")
-        self.publish_filename_list(project_name, "eeg_simulator", [".json"], self.dataset_list_publisher, "dataset")
-        self.publish_filename_list(project_name, "recordings", [".json"], self.recordings_list_publisher, "recordings")
+        # Publish the lists of modules for the new project and setup watches
+        self.publish_and_watch_directories(project_name)
 
         return True
 
@@ -162,6 +171,26 @@ class SessionConfiguratorNode(Node):
         publisher.publish(msg)
 
         self.logger.info(f"Published {component_name} module list for project '{project_name}': {modules}")
+    
+    def publish_and_watch_directories(self, project_name):
+        """Publish filename lists and setup file system watches for all directories."""
+        # Unwatch all previous directories
+        self.directory_watcher.unwatch_all()
+        
+        # Publish initial lists and setup watches for each directory
+        for subdirectory, file_extensions, publisher, component_name in self.watch_configs:
+            # Publish initial filename list
+            self.publish_filename_list(project_name, subdirectory, file_extensions, publisher, component_name)
+            
+            # Setup watch for the directory
+            directory_path = os.path.join(self.project_manager.PROJECTS_ROOT, project_name, subdirectory)
+            
+            # Create callback for this specific directory
+            def create_callback(proj, subdir, exts, pub, comp):
+                return lambda: self.publish_filename_list(proj, subdir, exts, pub, comp)
+            
+            callback = create_callback(project_name, subdirectory, file_extensions, publisher, component_name)
+            self.directory_watcher.watch_directory(directory_path, file_extensions, callback)
 
     # Service callbacks
 
@@ -236,14 +265,22 @@ class SessionConfiguratorNode(Node):
 
         # Return success to allow parameter changes
         return SetParametersResult(successful=True)
+    
+    def destroy_node(self):
+        """Cleanup when node is destroyed."""
+        self.directory_watcher.shutdown()
+        super().destroy_node()
 
 def main(args=None):
     rclpy.init(args=args)
     node = SessionConfiguratorNode()
     executor = MultiThreadedExecutor()
     executor.add_node(node)
-    executor.spin()
-    rclpy.shutdown()
+    try:
+        executor.spin()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

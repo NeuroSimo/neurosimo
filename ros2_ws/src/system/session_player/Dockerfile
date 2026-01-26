@@ -26,14 +26,14 @@ COPY ros2_ws/src/interfaces/system_interfaces src/interfaces/system_interfaces/
 RUN source /opt/ros/iron/setup.bash && colcon build
 
 # ROS node
-COPY ros2_ws/src/system/session_recorder src/system/session_recorder/
-RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select session_recorder
+COPY ros2_ws/src/system/session_player src/system/session_player/
+RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select session_player
 
 # Copy entrypoint
 
 WORKDIR /app
 
-COPY ros2_ws/src/system/session_recorder/ros_entrypoint.sh .
+COPY ros2_ws/src/system/session_player/ros_entrypoint.sh .
 RUN dos2unix ros_entrypoint.sh
 RUN chmod +x ros_entrypoint.sh
 

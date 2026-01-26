@@ -4,4 +4,4 @@ set -e
 source /opt/ros/iron/setup.bash
 source /app/ros2_ws/install/setup.bash
 
-ros2 launch session_recorder session_recorder.launch.py log-level:="$ROS_LOG_LEVEL"
+ros2 launch session_player session_player.launch.py log-level:="$ROS_LOG_LEVEL"

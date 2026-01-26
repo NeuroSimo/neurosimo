@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
@@ -63,6 +63,26 @@ const CheckboxLabel = styled.label`
 
 const Checkbox = styled.input`
   margin-right: 8px;
+`
+
+const SelectAllContainer = styled.div`
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+`
+
+const SelectAllLabel = styled.label`
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+`
+
+const SelectAllCheckbox = styled.input`
+  margin-right: 10px;
+  transform: scale(1.3);
 `
 
 const ButtonGroup = styled.div`
@@ -134,6 +154,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   recordingName,
 }) => {
   const [selectedTypes, setSelectedTypes] = useState<Set<ExportDataType>>(new Set())
+  const selectAllCheckboxRef = useRef<HTMLInputElement>(null)
 
   // Load previously selected types from localStorage on mount
   useEffect(() => {
@@ -157,6 +178,26 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   }, [selectedTypes])
 
+  // Manage the indeterminate state of the select all checkbox
+  useEffect(() => {
+    const checkbox = selectAllCheckboxRef.current
+    if (checkbox) {
+      const allTypes = Object.keys(DATA_TYPE_LABELS).map(key => parseInt(key) as ExportDataType)
+      const selectedCount = allTypes.filter(type => selectedTypes.has(type)).length
+
+      if (selectedCount === 0) {
+        checkbox.checked = false
+        checkbox.indeterminate = false
+      } else if (selectedCount === allTypes.length) {
+        checkbox.checked = true
+        checkbox.indeterminate = false
+      } else {
+        checkbox.checked = false
+        checkbox.indeterminate = true
+      }
+    }
+  }, [selectedTypes])
+
   const handleTypeChange = (type: ExportDataType, checked: boolean) => {
     const newSelected = new Set(selectedTypes)
     if (checked) {
@@ -176,6 +217,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     onClose()
   }
 
+  const handleSelectAll = () => {
+    const allTypes = Object.keys(DATA_TYPE_LABELS).map(key => parseInt(key) as ExportDataType)
+    const selectedCount = allTypes.filter(type => selectedTypes.has(type)).length
+
+    if (selectedCount === allTypes.length) {
+      // All selected, deselect all
+      setSelectedTypes(new Set())
+    } else {
+      // None or partially selected, select all
+      setSelectedTypes(new Set(allTypes))
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -187,6 +241,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <FontAwesomeIcon icon={faTimes} />
           </CloseButton>
         </ModalHeader>
+
+        <SelectAllContainer>
+          <SelectAllLabel>
+            <SelectAllCheckbox
+              ref={selectAllCheckboxRef}
+              type="checkbox"
+              onChange={handleSelectAll}
+            />
+            {Object.keys(DATA_TYPE_LABELS).every(key => selectedTypes.has(parseInt(key) as ExportDataType))
+              ? 'Clear all'
+              : 'Select all'}
+          </SelectAllLabel>
+        </SelectAllContainer>
 
         <CheckboxGroup>
           {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => {

@@ -41,9 +41,6 @@ const CompactRow = styled(ConfigRow)`
   gap: 4px;
 `
 
-const SectionStartRow = styled(CompactRow)`
-  margin-top: 6px;
-`
 
 export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegSimulatorHealthcheck } = useContext(HealthcheckContext)
@@ -120,17 +117,20 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         </DatasetSelect>
       </ConfigRow>
       <CompactRow>
-        <ConfigLabel>Length:</ConfigLabel>
+        <ConfigLabel>Duration:</ConfigLabel>
         <ConfigValue>
           {selectedDatasetInfo?.loop
             ? 'Continuous'
             : `${formatTime(selectedDatasetInfo?.duration)}${selectedDatasetInfo?.pulse_count ? `, ${selectedDatasetInfo.pulse_count} pulses` : ''}`}
         </ConfigValue>
       </CompactRow>
-      <SectionStartRow>
+
+      <div style={{ height: '8px' }} />
+
+      <CompactRow>
         <ConfigLabel>Sampling rate:</ConfigLabel>
         <ConfigValue>{formatFrequency(selectedDatasetInfo?.sampling_frequency)}</ConfigValue>
-      </SectionStartRow>
+      </CompactRow>
       <CompactRow>
         <ConfigLabel>Channels:</ConfigLabel>
       </CompactRow>
@@ -142,6 +142,9 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
         <ConfigValue>{selectedDatasetInfo?.num_emg_channels}</ConfigValue>
       </CompactRow>
+
+      <div style={{ height: '8px' }} />
+
       <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Start time (s)</ConfigLabel>
         <div style={{ marginRight: 20 }}>

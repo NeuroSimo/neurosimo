@@ -20,7 +20,7 @@ import { PlaybackContext } from 'providers/PlaybackProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { exportSessionRos } from 'ros/session'
 import { getRecordingInfoRos, RecordingInfo } from 'ros/session_player'
-import { formatTime, formatDateTime } from 'utils/utils'
+import { formatTime, formatDateTime, formatFrequency } from 'utils/utils'
 
 const PlaybackContainer = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
@@ -183,11 +183,36 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
       {selectedRecordingInfo && (
         <>
           <CompactRow>
+            <ConfigLabel>Duration:</ConfigLabel>
+            <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
+          </CompactRow>
+
+          <div style={{ height: '8px' }} />
+
+          <CompactRow>
+            <ConfigLabel>Sampling rate:</ConfigLabel>
+            <ConfigValue>{formatFrequency(selectedRecordingInfo.sampling_frequency)}</ConfigValue>
+          </CompactRow>
+          <CompactRow>
+            <ConfigLabel>Channels:</ConfigLabel>
+          </CompactRow>
+          <CompactRow>
+            <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
+            <ConfigValue>{selectedRecordingInfo.num_eeg_channels}</ConfigValue>
+          </CompactRow>
+          <CompactRow>
+            <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
+            <ConfigValue>{selectedRecordingInfo.num_emg_channels}</ConfigValue>
+          </CompactRow>
+
+          <div style={{ height: '8px' }} />
+
+          <CompactRow>
             <ConfigLabel>Subject ID:</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.subject_id}</ConfigValue>
           </CompactRow>
           <CompactRow>
-            <ConfigLabel>Start Time:</ConfigLabel>
+            <ConfigLabel>Time:</ConfigLabel>
             <ConfigValue>{formatDateTime(selectedRecordingInfo.start_time)}</ConfigValue>
           </CompactRow>
           {selectedRecordingInfo.notes && (
@@ -196,13 +221,6 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
               <ConfigValue>{selectedRecordingInfo.notes}</ConfigValue>
             </CompactRow>
           )}
-
-          <div style={{ height: '8px' }} />
-
-          <CompactRow>
-            <ConfigLabel>Duration:</ConfigLabel>
-            <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
-          </CompactRow>
 
           <div style={{ height: '8px' }} />
 
@@ -218,6 +236,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
             <ConfigLabel>Presenter:</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.presenter_enabled ? selectedRecordingInfo.presenter_module : '\u2013'}</ConfigValue>
           </CompactRow>
+          <div style={{ height: '8px' }} />
         </>
       )}
       <CompactRow>

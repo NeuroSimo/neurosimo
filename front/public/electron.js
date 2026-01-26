@@ -43,9 +43,14 @@ function createWindow() {
   });
 }
 
-function createDetachedWindow() {
+function toggleDetachedWindow() {
   if (detachedWindow) {
-    detachedWindow.focus();
+    if (detachedWindow.isVisible()) {
+      detachedWindow.hide();
+    } else {
+      detachedWindow.show();
+      detachedWindow.focus();
+    }
     return;
   }
 
@@ -83,8 +88,8 @@ ipcMain.handle('open-project-folder', async (event, projectName, subdir) => {
   return await shell.openPath(folderPath);
 });
 
-ipcMain.handle('open-detached-experiment-window', async () => {
-  createDetachedWindow();
+ipcMain.handle('toggle-detached-experiment-window', async () => {
+  toggleDetachedWindow();
   return null;
 });
 

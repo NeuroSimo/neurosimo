@@ -78,7 +78,7 @@ export const ExperimentStatePanel: React.FC = () => {
   }
 
   const handleDetachExperiment = async () => {
-    const error = await (window as any).electronAPI?.openDetachedExperimentWindow()
+    const error = await (window as any).electronAPI?.toggleDetachedExperimentWindow()
     if (error) console.error('Failed to open detached window:', error)
   }
 

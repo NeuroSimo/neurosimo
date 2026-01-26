@@ -43,9 +43,9 @@ function createWindow() {
 }
 
 // Handle IPC calls
-ipcMain.handle('open-recordings-folder', async (event, projectName) => {
-  const recordingsPath = path.join(os.homedir(), 'projects', projectName, 'recordings');
-  return await shell.openPath(recordingsPath);
+ipcMain.handle('open-project-folder', async (event, projectName, subdir) => {
+  const folderPath = path.join(os.homedir(), 'projects', projectName, subdir);
+  return await shell.openPath(folderPath);
 });
 
 // This method will be called when Electron has finished initialization

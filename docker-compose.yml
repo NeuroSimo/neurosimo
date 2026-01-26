@@ -95,6 +95,19 @@ services:
     profiles:
       - gpu
 
+  project_manager:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/system/project_manager/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID
+    volumes:
+      - '$PROJECTS_ROOT:/app/projects'
+    network_mode: host
+
   preprocessor:
     build:
       context: .

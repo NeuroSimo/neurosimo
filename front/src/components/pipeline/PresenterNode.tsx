@@ -28,6 +28,7 @@ export const PresenterNode: React.FC = () => {
       modules={presenterList}
       onToggle={handleToggle}
       onModuleChange={handleModuleChange}
+      folderName="presenter"
     />
   )
 }

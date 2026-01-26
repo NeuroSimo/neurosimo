@@ -28,6 +28,7 @@ export const PreprocessorNode: React.FC = () => {
       modules={preprocessorList}
       onToggle={handleToggle}
       onModuleChange={handleModuleChange}
+      folderName="preprocessor"
     />
   )
 }

@@ -77,6 +77,7 @@ class SessionConfiguratorNode(Node):
         self.presenter_list_publisher = self.create_publisher(FilenameList, "/pipeline/presenter/list", qos, callback_group=self.callback_group)
         self.protocol_list_publisher = self.create_publisher(FilenameList, "/experiment/protocol/list", qos, callback_group=self.callback_group)
         self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos, callback_group=self.callback_group)
+        self.recordings_list_publisher = self.create_publisher(FilenameList, "/playback/recordings/list", qos, callback_group=self.callback_group)
 
         # Set active project
         active_project = self.project_manager.get_active_project()
@@ -125,6 +126,7 @@ class SessionConfiguratorNode(Node):
         self.publish_filename_list(project_name, "presenter", [".py"], self.presenter_list_publisher, "presenter")
         self.publish_filename_list(project_name, "protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol")
         self.publish_filename_list(project_name, "eeg_simulator", [".json"], self.dataset_list_publisher, "dataset")
+        self.publish_filename_list(project_name, "recordings", [".json"], self.recordings_list_publisher, "recordings")
 
         return True
 

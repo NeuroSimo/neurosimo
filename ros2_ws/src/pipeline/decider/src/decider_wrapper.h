@@ -47,7 +47,6 @@ public:
   ~DeciderWrapper();
 
   void remove_modules(const std::string& base_directory);
-  void update_internal_imports(const std::string& base_directory);
 
   bool initialize_module(
       const std::string& project_directory,
@@ -80,8 +79,6 @@ public:
                        std::vector<std::pair<double, std::string>>,
                        std::greater<std::pair<double, std::string>>>& event_queue,
     bool is_coil_at_target);
-
-  std::vector<std::string> get_internal_imports() const;
 
   std::size_t get_buffer_size() const;
   double get_periodic_processing_interval() const;
@@ -148,8 +145,6 @@ private:
   /* Maximum window covering all processors */
   int max_look_back_samples;
   int max_look_ahead_samples;
-
-  std::vector<std::string> internal_imports;
 
   std::size_t buffer_size = 0;
   std::size_t eeg_size;

@@ -179,7 +179,7 @@ class SessionRecorderNode(Node):
         }
 
         # Create bag directory
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         bag_name = f'{timestamp}_{request.config.subject_id}'
         project_bags_dir = f'/app/projects/{request.config.project_name}/recordings'
 

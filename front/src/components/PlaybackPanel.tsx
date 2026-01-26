@@ -196,10 +196,18 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         </>
       )}
       {selectedRecordingInfo && (
-        <CompactRow>
-          <ConfigLabel>Duration:</ConfigLabel>
-          <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
-        </CompactRow>
+        <>
+          <CompactRow>
+            <ConfigLabel>Duration:</ConfigLabel>
+            <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
+          </CompactRow>
+          {selectedRecordingInfo.notes && (
+            <CompactRow>
+              <ConfigLabel>Notes:</ConfigLabel>
+              <ConfigValue>{selectedRecordingInfo.notes}</ConfigValue>
+            </CompactRow>
+          )}
+        </>
       )}
       <CompactRow>
         <ExportButton

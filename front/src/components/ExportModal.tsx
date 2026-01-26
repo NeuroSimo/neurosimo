@@ -54,11 +54,21 @@ const CheckboxGroup = styled.div`
   margin-bottom: 16px;
 `
 
+const GroupHeader = styled.div`
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+  margin: 16px 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`
+
 const CheckboxLabel = styled.label`
   display: flex;
   align-items: center;
   margin-bottom: 8px;
   cursor: pointer;
+  margin-left: 12px;
 `
 
 const Checkbox = styled.input`
@@ -133,15 +143,30 @@ export enum ExportDataType {
 }
 
 const DATA_TYPE_LABELS: Record<ExportDataType, string> = {
-  [ExportDataType.RAW_EEG]: 'Raw EEG',
-  [ExportDataType.ENRICHED_EEG]: 'Enriched EEG',
-  [ExportDataType.PREPROCESSED_EEG]: 'Preprocessed EEG',
-  [ExportDataType.STIMULATION_DECISIONS]: 'Stimulation Decisions',
-  [ExportDataType.DECIDER_LOGS]: 'Decider Logs',
-  [ExportDataType.PREPROCESSOR_LOGS]: 'Preprocessor Logs',
-  [ExportDataType.PRESENTER_LOGS]: 'Presenter Logs',
-  [ExportDataType.SENSORY_STIMULI]: 'Sensory Stimuli',
+  [ExportDataType.RAW_EEG]: 'Raw',
+  [ExportDataType.ENRICHED_EEG]: 'Enriched',
+  [ExportDataType.PREPROCESSED_EEG]: 'Preprocessed',
+  [ExportDataType.STIMULATION_DECISIONS]: 'Pulses',
+  [ExportDataType.DECIDER_LOGS]: 'Decider',
+  [ExportDataType.PREPROCESSOR_LOGS]: 'Preprocessor',
+  [ExportDataType.PRESENTER_LOGS]: 'Presenter',
+  [ExportDataType.SENSORY_STIMULI]: 'Sensory stimuli',
 }
+
+const EXPORT_GROUPS = [
+  {
+    name: 'EEG',
+    types: [ExportDataType.RAW_EEG, ExportDataType.ENRICHED_EEG, ExportDataType.PREPROCESSED_EEG]
+  },
+  {
+    name: 'Decisions',
+    types: [ExportDataType.STIMULATION_DECISIONS, ExportDataType.SENSORY_STIMULI]
+  },
+  {
+    name: 'Logs',
+    types: [ExportDataType.DECIDER_LOGS, ExportDataType.PREPROCESSOR_LOGS, ExportDataType.PRESENTER_LOGS]
+  }
+]
 
 const STORAGE_KEY = 'exportModalSelectedTypes'
 
@@ -261,19 +286,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         </SelectAllContainer>
 
         <CheckboxGroup>
-          {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => {
-            const type = parseInt(key) as ExportDataType
-            return (
-              <CheckboxLabel key={type}>
-                <Checkbox
-                  type="checkbox"
-                  checked={selectedTypes.has(type)}
-                  onChange={(e) => handleTypeChange(type, e.target.checked)}
-                />
-                {label}
-              </CheckboxLabel>
-            )
-          })}
+          {EXPORT_GROUPS.map((group) => (
+            <div key={group.name}>
+              <GroupHeader>{group.name}</GroupHeader>
+              {group.types.map((type) => (
+                <CheckboxLabel key={type}>
+                  <Checkbox
+                    type="checkbox"
+                    checked={selectedTypes.has(type)}
+                    onChange={(e) => handleTypeChange(type, e.target.checked)}
+                  />
+                  {DATA_TYPE_LABELS[type]}
+                </CheckboxLabel>
+              ))}
+            </div>
+          ))}
         </CheckboxGroup>
 
         <ButtonGroup>

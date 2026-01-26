@@ -15,13 +15,11 @@ import { HealthcheckMessageDisplay } from 'components/HealthcheckMessageDisplay'
 import { HealthcheckStatusDisplay } from 'components/HealthcheckStatusDisplay'
 import { PipelineView } from 'views/PipelineView'
 import { DashboardView } from 'views/DashboardView'
-import { Header as StyledHeader } from 'styles/StyledTypography'
 import { ProjectProvider } from 'providers/ProjectProvider'
 
 const App = () => {
   return (
     <Providers>
-      <Header>NeuroSimo</Header>
       <HealthcheckStatusDisplay />
       <HealthcheckMessageDisplay />
       <Wrapper>
@@ -31,16 +29,6 @@ const App = () => {
     </Providers>
   )
 }
-
-const Header = styled(StyledHeader)`
-  font-size: 1.02rem;
-  color: #333;
-  margin-bottom: 0.62rem;
-  padding: 0.31rem;
-  background-color: #f2f2f2;
-  border-bottom: 2px solid #ddd;
-  border-radius: 2px 2px 0 0;
-`
 
 const Wrapper = styled.div`
   padding: 1.23rem 0rem;

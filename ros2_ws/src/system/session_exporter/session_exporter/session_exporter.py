@@ -71,19 +71,19 @@ class SessionExporterNode(Node):
         )
 
         # Publish initial IDLE state
-        self._publish_state(ExporterState.IDLE, '', '', 0.0)
+        self._publish_state(ExporterState.IDLE, '', 0.0)
 
         # Create service servers
         self.create_service(
             ExportSession,
-            '/playback/session/export',
+            '/session/export',
             self.export_session_callback,
             callback_group=self.callback_group
         )
         
         self.create_service(
             CancelExport,
-            '/playback/session/cancel_export',
+            '/session/cancel_export',
             self.cancel_export_callback,
             callback_group=self.callback_group
         )
@@ -148,12 +148,11 @@ class SessionExporterNode(Node):
             response.success = True
             return response
 
-    def _publish_state(self, state, recording_name, export_path, progress):
+    def _publish_state(self, state, recording_name, progress):
         """Publish exporter state."""
         msg = ExporterState()
         msg.state = state
         msg.recording_name = recording_name
-        msg.export_path = export_path
         msg.progress = progress
         self._state_publisher.publish(msg)
 
@@ -164,7 +163,7 @@ class SessionExporterNode(Node):
             export_dir = self._create_export_directory(bag_path)
             
             self.logger.info(f'Starting export of {len(topics_to_export)} topics')
-            self._publish_state(ExporterState.EXPORTING, recording_name, str(export_dir), 0.0)
+            self._publish_state(ExporterState.EXPORTING, recording_name, 0.0)
 
             # Export all topics in a single pass
             exported_files = self._export_topics_single_pass(
@@ -174,20 +173,20 @@ class SessionExporterNode(Node):
             # Check if cancelled
             if self._cancel_flag.is_set():
                 self.logger.info('Export cancelled')
-                self._publish_state(ExporterState.IDLE, '', '', 0.0)
+                self._publish_state(ExporterState.IDLE, '', 0.0)
                 return
 
             if not exported_files:
-                self._publish_state(ExporterState.ERROR, recording_name, str(export_dir), 0.0)
+                self._publish_state(ExporterState.ERROR, recording_name, 0.0)
                 self.logger.error('No data exported')
                 return
 
-            self._publish_state(ExporterState.IDLE, '', '', 0.0)
+            self._publish_state(ExporterState.IDLE, '', 0.0)
             self.logger.info(f'Export complete: {export_dir}, exported {len(exported_files)} file(s)')
 
         except Exception as e:
             self.logger.error(f'Export failed: {str(e)}')
-            self._publish_state(ExporterState.ERROR, recording_name, '', 0.0)
+            self._publish_state(ExporterState.ERROR, recording_name, 0.0)
 
     def _find_bag_path(self, project_name, recording_name):
         """Find the bag directory path from project and recording name."""
@@ -320,7 +319,6 @@ class SessionExporterNode(Node):
                     self._publish_state(
                         ExporterState.EXPORTING,
                         recording_name,
-                        str(export_dir),
                         progress
                     )
                     last_progress_update = progress

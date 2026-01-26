@@ -1,5 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { ExportModal, ExportDataType } from 'components/ExportModal'
@@ -56,11 +58,28 @@ const ExportButton = styled.button<{ disabled: boolean }>`
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   font-size: 14px;
   font-weight: 500;
-  margin-left: auto;
-  margin-right: 10px;
+  margin-right: 8px;
 
   &:hover {
     background-color: ${props => props.disabled ? '#cccccc' : '#0056b3'};
+  }
+`
+
+const OpenFolderButton = styled.button<{ disabled: boolean }>`
+  background-color: ${props => props.disabled ? '#cccccc' : '#28a745'};
+  color: ${props => props.disabled ? '#666666' : 'white'};
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+
+  &:hover {
+    background-color: ${props => props.disabled ? '#cccccc' : '#218838'};
   }
 `
 
@@ -80,6 +99,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
 
   const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
   const isEegStreaming = eegInfo?.is_streaming || false
+  const isElectron = !!(window as any).electronAPI
 
   // Fetch recording info when selected recording changes
   useEffect(() => {
@@ -152,6 +172,13 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         }
       }
     )
+  }
+
+  const handleOpenFolder = async () => {
+    if (!activeProject) return
+    
+    const error = await (window as any).electronAPI?.openRecordingsFolder(activeProject)
+    if (error) console.error('Failed to open folder:', error)
   }
 
   return (
@@ -241,12 +268,21 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         </>
       )}
       <CompactRow>
-        <ExportButton
-          disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming}
-          onClick={handleExportClick}
-        >
-          Export
-        </ExportButton>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+          <ExportButton
+            disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming}
+            onClick={handleExportClick}
+          >
+            Export
+          </ExportButton>
+          <OpenFolderButton
+            disabled={!activeProject || !isElectron}
+            onClick={handleOpenFolder}
+            title={isElectron ? "Open recordings folder" : "Only available in Electron"}
+          >
+            <FontAwesomeIcon icon={faFolderOpen} />
+          </OpenFolderButton>
+        </div>
       </CompactRow>
       <ExportModal
         isOpen={isExportModalOpen}

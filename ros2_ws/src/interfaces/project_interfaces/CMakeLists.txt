@@ -29,9 +29,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   "msg/DatasetInfo.msg"
   "msg/FilenameList.msg"
+  "msg/RecordingInfo.msg"
   "srv/SetDataset.srv"
   "srv/SetStartTime.srv"
   "srv/GetDatasetInfo.srv"
+  "srv/GetRecordingInfo.srv"
 )
 
 ament_package()

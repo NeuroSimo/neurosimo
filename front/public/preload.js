@@ -1,5 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  openRecordingsFolder: (projectName) => ipcRenderer.invoke('open-recordings-folder', projectName),
+  openProjectFolder: (projectName, subdir) => ipcRenderer.invoke('open-project-folder', projectName, subdir),
 });

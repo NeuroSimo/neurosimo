@@ -177,7 +177,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const handleOpenFolder = async () => {
     if (!activeProject) return
     
-    const error = await (window as any).electronAPI?.openRecordingsFolder(activeProject)
+    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, 'recordings')
     if (error) console.error('Failed to open folder:', error)
   }
 

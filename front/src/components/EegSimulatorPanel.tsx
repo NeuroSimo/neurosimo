@@ -1,5 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 
 import { ValidatedInput } from 'components/ValidatedInput'
 
@@ -17,6 +19,7 @@ import {
 import { EegSimulatorContext, StreamerStateValue } from 'providers/EegSimulatorProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
+import { ProjectContext } from 'providers/ProjectProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { useSession, SessionStage } from 'providers/SessionProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
@@ -41,6 +44,25 @@ const CompactRow = styled(ConfigRow)`
   gap: 4px;
 `
 
+const OpenFolderButton = styled.button<{ disabled: boolean }>`
+  background-color: ${props => props.disabled ? '#cccccc' : '#28a745'};
+  color: ${props => props.disabled ? '#666666' : 'white'};
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: 10px;
+
+  &:hover {
+    background-color: ${props => props.disabled ? '#cccccc' : '#218838'};
+  }
+`
+
 
 export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegSimulatorHealthcheck } = useContext(HealthcheckContext)
@@ -52,6 +74,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(PipelineContext)
   const { eegInfo } = useContext(EegStreamContext)
+  const { activeProject } = useContext(ProjectContext)
   const { setSimulatorDataset, setSimulatorStartTime } = useParameters()
   const { sessionState } = useSession()
 
@@ -59,6 +82,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
 
   const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
   const isEegStreaming = eegInfo?.is_streaming || false
+  const isElectron = !!(window as any).electronAPI
 
   // Fetch dataset info when dataset changes
   useEffect(() => {
@@ -92,6 +116,13 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     setSimulatorStartTime(startTime, () => {
       console.log('Start time set to ' + startTime)
     })
+  }
+
+  const handleOpenFolder = async () => {
+    if (!activeProject) return
+    
+    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, 'eeg_simulator')
+    if (error) console.error('Failed to open folder:', error)
   }
     
 
@@ -161,6 +192,16 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       <CompactRow>
         <ConfigLabel>Status:</ConfigLabel>
         <ConfigValue>{streamerStateLabel}</ConfigValue>
+      </CompactRow>
+      <div style={{ height: '8px' }} />
+      <CompactRow>
+        <OpenFolderButton
+          disabled={!activeProject || !isElectron}
+          onClick={handleOpenFolder}
+          title={isElectron ? "Open EEG simulator folder" : "Only available in Electron"}
+        >
+          <FontAwesomeIcon icon={faFolderOpen} />
+        </OpenFolderButton>
       </CompactRow>
     </SimulatorPanel>
   )

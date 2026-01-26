@@ -1,9 +1,9 @@
 import React from 'react'
 import ROSLIB from 'roslib'
 
-const ROSBRIDGE_URL = `${process.env.REACT_APP_ROSBRIDGE_URL}`
+const ROSBRIDGE_URL = 'ws://localhost:9090'
 
-if (ROSBRIDGE_URL === 'undefined') {
+if (!ROSBRIDGE_URL) {
   throw new Error('ROSBRIDGE_URL environment variable is not set')
 }
 

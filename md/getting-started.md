@@ -8,7 +8,7 @@ A new project is created from the command line (ctrl+alt+t) by running the follo
 create-project <project_name>
 ```
 
-After that, the project can be opened from the NeuroSimo panel ([http://localhost:3000](http://localhost:3000)).
+After that, the project can be opened from the NeuroSimo desktop application.
 
 Here are some guidelines for choosing a project name:
 

@@ -7,8 +7,11 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y \
     dos2unix \
-    ros-iron-rmw-cyclonedds-cpp && \
+    ros-iron-rmw-cyclonedds-cpp \
+    python3-pip && \
     rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install watchdog
 
 # Set the Cyclone DDS configuration
 COPY ros2_ws/config/cyclonedds.xml /config/

@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
+const os = require('os');
 const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow;
@@ -40,6 +41,12 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// Handle IPC calls
+ipcMain.handle('open-recordings-folder', async (event, projectName) => {
+  const recordingsPath = path.join(os.homedir(), 'projects', projectName, 'recordings');
+  return await shell.openPath(recordingsPath);
+});
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(createWindow);

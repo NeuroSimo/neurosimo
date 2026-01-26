@@ -252,6 +252,9 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         onClose={() => setIsExportModalOpen(false)}
         onExport={handleExport}
         recordingName={playbackBagFilename ? playbackBagFilename.replace(/\.json$/, '') : (recordingsList.length > 0 ? recordingsList[0].replace(/\.json$/, '') : 'Unknown')}
+        preprocessorEnabled={selectedRecordingInfo?.preprocessor_enabled ?? true}
+        deciderEnabled={selectedRecordingInfo?.decider_enabled ?? true}
+        presenterEnabled={selectedRecordingInfo?.presenter_enabled ?? true}
       />
     </PlaybackContainer>
   )

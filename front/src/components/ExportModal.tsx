@@ -63,12 +63,13 @@ const GroupHeader = styled.div`
   letter-spacing: 0.5px;
 `
 
-const CheckboxLabel = styled.label`
+const CheckboxLabel = styled.label<{ disabled?: boolean }>`
   display: flex;
   align-items: center;
   margin-bottom: 8px;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'default' : 'pointer'};
   margin-left: 12px;
+  color: ${props => props.disabled ? '#999' : 'inherit'};
 `
 
 const Checkbox = styled.input`
@@ -164,7 +165,7 @@ const EXPORT_GROUPS = [
   },
   {
     name: 'Logs',
-    types: [ExportDataType.DECIDER_LOGS, ExportDataType.PREPROCESSOR_LOGS, ExportDataType.PRESENTER_LOGS]
+    types: [ExportDataType.PREPROCESSOR_LOGS, ExportDataType.DECIDER_LOGS, ExportDataType.PRESENTER_LOGS]
   }
 ]
 
@@ -175,6 +176,9 @@ interface ExportModalProps {
   onClose: () => void
   onExport: (selectedTypes: ExportDataType[]) => void
   recordingName: string
+  preprocessorEnabled?: boolean
+  deciderEnabled?: boolean
+  presenterEnabled?: boolean
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({
@@ -182,6 +186,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   onClose,
   onExport,
   recordingName,
+  preprocessorEnabled = true,
+  deciderEnabled = true,
+  presenterEnabled = true,
 }) => {
   const [selectedTypes, setSelectedTypes] = useState<Set<ExportDataType>>(new Set())
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null)
@@ -199,6 +206,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   }, [])
 
+  // Remove disabled types from selection when component props change
+  useEffect(() => {
+    setSelectedTypes(currentSelected => {
+      const newSelected = new Set(currentSelected)
+      const disabledTypes = [
+        ...(preprocessorEnabled ? [] : [ExportDataType.PREPROCESSED_EEG, ExportDataType.PREPROCESSOR_LOGS]),
+        ...(deciderEnabled ? [] : [ExportDataType.DECIDER_LOGS]),
+        ...(presenterEnabled ? [] : [ExportDataType.SENSORY_STIMULI, ExportDataType.PRESENTER_LOGS])
+      ]
+      disabledTypes.forEach(type => newSelected.delete(type))
+      return newSelected
+    })
+  }, [preprocessorEnabled, deciderEnabled, presenterEnabled])
+
   // Save selected types to localStorage whenever they change
   useEffect(() => {
     try {
@@ -213,12 +234,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     const checkbox = selectAllCheckboxRef.current
     if (checkbox) {
       const allTypes = Object.keys(DATA_TYPE_LABELS).map(key => parseInt(key) as ExportDataType)
-      const selectedCount = allTypes.filter(type => selectedTypes.has(type)).length
+      const enabledTypes = allTypes.filter(type =>
+        !((type === ExportDataType.PREPROCESSED_EEG && !preprocessorEnabled) ||
+          (type === ExportDataType.SENSORY_STIMULI && !presenterEnabled) ||
+          (type === ExportDataType.DECIDER_LOGS && !deciderEnabled) ||
+          (type === ExportDataType.PREPROCESSOR_LOGS && !preprocessorEnabled) ||
+          (type === ExportDataType.PRESENTER_LOGS && !presenterEnabled))
+      )
+      const selectedEnabledCount = enabledTypes.filter(type => selectedTypes.has(type)).length
 
-      if (selectedCount === 0) {
+      if (selectedEnabledCount === 0) {
         checkbox.checked = false
         checkbox.indeterminate = false
-      } else if (selectedCount === allTypes.length) {
+      } else if (selectedEnabledCount === enabledTypes.length) {
         checkbox.checked = true
         checkbox.indeterminate = false
       } else {
@@ -226,7 +254,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         checkbox.indeterminate = true
       }
     }
-  }, [selectedTypes])
+  }, [selectedTypes, preprocessorEnabled, deciderEnabled, presenterEnabled])
 
   const handleTypeChange = (type: ExportDataType, checked: boolean) => {
     const newSelected = new Set(selectedTypes)
@@ -249,14 +277,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   const handleSelectAll = () => {
     const allTypes = Object.keys(DATA_TYPE_LABELS).map(key => parseInt(key) as ExportDataType)
-    const selectedCount = allTypes.filter(type => selectedTypes.has(type)).length
+    const enabledTypes = allTypes.filter(type =>
+      !((type === ExportDataType.PREPROCESSED_EEG && !preprocessorEnabled) ||
+        (type === ExportDataType.SENSORY_STIMULI && !presenterEnabled) ||
+        (type === ExportDataType.DECIDER_LOGS && !deciderEnabled) ||
+        (type === ExportDataType.PREPROCESSOR_LOGS && !preprocessorEnabled) ||
+        (type === ExportDataType.PRESENTER_LOGS && !presenterEnabled))
+    )
+    const selectedEnabledCount = enabledTypes.filter(type => selectedTypes.has(type)).length
 
-    if (selectedCount === allTypes.length) {
-      // All selected, deselect all
+    if (selectedEnabledCount === enabledTypes.length) {
+      // All enabled selected, deselect all
       setSelectedTypes(new Set())
     } else {
-      // None or partially selected, select all
-      setSelectedTypes(new Set(allTypes))
+      // None or partially selected, select all enabled
+      setSelectedTypes(new Set(enabledTypes))
     }
   }
 
@@ -289,16 +324,24 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           {EXPORT_GROUPS.map((group) => (
             <div key={group.name}>
               <GroupHeader>{group.name}</GroupHeader>
-              {group.types.map((type) => (
-                <CheckboxLabel key={type}>
-                  <Checkbox
-                    type="checkbox"
-                    checked={selectedTypes.has(type)}
-                    onChange={(e) => handleTypeChange(type, e.target.checked)}
-                  />
-                  {DATA_TYPE_LABELS[type]}
-                </CheckboxLabel>
-              ))}
+              {group.types.map((type) => {
+                const isDisabled = (type === ExportDataType.PREPROCESSED_EEG && !preprocessorEnabled) ||
+                                 (type === ExportDataType.SENSORY_STIMULI && !presenterEnabled) ||
+                                 (type === ExportDataType.DECIDER_LOGS && !deciderEnabled) ||
+                                 (type === ExportDataType.PREPROCESSOR_LOGS && !preprocessorEnabled) ||
+                                 (type === ExportDataType.PRESENTER_LOGS && !presenterEnabled)
+                return (
+                  <CheckboxLabel key={type} disabled={isDisabled}>
+                    <Checkbox
+                      type="checkbox"
+                      checked={selectedTypes.has(type) && !isDisabled}
+                      onChange={(e) => handleTypeChange(type, e.target.checked)}
+                      disabled={isDisabled}
+                    />
+                    {DATA_TYPE_LABELS[type]}
+                  </CheckboxLabel>
+                )
+              })}
             </div>
           ))}
         </CheckboxGroup>

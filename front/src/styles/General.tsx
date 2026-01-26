@@ -143,7 +143,7 @@ export const ConfigValue = styled.div`
   display: inline-flex;
   justify-content: flex-end;
   align-items: center;
-  width: 120px;
+  width: 190px;
   text-align: right;
   font-size: 11px;
   font-family: 'Roboto', 'Segoe UI', sans-serif;

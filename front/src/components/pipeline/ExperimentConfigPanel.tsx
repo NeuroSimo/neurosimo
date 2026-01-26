@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
@@ -21,6 +21,26 @@ const Container = styled(StyledPanel)`
   left: 0;
 `
 
+const IconButtonWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const IconButton = styled.button<{ disabled: boolean }>`
+  background: none;
+  border: 0.5px solid #666666;
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666666;
+  opacity: ${props => props.disabled ? 0.5 : 1};
+`
+
 export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList } = useContext(PipelineContext)
   const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useParameters()
@@ -30,6 +50,7 @@ export const ExperimentPanel: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
+  const isElectron = !!(window as any).electronAPI
 
   useEffect(() => {
     listProjects(setProjects)
@@ -65,32 +86,26 @@ export const ExperimentPanel: React.FC = () => {
     })
   }
 
+  const handleOpenProtocolsFolder = async () => {
+    if (!activeProject) return
+    
+    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, 'protocols')
+    if (error) console.error('Failed to open folder:', error)
+  }
+
   return (
     <Container>
       <SmallerTitle>Experiment</SmallerTitle>
       <ConfigRow>
         <ConfigLabel>Project:</ConfigLabel>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
+        <IconButtonWrapper>
+          <IconButton
             onClick={() => setIsCreateModalOpen(true)}
             disabled={isSessionRunning}
-            style={{
-              background: 'none',
-              border: '0.5px solid #666666',
-              borderRadius: '3px',
-              width: '18px',
-              height: '18px',
-              cursor: isSessionRunning ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#666666',
-              opacity: isSessionRunning ? 0.5 : 1,
-            }}
             title="Create new project"
           >
             <FontAwesomeIcon icon={faPlus} />
-          </button>
+          </IconButton>
           <Select onChange={handleProjectChange} value={activeProject} disabled={isSessionRunning}>
             {projects.map((project, index) => (
               <option key={index} value={project}>
@@ -98,7 +113,7 @@ export const ExperimentPanel: React.FC = () => {
               </option>
             ))}
           </Select>
-        </div>
+        </IconButtonWrapper>
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Subject ID:</ConfigLabel>
@@ -125,13 +140,22 @@ export const ExperimentPanel: React.FC = () => {
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Protocol:</ConfigLabel>
-        <Select onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
-          {protocolList.map((protocol, index) => (
-            <option key={index} value={protocol}>
-              {protocol}
-            </option>
-          ))}
-        </Select>
+        <IconButtonWrapper>
+          <IconButton
+            onClick={handleOpenProtocolsFolder}
+            disabled={!activeProject || !isElectron}
+            title={isElectron ? "Open protocols folder" : "Only available in Electron"}
+          >
+            <FontAwesomeIcon icon={faFolderOpen} />
+          </IconButton>
+          <Select onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
+            {protocolList.map((protocol, index) => (
+              <option key={index} value={protocol}>
+                {protocol}
+              </option>
+            ))}
+          </Select>
+        </IconButtonWrapper>
       </ConfigRow>
 
       <CreateProjectModal

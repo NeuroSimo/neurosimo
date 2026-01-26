@@ -15,6 +15,7 @@ import {
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { useSession, SessionStage } from 'providers/SessionProvider'
+import { PlaybackContext } from 'providers/PlaybackProvider'
 
 const PlaybackContainer = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
@@ -24,7 +25,7 @@ const PlaybackContainer = styled(StyledPanel)`
   gap: 4px;
 `
 
-const ExperimentSelect = styled(Select)`
+const RecordingSelect = styled(Select)`
   margin-left: 6px;
   width: 150px;
 `
@@ -44,6 +45,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const { eegInfo } = useContext(EegStreamContext)
   const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useParameters()
   const { sessionState } = useSession()
+  const { recordingsList } = useContext(PlaybackContext)
 
   // For playback tab - these would come from a playback context in the future
   const [playbackBagFilename, setPlaybackBagFilenameState] = useState<string>('')
@@ -70,11 +72,18 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   return (
     <PlaybackContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Experiment:</ConfigLabel>
-        <ExperimentSelect onChange={setPlaybackBagFilenameHandler} value={playbackBagFilename} disabled={isSessionRunning || isEegStreaming}>
-          <option value="">Select experiment...</option>
-          {/* TODO: Add experiment options here */}
-        </ExperimentSelect>
+        <ConfigLabel>Recording:</ConfigLabel>
+        {recordingsList.length > 0 ? (
+          <RecordingSelect onChange={setPlaybackBagFilenameHandler} value={playbackBagFilename} disabled={isSessionRunning || isEegStreaming}>
+            {recordingsList.map((recordingFilename: typeof recordingsList[number], index: number) => (
+              <option key={index} value={recordingFilename}>
+                {recordingFilename}
+              </option>
+            ))}
+          </RecordingSelect>
+        ) : (
+          <ConfigValue>No recordings</ConfigValue>
+        )}
       </ConfigRow>
       <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Preprocessed:</ConfigLabel>
@@ -83,7 +92,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
             type="flat"
             checked={playbackIsPreprocessed}
             onChange={setPlaybackIsPreprocessedHandler}
-            disabled={isSessionRunning || isEegStreaming}
+            disabled={isSessionRunning || isEegStreaming || recordingsList.length === 0}
           />
         </SwitchWrapper>
       </CompactRow>

@@ -10,6 +10,7 @@ import {
   ConfigRow,
   ConfigLabel,
   ConfigValue,
+  NotesValue,
   CONFIG_PANEL_WIDTH,
 } from 'styles/General'
 
@@ -218,7 +219,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
           {selectedRecordingInfo.notes && (
             <CompactRow>
               <ConfigLabel>Notes:</ConfigLabel>
-              <ConfigValue>{selectedRecordingInfo.notes}</ConfigValue>
+              <NotesValue>{selectedRecordingInfo.notes}</NotesValue>
             </CompactRow>
           )}
 

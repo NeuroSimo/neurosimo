@@ -45,6 +45,25 @@ CONTAINER_NAME=$1
 # Check disk space and clean up before proceeding
 check_disk_space_and_clean
 
+# Get git provenance
+export GIT_COMMIT="$(git -C "$NEUROSIMO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
+export GIT_TAG="$(git -C "$NEUROSIMO_ROOT" describe --tags --abbrev=0 2>/dev/null || echo unknown)"
+
+if git -C "$NEUROSIMO_ROOT" diff --quiet --no-ext-diff && \
+   git -C "$NEUROSIMO_ROOT" diff --cached --quiet --no-ext-diff; then
+  export GIT_STATE="clean"
+else
+  export GIT_STATE="dirty"
+fi
+
+PROVENANCE_FILE="$NEUROSIMO_ROOT/.git_provenance.env"
+
+cat > "$PROVENANCE_FILE" <<EOF
+GIT_COMMIT=$GIT_COMMIT
+GIT_TAG=$GIT_TAG
+GIT_STATE=$GIT_STATE
+EOF
+
 # Rebuild the specified core container or all containers if none is specified.
 echo "${BOLD}Building containers...${RESET}"
 

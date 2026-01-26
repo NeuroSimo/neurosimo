@@ -27,9 +27,9 @@ ExecStartPre=/usr/bin/xhost +local:docker
 
 # Start containers
 {% if use_gpu | bool %}
-ExecStart=/usr/bin/flock -w 120 ${COMPOSE_LOCK} /usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile gpu up -d --remove-orphans
+ExecStart=/usr/bin/flock -w 120 ${COMPOSE_LOCK} /usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile gpu up -d --remove-orphans --force-recreate
 {% else %}
-ExecStart=/usr/bin/flock -w 120 ${COMPOSE_LOCK} /usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile non-gpu up -d --remove-orphans
+ExecStart=/usr/bin/flock -w 120 ${COMPOSE_LOCK} /usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile non-gpu up -d --remove-orphans --force-recreate
 {% endif %}
 
 # Stop containers

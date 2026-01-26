@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'session_configurator'
+package_name = 'project_manager'
 
 setup(
     name=package_name,
@@ -19,12 +19,12 @@ setup(
     zip_safe=True,
     maintainer='Olli-Pekka Kahilakoski',
     maintainer_email='okahilak@gmail.com',
-    description='Session configurator',
+    description='Project manager',
     license='TODO',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'session_configurator = session_configurator.session_configurator:main',
+            'project_manager = project_manager.project_manager:main',
         ],
     },
 )

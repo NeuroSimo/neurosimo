@@ -4,6 +4,7 @@ const os = require('os');
 const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow;
+let detachedWindow = null;
 
 function createWindow() {
   // Create the browser window.
@@ -42,10 +43,48 @@ function createWindow() {
   });
 }
 
+function createDetachedWindow() {
+  if (detachedWindow) {
+    detachedWindow.focus();
+    return;
+  }
+
+  detachedWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    backgroundColor: '#000000',
+    fullscreenable: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    title: 'Experiment View'
+  });
+
+  if (isDev) {
+    detachedWindow.loadURL('http://localhost:3000?detached=true');
+  } else {
+    detachedWindow.loadFile(path.join(__dirname, '../build/index.html'), {
+      query: { detached: 'true' }
+    });
+  }
+
+  detachedWindow.on('closed', () => {
+    detachedWindow = null;
+  });
+}
+
 // Handle IPC calls
 ipcMain.handle('open-project-folder', async (event, projectName, subdir) => {
   const folderPath = path.join(os.homedir(), 'projects', projectName, subdir);
   return await shell.openPath(folderPath);
+});
+
+ipcMain.handle('open-detached-experiment-window', async () => {
+  createDetachedWindow();
+  return null;
 });
 
 // This method will be called when Electron has finished initialization

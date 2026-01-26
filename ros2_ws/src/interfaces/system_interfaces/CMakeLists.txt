@@ -24,12 +24,16 @@ find_package(eeg_interfaces REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DiskStatus.msg"
+  "msg/ExportDataType.msg"
+  "msg/ExporterState.msg"
   "msg/Healthcheck.msg"
   "msg/HealthcheckStatus.msg"
   "msg/RecorderState.msg"
   "msg/SessionConfig.msg"
   "msg/SessionState.msg"
   "msg/StreamerState.msg"
+  "srv/CancelExport.srv"
+  "srv/ExportSession.srv"
   "srv/GetSessionConfig.srv"
   "srv/StartRecording.srv"
   "srv/StopRecording.srv"

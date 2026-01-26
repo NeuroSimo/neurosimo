@@ -1,0 +1,7 @@
+# Export specific topics from a recorded session to CSV files
+
+string project_name
+string recording_name
+ExportDataType[] data_types
+---
+bool success

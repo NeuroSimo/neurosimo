@@ -6,6 +6,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
 from system_interfaces.srv import StartRecording, StopRecording
 from system_interfaces.msg import RecorderState, SessionConfig, DiskStatus
+from rosidl_runtime_py.convert import message_to_ordereddict
 
 import os
 import json
@@ -127,8 +128,8 @@ class SessionRecorderNode(Node):
 
         self._recording_config = {
             'session_id': session_uuid.hex,
-            'session_config': request.config.to_dict(),
-            'stream_info': request.stream_info.to_dict(),
+            'session_config': message_to_ordereddict(request.config),
+            'stream_info': message_to_ordereddict(request.stream_info),
             'start_time': datetime.now().isoformat(),
         }
 
@@ -295,7 +296,7 @@ class SessionRecorderNode(Node):
     def _write_session_metadata(self):
         """Write session configuration to a sidecar JSON file."""
         if self._bag_path and self._recording_config:
-            metadata_path = f'{self._bag_path}.session.json'
+            metadata_path = f'{self._bag_path}.json'
             with open(metadata_path, 'w') as f:
                 json.dump(self._recording_config, f, indent=2)
             self.logger.info(f'Wrote session metadata to {metadata_path}')

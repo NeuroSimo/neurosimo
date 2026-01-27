@@ -9,13 +9,13 @@
 #include "rclcpp/rclcpp.hpp"
 #include "eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 #include "pipeline_interfaces/msg/experiment_state.hpp"
+#include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/srv/initialize_protocol.hpp"
 
 #include "protocol.h"
@@ -31,7 +31,7 @@ private:
   /* ROS2 interfaces */
   // Subscribers
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr raw_eeg_subscriber;
-  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr pulse_event_subscriber;
+  rclcpp::Subscription<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_final_subscriber;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   
   // Publishers
@@ -64,7 +64,7 @@ private:
 
   /* Callbacks */
   void handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
-  void handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg);
+  void handle_decision_trace_final(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg);
   
   void handle_pause(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,

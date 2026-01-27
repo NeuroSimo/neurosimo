@@ -73,11 +73,6 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     "/pipeline/latency",
     10);
 
-  /* Publisher for pulse events. */
-  this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/pipeline/pulse_events",
-    100);
-
   /* Initialize LabJack manager. */
   labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), this->simulate_labjack);
   labjack_manager->start();
@@ -143,10 +138,6 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
     decision_trace.pipeline_latency_at_firing = this->current_latency;
 
     this->decision_trace_publisher->publish(decision_trace);
-
-    /* Publish pulse event for experiment coordinator. */
-    auto pulse_event_msg = std_msgs::msg::Empty();
-    this->pulse_event_publisher->publish(pulse_event_msg);
   }
 }
 

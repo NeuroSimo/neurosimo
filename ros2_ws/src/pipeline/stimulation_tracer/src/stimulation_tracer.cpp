@@ -143,7 +143,7 @@ void StimulationTracer::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::
   auto observation_trace = pipeline_interfaces::msg::DecisionTrace();
   observation_trace.session_id = matching_trace->session_id;
   observation_trace.decision_id = matching_trace->decision_id;
-  observation_trace.status = pipeline_interfaces::msg::DecisionTrace::STATUS_OBSERVED;
+  observation_trace.status = pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED;
   observation_trace.actual_stimulation_time = actual_stimulation_time;
   observation_trace.actual_stimulation_sample_index = actual_stimulation_sample_index;
 
@@ -246,7 +246,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
 bool StimulationTracer::is_terminal_status(uint8_t status) {
   /* A decision is finalized when it reaches one of these terminal statuses. */
   return status == pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED ||
-         status == pipeline_interfaces::msg::DecisionTrace::STATUS_OBSERVED ||
+         status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED ||
          status == pipeline_interfaces::msg::DecisionTrace::STATUS_MISSED ||
          status == pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
 }

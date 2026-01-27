@@ -8,8 +8,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include <memory>
 
-#include "std_msgs/msg/bool.hpp"
-#include "std_msgs/msg/empty.hpp"
 #include "labjack_manager.h"
 
 #include "eeg_interfaces/msg/sample.hpp"
@@ -34,7 +32,6 @@ private:
   rclcpp::Service<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
   rclcpp::Publisher<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
-  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
 

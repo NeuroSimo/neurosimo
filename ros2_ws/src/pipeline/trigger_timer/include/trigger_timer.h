@@ -45,9 +45,9 @@ private:
   std::unique_ptr<LabJackManager> labjack_manager;
 
   double_t latest_timing_error = 0.0;
-  double_t latest_latency_measurement_time = 0.0;
+  double_t last_latency_measurement_time = 0.0;
   double_t current_latency = 0.0;
-  double_t current_latency_corrected_time = 0.0;
+  double_t current_time = 0.0;
 
   double_t triggering_tolerance = 0.0;
   bool simulate_labjack = false;
@@ -57,6 +57,10 @@ private:
   std::mutex queue_mutex;
 
   void attempt_labjack_connection();
+
+  void trigger_pulses_until_time(double_t until_time);
+  void trigger_latency_measurement(double_t sample_time);
+
   void handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,

@@ -125,6 +125,14 @@ class SessionPlayerNode(Node):
             recording_info.git_state = provenance.get('git_state', '')
             recording_info.version = provenance.get('version', '')
 
+            # Check if session has been exported
+            # Export folder is named [recording_name]_export next to the recording directory
+            recording_name = os.path.splitext(request.filename)[0]  # Remove .json extension
+            export_folder_path = os.path.join(self._recordings_directory, f'{recording_name}_export')
+            recording_info.exported = os.path.exists(export_folder_path) and os.path.isdir(export_folder_path)
+            # Store relative path from project root for electronAPI compatibility
+            recording_info.export_directory = f'recordings/{recording_name}_export' if recording_info.exported else ''
+
             response.recording_info = recording_info
             response.success = True
 

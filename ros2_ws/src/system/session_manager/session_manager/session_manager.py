@@ -13,7 +13,8 @@ from system_interfaces.msg import SessionConfig
 from pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
-    InitializeStimulationTracer, FinalizeStimulationTracer
+    InitializeStimulationTracer, FinalizeStimulationTracer,
+    InitializeTriggerTimer, FinalizeTriggerTimer
 )
 from eeg_interfaces.action import InitializeSimulatorStream, InitializePlaybackStream
 from eeg_interfaces.srv import InitializeEegDeviceStream, StartStreaming, StopStreaming
@@ -78,6 +79,8 @@ class SessionManagerNode(Node):
             InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
         self.stimulation_tracer_init_client = self.create_client(
             InitializeStimulationTracer, '/pipeline/stimulation_tracer/initialize', callback_group=self.callback_group)
+        self.trigger_timer_init_client = self.create_client(
+            InitializeTriggerTimer, '/pipeline/trigger_timer/initialize', callback_group=self.callback_group)
         self.simulator_stream_init_client = ActionClient(
             self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
         self.eeg_device_stream_init_client = self.create_client(
@@ -94,6 +97,8 @@ class SessionManagerNode(Node):
             FinalizePresenter, '/pipeline/presenter/finalize', callback_group=self.callback_group)
         self.stimulation_tracer_finalize_client = self.create_client(
             FinalizeStimulationTracer, '/pipeline/stimulation_tracer/finalize', callback_group=self.callback_group)
+        self.trigger_timer_finalize_client = self.create_client(
+            FinalizeTriggerTimer, '/pipeline/trigger_timer/finalize', callback_group=self.callback_group)
 
         # Create clients for session recording
         self.recording_start_client = self.create_client(
@@ -286,6 +291,12 @@ class SessionManagerNode(Node):
         # Initialize stimulation tracer
         if not self.initialize_stimulation_tracer(session_id):
             self.logger.error('StimulationTracer initialization failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Initialize trigger timer
+        if not self.initialize_trigger_timer(session_id):
+            self.logger.error('TriggerTimer initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
@@ -502,6 +513,20 @@ class SessionManagerNode(Node):
         self.logger.info('StimulationTracer initialized successfully')
         return True
 
+    def initialize_trigger_timer(self, session_id):
+        """Initialize the trigger timer component."""
+        request = InitializeTriggerTimer.Request()
+        request.session_id = session_id
+
+        response = self.call_service(self.trigger_timer_init_client, request, '/pipeline/trigger_timer/initialize')
+
+        if response is None or not response.success:
+            self.logger.error('TriggerTimer initialization failed')
+            return False
+
+        self.logger.info('TriggerTimer initialized successfully')
+        return True
+
     def initialize_protocol(self, session_id, session_config):
         protocol_filename = session_config.protocol_filename
         project_name = session_config.project_name
@@ -557,6 +582,14 @@ class SessionManagerNode(Node):
             self.call_service(self.stimulation_tracer_finalize_client, request, '/pipeline/stimulation_tracer/finalize')
         except Exception as e:
             self.logger.error(f'Error finalizing stimulation tracer: {e}')
+
+        # Finalize trigger timer
+        try:
+            request = FinalizeTriggerTimer.Request()
+            request.session_id = session_id
+            self.call_service(self.trigger_timer_finalize_client, request, '/pipeline/trigger_timer/finalize')
+        except Exception as e:
+            self.logger.error(f'Error finalizing trigger timer: {e}')
 
         self.logger.info(f'Session finalization completed')
 

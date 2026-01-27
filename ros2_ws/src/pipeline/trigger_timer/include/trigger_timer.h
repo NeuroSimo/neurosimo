@@ -20,6 +20,8 @@
 
 #include "pipeline_interfaces/msg/timed_trigger.hpp"
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
+#include "pipeline_interfaces/srv/initialize_trigger_timer.hpp"
+#include "pipeline_interfaces/srv/finalize_trigger_timer.hpp"
 
 
 class TriggerTimer : public rclcpp::Node {
@@ -30,6 +32,8 @@ public:
 private:
   rclcpp::Logger logger;
   rclcpp::Service<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
+  rclcpp::Service<pipeline_interfaces::srv::InitializeTriggerTimer>::SharedPtr initialize_service;
+  rclcpp::Service<pipeline_interfaces::srv::FinalizeTriggerTimer>::SharedPtr finalize_service;
   rclcpp::Publisher<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
@@ -60,6 +64,7 @@ private:
   std::mutex queue_mutex;
 
   void attempt_labjack_connection();
+  void reset_state();
 
   void trigger_pulses_until_time(double_t sample_time);
   void measure_latency(bool latency_trigger, double_t sample_time);
@@ -68,6 +73,12 @@ private:
   void handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
+  void handle_initialize_trigger_timer(
+    const std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Response> response);
+  void handle_finalize_trigger_timer(
+    const std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response);
 
   /* Healthcheck */
   uint8_t status;

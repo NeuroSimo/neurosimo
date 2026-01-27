@@ -63,6 +63,16 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     TIMED_TRIGGER_SERVICE,
     std::bind(&TriggerTimer::handle_request_timed_trigger, this, _1, _2));
 
+  /* Service for initialization. */
+  this->initialize_service = create_service<pipeline_interfaces::srv::InitializeTriggerTimer>(
+    "/pipeline/trigger_timer/initialize",
+    std::bind(&TriggerTimer::handle_initialize_trigger_timer, this, _1, _2));
+
+  /* Service for finalization. */
+  this->finalize_service = create_service<pipeline_interfaces::srv::FinalizeTriggerTimer>(
+    "/pipeline/trigger_timer/finalize",
+    std::bind(&TriggerTimer::handle_finalize_trigger_timer, this, _1, _2));
+
   /* Publisher for decision trace. */
   this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
     "/pipeline/decision_trace",
@@ -72,18 +82,12 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   this->pipeline_latency_publisher = this->create_publisher<pipeline_interfaces::msg::PipelineLatency>(
     "/pipeline/latency",
     10);
-
-  /* Initialize LabJack manager. */
-  labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), this->simulate_labjack);
-  labjack_manager->start();
-
-  /* Set up a timer to signal connection attempts every second. */
-  timer = this->create_wall_timer(
-    std::chrono::seconds(1),
-    std::bind(&TriggerTimer::attempt_labjack_connection, this));
 }
 
 TriggerTimer::~TriggerTimer() {
+  if (timer) {
+    timer->cancel();
+  }
   if (labjack_manager) {
     labjack_manager->stop();
   }
@@ -168,12 +172,6 @@ void TriggerTimer::measure_latency(bool latency_trigger, double_t sample_time) {
 }
 
 void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
-  if (msg->is_session_start) {
-    RCLCPP_INFO(this->get_logger(), "Session started.");
-    this->current_latency = 0.0;
-    this->last_latency_measurement_time = 0.0;
-  }
-    
   double_t sample_time = msg->time;
 
   std::lock_guard<std::mutex> lock(queue_mutex);
@@ -222,6 +220,76 @@ void TriggerTimer::handle_request_timed_trigger(
   decision_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
 
   this->decision_trace_publisher->publish(decision_trace);
+}
+
+void TriggerTimer::reset_state() {
+  /* Cancel and reset the connection timer */
+  if (timer) {
+    timer->cancel();
+    timer.reset();
+  }
+
+  /* Stop and reset LabJack manager */
+  if (labjack_manager) {
+    labjack_manager->stop();
+    labjack_manager.reset();
+  }
+
+  /* Reset latency state */
+  this->current_latency = 0.0;
+  this->last_latency_measurement_time = 0.0;
+}
+
+void TriggerTimer::handle_initialize_trigger_timer(
+    const std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Response> response) {
+
+  RCLCPP_INFO(this->get_logger(), "Initializing trigger timer for session");
+
+  reset_state();
+
+  /* Initialize LabJack manager. */
+  labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), this->simulate_labjack);
+  labjack_manager->start();
+
+  /* Set up a timer to signal connection attempts every second. */
+  timer = this->create_wall_timer(
+    std::chrono::seconds(1),
+    std::bind(&TriggerTimer::attempt_labjack_connection, this));
+
+  /* Wait for LabJack connection - try for up to 30 seconds */
+  auto start_time = std::chrono::steady_clock::now();
+  bool connected = false;
+
+  while (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(30)) {
+    if (labjack_manager && labjack_manager->is_connected()) {
+      connected = true;
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  if (!connected) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to connect to LabJack device during initialization");
+    response->success = false;
+
+    /* Clean up on failure */
+    reset_state();
+    return;
+  }
+
+  RCLCPP_INFO(this->get_logger(), "Trigger timer initialized successfully");
+  response->success = true;
+}
+
+void TriggerTimer::handle_finalize_trigger_timer(
+    const std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response) {
+
+  reset_state();
+
+  RCLCPP_INFO(this->get_logger(), "Trigger timer finalized successfully");
+  response->success = true;
 }
 
 

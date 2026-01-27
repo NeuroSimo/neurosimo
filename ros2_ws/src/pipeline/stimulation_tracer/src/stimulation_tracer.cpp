@@ -55,14 +55,15 @@ void StimulationTracer::handle_initialize_stimulation_tracer(
   const std::shared_ptr<pipeline_interfaces::srv::InitializeStimulationTracer::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::InitializeStimulationTracer::Response> response) {
 
-  /* Store the session ID and mark as initialized. */
+  /* Store the session ID, data source, and mark as initialized. */
   this->current_session_id = request->session_id;
+  this->data_source = request->data_source;
   this->is_initialized = true;
 
   /* Clear any existing decision traces. */
   this->decision_traces.clear();
 
-  RCLCPP_INFO(this->get_logger(), "StimulationTracer initialized for session");
+  RCLCPP_INFO(this->get_logger(), "StimulationTracer initialized for session with data_source: %s", this->data_source.c_str());
 
   response->success = true;
 }
@@ -82,6 +83,7 @@ void StimulationTracer::handle_finalize_stimulation_tracer(
   this->decision_traces.clear();
   this->is_initialized = false;
   this->current_session_id = {};
+  this->data_source = "";
 
   RCLCPP_INFO(this->get_logger(), "StimulationTracer finalized");
 
@@ -108,7 +110,7 @@ void StimulationTracer::handle_decision_trace(const std::shared_ptr<pipeline_int
                decision_id, msg->status);
 
   /* If this trace has a terminal status, finalize the decision. */
-  if (is_terminal_status(msg->status)) {
+  if (this->is_terminal_status(msg->status)) {
     finalize_decision(decision_id);
   }
 }
@@ -245,10 +247,20 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
 
 bool StimulationTracer::is_terminal_status(uint8_t status) {
   /* A decision is finalized when it reaches one of these terminal statuses. */
-  return status == pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED ||
-         status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED ||
-         status == pipeline_interfaces::msg::DecisionTrace::STATUS_MISSED ||
-         status == pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
+  if (status == pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED ||
+      status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED ||
+      status == pipeline_interfaces::msg::DecisionTrace::STATUS_MISSED ||
+      status == pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR) {
+    return true;
+  }
+
+  /* For playback and simulator data sources, STATUS_FIRED is also sufficient to finalize. */
+  if ((this->data_source == "playback" || this->data_source == "simulator") &&
+      status == pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
+    return true;
+  }
+
+  return false;
 }
 
 int main(int argc, char *argv[]) {

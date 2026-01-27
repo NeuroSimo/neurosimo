@@ -1,5 +1,6 @@
 # Initialize pipeline component: stimulation_tracer
 
 uint8[16] session_id
+string data_source
 ---
 bool success

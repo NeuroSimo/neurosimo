@@ -39,6 +39,7 @@ private:
   /* Current session tracking */
   bool is_initialized = false;
   std::array<uint8_t, 16> current_session_id = {};
+  std::string data_source = "";
 
   /* Storage for decision traces keyed by decision_id */
   std::map<uint64_t, std::vector<pipeline_interfaces::msg::DecisionTrace>> decision_traces;

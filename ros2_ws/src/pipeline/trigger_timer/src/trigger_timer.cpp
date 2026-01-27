@@ -101,7 +101,7 @@ TriggerTimer::~TriggerTimer() {
 void TriggerTimer::handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::LatencyMeasurementTrigger> msg) {
   double_t trigger_time = msg->time;
 
-  current_latency = trigger_time - latest_latency_measurement_time;
+  current_latency = trigger_time - this->last_latency_measurement_time;
 
   /* Publish latency ROS message. */
   auto msg_ = pipeline_interfaces::msg::TimingLatency();
@@ -120,30 +120,17 @@ void TriggerTimer::attempt_labjack_connection() {
   }
 }
 
-
-void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
-  if (msg->is_session_start) {
-    RCLCPP_INFO(this->get_logger(), "Session started.");
-    this->current_latency = 0.0;
-    this->latest_latency_measurement_time = 0.0;
-  }
-    
-  double_t current_time = msg->time;
-  this->current_latency_corrected_time = current_time + this->current_latency;
-
-  std::lock_guard<std::mutex> lock(queue_mutex);
-
-  /* Trigger all events that are due. */
-  while (!trigger_queue.empty() && trigger_queue.top() <= this->current_latency_corrected_time) {
+void TriggerTimer::trigger_pulses_until_time(double_t until_time) {
+  /* Trigger all events until the given time. */
+  while (!trigger_queue.empty() && trigger_queue.top() <= until_time) {
     double_t scheduled_time = trigger_queue.top();
-    double_t error = this->current_latency_corrected_time - scheduled_time;
+    double_t error = until_time - scheduled_time;
 
-    RCLCPP_INFO(logger, "Triggering at time: %.4f (current time: %.4f, error: %.4f)",
-                scheduled_time, this->current_latency_corrected_time, error);
+    RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (current time: %.4f, error: %.4f)",
+                scheduled_time, until_time, error);
     
     if (!labjack_manager || !labjack_manager->trigger_output(tms_trigger_fio)) {
       RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
-      continue;
     }
 
     trigger_queue.pop();
@@ -153,24 +140,44 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sam
     trigger_info_msg.success = true;
     trigger_info_msg.scheduled_time = scheduled_time;
     trigger_info_msg.current_latency = this->current_latency;
-    trigger_info_msg.latency_corrected_actual_time = this->current_latency_corrected_time;
+    trigger_info_msg.latency_corrected_actual_time = until_time;
 
     this->trigger_info_publisher->publish(trigger_info_msg);
 
     /* Publish pulse event for experiment coordinator. */
     auto pulse_event_msg = std_msgs::msg::Empty();
     this->pulse_event_publisher->publish(pulse_event_msg);
+  } 
+}
+
+void TriggerTimer::trigger_latency_measurement(double_t sample_time) {
+  double_t time_since_last_latency_measurement = sample_time - this->last_latency_measurement_time;
+  if (time_since_last_latency_measurement < latency_measurement_interval) {
+    return;
   }
 
-  /* Trigger latency measurement event at specific intervals. */
-  if (current_time - latest_latency_measurement_time >= latency_measurement_interval) {
-    latest_latency_measurement_time = current_time;
+  this->last_latency_measurement_time = sample_time;
 
-    if (!labjack_manager || !labjack_manager->trigger_output(latency_measurement_trigger_fio)) {
-      RCLCPP_ERROR(logger, "Failed to trigger latency measurement trigger.");
-      return;
-    }
+  if (!labjack_manager || !labjack_manager->trigger_output(latency_measurement_trigger_fio)) {
+    RCLCPP_ERROR(logger, "Failed to trigger latency measurement trigger.");
+    return;
   }
+}
+
+void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  if (msg->is_session_start) {
+    RCLCPP_INFO(this->get_logger(), "Session started.");
+    this->current_latency = 0.0;
+    this->last_latency_measurement_time = 0.0;
+  }
+    
+  double_t sample_time = msg->time;
+  double_t current_time = sample_time + this->current_latency;
+
+  std::lock_guard<std::mutex> lock(queue_mutex);
+  
+  trigger_pulses_until_time(current_time);
+  trigger_latency_measurement(sample_time);
 }
 
 void TriggerTimer::handle_request_timed_trigger(
@@ -179,31 +186,20 @@ void TriggerTimer::handle_request_timed_trigger(
 
   double_t trigger_time = request->timed_trigger.time;
 
-  /* Trigger is feasible if LabJack is connected, requested trigger time is greater than current time - tolerance. */
   bool is_labjack_connected = labjack_manager && labjack_manager->is_connected();
-  bool feasible = trigger_time > this->current_latency_corrected_time - this->triggering_tolerance;
+  if (!is_labjack_connected) {
+    RCLCPP_WARN(logger, "LabJack is not connected, not scheduling trigger at time: %.4f (s).", trigger_time);
+    response->success = false;
 
-  /* If not within acceptable range, log and return. */
-  if (is_labjack_connected && feasible) {
-    /* Within acceptable range and LabJack is connected, schedule the trigger. */
-    std::lock_guard<std::mutex> lock(queue_mutex);
-    trigger_queue.push(trigger_time);
-
-    RCLCPP_INFO(logger, "Scheduled trigger at time: %.4f (request accepted)", trigger_time);
-
-    response->success = true;
     return;
   }
 
-  if (!is_labjack_connected) {
-    RCLCPP_WARN(logger, "LabJack is not connected. Not scheduling a trigger.");
-  }
-  if (!feasible) {
-    RCLCPP_WARN(logger,
-      "Requested trigger time %.4f (s) is too late (current time: %.4f s, tolerance: %.1f ms). Not scheduling.",
-      trigger_time, this->current_latency_corrected_time, 1000 * this->triggering_tolerance);
-  }
-  response->success = false;
+  std::lock_guard<std::mutex> lock(queue_mutex);
+  trigger_queue.push(trigger_time);
+
+  RCLCPP_INFO(logger, "Scheduled trigger at time: %.4f (s).", trigger_time);
+
+  response->success = true;
 }
 
 

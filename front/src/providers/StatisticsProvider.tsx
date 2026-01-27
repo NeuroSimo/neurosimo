@@ -13,9 +13,9 @@ interface EegStatistics extends Message {
   num_of_preprocessed_samples: number
   max_interval_between_preprocessed_samples: number
 
-  preprocessing_duration_max: number
-  preprocessing_duration_q95: number
-  preprocessing_duration_median: number
+  preprocessor_duration_max: number
+  preprocessor_duration_q95: number
+  preprocessor_duration_median: number
 }
 
 interface StatisticsContextType {

@@ -21,7 +21,7 @@ def generate_launch_description():
         description="Number of dropped samples in a second before entering error state",
     )
 
-    timing_latency_threshold_arg = DeclareLaunchArgument(
+    pipeline_latency_threshold_arg = DeclareLaunchArgument(
         "timing-latency-threshold",
         description="Maximum timing latency, above which stimulation is prevented",
     )
@@ -29,7 +29,7 @@ def generate_launch_description():
     logger = LaunchConfiguration("log-level")
     minimum_intertrial_interval = LaunchConfiguration("minimum-intertrial-interval")
     dropped_sample_threshold = LaunchConfiguration("dropped-sample-threshold")
-    timing_latency_threshold = LaunchConfiguration("timing-latency-threshold")
+    pipeline_latency_threshold = LaunchConfiguration("timing-latency-threshold")
 
     # Ensure that the value of the minimum_intertrial_interval argument is a float.
     #
@@ -44,7 +44,7 @@ def generate_launch_description():
             {
                 "minimum-intertrial-interval": minimum_intertrial_interval_float,
                 "dropped-sample-threshold": dropped_sample_threshold,
-                "timing-latency-threshold": timing_latency_threshold,
+                "timing-latency-threshold": pipeline_latency_threshold,
             }
         ],
         arguments=['--ros-args', '--log-level', logger]
@@ -54,6 +54,6 @@ def generate_launch_description():
         log_arg,
         minimum_intertrial_interval_arg,
         dropped_sample_threshold_arg,
-        timing_latency_threshold_arg,
+        pipeline_latency_threshold_arg,
         node
     ])

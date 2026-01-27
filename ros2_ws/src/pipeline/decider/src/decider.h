@@ -29,9 +29,9 @@
 #include "pipeline_interfaces/msg/coil_target.hpp"
 
 #include "pipeline_interfaces/msg/timing_error.hpp"
-#include "pipeline_interfaces/msg/timing_latency.hpp"
+#include "pipeline_interfaces/msg/pipeline_latency.hpp"
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
-#include "pipeline_interfaces/msg/decision_info.hpp"
+#include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
 #include "pipeline_interfaces/srv/initialize_decider.hpp"
@@ -86,7 +86,7 @@ private:
 
   void publish_healthcheck();
 
-  void handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg);
+  void handle_pipeline_latency(const std::shared_ptr<pipeline_interfaces::msg::PipelineLatency> msg);
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
@@ -127,13 +127,13 @@ private:
   rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
 
   rclcpp::Publisher<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::DecisionInfo>::SharedPtr decision_info_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
 
-  rclcpp::Subscription<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_subscriber;
+  rclcpp::Subscription<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_subscriber;
 
   /* Service server for initialization */
   rclcpp::Service<pipeline_interfaces::srv::InitializeDecider>::SharedPtr initialize_service_server;
@@ -148,6 +148,10 @@ private:
   std::string initialized_module_filename;
   std::filesystem::path initialized_working_directory;
 
+  /* Session and decision tracking */
+  std::array<uint8_t, 16> session_id = {};
+  uint64_t decision_id = 0;
+
   double_t next_periodic_processing_time = UNSET_TIME;
 
   /* Used for keeping track of the time of the previous trigger time to ensure that the minimum pulse
@@ -157,7 +161,7 @@ private:
   /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
   double_t pulse_lockout_end_time = UNSET_TIME;
 
-  double_t timing_latency_threshold;
+  double_t pipeline_latency_threshold;
 
   StreamInfo stream_info;
 
@@ -168,7 +172,7 @@ private:
 
   bool is_processing_timed_trigger = false;
 
-  double_t timing_latency = 0.0;
+  double_t pipeline_latency = 0.0;
 
   /* State variables */
   bool error_occurred = false;

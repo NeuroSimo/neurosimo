@@ -68,7 +68,7 @@ EEG_FIELDS_ENRICHED = EEG_FIELDS_RAW + [
 
 EEG_FIELDS_PREPROCESSED = EEG_FIELDS_ENRICHED + [
     'valid',
-    'preprocessing_duration',
+    'preprocessor_duration',
 ]
 
 # Mapping from topic to field list

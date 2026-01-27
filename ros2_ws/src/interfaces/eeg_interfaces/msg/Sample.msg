@@ -33,7 +33,7 @@ uint64 pulse_count              # Total pulses delivered
 # Preprocessing (filled by Preprocessor if enabled)
 # ============================================================================
 bool valid                      # Sample quality check passed
-float64 preprocessing_duration  # Time spent in preprocessing (seconds)
+float64 preprocessor_duration  # Time spent in preprocessing (seconds)
 
 # ============================================================================
 # Metadata

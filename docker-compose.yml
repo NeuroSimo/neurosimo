@@ -233,6 +233,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+    network_mode: host
 
   trigger_timer:
     build:

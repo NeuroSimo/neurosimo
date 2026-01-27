@@ -166,7 +166,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
 }
 
 void EegPreprocessor::handle_finalize_preprocessor(
-  const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
+  [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
 
   response->success = this->reset_state();
@@ -309,7 +309,7 @@ void EegPreprocessor::publish_sentinel_sample(double_t sample_time) {
   this->preprocessed_eeg_publisher->publish(*sentinel_sample);
 }
 
-void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time) {
+void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& request, [[maybe_unused]] double_t current_sample_time) {
   /* Validate that the current sample window is suitable for processing. */
   if (!is_sample_window_valid()) {
     return;
@@ -339,7 +339,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   }
 
   /* Copy arrival time from the triggering sample. */
-  preprocessed_sample.system_time_eeg_bridge = triggering_sample->system_time_eeg_bridge;
+  preprocessed_sample.system_time_data_source_published = triggering_sample->system_time_data_source_published;
 
   /* Copy hardware trigger information. */
   preprocessed_sample.pulse_trigger = triggering_sample->pulse_trigger;

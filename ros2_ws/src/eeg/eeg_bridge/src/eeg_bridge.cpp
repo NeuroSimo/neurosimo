@@ -22,7 +22,6 @@ using namespace std::placeholders;
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string DEVICE_INFO_TOPIC = "/eeg_device/info";
 const std::string HEALTHCHECK_TOPIC = "/eeg/healthcheck";
-const std::string LATENCY_MEASUREMENT_TRIGGER_TOPIC = "/pipeline/latency_measurement_trigger";
 
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -118,9 +117,6 @@ void EegBridge::create_publishers() {
 
   this->streamer_state_publisher =
       this->create_publisher<system_interfaces::msg::StreamerState>("/eeg_bridge/state", qos_persist_latest);
-
-  this->latency_measurement_trigger_publisher =
-      this->create_publisher<pipeline_interfaces::msg::LatencyMeasurementTrigger>(LATENCY_MEASUREMENT_TRIGGER_TOPIC, 10);
 
   this->healthcheck_publisher =
       this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
@@ -287,8 +283,9 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.eeg = adapter_sample.eeg;
   sample.emg = adapter_sample.emg;
   sample.time = adapter_sample.time;
-  sample.pulse_delivered = adapter_sample.trigger_b;  // Only trigger_b is visible in Sample
-
+  sample.pulse_trigger = adapter_sample.trigger_b;
+  sample.latency_trigger = adapter_sample.trigger_a;
+  
   return sample;
 }
 
@@ -333,6 +330,16 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 
   this->eeg_sample_publisher->publish(sample);
 
+  // Log latency trigger when present
+  if (sample.latency_trigger) {
+    RCLCPP_DEBUG(this->get_logger(), "Received latency trigger at time: %.4f s.", sample.time);
+  }
+  
+  // Log pulse trigger when present
+  if (sample.pulse_trigger) {
+    RCLCPP_INFO(this->get_logger(), "Received TMS pulse at time: %.4f s", sample.time);
+  }
+
   /* Clear the session start marker after publishing. */
   this->is_session_start = false;
 
@@ -376,25 +383,6 @@ void EegBridge::process_eeg_packet() {
     }
 
     auto ros_sample = create_ros_sample(packet.sample, device_info);
-
-    // Handle trigger_a (latency measurement trigger) if present
-    if (packet.sample.trigger_a) {
-      RCLCPP_DEBUG(this->get_logger(), "Received latency measurement trigger at %.4f s.",
-                   packet.trigger_a_timestamp);
-      auto msg = pipeline_interfaces::msg::LatencyMeasurementTrigger();
-      msg.time = packet.trigger_a_timestamp - this->time_offset;
-      this->latency_measurement_trigger_publisher->publish(msg);
-    }
-
-    // Log pulse trigger (trigger_b) when present
-    if (packet.sample.trigger_b) {
-      if (this->time_offset != UNSET_TIME) {
-        RCLCPP_INFO(this->get_logger(), "Received TMS pulse at time: %.4f s",
-                    packet.sample.time - this->time_offset);
-      } else {
-        RCLCPP_WARN(this->get_logger(), "Received TMS pulse, skipping.");
-      }
-    }
 
     // Always handle the sample
     handle_sample(ros_sample);

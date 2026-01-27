@@ -311,11 +311,11 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
   msg.valid = true;
 
   /* Check if a pulse should be delivered at this sample time. */
-  msg.pulse_delivered = false;
+  msg.pulse_trigger = false;
   if (!this->pulse_times.empty() && this->current_pulse_index < this->pulse_times.size()) {
     double_t next_pulse_time = this->pulse_times[this->current_pulse_index];
     if (sample_time >= next_pulse_time) {
-      msg.pulse_delivered = true;
+      msg.pulse_trigger = true;
       this->current_pulse_index++;
 
       RCLCPP_INFO(this->get_logger(), "Pulse delivered at %.4f s (pulse %zu/%zu).",

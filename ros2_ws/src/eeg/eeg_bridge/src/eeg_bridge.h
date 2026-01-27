@@ -15,8 +15,6 @@
 #include "eeg_interfaces/srv/stop_streaming.hpp"
 #include "eeg_interfaces/srv/initialize_eeg_device_stream.hpp"
 
-#include "pipeline_interfaces/msg/latency_measurement_trigger.hpp"
-
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
 #include "system_interfaces/msg/streamer_state.hpp"
@@ -118,7 +116,6 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
   rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
   rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::LatencyMeasurementTrigger>::SharedPtr latency_measurement_trigger_publisher;
 
   rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
 

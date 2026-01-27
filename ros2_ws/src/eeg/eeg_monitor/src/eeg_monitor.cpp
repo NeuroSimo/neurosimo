@@ -62,7 +62,7 @@ public:
       num_of_preprocessed_eeg_samples++;
 
       /* Update the preprocessing durations. */
-      preprocessing_durations.push_back(msg->preprocessing_duration);
+      preprocessor_durations.push_back(msg->preprocessor_duration);
     };
 
     eeg_preprocessed_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
@@ -87,25 +87,25 @@ public:
     double q95_duration = 0.0;
     double median_duration = 0.0;
 
-    if (!preprocessing_durations.empty()) {
+    if (!preprocessor_durations.empty()) {
       /* Maximum */
-      max_duration = *std::max_element(preprocessing_durations.begin(), preprocessing_durations.end());
+      max_duration = *std::max_element(preprocessor_durations.begin(), preprocessor_durations.end());
 
       /* 95% Percentile */
-      size_t q95_index = static_cast<size_t>(0.95 * preprocessing_durations.size());
+      size_t q95_index = static_cast<size_t>(0.95 * preprocessor_durations.size());
 
-      std::nth_element(preprocessing_durations.begin(), preprocessing_durations.begin() + q95_index, preprocessing_durations.end());
-      q95_duration = preprocessing_durations[q95_index];
+      std::nth_element(preprocessor_durations.begin(), preprocessor_durations.begin() + q95_index, preprocessor_durations.end());
+      q95_duration = preprocessor_durations[q95_index];
 
       /* Median */
-      size_t middle_index = preprocessing_durations.size() / 2;
+      size_t middle_index = preprocessor_durations.size() / 2;
 
-      std::nth_element(preprocessing_durations.begin(), preprocessing_durations.begin() + middle_index, preprocessing_durations.end());
-      median_duration = preprocessing_durations[middle_index];
+      std::nth_element(preprocessor_durations.begin(), preprocessor_durations.begin() + middle_index, preprocessor_durations.end());
+      median_duration = preprocessor_durations[middle_index];
 
-      if(preprocessing_durations.size() % 2 == 0) {
-        std::nth_element(preprocessing_durations.begin(), preprocessing_durations.begin() + middle_index - 1, preprocessing_durations.end());
-        median_duration = (median_duration + preprocessing_durations[middle_index - 1]) / 2;
+      if(preprocessor_durations.size() % 2 == 0) {
+        std::nth_element(preprocessor_durations.begin(), preprocessor_durations.begin() + middle_index - 1, preprocessor_durations.end());
+        median_duration = (median_duration + preprocessor_durations[middle_index - 1]) / 2;
       }
     }
 
@@ -118,9 +118,9 @@ public:
     msg.num_of_preprocessed_samples = num_of_preprocessed_eeg_samples;
     msg.max_interval_between_preprocessed_samples = max_interval_between_preprocessed_samples;
 
-    msg.preprocessing_duration_max = max_duration;
-    msg.preprocessing_duration_q95 = q95_duration;
-    msg.preprocessing_duration_median = median_duration;
+    msg.preprocessor_duration_max = max_duration;
+    msg.preprocessor_duration_q95 = q95_duration;
+    msg.preprocessor_duration_median = median_duration;
 
     eeg_statistics_publisher->publish(msg);
 
@@ -131,7 +131,7 @@ public:
     max_interval_between_raw_samples = 0;
     max_interval_between_preprocessed_samples = 0;
 
-    preprocessing_durations.clear();
+    preprocessor_durations.clear();
 
     /* Log the duration of the callback. */
     auto end_time = std::chrono::steady_clock::now();
@@ -156,7 +156,7 @@ private:
   double_t max_interval_between_preprocessed_samples = 0.0;
   rclcpp::Time last_preprocessed_sample_time;
 
-  std::vector<double_t> preprocessing_durations;
+  std::vector<double_t> preprocessor_durations;
 };
 
 

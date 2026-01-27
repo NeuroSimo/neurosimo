@@ -74,15 +74,15 @@ export const StatisticsDisplay: React.FC = () => {
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Median</IndentedStateTitle>
-          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_duration_median)}</StateValue>
+          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessor_duration_median)}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Q95</IndentedStateTitle>
-          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_duration_q95)}</StateValue>
+          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessor_duration_q95)}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Max</IndentedStateTitle>
-          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessing_duration_max)}</StateValue>
+          <StateValue>{formatTimeToMicroseconds(eegStatistics?.preprocessor_duration_max)}</StateValue>
         </StateRow>
         <br />
         <StateRow>

@@ -14,9 +14,9 @@
 
 #include "eeg_interfaces/msg/sample.hpp"
 
-#include "pipeline_interfaces/msg/timing_latency.hpp"
-#include "pipeline_interfaces/msg/trigger_info.hpp"
+#include "pipeline_interfaces/msg/pipeline_latency.hpp"
 #include "pipeline_interfaces/msg/timing_error.hpp"
+#include "pipeline_interfaces/msg/decision_trace.hpp"
 
 #include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/healthcheck_status.hpp"
@@ -33,8 +33,8 @@ public:
 private:
   rclcpp::Logger logger;
   rclcpp::Service<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
-  rclcpp::Publisher<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::TriggerInfo>::SharedPtr trigger_info_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::Subscription<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_subscriber;
@@ -50,13 +50,23 @@ private:
   double_t triggering_tolerance = 0.0;
   bool simulate_labjack = false;
 
-  /* Priority queue for trigger times. */
-  std::priority_queue<double_t, std::vector<double_t>, std::greater<double_t>> trigger_queue;
+  /* Comparator for priority queue - sorts by trigger time. */
+  struct TriggerRequestComparator {
+    bool operator()(const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>& a,
+                    const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>& b) const {
+      return a->timed_trigger.time > b->timed_trigger.time;  // min-heap by time
+    }
+  };
+
+  /* Priority queue for trigger requests. */
+  std::priority_queue<std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>,
+                      std::vector<std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>>,
+                      TriggerRequestComparator> trigger_queue;
   std::mutex queue_mutex;
 
   void attempt_labjack_connection();
 
-  void trigger_pulses_until_time(double_t until_time);
+  void trigger_pulses_until_time(double_t sample_time);
   void measure_latency(bool latency_trigger, double_t sample_time);
 
   void handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);

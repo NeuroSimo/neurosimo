@@ -26,7 +26,7 @@ TOPICS_TO_RECORD = [
 
     # Pipeline outputs
     '/pipeline/decision_info',
-    '/pipeline/timing_latency',
+    '/pipeline/pipeline_latency',
     '/pipeline/experiment_state',
     '/pipeline/sensory_stimulus',
 

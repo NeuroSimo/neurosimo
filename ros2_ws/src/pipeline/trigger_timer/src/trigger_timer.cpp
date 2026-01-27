@@ -58,12 +58,6 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     10,
     std::bind(&TriggerTimer::handle_eeg_raw, this, _1));
 
-  /* Subscriber for timing error. */
-  this->timing_error_subscriber = this->create_subscription<pipeline_interfaces::msg::TimingError>(
-    "/pipeline/timing/error",
-    10,
-    std::bind(&TriggerTimer::handle_timing_error, this, _1));
-
   /* Service for trigger request. */
   this->trigger_request_service = create_service<pipeline_interfaces::srv::RequestTimedTrigger>(
     TIMED_TRIGGER_SERVICE,
@@ -98,10 +92,6 @@ TriggerTimer::~TriggerTimer() {
   if (labjack_manager) {
     labjack_manager->stop();
   }
-}
-
-void TriggerTimer::handle_timing_error(const std::shared_ptr<pipeline_interfaces::msg::TimingError> msg) {
-  this->latest_timing_error = msg->error;
 }
 
 void TriggerTimer::attempt_labjack_connection() {

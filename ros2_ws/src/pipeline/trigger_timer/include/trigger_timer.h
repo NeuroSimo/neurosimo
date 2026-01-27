@@ -15,7 +15,6 @@
 #include "eeg_interfaces/msg/sample.hpp"
 
 #include "pipeline_interfaces/msg/pipeline_latency.hpp"
-#include "pipeline_interfaces/msg/timing_error.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 
 #include "system_interfaces/msg/healthcheck.hpp"
@@ -37,12 +36,10 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
-  rclcpp::Subscription<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
 
   std::unique_ptr<LabJackManager> labjack_manager;
 
-  double_t latest_timing_error = 0.0;
   double_t last_latency_measurement_time = 0.0;
   double_t current_latency = 0.0;
   double_t current_time = 0.0;
@@ -74,7 +71,6 @@ private:
   void handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
-  void handle_timing_error(const std::shared_ptr<pipeline_interfaces::msg::TimingError> msg);
 
   /* Healthcheck */
   uint8_t status;

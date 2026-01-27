@@ -23,6 +23,7 @@ add_executable(
 
         src/trigger_timer.cpp
         src/labjack_manager.cpp
+        src/mock_labjack_manager.cpp
 )
 
 target_include_directories(trigger_timer
@@ -30,7 +31,11 @@ target_include_directories(trigger_timer
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib>
         $<INSTALL_INTERFACE:lib>)
 
-target_link_libraries(trigger_timer ${LABJACKM_LIBRARY})
+if(LABJACKM_LIBRARY)
+    target_link_libraries(trigger_timer ${LABJACKM_LIBRARY})
+else()
+    message(WARNING "LabJackM library not found - LabJack hardware support will not be available")
+endif()
 
 target_link_libraries(trigger_timer
   realtime_utils::utils

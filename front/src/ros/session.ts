@@ -6,6 +6,7 @@ import { ExportDataType } from 'components/ExportModal'
 export interface SessionState extends ROSLIB.Message {
   is_running: boolean
   stage: SessionStage
+  message: string
 }
 
 /* Session services */

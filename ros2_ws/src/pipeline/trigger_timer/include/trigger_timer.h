@@ -48,6 +48,7 @@ private:
   double_t current_time = 0.0;
 
   double_t triggering_tolerance = 0.0;
+  double_t pipeline_latency_threshold = 0.0;
   bool simulate_labjack = false;
 
   /* Comparator for priority queue - sorts by trigger time. */

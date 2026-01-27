@@ -23,9 +23,15 @@ def generate_launch_description():
         description="Simulate LabJack device when hardware is not available",
     )
 
+    pipeline_latency_threshold_arg = DeclareLaunchArgument(
+        "pipeline-latency-threshold",
+        description="Maximum pipeline latency, above which stimulation is prevented",
+    )
+
     logger = LaunchConfiguration("log-level")
     triggering_tolerance = LaunchConfiguration("triggering-tolerance")
     simulate_labjack = LaunchConfiguration("simulate-labjack")
+    pipeline_latency_threshold = LaunchConfiguration("pipeline-latency-threshold")
 
     node = Node(
         package="trigger_timer",
@@ -35,6 +41,7 @@ def generate_launch_description():
             {
                 "triggering-tolerance": triggering_tolerance,
                 "simulate-labjack": simulate_labjack,
+                "pipeline-latency-threshold": pipeline_latency_threshold,
             }
         ],
         arguments=['--ros-args', '--log-level', logger]
@@ -43,5 +50,6 @@ def generate_launch_description():
     ld.add_action(log_arg)
     ld.add_action(triggering_tolerance_arg)
     ld.add_action(simulate_labjack_arg)
+    ld.add_action(pipeline_latency_threshold_arg)
 
     return ld

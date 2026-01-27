@@ -87,7 +87,7 @@ private:
   double_t latest_sample_time = 0.0;
   double_t time_offset = 0.0;
 
-  /* Pulse times loaded from dataset JSON, used to inject pulse_delivered flags. */
+  /* Pulse times loaded from dataset JSON, used to inject pulse_trigger flags. */
   std::vector<double_t> pulse_times;
 
   /* Initialization state */

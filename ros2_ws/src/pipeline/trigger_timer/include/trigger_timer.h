@@ -22,7 +22,6 @@
 #include "system_interfaces/msg/healthcheck_status.hpp"
 
 #include "pipeline_interfaces/msg/timed_trigger.hpp"
-#include "pipeline_interfaces/msg/latency_measurement_trigger.hpp"
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
 
@@ -38,7 +37,6 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::TriggerInfo>::SharedPtr trigger_info_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
-  rclcpp::Subscription<pipeline_interfaces::msg::LatencyMeasurementTrigger>::SharedPtr latency_measurement_trigger_subscriber;
   rclcpp::Subscription<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
 
@@ -59,13 +57,12 @@ private:
   void attempt_labjack_connection();
 
   void trigger_pulses_until_time(double_t until_time);
-  void trigger_latency_measurement(double_t sample_time);
+  void measure_latency(bool latency_trigger, double_t sample_time);
 
   void handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
-  void handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::LatencyMeasurementTrigger> msg);
   void handle_timing_error(const std::shared_ptr<pipeline_interfaces::msg::TimingError> msg);
 
   /* Healthcheck */

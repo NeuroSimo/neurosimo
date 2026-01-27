@@ -826,7 +826,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
-    bool pulse_delivered,
+    bool pulse_trigger,
     bool has_event,
     std::string event_type,
     std::priority_queue<std::pair<double, std::string>,
@@ -870,7 +870,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   /* Call the appropriate Python function using the selected arrays. */
   py::object py_result;
   try {
-    if (pulse_delivered) {
+    if (pulse_trigger) {
       /* Call process_eeg_trigger. */
       py_result = decider_instance->attr("process_eeg_trigger")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
     } else if (has_event) {

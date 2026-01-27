@@ -57,11 +57,6 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     10,
     std::bind(&TriggerTimer::handle_timing_error, this, _1));
 
-  this->latency_measurement_trigger_subscriber = create_subscription<pipeline_interfaces::msg::LatencyMeasurementTrigger>(
-    "/pipeline/latency_measurement_trigger",
-    10,
-    std::bind(&TriggerTimer::handle_latency_measurement_trigger, this, _1));
-
   /* Service for trigger request. */
   this->trigger_request_service = create_service<pipeline_interfaces::srv::RequestTimedTrigger>(
     TIMED_TRIGGER_SERVICE,
@@ -96,18 +91,6 @@ TriggerTimer::~TriggerTimer() {
   if (labjack_manager) {
     labjack_manager->stop();
   }
-}
-
-void TriggerTimer::handle_latency_measurement_trigger(const std::shared_ptr<pipeline_interfaces::msg::LatencyMeasurementTrigger> msg) {
-  double_t trigger_time = msg->time;
-
-  current_latency = trigger_time - this->last_latency_measurement_time;
-
-  /* Publish latency ROS message. */
-  auto msg_ = pipeline_interfaces::msg::TimingLatency();
-  msg_.latency = current_latency;
-
-  this->timing_latency_publisher->publish(msg_);
 }
 
 void TriggerTimer::handle_timing_error(const std::shared_ptr<pipeline_interfaces::msg::TimingError> msg) {
@@ -147,10 +130,22 @@ void TriggerTimer::trigger_pulses_until_time(double_t until_time) {
     /* Publish pulse event for experiment coordinator. */
     auto pulse_event_msg = std_msgs::msg::Empty();
     this->pulse_event_publisher->publish(pulse_event_msg);
-  } 
+  }
 }
 
-void TriggerTimer::trigger_latency_measurement(double_t sample_time) {
+void TriggerTimer::measure_latency(bool latency_trigger, double_t sample_time) {
+  /* Update current latency if latency trigger is present. */
+  if (latency_trigger) {
+    this->current_latency = sample_time - this->last_latency_measurement_time;
+
+    /* Publish latency ROS message. */
+    auto msg = pipeline_interfaces::msg::TimingLatency();
+    msg.latency = this->current_latency;
+  
+    this->timing_latency_publisher->publish(msg);  
+  }
+
+  /* Trigger latency measurement at specific intervals. */
   double_t time_since_last_latency_measurement = sample_time - this->last_latency_measurement_time;
   if (time_since_last_latency_measurement < latency_measurement_interval) {
     return;
@@ -175,9 +170,9 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sam
   double_t current_time = sample_time + this->current_latency;
 
   std::lock_guard<std::mutex> lock(queue_mutex);
-  
+    
   trigger_pulses_until_time(current_time);
-  trigger_latency_measurement(sample_time);
+  measure_latency(msg->latency_trigger, sample_time);
 }
 
 void TriggerTimer::handle_request_timed_trigger(

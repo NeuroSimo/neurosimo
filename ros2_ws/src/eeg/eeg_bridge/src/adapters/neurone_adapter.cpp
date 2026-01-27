@@ -149,7 +149,6 @@ AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unus
   AdapterPacket packet;
   packet.result = INTERNAL;
   packet.sample = AdapterSample();
-  packet.trigger_a_timestamp = -1.0; // in seconds
 
   uint8_t frame_type = buffer[0];
 
@@ -164,9 +163,6 @@ AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unus
   case FrameType::SAMPLES:
     packet.sample = handle_sample_packet(buffer);
     packet.result = SAMPLE;
-    if (packet.sample.trigger_a) {
-      packet.trigger_a_timestamp = packet.sample.time;
-    }
     break;
 
   case FrameType::MEASUREMENT_END:

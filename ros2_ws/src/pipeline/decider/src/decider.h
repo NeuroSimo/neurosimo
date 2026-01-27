@@ -103,7 +103,7 @@ private:
     const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response);
 
-  void handle_pulse_delivered(const double_t pulse_delivered_time);
+  void handle_pulse_trigger(const double_t pulse_trigger_time);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 

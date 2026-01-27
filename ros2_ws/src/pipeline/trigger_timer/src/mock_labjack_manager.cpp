@@ -115,24 +115,25 @@ void MockLabJackManager::attempt_connection() {
   // Measure how long the connection attempt takes
   auto start_time = high_resolution_clock::now();
 
-  bool success = connect_socket();
+  bool socket_connected = connect_socket();
 
   auto end_time = high_resolution_clock::now();
   auto duration = duration_cast<milliseconds>(end_time - start_time);
 
-  if (success) {
-    connected_.store(true);
+  // For mock purposes, always report as connected regardless of socket status
+  connected_.store(true);
+
+  if (socket_connected) {
     RCLCPP_INFO(logger_, "Successfully connected to neurone_simulator socket. Time taken: %ld ms", duration.count());
   } else {
-    connected_.store(false);
-    RCLCPP_WARN(logger_, "Failed to connect to neurone_simulator socket. Time taken: %ld ms", duration.count());
+    RCLCPP_INFO(logger_, "MockLabJack connected (socket connection failed but mocking enabled)");
   }
 
-  // Notify callback if set
+  // Notify callback if set - always report success for mock
   {
     std::lock_guard<std::mutex> lock(callback_mutex_);
     if (status_callback_) {
-      status_callback_(success, success ? 0 : -1, duration.count());
+      status_callback_(true, 0, duration.count());
     }
   }
 }
@@ -152,7 +153,7 @@ bool MockLabJackManager::connect_socket() {
   server_addr.sin_port = htons(port_);
 
   if (inet_pton(AF_INET, host_.c_str(), &server_addr.sin_addr) <= 0) {
-    RCLCPP_ERROR(logger_, "Invalid address: %s", host_.c_str());
+    RCLCPP_WARN(logger_, "Invalid address: %s (continuing with mock)", host_.c_str());
     close_socket();
     return false;
   }
@@ -176,18 +177,24 @@ void MockLabJackManager::close_socket() {
 }
 
 bool MockLabJackManager::send_trigger(const std::string& trigger_type) {
-  if (socket_fd_ < 0 || !connected_.load()) {
+  if (!connected_.load()) {
     return false;
   }
 
-  // Send the trigger type as a string followed by newline
-  std::string message = trigger_type + "\n";
-  ssize_t sent = send(socket_fd_, message.c_str(), message.length(), 0);
+  // Try to send via socket if connected, otherwise just mock the trigger
+  if (socket_fd_ >= 0) {
+    // Send the trigger type as a string followed by newline
+    std::string message = trigger_type + "\n";
+    ssize_t sent = send(socket_fd_, message.c_str(), message.length(), 0);
 
-  if (sent < 0) {
-    RCLCPP_ERROR(logger_, "Failed to send trigger message");
-    connected_.store(false);
-    return false;
+    if (sent < 0) {
+      RCLCPP_WARN(logger_, "Failed to send trigger message via socket, continuing with mock");
+      // Don't set connected to false - we're mocking
+    } else {
+      RCLCPP_DEBUG(logger_, "Sent %s trigger via socket", trigger_type.c_str());
+    }
+  } else {
+    RCLCPP_DEBUG(logger_, "Mocking %s trigger (no socket connection)", trigger_type.c_str());
   }
 
   return true;

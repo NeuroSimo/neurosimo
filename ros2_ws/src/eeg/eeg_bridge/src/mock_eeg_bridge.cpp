@@ -67,8 +67,12 @@ class MockEegBridge : public rclcpp::Node {
         message.time = this->time_;
         this->time_ += this->sampling_interval_;
 
-        /* Set arrival time to current ROS clock time. */
-        message.arrival_time = this->get_clock()->now().seconds();
+        /* Set the system time when the sample was published. */
+        auto now = std::chrono::high_resolution_clock::now();
+        uint64_t system_time_data_source_published = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          now.time_since_epoch()).count();
+
+        message.system_time_data_source_published = system_time_data_source_published;
 
         this->publisher_data_->publish(message);
 

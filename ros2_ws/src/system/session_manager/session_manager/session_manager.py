@@ -175,11 +175,12 @@ class SessionManagerNode(Node):
         self.logger.info("Session Manager initialized")
 
     # Helper functions
-    def publish_session_state(self, is_running, stage):
+    def publish_session_state(self, is_running, stage, message=''):
         """Publish current session state."""
         msg = SessionState()
         msg.is_running = is_running
         msg.stage = stage
+        msg.message = message
         self.session_state_publisher.publish(msg)
 
     # Service callbacks
@@ -251,20 +252,20 @@ class SessionManagerNode(Node):
         session_config = self.get_session_config()
         if session_config is None or not self.validate_session_config(session_config):
             self.logger.error('Failed to get or validate session parameters')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Failed to get or validate session parameters')
             return
 
         # Initialize data stream first to get stream info
         stream_info = self.initialize_stream(session_id, session_config)
         if stream_info is None:
             self.logger.error('Stream initialization failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Stream initialization failed')
             return
 
         # Initialize protocol
         if not self.initialize_protocol(session_id, session_config):
             self.logger.error('Protocol initialization failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Protocol initialization failed')
             return
 
         # Initialize presenter.
@@ -273,44 +274,44 @@ class SessionManagerNode(Node):
         #       during initialization are properly queued.
         if not self.initialize_presenter(session_config, session_id, stream_info):
             self.logger.error('Presenter initialization failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Presenter initialization failed')
             return
 
         # Initialize decider
         if not self.initialize_decider(session_config, session_id, stream_info):
             self.logger.error('Decider initialization failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Decider initialization failed')
             return
 
         # Initialize preprocessor
         if not self.initialize_preprocessor(session_config, session_id, stream_info):
             self.logger.error('Preprocessor initialization failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Preprocessor initialization failed')
             return
 
         # Initialize stimulation tracer
         if not self.initialize_stimulation_tracer(session_id, session_config.data_source):
             self.logger.error('StimulationTracer initialization failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'StimulationTracer initialization failed')
             return
 
         # Initialize trigger timer
         if not self.initialize_trigger_timer(session_id):
             self.logger.error('TriggerTimer initialization failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'TriggerTimer initialization failed')
             return
 
         # Start recording
         if not self.start_recording(session_id, session_config, stream_info):
             self.logger.error('Recording start failed')
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Recording start failed')
             return
 
         # Start data streaming
         if not self.start_data_streaming(session_config, session_id):
             self.logger.error('Data streaming start failed')
             self.stop_recording(session_id)  # Clean up recording on failure
-            self.publish_session_state(False, SessionState.STOPPED)
+            self.publish_session_state(False, SessionState.ERROR, 'Data streaming start failed')
             return
 
         # Set session state to running
@@ -323,13 +324,46 @@ class SessionManagerNode(Node):
         self.publish_session_state(False, SessionState.FINALIZING)
 
         # Stop data streaming first
-        self.stop_data_streaming(session_config, session_id)
+        if not self.stop_data_streaming(session_config, session_id):
+            self.logger.error('Data streaming stop failed')
+            self.publish_session_state(False, SessionState.ERROR, 'Data streaming stop failed')
+            return False
 
         # Stop recording
-        self.stop_recording(session_id)
+        if not self.stop_recording(session_id):
+            self.logger.error('Recording stop failed')
+            self.publish_session_state(False, SessionState.ERROR, 'Recording stop failed')
+            return False
 
-        # Finalize session components
-        self.finalize_session_components(session_id)
+        # Finalize presenter
+        if not self.finalize_presenter(session_id):
+            self.logger.error('Presenter finalization failed')
+            self.publish_session_state(False, SessionState.ERROR, 'Presenter finalization failed')
+            return False
+
+        # Finalize decider
+        if not self.finalize_decider(session_id):
+            self.logger.error('Decider finalization failed')
+            self.publish_session_state(False, SessionState.ERROR, 'Decider finalization failed')
+            return False
+
+        # Finalize preprocessor
+        if not self.finalize_preprocessor(session_id):
+            self.logger.error('Preprocessor finalization failed')
+            self.publish_session_state(False, SessionState.ERROR, 'Preprocessor finalization failed')
+            return False
+
+        # Finalize stimulation tracer
+        if not self.finalize_stimulation_tracer(session_id):
+            self.logger.error('StimulationTracer finalization failed')
+            self.publish_session_state(False, SessionState.ERROR, 'StimulationTracer finalization failed')
+            return False
+
+        # Finalize trigger timer
+        if not self.finalize_trigger_timer(session_id):
+            self.logger.error('TriggerTimer finalization failed')
+            self.publish_session_state(False, SessionState.ERROR, 'TriggerTimer finalization failed')
+            return False
 
         # Publish stopped state
         self.publish_session_state(False, SessionState.STOPPED)
@@ -344,8 +378,7 @@ class SessionManagerNode(Node):
         request = GetSessionConfig.Request()
         response = self.call_service(self.get_session_config_client, request, '/session_configurator/get_config')
 
-        if response is None:
-            self.logger.error('Failed to get session config from session configurator')
+        if response is None or not response.success:
             return None
 
         config = response.config
@@ -452,7 +485,6 @@ class SessionManagerNode(Node):
         response = self.call_service(self.decider_init_client, request, '/pipeline/decider/initialize')
 
         if response is None or not response.success:
-            self.logger.error('Decider initialization failed')
             return False
 
         self.logger.info('Decider initialized successfully')
@@ -473,7 +505,6 @@ class SessionManagerNode(Node):
         response = self.call_service(self.preprocessor_init_client, request, '/pipeline/preprocessor/initialize')
 
         if response is None or not response.success:
-            self.logger.error('Preprocessor initialization failed')
             return False
 
         self.logger.info('Preprocessor initialized successfully')
@@ -493,7 +524,6 @@ class SessionManagerNode(Node):
         response = self.call_service(self.presenter_init_client, request, '/pipeline/presenter/initialize')
 
         if response is None or not response.success:
-            self.logger.error('Presenter initialization failed')
             return False
 
         self.logger.info('Presenter initialized successfully')
@@ -508,7 +538,6 @@ class SessionManagerNode(Node):
         response = self.call_service(self.stimulation_tracer_init_client, request, '/pipeline/stimulation_tracer/initialize')
 
         if response is None or not response.success:
-            self.logger.error('StimulationTracer initialization failed')
             return False
 
         self.logger.info('StimulationTracer initialized successfully')
@@ -522,7 +551,6 @@ class SessionManagerNode(Node):
         response = self.call_service(self.trigger_timer_init_client, request, '/pipeline/trigger_timer/initialize')
 
         if response is None or not response.success:
-            self.logger.error('TriggerTimer initialization failed')
             return False
 
         self.logger.info('TriggerTimer initialized successfully')
@@ -539,60 +567,77 @@ class SessionManagerNode(Node):
 
         response = self.call_service(self.protocol_init_client, request, '/pipeline/protocol/initialize')
 
-        if response is None:
-            return False
-
-        if not response.success:
-            self.logger.error('Protocol initialization failed')
+        if response is None or not response.success:
             return False
 
         self.logger.info(f'Protocol initialized successfully')
         return True
 
     # Finalization functions
-    def finalize_session_components(self, session_id):
-        """Finalize all session components in reverse order."""
-        # Finalize presenter
-        try:
-            request = FinalizePresenter.Request()
-            request.session_id = session_id
-            self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize')
-        except Exception as e:
-            self.logger.error(f'Error finalizing presenter: {e}')
+    def finalize_presenter(self, session_id):
+        """Finalize the presenter component."""
+        request = FinalizePresenter.Request()
+        request.session_id = session_id
+        response = self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize')
 
-        # Finalize decider
-        try:
-            request = FinalizeDecider.Request()
-            request.session_id = session_id
-            self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
-        except Exception as e:
-            self.logger.error(f'Error finalizing decider: {e}')
+        if response is None or not response.success:
+            self.logger.error(f'Presenter finalization failed: {response.message}' if response else 'Presenter finalization failed: no response')
+            return False
 
-        # Finalize preprocessor
-        try:
-            request = FinalizePreprocessor.Request()
-            request.session_id = session_id
-            self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
-        except Exception as e:
-            self.logger.error(f'Error finalizing preprocessor: {e}')
+        self.logger.info('Presenter finalized successfully')
+        return True
 
-        # Finalize stimulation tracer
-        try:
-            request = FinalizeStimulationTracer.Request()
-            request.session_id = session_id
-            self.call_service(self.stimulation_tracer_finalize_client, request, '/pipeline/stimulation_tracer/finalize')
-        except Exception as e:
-            self.logger.error(f'Error finalizing stimulation tracer: {e}')
+    def finalize_decider(self, session_id):
+        """Finalize the decider component."""
+        request = FinalizeDecider.Request()
+        request.session_id = session_id
+        response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
 
-        # Finalize trigger timer
-        try:
-            request = FinalizeTriggerTimer.Request()
-            request.session_id = session_id
-            self.call_service(self.trigger_timer_finalize_client, request, '/pipeline/trigger_timer/finalize')
-        except Exception as e:
-            self.logger.error(f'Error finalizing trigger timer: {e}')
+        if response is None or not response.success:
+            self.logger.error(f'Decider finalization failed: {response.message}' if response else 'Decider finalization failed: no response')
+            return False
 
-        self.logger.info(f'Session finalization completed')
+        self.logger.info('Decider finalized successfully')
+        return True
+
+    def finalize_preprocessor(self, session_id):
+        """Finalize the preprocessor component."""
+        request = FinalizePreprocessor.Request()
+        request.session_id = session_id
+        response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
+
+        if response is None or not response.success:
+            self.logger.error(f'Preprocessor finalization failed: {response.message}' if response else 'Preprocessor finalization failed: no response')
+            return False
+
+        self.logger.info('Preprocessor finalized successfully')
+        return True
+
+    def finalize_stimulation_tracer(self, session_id):
+        """Finalize the stimulation tracer component."""
+        request = FinalizeStimulationTracer.Request()
+        request.session_id = session_id
+        response = self.call_service(self.stimulation_tracer_finalize_client, request, '/pipeline/stimulation_tracer/finalize')
+
+        if response is None or not response.success:
+            self.logger.error(f'StimulationTracer finalization failed: {response.message}' if response else 'StimulationTracer finalization failed: no response')
+            return False
+
+        self.logger.info('StimulationTracer finalized successfully')
+        return True
+
+    def finalize_trigger_timer(self, session_id):
+        """Finalize the trigger timer component."""
+        request = FinalizeTriggerTimer.Request()
+        request.session_id = session_id
+        response = self.call_service(self.trigger_timer_finalize_client, request, '/pipeline/trigger_timer/finalize')
+
+        if response is None or not response.success:
+            self.logger.error(f'TriggerTimer finalization failed: {response.message}' if response else 'TriggerTimer finalization failed: no response')
+            return False
+
+        self.logger.info('TriggerTimer finalized successfully')
+        return True
 
     # Streaming functions
     def start_data_streaming(self, session_config, session_id):
@@ -618,13 +663,11 @@ class SessionManagerNode(Node):
         request.session_id = session_id
         response = self.call_service(client, request, service_name)
 
-        if response is None:
+        if response is None or not response.success:
+            self.logger.error(f'Data streaming start failed: {response.message}' if response else 'Data streaming start failed')
             return False
 
-        if not response.success:
-            self.logger.error(f'Data streaming start failed: {response.message}')
-            return False
-
+        self.logger.info('Data streaming started successfully')
         return True
 
     def stop_data_streaming(self, session_config, session_id):
@@ -643,16 +686,18 @@ class SessionManagerNode(Node):
             service_name = '/eeg_device/streaming/stop'
         else:
             self.logger.error(f'Unknown data source for stopping: {data_source}')
-            return
+            return False
 
         # Call the stop streaming service
-        try:
-            request = StopStreaming.Request()
-            request.session_id = session_id
-            self.call_service(client, request, service_name)
-            self.logger.info(f'Stopped streaming for data source: {data_source}')
-        except Exception as e:
-            self.logger.error(f'Error stopping streaming for {data_source}: {e}')
+        request = StopStreaming.Request()
+        request.session_id = session_id
+        response = self.call_service(client, request, service_name)
+
+        if response is None or not response.success:
+            return False
+
+        self.logger.info('Data streaming stopped successfully')
+        return True
 
     # Recording functions
     def start_recording(self, session_id, session_config, stream_info):
@@ -665,14 +710,10 @@ class SessionManagerNode(Node):
 
         response = self.call_service(self.recording_start_client, request, '/session_recorder/start')
 
-        if response is None:
+        if response is None or not response.success:
             return False
 
-        if not response.success:
-            self.logger.error('Recording start failed')
-            return False
- 
-        self.logger.info('Recording started')
+        self.logger.info('Recording started successfully')
         return True
 
     def stop_recording(self, session_id):
@@ -682,14 +723,11 @@ class SessionManagerNode(Node):
 
         response = self.call_service(self.recording_stop_client, request, '/session_recorder/stop')
 
-        if response is None:
-            self.logger.warn('Failed to stop recording (no response)')
-            return
+        if response is None or not response.success:
+            return False
 
-        if response.success:
-            self.logger.info(f'Recording stopped: {response.bag_path}')
-        else:
-            self.logger.warn('Recording stop returned failure')
+        self.logger.info('Recording stopped successfully')
+        return True
 
     def call_action(self, client, goal, action_name, timeout_sec=30.0):
         """Call an action."""

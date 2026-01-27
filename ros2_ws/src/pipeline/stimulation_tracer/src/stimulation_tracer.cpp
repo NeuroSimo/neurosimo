@@ -235,6 +235,20 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     if (trace.timing_error != 0.0) final_trace.timing_error = trace.timing_error;
   }
 
+  bool is_simulated_data_source = this->data_source == "simulator" || this->data_source == "playback";
+
+  /* If the data source is simulated, the pulse is confirmed via trigger timer fire. */
+  if (is_simulated_data_source && final_trace.status == pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
+    final_trace.pulse_confirmation_method = pipeline_interfaces::msg::DecisionTrace::METHOD_TRIGGER_TIMER_FIRE;
+    final_trace.pulse_confirmed = true;
+  }
+
+  /* If the data source is not simulated, the pulse is confirmed via EEG trigger. */
+  if (!is_simulated_data_source && final_trace.status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED) {
+    final_trace.pulse_confirmation_method = pipeline_interfaces::msg::DecisionTrace::METHOD_EEG_TRIGGER;
+    final_trace.pulse_confirmed = true;
+  }
+
   /* Publish the final merged trace. */
   this->decision_trace_final_publisher->publish(final_trace);
 

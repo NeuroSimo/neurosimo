@@ -150,8 +150,8 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
 }
 
 void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg) {
-  /* Only process STATUS_PULSE_OBSERVED events. */
-  if (msg->status != pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED) {
+  /* Only process confirmed pulses. */
+  if (!msg->pulse_confirmed) {
     return;
   }
 

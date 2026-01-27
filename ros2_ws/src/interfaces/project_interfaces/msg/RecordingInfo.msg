@@ -31,3 +31,7 @@ string end_time
 string git_commit
 string git_state
 string version
+
+# Export status
+bool exported
+string export_directory

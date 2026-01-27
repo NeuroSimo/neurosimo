@@ -22,6 +22,8 @@ export interface RecordingInfo extends ROSLIB.Message {
   git_commit: string
   git_state: string
   version: string
+  exported: boolean
+  export_directory: string
 }
 
 /* Get recording info service */

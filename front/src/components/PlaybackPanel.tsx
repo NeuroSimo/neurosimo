@@ -175,9 +175,9 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   }
 
   const handleOpenFolder = async () => {
-    if (!activeProject) return
-    
-    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, 'recordings')
+    if (!activeProject || !selectedRecordingInfo?.exported || !selectedRecordingInfo?.export_directory) return
+
+    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, selectedRecordingInfo.export_directory)
     if (error) console.error('Failed to open folder:', error)
   }
 
@@ -276,9 +276,15 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
             Export
           </ExportButton>
           <OpenFolderButton
-            disabled={!activeProject || !isElectron}
+            disabled={!activeProject || !isElectron || !selectedRecordingInfo?.exported}
             onClick={handleOpenFolder}
-            title={isElectron ? "Open recordings folder" : "Only available in Electron"}
+            title={
+              !selectedRecordingInfo?.exported
+                ? "No export available"
+                : isElectron
+                ? "Open export folder"
+                : "Only available in Electron"
+            }
           >
             <FontAwesomeIcon icon={faFolderOpen} />
           </OpenFolderButton>

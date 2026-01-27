@@ -28,7 +28,6 @@
 
 #include "pipeline_interfaces/msg/coil_target.hpp"
 
-#include "pipeline_interfaces/msg/timing_error.hpp"
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
@@ -101,8 +100,6 @@ private:
     const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response);
 
-  void handle_pulse_trigger(const double_t pulse_trigger_time);
-
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
   std::tuple<bool, double, std::string> consume_next_event(double_t current_time);
@@ -124,7 +121,6 @@ private:
 
   rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
 
-  rclcpp::Publisher<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;

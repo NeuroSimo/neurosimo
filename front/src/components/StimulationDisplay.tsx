@@ -36,7 +36,6 @@ const StimulationPanel = styled(StyledPanel)`
 
 export const StimulationDisplay: React.FC = () => {
   const { pipelineLatency, setPipelineLatency } = useContext(PipelineContext)
-  const { timingError, setTimingError } = useContext(PipelineContext)
   const { decisionTrace } = useContext(PipelineContext)
 
   const [positiveDecision, setPositiveDecision] = useState<any>(null)
@@ -55,8 +54,6 @@ export const StimulationDisplay: React.FC = () => {
   }, [decisionTrace])
 
   const formattedLatency = pipelineLatency ? (pipelineLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
-
-  const formattedError = timingError ? (timingError.error * 1000).toFixed(1) + ' ms' : '\u2013'
 
   // Latest Decision Stats
   const formattedLatestSampleTime = latestDecision?.sample_time
@@ -145,10 +142,6 @@ export const StimulationDisplay: React.FC = () => {
       <StateRow>
         <IndentedStateTitle>Latency</IndentedStateTitle>
         <StateValue>{formattedLatency}</StateValue>
-      </StateRow>
-      <StateRow>
-        <IndentedStateTitle>Error</IndentedStateTitle>
-        <StateValue>{formattedError}</StateValue>
       </StateRow>
       </StimulationPanel>
     </>

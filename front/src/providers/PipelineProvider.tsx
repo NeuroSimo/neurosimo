@@ -8,10 +8,6 @@ interface PipelineLatency extends ROSLIB.Message {
   latency: number
 }
 
-interface TimingError extends ROSLIB.Message {
-  error: number
-}
-
 interface DecisionTrace extends ROSLIB.Message {
   sample_time: number
   stimulate: boolean
@@ -80,12 +76,10 @@ interface PipelineContextType {
   protocolName: string
 
   pipelineLatency: PipelineLatency | null
-  timingError: TimingError | null
   decisionTrace: DecisionTrace | null
   experimentState: ExperimentState | null
 
   setPipelineLatency: React.Dispatch<React.SetStateAction<PipelineLatency | null>>
-  setTimingError: React.Dispatch<React.SetStateAction<TimingError | null>>
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
   setExperimentState: React.Dispatch<React.SetStateAction<ExperimentState | null>>
   clearAllLogs: () => void
@@ -117,9 +111,6 @@ const defaultPipelineState: PipelineContextType = {
 
   setPipelineLatency: () => {
     console.warn('setPipelineLatency is not yet initialized.')
-  },
-  setTimingError: () => {
-    console.warn('setTimingError is not yet initialized.')
   },
   setDecisionTrace: () => {
     console.warn('setDecisionTrace is not yet initialized.')
@@ -162,7 +153,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const protocolName = pipeline.experiment.protocol
 
   const [pipelineLatency, setPipelineLatency] = useState<PipelineLatency | null>(null)
-  const [timingError, setTimingError] = useState<TimingError | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
   const [experimentState, setExperimentState] = useState<ExperimentState | null>(null)
 
@@ -226,17 +216,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
 
     pipelineLatencySubscriber.subscribe((message) => {
       setPipelineLatency(message)
-    })
-
-    /* Subscriber for timing error. */
-    const timingErrorSubscriber = new Topic<TimingError>({
-      ros: ros,
-      name: '/pipeline/timing/error',
-      messageType: 'pipeline_interfaces/TimingError',
-    })
-
-    timingErrorSubscriber.subscribe((message) => {
-      setTimingError(message)
     })
 
     /* Subscriber for decision info. */
@@ -333,11 +312,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         protocolList,
         protocolName,
         pipelineLatency,
-        timingError,
         decisionTrace,
         experimentState,
         setPipelineLatency,
-        setTimingError,
         setDecisionTrace,
         setExperimentState,
         clearAllLogs,

@@ -26,6 +26,8 @@ const getStageDisplayText = (stage: SessionStage): string => {
       return 'Running'
     case SessionStage.FINALIZING:
       return 'Finalizing'
+    case SessionStage.ERROR:
+      return 'Error'
     default:
       return 'Unknown'
   }
@@ -117,7 +119,7 @@ export const SessionPanel: React.FC = () => {
       </StateRow>
 
       <StateRow>
-        <StateTitle>Stage:</StateTitle>
+        <StateTitle>State:</StateTitle>
         <StateValue>{getStageDisplayText(displayedStage)}</StateValue>
       </StateRow>
     </Container>

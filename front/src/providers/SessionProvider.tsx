@@ -6,11 +6,13 @@ export enum SessionStage {
   INITIALIZING = 1,
   RUNNING = 2,
   FINALIZING = 3,
+  ERROR = 4,
 }
 
 interface SessionState {
   isRunning: boolean
   stage: SessionStage
+  message: string
 }
 
 interface SessionContextType {
@@ -26,6 +28,7 @@ const defaultSessionState: SessionContextType = {
   sessionState: {
     isRunning: false,
     stage: SessionStage.STOPPED,
+    message: '',
   },
   startSession: noopCallback,
   abortSession: noopCallback,
@@ -41,6 +44,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) =>
   const [sessionState, setSessionState] = useState<SessionState>({
     isRunning: false,
     stage: SessionStage.STOPPED,
+    message: '',
   })
 
   useEffect(() => {
@@ -49,6 +53,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) =>
       setSessionState({
         isRunning: state.is_running,
         stage: state.stage,
+        message: state.message,
       })
     })
 

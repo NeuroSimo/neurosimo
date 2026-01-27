@@ -67,3 +67,13 @@ uint64 actual_stimulation_sample_index
 
 # Timing error (actual - scheduled) in seconds
 float64 timing_error
+
+# ----------------------------------------------------------------------------
+# Pulse confirmation (filled by StimulationTracer)
+# ----------------------------------------------------------------------------
+uint8 METHOD_NONE=0                 # No confirmation
+uint8 METHOD_EEG_TRIGGER=1          # Confirmation for pulse received via incoming trigger (when using the EEG device)
+uint8 METHOD_TRIGGER_TIMER_FIRE=2   # Confirmed via generating an outgoing trigger (when using the simulator)
+uint8 pulse_confirmation_method
+
+bool pulse_confirmed

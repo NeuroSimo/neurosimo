@@ -40,10 +40,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/FinalizePreprocessor.srv"
   "srv/FinalizeDecider.srv"
   "srv/FinalizePresenter.srv"
+  "srv/FinalizeStimulationTracer.srv"
 
   "srv/InitializePreprocessor.srv"
   "srv/InitializeDecider.srv"
   "srv/InitializePresenter.srv"
+  "srv/InitializeStimulationTracer.srv"
 
   DEPENDENCIES
     diagnostic_msgs

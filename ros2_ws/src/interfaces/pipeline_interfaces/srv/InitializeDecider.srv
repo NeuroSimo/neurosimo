@@ -1,6 +1,5 @@
 # Initialize pipeline component: decider
 
-# Goal: Component initialization parameters
 uint8[16] session_id
 
 string project_name
@@ -16,5 +15,4 @@ eeg_interfaces/StreamInfo stream_info
 # Metadata
 string subject_id
 ---
-# Result: Initialization outcome
 bool success

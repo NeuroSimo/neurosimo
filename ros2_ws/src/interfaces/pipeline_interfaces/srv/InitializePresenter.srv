@@ -1,6 +1,5 @@
 # Initialize pipeline component: presenter
 
-# Goal: Component initialization parameters
 uint8[16] session_id
 
 string project_name

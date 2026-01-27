@@ -53,7 +53,7 @@ EEG_FIELDS_RAW = [
     'arrival_time',
     'is_session_start',
     'is_session_end',
-    'pulse_delivered',
+    'pulse_trigger',
 ]
 
 EEG_FIELDS_ENRICHED = EEG_FIELDS_RAW + [

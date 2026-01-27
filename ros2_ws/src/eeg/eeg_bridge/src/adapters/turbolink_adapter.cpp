@@ -62,14 +62,12 @@ AdapterPacket TurboLinkAdapter::process_packet(const uint8_t* buffer, [[maybe_un
   AdapterPacket packet;
   packet.result = INTERNAL;
   packet.sample = AdapterSample();
-  packet.trigger_a_timestamp = -1.0; // in seconds
 
   bool trigger_a = false;
 
   std::tie(packet.sample, trigger_a) = handle_packet(buffer);
   packet.result = SAMPLE;
   if (trigger_a) {
-    packet.trigger_a_timestamp = packet.sample.time;
     packet.sample.trigger_a = true;
   }
 

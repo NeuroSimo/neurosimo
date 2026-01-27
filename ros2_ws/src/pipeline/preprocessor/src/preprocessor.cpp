@@ -325,7 +325,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     preprocessed_sample,
     this->sample_buffer,
     sample_time,
-    triggering_sample->pulse_delivered);
+    triggering_sample->pulse_trigger);
 
   /* Publish buffered Python logs after process() completes to avoid interfering with timing */
   publish_python_logs(sample_time, false);
@@ -342,7 +342,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   preprocessed_sample.arrival_time = triggering_sample->arrival_time;
 
   /* Copy hardware trigger information. */
-  preprocessed_sample.pulse_delivered = triggering_sample->pulse_delivered;
+  preprocessed_sample.pulse_trigger = triggering_sample->pulse_trigger;
 
   /* Carry forward any pending session markers. */
   preprocessed_sample.is_session_start = this->pending_session_start;
@@ -411,7 +411,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
     return;
   }
 
-  if (msg->pulse_delivered) {
+  if (msg->pulse_trigger) {
     RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.1f (s).", sample_time);
   }
 

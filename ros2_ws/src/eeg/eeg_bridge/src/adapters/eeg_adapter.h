@@ -43,7 +43,6 @@ struct AdapterSample {
 struct AdapterPacket {
   AdapterPacketResult result;
   AdapterSample sample;           // Valid when result == ADAPTER_SAMPLE
-  double trigger_a_timestamp;     // Valid when result contains trigger_a
 };
 
 class EegAdapter {

@@ -494,7 +494,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
-    request.triggering_sample->pulse_delivered,
+    request.triggering_sample->pulse_trigger,
     request.has_event,
     request.event_type,
     this->event_queue,
@@ -641,15 +641,15 @@ void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::B
   this->is_coil_at_target = msg->data;
 }
 
-void EegDecider::handle_pulse_delivered(const double_t pulse_delivered_time) {
+void EegDecider::handle_pulse_trigger(const double_t pulse_trigger_time) {
   if (this->previous_stimulation_time == UNSET_TIME) {
     return;
   }
 
   /* Calculate the time difference between the incoming pulse and the expected pulse time. */
-  double_t timing_error = pulse_delivered_time - previous_stimulation_time;
+  double_t timing_error = pulse_trigger_time - previous_stimulation_time;
 
-  RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.4f (s), expected pulse at: %.4f (s), timing error: %.1f (ms)", pulse_delivered_time, previous_stimulation_time, 1000 * timing_error);
+  RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.4f (s), expected pulse at: %.4f (s), timing error: %.1f (ms)", pulse_trigger_time, previous_stimulation_time, 1000 * timing_error);
 
   /* Publish timing error ROS message. */
   auto msg = pipeline_interfaces::msg::TimingError();
@@ -676,8 +676,8 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   }
 
   /* If the sample includes a trigger, handle it accordingly. */
-  if (msg->pulse_delivered) {
-    handle_pulse_delivered(sample_time);
+  if (msg->pulse_trigger) {
+    handle_pulse_trigger(sample_time);
   }
 
   /* Append the sample to the buffer. */
@@ -719,7 +719,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
      1. Periodic processing was triggered AND we're not in the pulse lockout period
      2. The sample includes a pulse delivered
      3. The sample includes an event. */
-  bool should_trigger_python_call = (periodic_processing_triggered && !in_lockout_period) || msg->pulse_delivered || has_event;
+  bool should_trigger_python_call = (periodic_processing_triggered && !in_lockout_period) || msg->pulse_trigger || has_event;
 
   /* Return early if no Python call should be triggered. */
   if (!should_trigger_python_call) {

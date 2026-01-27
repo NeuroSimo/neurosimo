@@ -21,7 +21,7 @@ uint8 STATUS_DECIDED_YES=1          # decider decided to stimulate (request crea
 uint8 STATUS_SCHEDULED=2            # trigger_timer accepted and scheduled
 uint8 STATUS_REJECTED=3             # trigger_timer rejected request (e.g. safety/late)
 uint8 STATUS_FIRED=4                # trigger_timer fired hardware trigger
-uint8 STATUS_OBSERVED=5             # pulse observed in EEG stream
+uint8 STATUS_PULSE_OBSERVED=5             # pulse observed in EEG stream
 uint8 STATUS_MISSED=6               # expected pulse not observed within window
 uint8 STATUS_ERROR=7                # generic error
 uint8 status

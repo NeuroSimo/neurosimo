@@ -9,7 +9,7 @@ using namespace experiment_coordinator;
 
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string PULSE_EVENT_TOPIC = "/pipeline/pulse_events";
+const std::string DECISION_TRACE_FINAL_TOPIC = "/pipeline/decision_trace/final";
 const std::string HEALTHCHECK_TOPIC = "/experiment/coordinator/healthcheck";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -41,11 +41,11 @@ ExperimentCoordinator::ExperimentCoordinator()
     EEG_QUEUE_LENGTH,
     std::bind(&ExperimentCoordinator::handle_raw_sample, this, _1));
   
-  /* Subscriber for pulse events. */
-  this->pulse_event_subscriber = this->create_subscription<std_msgs::msg::Empty>(
-    PULSE_EVENT_TOPIC,
+  /* Subscriber for decision trace final events. */
+  this->decision_trace_final_subscriber = this->create_subscription<pipeline_interfaces::msg::DecisionTrace>(
+    DECISION_TRACE_FINAL_TOPIC,
     100,
-    std::bind(&ExperimentCoordinator::handle_pulse_event, this, _1));
+    std::bind(&ExperimentCoordinator::handle_decision_trace_final, this, _1));
 
   /* Client for finishing the session. */
   this->finish_session_client = this->create_client<std_srvs::srv::Trigger>(
@@ -149,54 +149,57 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
   }
 }
 
-void ExperimentCoordinator::handle_pulse_event(const std::shared_ptr<std_msgs::msg::Empty> msg) {
-  (void)msg;  // Unused
-  
+void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg) {
+  /* Only process STATUS_PULSE_OBSERVED events. */
+  if (msg->status != pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED) {
+    return;
+  }
+
   if (!state.is_session_ongoing) {
     RCLCPP_WARN(this->get_logger(), "Session not ongoing, ignoring pulse event");
     return;
   }
-  
+
   if (state.paused) {
     RCLCPP_WARN(this->get_logger(), "Pulse received while paused, ignoring");
     return;
   }
-  
+
   if (state.in_rest) {
     RCLCPP_WARN(this->get_logger(), "Pulse received during rest, ignoring");
     return;
   }
-  
+
   state.total_pulses++;
-  
+
   /* Check if we're in a stage. */
   if (state.current_element_index >= protocol->elements.size()) {
     RCLCPP_WARN(this->get_logger(), "Pulse received but protocol is complete");
     return;
   }
-  
+
   const auto& element = protocol->elements[state.current_element_index];
-  
+
   if (element.type != ProtocolElement::Type::STAGE) {
     RCLCPP_WARN(this->get_logger(), "Pulse received but not in a stage");
     return;
   }
-  
+
   const auto& stage = element.stage.value();
   state.trial++;
-  
+
   RCLCPP_INFO(this->get_logger(), "Pulse %u: Stage '%s' trial %u/%u",
     state.total_pulses, stage.name.c_str(), state.trial, stage.trials);
-  
+
   /* Check if stage is complete. */
   if (state.trial >= stage.trials) {
     RCLCPP_INFO(this->get_logger(), "Stage '%s' complete (%u trials)",
       stage.name.c_str(), stage.trials);
-    
+
     /* Advance to next element. */
     advance_to_next_element();
   }
-  
+
   publish_experiment_state(state.last_sample_time);
 }
 

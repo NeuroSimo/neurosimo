@@ -15,7 +15,6 @@ This node:
 
 ### Subscribed
 - `/eeg/raw` (eeg_interfaces/Sample) - Raw EEG samples from EEG Bridge
-- `/pipeline/pulse_events` (std_msgs/Empty) - Pulse events from Trigger Timer
 - `/projects/active` (std_msgs/String) - Active project name
 
 ### Published

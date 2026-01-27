@@ -29,12 +29,12 @@ const Message = styled.div`
 `
 
 export const HealthcheckMessageDisplay: React.FC = () => {
-  const { eegHealthcheck, preprocessorHealthcheck, deciderHealthcheck } =
+  const { eegHealthcheck, preprocessorHealthcheck, deciderHealthcheck, resourceMonitorHealthcheck } =
     useContext(HealthcheckContext)
 
   let displayMessage
 
-  // Prioritize eegHealthcheck > preprocessorHealthcheck > deciderHealthcheck
+  // Prioritize eegHealthcheck > preprocessorHealthcheck > deciderHealthcheck > resourceMonitorHealthcheck
   if (eegHealthcheck?.status.value !== HealthcheckStatus.READY) {
     displayMessage = eegHealthcheck?.actionable_message
   } else if (
@@ -47,6 +47,10 @@ export const HealthcheckMessageDisplay: React.FC = () => {
     deciderHealthcheck?.status.value === HealthcheckStatus.ERROR
   ) {
     displayMessage = deciderHealthcheck?.actionable_message
+  } else if (
+    resourceMonitorHealthcheck?.status.value === HealthcheckStatus.ERROR
+  ) {
+    displayMessage = resourceMonitorHealthcheck?.actionable_message
   } else {
     displayMessage = 'Ready'
   }

@@ -105,7 +105,6 @@ const defaultPipelineState: PipelineContextType = {
   protocolName: '',
 
   pipelineLatency: null,
-  timingError: null,
   decisionTrace: null,
   experimentState: null,
 
@@ -284,7 +283,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       protocolListSubscriber.unsubscribe()
 
       pipelineLatencySubscriber.unsubscribe()
-      timingErrorSubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
       
       preprocessorLogSubscriber.unsubscribe()

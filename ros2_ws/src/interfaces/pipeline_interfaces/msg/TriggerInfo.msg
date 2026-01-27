@@ -1,5 +1,0 @@
-bool success
-
-float64 scheduled_time
-float64 current_latency
-float64 latency_corrected_actual_time

@@ -35,26 +35,26 @@ const StimulationPanel = styled(StyledPanel)`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { timingLatency, setTimingLatency } = useContext(PipelineContext)
+  const { pipelineLatency, setPipelineLatency } = useContext(PipelineContext)
   const { timingError, setTimingError } = useContext(PipelineContext)
-  const { decisionInfo } = useContext(PipelineContext)
+  const { decisionTrace } = useContext(PipelineContext)
 
   const [positiveDecision, setPositiveDecision] = useState<any>(null)
   const [latestDecision, setLatestDecision] = useState<any>(null)
 
   useEffect(() => {
-    if (decisionInfo) {
+    if (decisionTrace) {
       // Update the latest decision
-      setLatestDecision(decisionInfo)
+      setLatestDecision(decisionTrace)
 
       // Update positive decision if `stimulate` is true
-      if (decisionInfo.stimulate) {
-        setPositiveDecision(decisionInfo)
+      if (decisionTrace.stimulate) {
+        setPositiveDecision(decisionTrace)
       }
     }
-  }, [decisionInfo])
+  }, [decisionTrace])
 
-  const formattedLatency = timingLatency ? (timingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedLatency = pipelineLatency ? (pipelineLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
 
   const formattedError = timingError ? (timingError.error * 1000).toFixed(1) + ' ms' : '\u2013'
 

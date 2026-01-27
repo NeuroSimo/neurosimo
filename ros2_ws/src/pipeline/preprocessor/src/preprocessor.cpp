@@ -354,7 +354,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
 
   /* Calculate preprocessing duration. */
   auto end_time = std::chrono::high_resolution_clock::now();
-  preprocessed_sample.preprocessing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
+  preprocessed_sample.preprocessor_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
   /* Publish the preprocessed sample. */
   preprocessed_eeg_publisher->publish(preprocessed_sample);

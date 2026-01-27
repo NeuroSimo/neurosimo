@@ -1,4 +1,7 @@
 # Used in the real-time pipeline for requesting timed trigger.
+uint8[16] session_id
+uint64 decision_id
+
 TimedTrigger timed_trigger
 ---
 bool success

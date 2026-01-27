@@ -51,16 +51,16 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->get_parameter("minimum-intertrial-interval", this->minimum_intertrial_interval);
 
   /* Read ROS parameter: timing latency threshold */
-  auto timing_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  timing_latency_threshold_descriptor.description = "The threshold for the timing latency (in seconds) before stimulation is prevented";
-  this->declare_parameter("timing-latency-threshold", 0.005, timing_latency_threshold_descriptor);
-  this->get_parameter("timing-latency-threshold", this->timing_latency_threshold);
+  auto pipeline_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  pipeline_latency_threshold_descriptor.description = "The threshold for the timing latency (in seconds) before stimulation is prevented";
+  this->declare_parameter("timing-latency-threshold", 0.005, pipeline_latency_threshold_descriptor);
+  this->get_parameter("timing-latency-threshold", this->pipeline_latency_threshold);
 
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Minimum pulse interval: %.1f (s)", this->minimum_intertrial_interval);
-  RCLCPP_INFO(this->get_logger(), "  Timing latency threshold: %.1f (ms)", 1000 * this->timing_latency_threshold);
+  RCLCPP_INFO(this->get_logger(), "  Timing latency threshold: %.1f (ms)", 1000 * this->pipeline_latency_threshold);
 
   /* Validate the minimum pulse interval. */
   if (this->minimum_intertrial_interval <= 0) {
@@ -95,16 +95,16 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/pipeline/timing/error",
     10);
 
-  /* Publisher for decision info. */
-  this->decision_info_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionInfo>(
-    "/pipeline/decision_info",
+  /* Publisher for decision trace. */
+  this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
+    "/pipeline/decision_trace",
     10);
 
   /* Subscriber for timing latency. */
-  this->timing_latency_subscriber = this->create_subscription<pipeline_interfaces::msg::TimingLatency>(
-    "/pipeline/timing/latency",
+  this->pipeline_latency_subscriber = this->create_subscription<pipeline_interfaces::msg::PipelineLatency>(
+    "/pipeline/latency",
     10,
-    std::bind(&EegDecider::handle_timing_latency, this, _1));
+    std::bind(&EegDecider::handle_pipeline_latency, this, _1));
 
   /* Publisher for sensory stimulus. */
 
@@ -200,6 +200,10 @@ void EegDecider::handle_initialize_decider(
 
   // Store stream info
   this->stream_info = request->stream_info;
+
+  // Store session ID and reset decision ID
+  this->session_id = request->session_id;
+  this->decision_id = 0;
 
   // Change working directory to the module directory
   if (!filesystem_utils::change_working_directory(decider_path.string(), this->get_logger())) {
@@ -300,13 +304,17 @@ bool EegDecider::reset_state() {
   this->initialized_module_filename = UNSET_STRING;
   this->initialized_working_directory = "";
 
+  // Reset session and decision tracking
+  this->session_id = {};
+  this->decision_id = 0;
+
   this->is_initialized = false;
   this->is_enabled = false;
   this->error_occurred = false;
   this->previous_stimulation_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
   this->next_periodic_processing_time = UNSET_TIME;
-  this->timing_latency = 0.0;
+  this->pipeline_latency = 0.0;
 
   /* Clear the event queue. */
   {
@@ -356,8 +364,8 @@ void EegDecider::publish_healthcheck() {
   this->healthcheck_publisher->publish(healthcheck);
 }
 
-void EegDecider::handle_timing_latency(const std::shared_ptr<pipeline_interfaces::msg::TimingLatency> msg) {
-  this->timing_latency = msg->latency;
+void EegDecider::handle_pipeline_latency(const std::shared_ptr<pipeline_interfaces::msg::PipelineLatency> msg) {
+  this->pipeline_latency = msg->latency;
 }
 
 void EegDecider::log_section_header(const std::string& title) {
@@ -485,7 +493,10 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     return;
   }
 
+  /* Capture timing for decision trace */
   auto start_time = std::chrono::high_resolution_clock::now();
+  uint64_t system_time_decider_received = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    start_time.time_since_epoch()).count();
 
   double_t sample_time = request.triggering_sample->time;
 
@@ -512,10 +523,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     return;
   }
 
-  /* Calculate the total latency of the decider. */
-  auto end_time = std::chrono::high_resolution_clock::now();
-  double_t decider_processing_duration = std::chrono::duration<double_t>(end_time - start_time).count();
-
   /* Publish sensory stimuli if the vector is not empty. */
   if (!this->sensory_stimuli.empty()) {
     auto sensory_stimulus_count = this->sensory_stimuli.size();
@@ -538,18 +545,39 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* Check if the decision is positive. */
   bool stimulate = (timed_trigger != nullptr);
 
-  /* Publish decision info. */
-  rclcpp::Time now = this->get_clock()->now();
-  double_t total_latency = now.seconds() - request.triggering_sample->arrival_time;
+  /* Calculate the total latency of the decider. */
+  auto end_time = std::chrono::high_resolution_clock::now();
+  uint64_t system_time_decider_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    end_time.time_since_epoch()).count();
 
-  auto decision_info = pipeline_interfaces::msg::DecisionInfo();
-  decision_info.stimulate = stimulate;
-  decision_info.sample_time = sample_time;
-  decision_info.decider_processing_duration = decider_processing_duration;
-  decision_info.preprocessor_processing_duration = request.triggering_sample->preprocessing_duration;
-  decision_info.total_latency = total_latency;
+  double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
-  this->decision_info_publisher->publish(decision_info);
+  /* Publish decision trace. */
+  auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
+
+  // Metadata (filled by Decider)
+  decision_trace.session_id = this->session_id;
+  decision_trace.decision_id = ++this->decision_id;  // Increment decision ID
+
+  // Status (filled by each stage) - initially set by Decider
+  decision_trace.status = stimulate ? pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
+                                   : pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
+
+  // Decision info
+  decision_trace.reference_sample_time = sample_time;
+  decision_trace.reference_sample_index = request.triggering_sample->sample_index;
+  decision_trace.stimulate = stimulate;
+  decision_trace.requested_stimulation_time = timed_trigger ? timed_trigger->time : 0.0;
+
+  // Decider / preprocessing timing
+  decision_trace.decider_duration = decider_duration;
+  decision_trace.preprocessor_duration = request.triggering_sample->preprocessor_duration;
+
+  // System timing
+  decision_trace.system_time_decider_received = system_time_decider_received;
+  decision_trace.system_time_decider_finished = system_time_decider_finished;
+
+  this->decision_trace_publisher->publish(decision_trace);
 
   /* If the decision is negative, return early. */
   if (!stimulate) {
@@ -557,8 +585,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
 
   /* Check that timing latency is within threshold. */
-  if (this->timing_latency > this->timing_latency_threshold) {
-    RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms), ignoring stimulation request.", this->timing_latency * 1000, this->timing_latency_threshold * 1000);
+  if (this->pipeline_latency > this->pipeline_latency_threshold) {
+    RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms), ignoring stimulation request.", this->pipeline_latency * 1000, this->pipeline_latency_threshold * 1000);
     return;
   }
 
@@ -578,6 +606,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
 
   request_msg->timed_trigger = *timed_trigger;
+  request_msg->session_id = this->session_id;
+  request_msg->decision_id = this->decision_id;
   this->request_timed_trigger(request_msg);
 
   RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", timed_trigger->time);

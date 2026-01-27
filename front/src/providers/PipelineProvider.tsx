@@ -4,7 +4,7 @@ import { Topic, Message } from 'roslib'
 import { ros } from 'ros/ros'
 import { useParameters } from './ParameterProvider'
 
-interface TimingLatency extends ROSLIB.Message {
+interface PipelineLatency extends ROSLIB.Message {
   latency: number
 }
 
@@ -12,7 +12,7 @@ interface TimingError extends ROSLIB.Message {
   error: number
 }
 
-interface DecisionInfo extends ROSLIB.Message {
+interface DecisionTrace extends ROSLIB.Message {
   sample_time: number
   stimulate: boolean
   decider_processing_duration: number
@@ -79,14 +79,14 @@ interface PipelineContextType {
   protocolList: string[]
   protocolName: string
 
-  timingLatency: TimingLatency | null
+  pipelineLatency: PipelineLatency | null
   timingError: TimingError | null
-  decisionInfo: DecisionInfo | null
+  decisionTrace: DecisionTrace | null
   experimentState: ExperimentState | null
 
-  setTimingLatency: React.Dispatch<React.SetStateAction<TimingLatency | null>>
+  setPipelineLatency: React.Dispatch<React.SetStateAction<PipelineLatency | null>>
   setTimingError: React.Dispatch<React.SetStateAction<TimingError | null>>
-  setDecisionInfo: React.Dispatch<React.SetStateAction<DecisionInfo | null>>
+  setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
   setExperimentState: React.Dispatch<React.SetStateAction<ExperimentState | null>>
   clearAllLogs: () => void
 }
@@ -110,19 +110,19 @@ const defaultPipelineState: PipelineContextType = {
   protocolList: [],
   protocolName: '',
 
-  timingLatency: null,
+  pipelineLatency: null,
   timingError: null,
-  decisionInfo: null,
+  decisionTrace: null,
   experimentState: null,
 
-  setTimingLatency: () => {
-    console.warn('setTimingLatency is not yet initialized.')
+  setPipelineLatency: () => {
+    console.warn('setPipelineLatency is not yet initialized.')
   },
   setTimingError: () => {
     console.warn('setTimingError is not yet initialized.')
   },
-  setDecisionInfo: () => {
-    console.warn('setDecisionInfo is not yet initialized.')
+  setDecisionTrace: () => {
+    console.warn('setDecisionTrace is not yet initialized.')
   },
   setExperimentState: () => {
     console.warn('setExperimentState is not yet initialized.')
@@ -161,9 +161,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const presenterEnabled = pipeline.presenter.enabled
   const protocolName = pipeline.experiment.protocol
 
-  const [timingLatency, setTimingLatency] = useState<TimingLatency | null>(null)
+  const [pipelineLatency, setPipelineLatency] = useState<PipelineLatency | null>(null)
   const [timingError, setTimingError] = useState<TimingError | null>(null)
-  const [decisionInfo, setDecisionInfo] = useState<DecisionInfo | null>(null)
+  const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
   const [experimentState, setExperimentState] = useState<ExperimentState | null>(null)
 
   const clearAllLogs = () => {
@@ -218,14 +218,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     })
 
     /* Subscriber for timing latency. */
-    const timingLatencySubscriber = new Topic<TimingLatency>({
+    const pipelineLatencySubscriber = new Topic<PipelineLatency>({
       ros: ros,
-      name: '/pipeline/timing/latency',
-      messageType: 'pipeline_interfaces/TimingLatency',
+      name: '/pipeline/latency',
+      messageType: 'pipeline_interfaces/PipelineLatency',
     })
 
-    timingLatencySubscriber.subscribe((message) => {
-      setTimingLatency(message)
+    pipelineLatencySubscriber.subscribe((message) => {
+      setPipelineLatency(message)
     })
 
     /* Subscriber for timing error. */
@@ -240,14 +240,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     })
 
     /* Subscriber for decision info. */
-    const decisionInfoSubscriber = new Topic<DecisionInfo>({
+    const decisionTraceSubscriber = new Topic<DecisionTrace>({
       ros: ros,
       name: '/pipeline/decision_info',
-      messageType: 'pipeline_interfaces/DecisionInfo',
+      messageType: 'pipeline_interfaces/DecisionTrace',
     })
 
-    decisionInfoSubscriber.subscribe((message) => {
-      setDecisionInfo(message)
+    decisionTraceSubscriber.subscribe((message) => {
+      setDecisionTrace(message)
     })
 
     /* Subscriber for preprocessor logs. */
@@ -304,9 +304,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       presenterListSubscriber.unsubscribe()
       protocolListSubscriber.unsubscribe()
 
-      timingLatencySubscriber.unsubscribe()
+      pipelineLatencySubscriber.unsubscribe()
       timingErrorSubscriber.unsubscribe()
-      decisionInfoSubscriber.unsubscribe()
+      decisionTraceSubscriber.unsubscribe()
       
       preprocessorLogSubscriber.unsubscribe()
       deciderLogSubscriber.unsubscribe()
@@ -332,13 +332,13 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
         presenterLogs,
         protocolList,
         protocolName,
-        timingLatency,
+        pipelineLatency,
         timingError,
-        decisionInfo,
+        decisionTrace,
         experimentState,
-        setTimingLatency,
+        setPipelineLatency,
         setTimingError,
-        setDecisionInfo,
+        setDecisionTrace,
         setExperimentState,
         clearAllLogs,
       }}

@@ -83,11 +83,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     qos_persist_latest,
     std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
 
-  /* Publisher for timing error. */
-  this->timing_error_publisher = this->create_publisher<pipeline_interfaces::msg::TimingError>(
-    "/pipeline/timing/error",
-    10);
-
   /* Publisher for decision trace. */
   this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
     "/pipeline/decision_trace",
@@ -647,23 +642,6 @@ void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::B
   this->is_coil_at_target = msg->data;
 }
 
-void EegDecider::handle_pulse_trigger(const double_t pulse_trigger_time) {
-  if (this->previous_stimulation_time == UNSET_TIME) {
-    return;
-  }
-
-  /* Calculate the time difference between the incoming pulse and the expected pulse time. */
-  double_t timing_error = pulse_trigger_time - previous_stimulation_time;
-
-  RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.4f (s), expected pulse at: %.4f (s), timing error: %.1f (ms)", pulse_trigger_time, previous_stimulation_time, 1000 * timing_error);
-
-  /* Publish timing error ROS message. */
-  auto msg = pipeline_interfaces::msg::TimingError();
-  msg.error = timing_error;
-
-  this->timing_error_publisher->publish(msg);
-}
-
 void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   /* Return early if decider is not enabled or initialized. */
   if (!this->is_enabled || !this->is_initialized) {
@@ -679,11 +657,6 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
                          "An error occurred in decider module, not processing EEG sample at time %.3f (s).",
                          sample_time);
     return;
-  }
-
-  /* If the sample includes a trigger, handle it accordingly. */
-  if (msg->pulse_trigger) {
-    handle_pulse_trigger(sample_time);
   }
 
   /* Append the sample to the buffer. */

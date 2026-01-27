@@ -49,16 +49,19 @@ DEFAULT_PORT = 50000
 DEFAULT_SAMPLING_RATE = 500  # Hz
 DEFAULT_EEG_CHANNELS = 8
 DEFAULT_EMG_CHANNELS = 2
+DEFAULT_TRIGGER_PORT = 60000  # Port for receiving triggers from MockLabJackManager
 DC_MODE_SCALE = 100  # Scaling factor
 
 class NeurOneSimulator:
     def __init__(self, port=DEFAULT_PORT, sampling_rate=DEFAULT_SAMPLING_RATE,
-                 eeg_channels=DEFAULT_EEG_CHANNELS, emg_channels=DEFAULT_EMG_CHANNELS):
+                 eeg_channels=DEFAULT_EEG_CHANNELS, emg_channels=DEFAULT_EMG_CHANNELS,
+                 trigger_port=DEFAULT_TRIGGER_PORT):
         self.port = port
         self.sampling_rate = sampling_rate
         self.eeg_channels = eeg_channels
         self.emg_channels = emg_channels
         self.total_channels = eeg_channels + emg_channels + 1  # +1 for trigger channel
+        self.trigger_port = trigger_port
 
         # Create UDP socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -67,11 +70,22 @@ class NeurOneSimulator:
         # Bind to a local port for sending
         self.sock.bind(('', 0))
 
+        # Create TCP socket for receiving triggers
+        self.trigger_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.trigger_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.trigger_sock.bind(('localhost', self.trigger_port))
+        self.trigger_sock.listen(1)
+
         # EEG device IP (what the bridge expects)
         self.device_ip = 'localhost'
 
         self.running = False
         self.sample_index = 0
+
+        # Trigger flags for the next sample
+        self.next_pulse_trigger = False
+        self.next_latency_trigger = False
+        self.trigger_lock = threading.Lock()
 
         # Generate some realistic channel configurations
         self.source_channels = []
@@ -83,6 +97,54 @@ class NeurOneSimulator:
 
         # Add trigger channel
         self.source_channels.append(65535)  # SOURCE_CHANNEL_FOR_TRIGGER
+
+    def handle_trigger_connection(self):
+        """Handle incoming trigger connections in a separate thread"""
+        print(f"Listening for triggers on port {self.trigger_port}")
+        while self.running:
+            try:
+                # Accept connection with timeout
+                self.trigger_sock.settimeout(1.0)
+                client_sock, addr = self.trigger_sock.accept()
+                print(f"Accepted trigger connection from {addr}")
+
+                # Handle the connection
+                self.handle_client_connection(client_sock)
+
+            except socket.timeout:
+                continue
+            except OSError:
+                # Socket was closed
+                break
+            except Exception as e:
+                print(f"Error accepting trigger connection: {e}")
+
+    def handle_client_connection(self, client_sock):
+        """Handle messages from a connected trigger client"""
+        try:
+            while self.running:
+                # Receive trigger message with timeout
+                client_sock.settimeout(1.0)
+                data = client_sock.recv(1024)
+
+                if not data:
+                    break  # Connection closed
+
+                message = data.decode('utf-8').strip()
+                print(f"Received trigger: {message}")
+
+                with self.trigger_lock:
+                    if message == "pulse_trigger":
+                        self.next_pulse_trigger = True
+                    elif message == "latency_trigger":
+                        self.next_latency_trigger = True
+
+        except socket.timeout:
+            pass  # Timeout is expected
+        except Exception as e:
+            print(f"Error handling trigger connection: {e}")
+        finally:
+            client_sock.close()
 
     def int32_to_int24_bytes(self, value):
         """Convert int32 to 3-byte big-endian representation"""
@@ -125,7 +187,7 @@ class NeurOneSimulator:
         print(f"Sending measurement start packet: {self.total_channels} channels, {self.sampling_rate} Hz")
         self.sock.sendto(packet, (self.device_ip, self.port))
 
-    def generate_sample_data(self, channel_index):
+    def generate_sample_data(self, channel_index, pulse_trigger=False, latency_trigger=False):
         """Generate realistic EEG/EMG sample data"""
         t = self.sample_index / self.sampling_rate
 
@@ -142,12 +204,14 @@ class NeurOneSimulator:
             noise = random.gauss(0, 2)
             return int((base_signal + noise) * 1000)  # Convert to nV
         else:
-            # Trigger channel: mostly zeros, occasional triggers
-            if self.sample_index % (self.sampling_rate * 2) == 0:  # Every 2 seconds
-                return 1 << 3  # Trigger B (bit 3)
-            elif self.sample_index % (self.sampling_rate * 5) == 0:  # Every 5 seconds
-                return 1 << 1  # Trigger A (bit 1)
-            return 0
+            # Trigger channel: set bits based on received triggers
+            trigger_value = 0
+            if pulse_trigger:
+                trigger_value |= (1 << 3)  # Set bit 3 for pulse trigger
+            if latency_trigger:
+                trigger_value |= (1 << 1)  # Set bit 1 for latency trigger
+
+            return trigger_value
 
     def send_sample_packet(self):
         """Send a sample packet"""
@@ -173,9 +237,17 @@ class NeurOneSimulator:
         current_time_us = int(time.time() * 1_000_000)
         struct.pack_into('>Q', packet, SamplesPacketFieldIndex.SAMPLE_FIRST_SAMPLE_TIME, current_time_us)
 
+        # Check for trigger flags and include them in the sample data
+        with self.trigger_lock:
+            pulse_trigger = self.next_pulse_trigger
+            latency_trigger = self.next_latency_trigger
+            # Reset flags after reading
+            self.next_pulse_trigger = False
+            self.next_latency_trigger = False
+
         # Sample data (3 bytes per channel, big-endian)
         for i in range(self.total_channels):
-            sample_value = self.generate_sample_data(i)
+            sample_value = self.generate_sample_data(i, pulse_trigger, latency_trigger)
             sample_bytes = self.int32_to_int24_bytes(sample_value)
             offset = SamplesPacketFieldIndex.SAMPLE_SAMPLES + 3 * i
             packet[offset:offset+3] = sample_bytes
@@ -200,6 +272,12 @@ class NeurOneSimulator:
         print(f"Starting NeurOne simulator on port {self.port}")
         print(f"Sampling rate: {self.sampling_rate} Hz")
         print(f"EEG channels: {self.eeg_channels}, EMG channels: {self.emg_channels}")
+        print(f"Trigger server listening on port {self.trigger_port}")
+
+        # Start trigger handling thread
+        trigger_thread = threading.Thread(target=self.handle_trigger_connection)
+        trigger_thread.daemon = True
+        trigger_thread.start()
 
         # Send measurement start packet
         self.send_measurement_start_packet()
@@ -240,6 +318,10 @@ class NeurOneSimulator:
     def stop(self):
         """Stop the simulator"""
         self.running = False
+        try:
+            self.trigger_sock.close()
+        except:
+            pass
 
 
 def main():
@@ -248,6 +330,8 @@ def main():
     parser = argparse.ArgumentParser(description='NeurOne EEG Simulator')
     parser.add_argument('--port', type=int, default=DEFAULT_PORT,
                        help=f'UDP port to send packets to (default: {DEFAULT_PORT})')
+    parser.add_argument('--trigger-port', type=int, default=DEFAULT_TRIGGER_PORT,
+                       help=f'TCP port to listen for triggers (default: {DEFAULT_TRIGGER_PORT})')
     parser.add_argument('--sampling-rate', type=int, default=DEFAULT_SAMPLING_RATE,
                        help=f'Sampling rate in Hz (default: {DEFAULT_SAMPLING_RATE})')
     parser.add_argument('--eeg-channels', type=int, default=DEFAULT_EEG_CHANNELS,
@@ -263,7 +347,8 @@ def main():
         port=args.port,
         sampling_rate=args.sampling_rate,
         eeg_channels=args.eeg_channels,
-        emg_channels=args.emg_channels
+        emg_channels=args.emg_channels,
+        trigger_port=args.trigger_port
     )
 
     def signal_handler(signum, frame):

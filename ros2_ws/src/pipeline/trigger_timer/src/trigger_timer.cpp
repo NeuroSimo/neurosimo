@@ -38,10 +38,17 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   this->declare_parameter("simulate-labjack", false, simulate_labjack_descriptor);
   this->get_parameter("simulate-labjack", this->simulate_labjack);
 
+  /* Read ROS parameter: pipeline latency threshold */
+  auto pipeline_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  pipeline_latency_threshold_descriptor.description = "The threshold for the pipeline latency (in seconds) before stimulation is prevented";
+  this->declare_parameter("pipeline-latency-threshold", 0.005, pipeline_latency_threshold_descriptor);
+  this->get_parameter("pipeline-latency-threshold", this->pipeline_latency_threshold);
+
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Triggering tolerance (ms): %.1f", 1000 * this->triggering_tolerance);
+  RCLCPP_INFO(this->get_logger(), "  Pipeline latency threshold: %.1f (ms)", 1000 * this->pipeline_latency_threshold);
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 
@@ -112,18 +119,27 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
     double_t scheduled_time = request->timed_trigger.time;
     double_t error = latency_corrected_time - scheduled_time;
 
-    RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (current time: %.4f, error: %.4f)",
-                scheduled_time, latency_corrected_time, error);
+    uint8_t status = pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
 
-    /* Capture timing before hardware trigger. */
-    auto firing_time = std::chrono::high_resolution_clock::now();
+    /* Capture timing when hardware trigger is fired. */
+    auto now = std::chrono::high_resolution_clock::now();
     uint64_t system_time_hardware_fired = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      firing_time.time_since_epoch()).count();
+      now.time_since_epoch()).count();
 
-    if (!labjack_manager || !labjack_manager->trigger_output(tms_trigger_fio)) {
-      RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
+    /* Check that timing latency is within threshold. */
+    if (this->current_latency <= this->pipeline_latency_threshold) {
+      RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (current time: %.4f, error: %.4f)",
+                  scheduled_time, latency_corrected_time, error);
+
+      if (labjack_manager && labjack_manager->trigger_output(tms_trigger_fio)) {
+        status = pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
+      } else {
+        RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
+      }
+    } else {
+      RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms) at triggering time, rejecting stimulation.",
+                   this->current_latency * 1000, this->pipeline_latency_threshold * 1000);
     }
-
     trigger_queue.pop();
 
     /* Publish second DecisionTrace (fired). */

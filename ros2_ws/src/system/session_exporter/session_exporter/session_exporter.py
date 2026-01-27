@@ -50,7 +50,7 @@ DATA_TYPE_TO_NAME = {
 EEG_FIELDS_RAW = [
     'sample_index',
     'time',
-    'arrival_time',
+    'system_time_eeg_bridge',
     'is_session_start',
     'is_session_end',
     'pulse_trigger',

@@ -339,7 +339,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   }
 
   /* Copy arrival time from the triggering sample. */
-  preprocessed_sample.arrival_time = triggering_sample->arrival_time;
+  preprocessed_sample.system_time_eeg_bridge = triggering_sample->system_time_eeg_bridge;
 
   /* Copy hardware trigger information. */
   preprocessed_sample.pulse_trigger = triggering_sample->pulse_trigger;

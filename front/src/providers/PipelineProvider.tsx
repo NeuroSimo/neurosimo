@@ -13,11 +13,10 @@ interface TimingError extends ROSLIB.Message {
 }
 
 interface DecisionInfo extends ROSLIB.Message {
+  sample_time: number
   stimulate: boolean
-  feasible: boolean
-  decision_time: number
-  decider_latency: number
-  preprocessor_latency: number
+  decider_processing_duration: number
+  preprocessor_processing_duration: number
   total_latency: number
 }
 

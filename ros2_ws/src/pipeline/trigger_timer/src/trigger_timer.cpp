@@ -77,11 +77,6 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     "/pipeline/timing/latency",
     10);
 
-  /* Publisher for decision info. */
-  this->decision_info_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionInfo>(
-    "/pipeline/decision_info",
-    10);
-
   /* Publisher for pulse events. */
   this->pulse_event_publisher = this->create_publisher<std_msgs::msg::Empty>(
     "/pipeline/pulse_events",
@@ -184,44 +179,31 @@ void TriggerTimer::handle_request_timed_trigger(
 
   double_t trigger_time = request->timed_trigger.time;
 
-  /* Trigger is feasible if LabJack is connected and requested trigger time is less than current time - tolerance. */
-  bool feasible = labjack_manager && labjack_manager->is_connected() && trigger_time > this->current_latency_corrected_time - this->triggering_tolerance;
-
-  /* Create and publish decision info. */
-  auto msg = pipeline_interfaces::msg::DecisionInfo();
-  msg.stimulate = true;
-  msg.feasible = feasible;
-  msg.decision_time = request->decision_time;
-  msg.decider_latency = request->decider_latency;
-  msg.preprocessor_latency = request->preprocessor_latency;
-
-  /* In case of a positive stimulation decision, the total latency can only be calculated by Trigger Timer -
-     it cannot be calculated by Decider due to the additional component (Trigger Timer) on the pathway. */
-  rclcpp::Time now = this->get_clock()->now();
-  double_t total_latency = now.seconds() - request->sample_arrival_time;
-
-  msg.total_latency = total_latency;
-  this->decision_info_publisher->publish(msg);
+  /* Trigger is feasible if LabJack is connected, requested trigger time is greater than current time - tolerance. */
+  bool is_labjack_connected = labjack_manager && labjack_manager->is_connected();
+  bool feasible = trigger_time > this->current_latency_corrected_time - this->triggering_tolerance;
 
   /* If not within acceptable range, log and return. */
-  if (!feasible) {
-    response->success = false;
-    if (!labjack_manager || !labjack_manager->is_connected()) {
-      RCLCPP_WARN(logger, "LabJack is not connected. Not scheduling a trigger.");
-    } else {
-      RCLCPP_WARN(logger,
-        "Requested trigger time %.4f (s) is too late (current time: %.4f s, tolerance: %.1f ms). Not scheduling.",
-        trigger_time, this->current_latency_corrected_time, 1000 * this->triggering_tolerance);
-    }
+  if (is_labjack_connected && feasible) {
+    /* Within acceptable range and LabJack is connected, schedule the trigger. */
+    std::lock_guard<std::mutex> lock(queue_mutex);
+    trigger_queue.push(trigger_time);
+
+    RCLCPP_INFO(logger, "Scheduled trigger at time: %.4f (request accepted)", trigger_time);
+
+    response->success = true;
     return;
   }
 
-  /* Within acceptable range and LabJack is connected, schedule the trigger. */
-  std::lock_guard<std::mutex> lock(queue_mutex);
-  trigger_queue.push(trigger_time);
-
-  RCLCPP_INFO(logger, "Scheduled trigger at time: %.4f (request accepted)", trigger_time);
-  response->success = true;
+  if (!is_labjack_connected) {
+    RCLCPP_WARN(logger, "LabJack is not connected. Not scheduling a trigger.");
+  }
+  if (!feasible) {
+    RCLCPP_WARN(logger,
+      "Requested trigger time %.4f (s) is too late (current time: %.4f s, tolerance: %.1f ms). Not scheduling.",
+      trigger_time, this->current_latency_corrected_time, 1000 * this->triggering_tolerance);
+  }
+  response->success = false;
 }
 
 

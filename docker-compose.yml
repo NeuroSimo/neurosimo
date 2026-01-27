@@ -224,6 +224,16 @@ services:
       - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
 
+  stimulation_tracer:
+    build:
+      context: .
+      dockerfile: ros2_ws/src/pipeline/stimulation_tracer/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID
+
   trigger_timer:
     build:
       context: .

@@ -12,7 +12,8 @@ from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfi
 from system_interfaces.msg import SessionConfig
 from pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
-    InitializeDecider, InitializePreprocessor, InitializePresenter
+    InitializeDecider, InitializePreprocessor, InitializePresenter,
+    InitializeStimulationTracer, FinalizeStimulationTracer
 )
 from eeg_interfaces.action import InitializeSimulatorStream, InitializePlaybackStream
 from eeg_interfaces.srv import InitializeEegDeviceStream, StartStreaming, StopStreaming
@@ -75,6 +76,8 @@ class SessionManagerNode(Node):
             InitializeDecider, '/pipeline/decider/initialize', callback_group=self.callback_group)
         self.presenter_init_client = self.create_client(
             InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
+        self.stimulation_tracer_init_client = self.create_client(
+            InitializeStimulationTracer, '/pipeline/stimulation_tracer/initialize', callback_group=self.callback_group)
         self.simulator_stream_init_client = ActionClient(
             self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
         self.eeg_device_stream_init_client = self.create_client(
@@ -89,6 +92,8 @@ class SessionManagerNode(Node):
             FinalizeDecider, '/pipeline/decider/finalize', callback_group=self.callback_group)
         self.presenter_finalize_client = self.create_client(
             FinalizePresenter, '/pipeline/presenter/finalize', callback_group=self.callback_group)
+        self.stimulation_tracer_finalize_client = self.create_client(
+            FinalizeStimulationTracer, '/pipeline/stimulation_tracer/finalize', callback_group=self.callback_group)
 
         # Create clients for session recording
         self.recording_start_client = self.create_client(
@@ -134,10 +139,12 @@ class SessionManagerNode(Node):
             (self.preprocessor_init_client, '/pipeline/preprocessor/initialize'),
             (self.decider_init_client, '/pipeline/decider/initialize'),
             (self.presenter_init_client, '/pipeline/presenter/initialize'),
+            (self.stimulation_tracer_init_client, '/pipeline/stimulation_tracer/initialize'),
             (self.eeg_device_stream_init_client, '/eeg_device/initialize'),
             (self.preprocessor_finalize_client, '/pipeline/preprocessor/finalize'),
             (self.decider_finalize_client, '/pipeline/decider/finalize'),
             (self.presenter_finalize_client, '/pipeline/presenter/finalize'),
+            (self.stimulation_tracer_finalize_client, '/pipeline/stimulation_tracer/finalize'),
             (self.playback_streaming_start_client, '/eeg_simulator/streaming/start'),
             (self.eeg_simulator_streaming_start_client, '/eeg_simulator/streaming/start'),
             (self.eeg_device_streaming_start_client, '/eeg_device/streaming/start'),
@@ -273,6 +280,12 @@ class SessionManagerNode(Node):
         # Initialize preprocessor
         if not self.initialize_preprocessor(session_config, session_id, stream_info):
             self.logger.error('Preprocessor initialization failed')
+            self.publish_session_state(False, SessionState.STOPPED)
+            return
+
+        # Initialize stimulation tracer
+        if not self.initialize_stimulation_tracer(session_id):
+            self.logger.error('StimulationTracer initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
 
@@ -475,6 +488,20 @@ class SessionManagerNode(Node):
         self.logger.info('Presenter initialized successfully')
         return True
 
+    def initialize_stimulation_tracer(self, session_id):
+        """Initialize the stimulation tracer component."""
+        request = InitializeStimulationTracer.Request()
+        request.session_id = session_id
+
+        response = self.call_service(self.stimulation_tracer_init_client, request, '/pipeline/stimulation_tracer/initialize')
+
+        if response is None or not response.success:
+            self.logger.error('StimulationTracer initialization failed')
+            return False
+
+        self.logger.info('StimulationTracer initialized successfully')
+        return True
+
     def initialize_protocol(self, session_id, session_config):
         protocol_filename = session_config.protocol_filename
         project_name = session_config.project_name
@@ -522,6 +549,14 @@ class SessionManagerNode(Node):
             self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
         except Exception as e:
             self.logger.error(f'Error finalizing preprocessor: {e}')
+
+        # Finalize stimulation tracer
+        try:
+            request = FinalizeStimulationTracer.Request()
+            request.session_id = session_id
+            self.call_service(self.stimulation_tracer_finalize_client, request, '/pipeline/stimulation_tracer/finalize')
+        except Exception as e:
+            self.logger.error(f'Error finalizing stimulation tracer: {e}')
 
         self.logger.info(f'Session finalization completed')
 

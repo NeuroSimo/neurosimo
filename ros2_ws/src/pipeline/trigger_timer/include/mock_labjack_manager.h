@@ -1,10 +1,10 @@
 //
-// LabJack Manager - Handles all LabJack device communication
+// Mock LabJack Manager - Sends socket triggers for simulation
 // Created for neurosimo trigger_timer
 //
 
-#ifndef LABJACK_MANAGER_H
-#define LABJACK_MANAGER_H
+#ifndef MOCK_LABJACK_MANAGER_H
+#define MOCK_LABJACK_MANAGER_H
 
 #include <thread>
 #include <atomic>
@@ -12,16 +12,22 @@
 #include <mutex>
 #include <chrono>
 #include <functional>
+#include <string>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <cstring>
+#include <arpa/inet.h>
 
 #include "rclcpp/rclcpp.hpp"
 #include "labjack_interface.h"
 
-class LabJackManager : public LabJackInterface {
+class MockLabJackManager : public LabJackInterface {
 public:
   using ConnectionStatusCallback = std::function<void(bool connected, int error_code, int64_t connection_time_ms)>;
 
-  explicit LabJackManager(rclcpp::Logger logger, bool simulation_mode = false);
-  ~LabJackManager();
+  explicit MockLabJackManager(rclcpp::Logger logger, const std::string& host = "localhost", int port = 60000);
+  ~MockLabJackManager();
 
   // Connection management
   void start();
@@ -37,32 +43,36 @@ public:
 
 private:
   rclcpp::Logger logger_;
-  
-  // Simulation mode flag
-  bool simulation_mode_;
-  
-  // LabJack handle and connection state
-  std::atomic<int> labjack_handle_{-1};
-  
-  // Threading for non-blocking connection attempts
+
+  // Socket connection details
+  std::string host_;
+  int port_;
+  int socket_fd_{-1};
+
+  // Connection state
+  std::atomic<bool> connected_{false};
+
+  // Threading for connection management
   std::thread connection_thread_;
   std::atomic<bool> thread_running_{false};
   std::atomic<bool> should_attempt_connection_{false};
   std::mutex connection_mutex_;
   std::condition_variable connection_cv_;
-  
+
   // Connection status callback
   ConnectionStatusCallback status_callback_;
   std::mutex callback_mutex_;
-  
+
   // Worker thread function
   void connection_worker();
-  
+
   // Internal connection attempt (blocking)
   void attempt_connection();
-  
-  // Error handling
-  bool check_error(int err, const char* action);
+
+  // Socket operations
+  bool connect_socket();
+  void close_socket();
+  bool send_trigger(const std::string& trigger_type);
 };
 
-#endif // LABJACK_MANAGER_H
+#endif // MOCK_LABJACK_MANAGER_H

@@ -8,7 +8,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include <memory>
 
-#include "labjack_manager.h"
+#include "labjack_interface.h"
 
 #include "eeg_interfaces/msg/sample.hpp"
 
@@ -39,7 +39,7 @@ private:
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
 
-  std::unique_ptr<LabJackManager> labjack_manager;
+  std::unique_ptr<LabJackInterface> labjack_manager;
 
   double_t last_latency_measurement_time = 0.0;
   double_t current_latency = 0.0;

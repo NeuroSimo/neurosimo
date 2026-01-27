@@ -2,6 +2,8 @@
 #include <thread>
 
 #include "trigger_timer.h"
+#include "labjack_manager.h"
+#include "mock_labjack_manager.h"
 
 #include "realtime_utils/utils.h"
 
@@ -249,7 +251,11 @@ void TriggerTimer::handle_initialize_trigger_timer(
   reset_state();
 
   /* Initialize LabJack manager. */
-  labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), this->simulate_labjack);
+  if (this->simulate_labjack) {
+    labjack_manager = std::make_unique<MockLabJackManager>(this->get_logger());
+  } else {
+    labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), false);
+  }
   labjack_manager->start();
 
   /* Set up a timer to signal connection attempts every second. */

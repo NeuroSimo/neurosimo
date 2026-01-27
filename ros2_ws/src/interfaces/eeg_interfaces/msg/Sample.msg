@@ -32,10 +32,10 @@ uint64 pulse_count              # Total pulses delivered
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)
 # ============================================================================
-bool valid                      # Sample quality check passed
+bool valid                     # Sample quality check passed
 float64 preprocessor_duration  # Time spent in preprocessing (seconds)
 
 # ============================================================================
 # Metadata
 # ============================================================================
-float64 arrival_time            # Unix timestamp when sample arrived
+uint64 system_time_data_source_published

@@ -325,8 +325,12 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   sample.valid = true;
 
-  /* Set arrival time to current ROS clock time. */
-  sample.arrival_time = this->get_clock()->now().seconds();
+  /* Set the system time when the sample was published. */
+  auto now = std::chrono::high_resolution_clock::now();
+  uint64_t system_time_data_source_published = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    now.time_since_epoch()).count();
+
+  sample.system_time_data_source_published = system_time_data_source_published;
 
   this->eeg_sample_publisher->publish(sample);
 

@@ -331,8 +331,12 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
     }
   }
 
-  /* Set arrival time to current ROS clock time. */
-  msg.arrival_time = this->get_clock()->now().seconds();
+  /* Set the system time when the sample was published. */
+  auto now = std::chrono::high_resolution_clock::now();
+  uint64_t system_time_data_source_published = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    now.time_since_epoch()).count();
+
+  msg.system_time_data_source_published = system_time_data_source_published;
 
   eeg_publisher->publish(msg);
 

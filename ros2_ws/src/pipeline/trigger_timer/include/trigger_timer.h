@@ -15,7 +15,6 @@
 #include "eeg_interfaces/msg/sample.hpp"
 
 #include "pipeline_interfaces/msg/timing_latency.hpp"
-#include "pipeline_interfaces/msg/decision_info.hpp"
 #include "pipeline_interfaces/msg/trigger_info.hpp"
 #include "pipeline_interfaces/msg/timing_error.hpp"
 
@@ -36,7 +35,6 @@ private:
   rclcpp::Logger logger;
   rclcpp::Service<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
   rclcpp::Publisher<pipeline_interfaces::msg::TimingLatency>::SharedPtr timing_latency_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::DecisionInfo>::SharedPtr decision_info_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::TriggerInfo>::SharedPtr trigger_info_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_event_publisher;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;

@@ -1,13 +1,4 @@
-# Used in the real-time pipeline for timed trigger using LabJack.
+# Used in the real-time pipeline for requesting timed trigger.
 TimedTrigger timed_trigger
-
-# Unix timestamp (seconds since epoch) when the sample was taken.
-float64 sample_arrival_time
-
-float64 preprocessor_latency
-float64 decider_latency
-
-# The time of the sample based on which the stimulation decision was made.
-float64 decision_time
 ---
 bool success

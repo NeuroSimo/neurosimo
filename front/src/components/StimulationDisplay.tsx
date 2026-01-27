@@ -59,16 +59,16 @@ export const StimulationDisplay: React.FC = () => {
   const formattedError = timingError ? (timingError.error * 1000).toFixed(1) + ' ms' : '\u2013'
 
   // Latest Decision Stats
-  const formattedLatestDecisionTime = latestDecision?.decision_time
-    ? latestDecision.decision_time.toFixed(1) + ' s'
+  const formattedLatestSampleTime = latestDecision?.sample_time
+    ? latestDecision.sample_time.toFixed(1) + ' s'
     : '\u2013'
 
-  const formattedLatestDeciderLatency = latestDecision?.decider_latency
-    ? (latestDecision.decider_latency * 1000).toFixed(1) + ' ms'
+  const formattedLatestDeciderProcessingDuration = latestDecision?.decider_processing_duration
+    ? (latestDecision.decider_processing_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedLatestPreprocessorLatency = latestDecision?.preprocessor_latency
-    ? (latestDecision.preprocessor_latency * 1000).toFixed(1) + ' ms'
+  const formattedLatestPreprocessorProcessingDuration = latestDecision?.preprocessor_processing_duration
+    ? (latestDecision.preprocessor_processing_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
   const formattedLatestTotalLatency = latestDecision?.total_latency
@@ -76,16 +76,16 @@ export const StimulationDisplay: React.FC = () => {
     : '\u2013'
 
   // Positive Decision Stats
-  const formattedPositiveDecisionTime = positiveDecision?.decision_time
-    ? positiveDecision.decision_time.toFixed(1) + ' s'
+  const formattedPositiveSampleTime = positiveDecision?.sample_time
+    ? positiveDecision.sample_time.toFixed(1) + ' s'
     : '\u2013'
 
-  const formattedPositiveDeciderLatency = positiveDecision?.decider_latency
-    ? (positiveDecision.decider_latency * 1000).toFixed(1) + ' ms'
+  const formattedPositiveDeciderProcessingDuration = positiveDecision?.decider_processing_duration
+    ? (positiveDecision.decider_processing_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedPositivePreprocessorLatency = positiveDecision?.preprocessor_latency
-    ? (positiveDecision.preprocessor_latency * 1000).toFixed(1) + ' ms'
+  const formattedPositivePreprocessorProcessingDuration = positiveDecision?.preprocessor_processing_duration
+    ? (positiveDecision.preprocessor_processing_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
   const formattedPositiveTotalLatency = positiveDecision?.total_latency
@@ -102,18 +102,18 @@ export const StimulationDisplay: React.FC = () => {
       </StateRow>
       <StateRow>
         <IndentedStateTitle>Latest time</IndentedStateTitle>
-        <StateValue>{formattedLatestDecisionTime}</StateValue>
+        <StateValue>{formattedLatestSampleTime}</StateValue>
       </StateRow>
       <StateRow>
         <IndentedStateTitle>Latency</IndentedStateTitle>
       </StateRow>
       <StateRow>
         <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
-        <StateValue>{formattedLatestDeciderLatency}</StateValue>
+        <StateValue>{formattedLatestDeciderProcessingDuration}</StateValue>
       </StateRow>
       <StateRow>
         <DoubleIndentedStateTitle>Preprocessor</DoubleIndentedStateTitle>
-        <StateValue>{formattedLatestPreprocessorLatency}</StateValue>
+        <StateValue>{formattedLatestPreprocessorProcessingDuration}</StateValue>
       </StateRow>
       <StateRow>
         <DoubleIndentedStateTitle>Total</DoubleIndentedStateTitle>
@@ -123,23 +123,19 @@ export const StimulationDisplay: React.FC = () => {
       {/* Positive Decision Info */}
       <StateRow>
         <IndentedStateTitle>Latest stimulation time</IndentedStateTitle>
-        <StateValue>{formattedPositiveDecisionTime}</StateValue>
+        <StateValue>{formattedPositiveSampleTime}</StateValue>
       </StateRow>
       <StateRow>
         <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
-        <StateValue>{formattedPositiveDeciderLatency}</StateValue>
+        <StateValue>{formattedPositiveDeciderProcessingDuration}</StateValue>
       </StateRow>
       <StateRow>
         <DoubleIndentedStateTitle>Preprocessor</DoubleIndentedStateTitle>
-        <StateValue>{formattedPositivePreprocessorLatency}</StateValue>
+        <StateValue>{formattedPositivePreprocessorProcessingDuration}</StateValue>
       </StateRow>
       <StateRow>
         <DoubleIndentedStateTitle>Total</DoubleIndentedStateTitle>
         <StateValue>{formattedPositiveTotalLatency}</StateValue>
-      </StateRow>
-      <StateRow>
-        <DoubleIndentedStateTitle>Feasible</DoubleIndentedStateTitle>
-        <StateValue>{positiveDecision?.feasible ? '\u2714' : '\u2718'}</StateValue>
       </StateRow>
       <br />
       {/* Timing Info */}

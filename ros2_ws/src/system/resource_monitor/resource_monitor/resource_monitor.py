@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from system_interfaces.msg import DiskStatus
+from system_interfaces.msg import DiskStatus, Healthcheck, HealthcheckStatus
 from .utils import parse_size_string
 
 
@@ -41,6 +41,13 @@ class ResourceMonitorNode(Node):
             status_qos
         )
 
+        # Create healthcheck publisher
+        self._healthcheck_publisher = self.create_publisher(
+            Healthcheck,
+            '/system/resource_monitor/healthcheck',
+            10
+        )
+
         # Create timer for periodic disk checks
         self._check_timer = self.create_timer(CHECK_INTERVAL_SEC, self._check_disk_space)
 
@@ -55,33 +62,48 @@ class ResourceMonitorNode(Node):
 
     def _check_disk_space(self):
         """Check disk space and publish status."""
+        usage = shutil.disk_usage(MONITORED_PATH)
+        is_ok = usage.free >= self._error_threshold_bytes
+
         msg = DiskStatus()
         msg.warning_threshold_bytes = self._warning_threshold_bytes
         msg.error_threshold_bytes = self._error_threshold_bytes
+        msg.free_bytes = usage.free
+        msg.total_bytes = usage.total
+        msg.is_ok = is_ok
 
-        try:
-            usage = shutil.disk_usage(MONITORED_PATH)
-            msg.free_bytes = usage.free
-            msg.total_bytes = usage.total
-            msg.is_ok = usage.free >= self._error_threshold_bytes
+        if usage.free < self._warning_threshold_bytes:
+            threshold_name = 'warning' if is_ok else 'error'
+            threshold_bytes = self._warning_threshold_bytes if is_ok else self._error_threshold_bytes
 
-            if usage.free < self._warning_threshold_bytes:
-                log_level = self.logger.warn if usage.free >= self._error_threshold_bytes else self.logger.error
-                threshold_name = 'warning' if usage.free >= self._error_threshold_bytes else 'error'
-                threshold_bytes = self._warning_threshold_bytes if usage.free >= self._error_threshold_bytes else self._error_threshold_bytes
-
-                log_level(
-                    f'Low disk space: {msg.free_bytes / (1024**3):.1f} GiB free, '
-                    f'{threshold_name} threshold is {threshold_bytes / (1024**3):.1f} GiB'
-                )
-
-        except OSError as e:
-            self.logger.error(f'Failed to check disk space for {MONITORED_PATH}: {e}')
-            msg.free_bytes = 0
-            msg.total_bytes = 0
-            msg.is_ok = False
+            message = (
+                f'Low disk space: {usage.free / (1024**3):.1f} GiB free, '
+                f'{threshold_name} threshold: {threshold_bytes / (1024**3):.1f} GiB'
+            )
+            if is_ok:
+                self.logger.warn(message)
+            else:
+                self.logger.error(message)
 
         self._disk_status_publisher.publish(msg)
+
+        # Publish healthcheck message based on disk space status
+        self._publish_healthcheck(is_ok)
+
+    def _publish_healthcheck(self, is_ok):
+        """Publish healthcheck message based on disk space status."""
+        healthcheck = Healthcheck()
+
+        if not is_ok:
+            healthcheck.status.value = HealthcheckStatus.ERROR
+            healthcheck.status_message = 'Critical disk space'
+            healthcheck.actionable_message = 'Free up disk space.'
+        else:
+            healthcheck.status.value = HealthcheckStatus.READY
+            healthcheck.status_message = 'Disk space OK'
+            healthcheck.actionable_message = ''
+
+        self._healthcheck_publisher.publish(healthcheck)
 
 
 def main(args=None):

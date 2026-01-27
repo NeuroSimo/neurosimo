@@ -23,17 +23,17 @@ interface Healthcheck extends ROSLIB.Message {
 interface HealthcheckContextType {
   eegHealthcheck: Healthcheck | null
   eegSimulatorHealthcheck: Healthcheck | null
-  mepHealthcheck: Healthcheck | null
   preprocessorHealthcheck: Healthcheck | null
   deciderHealthcheck: Healthcheck | null
+  resourceMonitorHealthcheck: Healthcheck | null
 }
 
 const defaultHealthcheckState: HealthcheckContextType = {
   eegHealthcheck: null,
   eegSimulatorHealthcheck: null,
-  mepHealthcheck: null,
   preprocessorHealthcheck: null,
   deciderHealthcheck: null,
+  resourceMonitorHealthcheck: null,
 }
 
 export const HealthcheckContext = React.createContext<HealthcheckContextType>(defaultHealthcheckState)
@@ -45,9 +45,9 @@ interface HealthcheckProviderProps {
 export const HealthcheckProvider: React.FC<HealthcheckProviderProps> = ({ children }) => {
   const [eegHealthcheck, setEegHealthcheck] = useState<Healthcheck | null>(null)
   const [eegSimulatorHealthcheck, setEegSimulatorHealthcheck] = useState<Healthcheck | null>(null)
-  const [mepHealthcheck, setMepHealthcheck] = useState<Healthcheck | null>(null)
   const [preprocessorHealthcheck, setPreprocessorHealthcheck] = useState<Healthcheck | null>(null)
   const [deciderHealthcheck, setDeciderHealthcheck] = useState<Healthcheck | null>(null)
+  const [resourceMonitorHealthcheck, setResourceMonitorHealthcheck] = useState<Healthcheck | null>(null)
 
   useEffect(() => {
     const eegSubscriber = new Topic<Healthcheck>({
@@ -59,12 +59,6 @@ export const HealthcheckProvider: React.FC<HealthcheckProviderProps> = ({ childr
     const eegSimulatorSubscriber = new Topic<Healthcheck>({
       ros: ros,
       name: '/eeg_simulator/healthcheck',
-      messageType: 'system_interfaces/Healthcheck',
-    })
-
-    const mepSubscriber = new Topic<Healthcheck>({
-      ros: ros,
-      name: '/mep/healthcheck',
       messageType: 'system_interfaces/Healthcheck',
     })
 
@@ -80,83 +74,38 @@ export const HealthcheckProvider: React.FC<HealthcheckProviderProps> = ({ childr
       messageType: 'system_interfaces/Healthcheck',
     })
 
-    let eegTimeout: NodeJS.Timeout | null = null
-    let eegSimulatorTimeout: NodeJS.Timeout | null = null
-    let mepTimeout: NodeJS.Timeout | null = null
-    let preprocessorTimeout: NodeJS.Timeout | null = null
-    let deciderTimeout: NodeJS.Timeout | null = null
+    const resourceMonitorSubscriber = new Topic<Healthcheck>({
+      ros: ros,
+      name: '/system/resource_monitor/healthcheck',
+      messageType: 'system_interfaces/Healthcheck',
+    })
 
     eegSubscriber.subscribe((message) => {
       setEegHealthcheck(message)
-      if (eegTimeout) {
-        clearTimeout(eegTimeout)
-      }
-      eegTimeout = setTimeout(() => {
-        setEegHealthcheck(null)
-      }, 1200)
     })
 
     eegSimulatorSubscriber.subscribe((message) => {
       setEegSimulatorHealthcheck(message)
-      if (eegSimulatorTimeout) {
-        clearTimeout(eegSimulatorTimeout)
-      }
-      eegSimulatorTimeout = setTimeout(() => {
-        setEegSimulatorHealthcheck(null)
-      }, 1200)
-    })
-
-    mepSubscriber.subscribe((message) => {
-      setMepHealthcheck(message)
-      if (mepTimeout) {
-        clearTimeout(mepTimeout)
-      }
-      mepTimeout = setTimeout(() => {
-        setMepHealthcheck(null)
-      }, 1200)
     })
 
     preprocessorSubscriber.subscribe((message) => {
       setPreprocessorHealthcheck(message)
-      if (preprocessorTimeout) {
-        clearTimeout(preprocessorTimeout)
-      }
-      preprocessorTimeout = setTimeout(() => {
-        setPreprocessorHealthcheck(null)
-      }, 1200)
     })
 
     deciderSubscriber.subscribe((message) => {
       setDeciderHealthcheck(message)
-      if (deciderTimeout) {
-        clearTimeout(deciderTimeout)
-      }
-      deciderTimeout = setTimeout(() => {
-        setDeciderHealthcheck(null)
-      }, 1200)
+    })
+
+    resourceMonitorSubscriber.subscribe((message) => {
+      setResourceMonitorHealthcheck(message)
     })
 
     return () => {
       eegSubscriber.unsubscribe()
       eegSimulatorSubscriber.unsubscribe()
-      mepSubscriber.unsubscribe()
       preprocessorSubscriber.unsubscribe()
       deciderSubscriber.unsubscribe()
-      if (eegTimeout) {
-        clearTimeout(eegTimeout)
-      }
-      if (eegSimulatorTimeout) {
-        clearTimeout(eegSimulatorTimeout)
-      }
-      if (mepTimeout) {
-        clearTimeout(mepTimeout)
-      }
-      if (preprocessorTimeout) {
-        clearTimeout(preprocessorTimeout)
-      }
-      if (deciderTimeout) {
-        clearTimeout(deciderTimeout)
-      }
+      resourceMonitorSubscriber.unsubscribe()
     }
   }, [])
 
@@ -165,9 +114,9 @@ export const HealthcheckProvider: React.FC<HealthcheckProviderProps> = ({ childr
       value={{
         eegHealthcheck,
         eegSimulatorHealthcheck,
-        mepHealthcheck,
         preprocessorHealthcheck,
         deciderHealthcheck,
+        resourceMonitorHealthcheck,
       }}
     >
       {children}

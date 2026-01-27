@@ -50,17 +50,10 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->declare_parameter("minimum-intertrial-interval", 0.0, minimum_intertrial_interval_descriptor);
   this->get_parameter("minimum-intertrial-interval", this->minimum_intertrial_interval);
 
-  /* Read ROS parameter: timing latency threshold */
-  auto pipeline_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  pipeline_latency_threshold_descriptor.description = "The threshold for the timing latency (in seconds) before stimulation is prevented";
-  this->declare_parameter("timing-latency-threshold", 0.005, pipeline_latency_threshold_descriptor);
-  this->get_parameter("timing-latency-threshold", this->pipeline_latency_threshold);
-
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Minimum pulse interval: %.1f (s)", this->minimum_intertrial_interval);
-  RCLCPP_INFO(this->get_logger(), "  Timing latency threshold: %.1f (ms)", 1000 * this->pipeline_latency_threshold);
 
   /* Validate the minimum pulse interval. */
   if (this->minimum_intertrial_interval <= 0) {
@@ -99,12 +92,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
     "/pipeline/decision_trace",
     10);
-
-  /* Subscriber for timing latency. */
-  this->pipeline_latency_subscriber = this->create_subscription<pipeline_interfaces::msg::PipelineLatency>(
-    "/pipeline/latency",
-    10,
-    std::bind(&EegDecider::handle_pipeline_latency, this, _1));
 
   /* Publisher for sensory stimulus. */
 
@@ -314,7 +301,6 @@ bool EegDecider::reset_state() {
   this->previous_stimulation_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
   this->next_periodic_processing_time = UNSET_TIME;
-  this->pipeline_latency = 0.0;
 
   /* Clear the event queue. */
   {
@@ -362,10 +348,6 @@ void EegDecider::publish_healthcheck() {
       break; 
   }
   this->healthcheck_publisher->publish(healthcheck);
-}
-
-void EegDecider::handle_pipeline_latency(const std::shared_ptr<pipeline_interfaces::msg::PipelineLatency> msg) {
-  this->pipeline_latency = msg->latency;
 }
 
 void EegDecider::log_section_header(const std::string& title) {
@@ -581,12 +563,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   /* If the decision is negative, return early. */
   if (!stimulate) {
-    return;
-  }
-
-  /* Check that timing latency is within threshold. */
-  if (this->pipeline_latency > this->pipeline_latency_threshold) {
-    RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms), ignoring stimulation request.", this->pipeline_latency * 1000, this->pipeline_latency_threshold * 1000);
     return;
   }
 

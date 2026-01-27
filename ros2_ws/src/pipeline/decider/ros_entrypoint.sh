@@ -23,5 +23,4 @@ export OPENBLAS_NUM_THREADS=1
 
 ros2 launch decider decider.launch.py log-level:="$ROS_LOG_LEVEL" \
     minimum-intertrial-interval:="$MINIMUM_INTERTRIAL_INTERVAL" \
-    dropped-sample-threshold:="$DROPPED_SAMPLE_THRESHOLD" \
-    timing-latency-threshold:="$PIPELINE_LATENCY_THRESHOLD"
+    dropped-sample-threshold:="$DROPPED_SAMPLE_THRESHOLD"

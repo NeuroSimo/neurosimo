@@ -29,7 +29,6 @@
 #include "pipeline_interfaces/msg/coil_target.hpp"
 
 #include "pipeline_interfaces/msg/timing_error.hpp"
-#include "pipeline_interfaces/msg/pipeline_latency.hpp"
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
@@ -86,7 +85,6 @@ private:
 
   void publish_healthcheck();
 
-  void handle_pipeline_latency(const std::shared_ptr<pipeline_interfaces::msg::PipelineLatency> msg);
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
@@ -127,13 +125,10 @@ private:
   rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
 
   rclcpp::Publisher<pipeline_interfaces::msg::TimingError>::SharedPtr timing_error_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
-
-  rclcpp::Subscription<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_subscriber;
 
   /* Service server for initialization */
   rclcpp::Service<pipeline_interfaces::srv::InitializeDecider>::SharedPtr initialize_service_server;
@@ -161,8 +156,6 @@ private:
   /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
   double_t pulse_lockout_end_time = UNSET_TIME;
 
-  double_t pipeline_latency_threshold;
-
   StreamInfo stream_info;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;
@@ -171,8 +164,6 @@ private:
   std::unique_ptr<DeciderWrapper> decider_wrapper;
 
   bool is_processing_timed_trigger = false;
-
-  double_t pipeline_latency = 0.0;
 
   /* State variables */
   bool error_occurred = false;

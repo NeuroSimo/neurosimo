@@ -289,7 +289,7 @@ class SessionManagerNode(Node):
             return
 
         # Initialize stimulation tracer
-        if not self.initialize_stimulation_tracer(session_id):
+        if not self.initialize_stimulation_tracer(session_id, session_config.data_source):
             self.logger.error('StimulationTracer initialization failed')
             self.publish_session_state(False, SessionState.STOPPED)
             return
@@ -499,10 +499,11 @@ class SessionManagerNode(Node):
         self.logger.info('Presenter initialized successfully')
         return True
 
-    def initialize_stimulation_tracer(self, session_id):
+    def initialize_stimulation_tracer(self, session_id, data_source):
         """Initialize the stimulation tracer component."""
         request = InitializeStimulationTracer.Request()
         request.session_id = session_id
+        request.data_source = data_source
 
         response = self.call_service(self.stimulation_tracer_init_client, request, '/pipeline/stimulation_tracer/initialize')
 

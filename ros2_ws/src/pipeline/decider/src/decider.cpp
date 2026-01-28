@@ -125,6 +125,13 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     RCLCPP_INFO(get_logger(), "Service /pipeline/timed_trigger not available, waiting...");
   }
 
+  /* Service client for session abort. */
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+
+  while (!abort_session_client->wait_for_service(2s)) {
+    RCLCPP_INFO(get_logger(), "Service /session/abort not available, waiting...");
+  }
+
   /* Initialize variables. */
   this->decider_wrapper = std::make_unique<DeciderWrapper>(logger);
 
@@ -497,6 +504,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
                  sample_time);
     this->error_occurred = true;
     this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
+    this->abort_session();
     return;
   }
 
@@ -634,6 +642,14 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
   if (!result->success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to send timed trigger.");
   }
+}
+
+void EegDecider::abort_session() {
+  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  request->source = "decider";
+
+  auto result = this->abort_session_client->async_send_request(request);
+  RCLCPP_INFO(this->get_logger(), "Requested session abort due to run-time error");
 }
 
 /* Initialization and reset functions */

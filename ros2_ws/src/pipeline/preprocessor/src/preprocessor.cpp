@@ -64,6 +64,13 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     "/pipeline/preprocessor/finalize",
     std::bind(&EegPreprocessor::handle_finalize_preprocessor, this, std::placeholders::_1, std::placeholders::_2));
 
+  /* Service client for session abort. */
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+
+  while (!abort_session_client->wait_for_service(2s)) {
+    RCLCPP_INFO(this->get_logger(), "Service /session/abort not available, waiting...");
+  }
+
   /* Initialize variables. */
   this->preprocessor_wrapper = std::make_unique<PreprocessorWrapper>(logger);
 
@@ -313,6 +320,14 @@ void EegPreprocessor::publish_sentinel_sample(double_t sample_time) {
   this->preprocessed_eeg_publisher->publish(*sentinel_sample);
 }
 
+void EegPreprocessor::abort_session() {
+  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  request->source = "preprocessor";
+
+  auto result = this->abort_session_client->async_send_request(request);
+  RCLCPP_INFO(this->get_logger(), "Requested session abort due to run-time error");
+}
+
 void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& request, [[maybe_unused]] double_t current_sample_time) {
   /* Validate that the current sample window is suitable for processing. */
   if (!is_sample_window_valid()) {
@@ -340,6 +355,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
                  sample_time);
     this->error_occurred = true;
     this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
+    this->abort_session();
     return;
   }
 

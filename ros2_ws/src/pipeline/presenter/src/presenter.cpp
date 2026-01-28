@@ -63,6 +63,13 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     "/pipeline/presenter/finalize",
     std::bind(&EegPresenter::handle_finalize_presenter, this, std::placeholders::_1, std::placeholders::_2));
 
+  /* Service client for session abort. */
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+
+  while (!abort_session_client->wait_for_service(2s)) {
+    RCLCPP_INFO(this->get_logger(), "Service /session/abort not available, waiting...");
+  }
+
   /* Create QoS profile for latched topics */
   auto status_qos = rclcpp::QoS(rclcpp::KeepLast(1));
   status_qos.durability(rclcpp::DurabilityPolicy::TransientLocal);
@@ -286,6 +293,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");
     this->error_occurred = true;
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
+    this->abort_session();
     return;
   }
 }
@@ -320,6 +328,14 @@ void EegPresenter::_publish_health_status(uint8_t health_level, const std::strin
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
+}
+
+void EegPresenter::abort_session() {
+  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  request->source = "presenter";
+
+  auto result = this->abort_session_client->async_send_request(request);
+  RCLCPP_INFO(this->get_logger(), "Requested session abort due to run-time error");
 }
 
 int main(int argc, char *argv[]) {

@@ -10,6 +10,7 @@
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 #include "eeg_interfaces/msg/sample.hpp"
 
@@ -20,7 +21,7 @@
 #include "pipeline_interfaces/srv/finalize_presenter.hpp"
 
 #include "system_interfaces/msg/component_health.hpp"
-#include "std_msgs/msg/empty.hpp"
+#include "system_interfaces/srv/abort_session.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -52,6 +53,8 @@ private:
   void _publish_heartbeat();
   void _publish_health_status(uint8_t health_level, const std::string& message);
 
+  void abort_session();
+
   void handle_initialize_presenter(
     const std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Response> response);
@@ -79,6 +82,9 @@ private:
 
   /* Service server for finalization */
   rclcpp::Service<pipeline_interfaces::srv::FinalizePresenter>::SharedPtr finalize_service_server;
+
+  /* Service client for session abort */
+  rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   /* Initialization state */
   bool is_initialized = false;

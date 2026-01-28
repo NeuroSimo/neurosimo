@@ -22,5 +22,4 @@ source /app/ros2_ws/install/setup.bash
 export OPENBLAS_NUM_THREADS=1
 
 ros2 launch decider decider.launch.py log-level:="$ROS_LOG_LEVEL" \
-    minimum-intertrial-interval:="$MINIMUM_INTERTRIAL_INTERVAL" \
-    dropped-sample-threshold:="$DROPPED_SAMPLE_THRESHOLD"
+    minimum-intertrial-interval:="$MINIMUM_INTERTRIAL_INTERVAL"

@@ -16,14 +16,8 @@ def generate_launch_description():
         description="Minimum interval between consecutive pulses (in seconds)",
     )
 
-    dropped_sample_threshold_arg = DeclareLaunchArgument(
-        "dropped-sample-threshold",
-        description="Number of dropped samples in a second before entering error state",
-    )
-
     logger = LaunchConfiguration("log-level")
     minimum_intertrial_interval = LaunchConfiguration("minimum-intertrial-interval")
-    dropped_sample_threshold = LaunchConfiguration("dropped-sample-threshold")
 
     # Ensure that the value of the minimum_intertrial_interval argument is a float.
     #
@@ -37,7 +31,6 @@ def generate_launch_description():
         parameters=[
             {
                 "minimum-intertrial-interval": minimum_intertrial_interval_float,
-                "dropped-sample-threshold": dropped_sample_threshold,
             }
         ],
         arguments=['--ros-args', '--log-level', logger]
@@ -46,6 +39,5 @@ def generate_launch_description():
     return LaunchDescription([
         log_arg,
         minimum_intertrial_interval_arg,
-        dropped_sample_threshold_arg,
         node
     ])

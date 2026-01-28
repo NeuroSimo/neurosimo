@@ -50,10 +50,10 @@ const StatusMessage = styled.div`
 export const DataSourceDisplay: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<'simulator' | 'playback' | 'eeg_device'>('simulator')
   const [previousTab, setPreviousTab] = React.useState<'simulator' | 'playback'>('simulator')
-  const { eegInfo } = useContext(EegStreamContext)
+  const { eegDeviceInfo } = useContext(EegStreamContext)
   const { setDataSource } = useParameters()
 
-  const isEegStreaming = eegInfo?.is_streaming || false
+  const isEegStreaming = eegDeviceInfo?.is_streaming || false
 
   React.useEffect(() => {
     if (isEegStreaming) {

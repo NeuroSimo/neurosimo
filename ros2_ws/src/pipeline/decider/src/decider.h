@@ -168,11 +168,6 @@ private:
   /* ROS parameters */
   double_t minimum_intertrial_interval;
 
-  /* Healthcheck */
-  uint8_t status;
-  std::string status_message;
-  std::string actionable_message;
-
   /* Event queue for storing events from the Python module. */
   std::priority_queue<std::pair<double, std::string>,
                       std::vector<std::pair<double, std::string>>,

@@ -19,7 +19,6 @@ This node:
 
 ### Published
 - `/eeg/enriched` (eeg_interfaces/Sample) - EEG samples enriched with experiment state
-- `/experiment/coordinator/healthcheck` (system_interfaces/Healthcheck) - Health status
 - `/experiment/protocol/list` (project_interfaces/FilenameList) - Available protocols
 - `/experiment/protocol` (std_msgs/String) - Currently loaded protocol
 

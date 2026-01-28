@@ -10,7 +10,7 @@ using namespace experiment_coordinator;
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string DECISION_TRACE_FINAL_TOPIC = "/pipeline/decision_trace/final";
-const std::string HEALTHCHECK_TOPIC = "/experiment/coordinator/healthcheck";
+const std::string HEARTBEAT_TOPIC = "/health/experiment_coordinator/heartbeat";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
@@ -19,9 +19,9 @@ ExperimentCoordinator::ExperimentCoordinator()
     protocol_loader(rclcpp::get_logger("protocol_loader")),
     logger(rclcpp::get_logger("experiment_coordinator")) {
 
-  /* Publisher for healthcheck. */
-  this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(
-    HEALTHCHECK_TOPIC, 10);
+  /* Publisher for heartbeat. */
+  this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
+    HEARTBEAT_TOPIC, 10);
 
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
         .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
@@ -71,29 +71,14 @@ ExperimentCoordinator::ExperimentCoordinator()
     std::bind(&ExperimentCoordinator::handle_initialize_protocol, this, _1, _2));
   
   /* Create timers. */
-  this->healthcheck_timer = this->create_wall_timer(
+  this->heartbeat_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
-    std::bind(&ExperimentCoordinator::publish_healthcheck, this));
+    std::bind(&ExperimentCoordinator::publish_heartbeat, this));
 }
 
-void ExperimentCoordinator::publish_healthcheck() {
-  auto healthcheck = system_interfaces::msg::Healthcheck();
-  
-  switch (this->error_occurred) {
-    case true:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-      healthcheck.status_message = "Error occurred";
-      healthcheck.actionable_message = "An error occurred. Please check logs.";
-      break;
-
-    case false:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
-      healthcheck.status_message = "Ready";
-      healthcheck.actionable_message = "Ready";
-      break;
-  }
-  
-  this->healthcheck_publisher->publish(healthcheck);
+void ExperimentCoordinator::publish_heartbeat() {
+  auto heartbeat = std_msgs::msg::Empty();
+  this->heartbeat_publisher->publish(heartbeat);
 }
 
 void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {

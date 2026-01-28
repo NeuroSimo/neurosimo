@@ -4,13 +4,15 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from system_interfaces.msg import DiskStatus, Healthcheck, HealthcheckStatus
+from system_interfaces.msg import DiskStatus
+from std_msgs.msg import Empty
 from .utils import parse_size_string
 
 
 # Hard-coded path to monitor disk space
 MONITORED_PATH = '/app/projects'
 CHECK_INTERVAL_SEC = 5.0
+HEARTBEAT_INTERVAL_SEC = 0.5
 
 
 class ResourceMonitorNode(Node):
@@ -41,15 +43,18 @@ class ResourceMonitorNode(Node):
             status_qos
         )
 
-        # Create healthcheck publisher
-        self._healthcheck_publisher = self.create_publisher(
-            Healthcheck,
-            '/system/resource_monitor/healthcheck',
+        # Create heartbeat publisher
+        self._heartbeat_publisher = self.create_publisher(
+            Empty,
+            '/health/resource_monitor/heartbeat',
             10
         )
 
         # Create timer for periodic disk checks
         self._check_timer = self.create_timer(CHECK_INTERVAL_SEC, self._check_disk_space)
+
+        # Create timer for heartbeat publishing
+        self._heartbeat_timer = self.create_timer(HEARTBEAT_INTERVAL_SEC, self._publish_heartbeat)
 
         # Perform initial check immediately
         self._check_disk_space()
@@ -87,23 +92,13 @@ class ResourceMonitorNode(Node):
 
         self._disk_status_publisher.publish(msg)
 
-        # Publish healthcheck message based on disk space status
-        self._publish_healthcheck(is_ok)
+        # Publish heartbeat message
+        self._publish_heartbeat()
 
-    def _publish_healthcheck(self, is_ok):
-        """Publish healthcheck message based on disk space status."""
-        healthcheck = Healthcheck()
-
-        if not is_ok:
-            healthcheck.status.value = HealthcheckStatus.ERROR
-            healthcheck.status_message = 'Critical disk space'
-            healthcheck.actionable_message = 'Free up disk space.'
-        else:
-            healthcheck.status.value = HealthcheckStatus.READY
-            healthcheck.status_message = 'Disk space OK'
-            healthcheck.actionable_message = ''
-
-        self._healthcheck_publisher.publish(healthcheck)
+    def _publish_heartbeat(self):
+        """Publish heartbeat message."""
+        heartbeat = Empty()
+        self._heartbeat_publisher.publish(heartbeat)
 
 
 def main(args=None):

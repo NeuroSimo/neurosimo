@@ -16,7 +16,7 @@ using namespace std::placeholders;
 
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string HEALTHCHECK_TOPIC = "/eeg/decider/healthcheck";
+const std::string HEARTBEAT_TOPIC = "/health/decider/heartbeat";
 const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
@@ -67,8 +67,8 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     RCLCPP_WARN(this->get_logger(), "Note: Minimum pulse interval is very low: %.1f (s)", this->minimum_intertrial_interval);
   }
 
-  /* Publisher for healthcheck. */
-  this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
+  /* Publisher for heartbeat. */
+  this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
   /* Note: The EEG subscriber will be during initialization based on whether preprocessor is enabled. */
 
@@ -136,9 +136,9 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/pipeline/decider/finalize",
     std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2));
 
-  this->healthcheck_publisher_timer = this->create_wall_timer(
+  this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
-    std::bind(&EegDecider::publish_healthcheck, this));
+    std::bind(&EegDecider::publish_heartbeat, this));
 }
 
 void EegDecider::handle_initialize_decider(
@@ -326,23 +326,9 @@ bool EegDecider::reset_state() {
   return success;
 }
 
-void EegDecider::publish_healthcheck() {
-  auto healthcheck = system_interfaces::msg::Healthcheck();
-
-  switch (this->error_occurred) {
-    case true:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::NOT_READY;
-      healthcheck.status_message = "Error occurred";
-      healthcheck.actionable_message = "An error occurred in decider.";
-      break;
-
-    case false:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
-      healthcheck.status_message = "Ready";
-      healthcheck.actionable_message = "No error occurred in decider.";
-      break; 
-  }
-  this->healthcheck_publisher->publish(healthcheck);
+void EegDecider::publish_heartbeat() {
+  auto heartbeat = std_msgs::msg::Empty();
+  this->heartbeat_publisher->publish(heartbeat);
 }
 
 void EegDecider::log_section_header(const std::string& title) {

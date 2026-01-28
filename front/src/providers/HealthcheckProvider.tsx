@@ -3,37 +3,44 @@ import { Topic, Message } from 'roslib'
 
 import { ros } from 'ros/ros'
 
-export const HealthcheckStatus = {
-  READY: 0,
-  NOT_READY: 1,
-  DISABLED: 2,
-  ERROR: 3,
-}
+export const ComponentHealth = {
+  HEALTHY: 'healthy',
+  UNHEALTHY: 'unhealthy',
+  UNKNOWN: 'unknown',
+} as const
 
-interface HealthcheckStatusMessage {
-  value: number
-}
+type ComponentHealthType = typeof ComponentHealth[keyof typeof ComponentHealth]
 
-interface Healthcheck extends ROSLIB.Message {
-  status: HealthcheckStatusMessage
-  status_message: string
-  actionable_message: string
+interface HeartbeatMessage extends ROSLIB.Message {}
+
+interface ComponentStatus {
+  health: ComponentHealthType
+  lastHeartbeat: number | null
 }
 
 interface HealthcheckContextType {
-  eegHealthcheck: Healthcheck | null
-  eegSimulatorHealthcheck: Healthcheck | null
-  preprocessorHealthcheck: Healthcheck | null
-  deciderHealthcheck: Healthcheck | null
-  resourceMonitorHealthcheck: Healthcheck | null
+  eegBridgeStatus: ComponentStatus
+  eegSimulatorStatus: ComponentStatus
+  preprocessorStatus: ComponentStatus
+  deciderStatus: ComponentStatus
+  experimentCoordinatorStatus: ComponentStatus
+  resourceMonitorStatus: ComponentStatus
+}
+
+const HEARTBEAT_TIMEOUT_MS = 800
+
+const defaultComponentStatus: ComponentStatus = {
+  health: ComponentHealth.UNKNOWN,
+  lastHeartbeat: null,
 }
 
 const defaultHealthcheckState: HealthcheckContextType = {
-  eegHealthcheck: null,
-  eegSimulatorHealthcheck: null,
-  preprocessorHealthcheck: null,
-  deciderHealthcheck: null,
-  resourceMonitorHealthcheck: null,
+  eegBridgeStatus: { ...defaultComponentStatus },
+  eegSimulatorStatus: { ...defaultComponentStatus },
+  preprocessorStatus: { ...defaultComponentStatus },
+  deciderStatus: { ...defaultComponentStatus },
+  experimentCoordinatorStatus: { ...defaultComponentStatus },
+  resourceMonitorStatus: { ...defaultComponentStatus },
 }
 
 export const HealthcheckContext = React.createContext<HealthcheckContextType>(defaultHealthcheckState)
@@ -43,80 +50,125 @@ interface HealthcheckProviderProps {
 }
 
 export const HealthcheckProvider: React.FC<HealthcheckProviderProps> = ({ children }) => {
-  const [eegHealthcheck, setEegHealthcheck] = useState<Healthcheck | null>(null)
-  const [eegSimulatorHealthcheck, setEegSimulatorHealthcheck] = useState<Healthcheck | null>(null)
-  const [preprocessorHealthcheck, setPreprocessorHealthcheck] = useState<Healthcheck | null>(null)
-  const [deciderHealthcheck, setDeciderHealthcheck] = useState<Healthcheck | null>(null)
-  const [resourceMonitorHealthcheck, setResourceMonitorHealthcheck] = useState<Healthcheck | null>(null)
+  const [eegBridgeStatus, setEegBridgeStatus] = useState<ComponentStatus>({ ...defaultComponentStatus })
+  const [eegSimulatorStatus, setEegSimulatorStatus] = useState<ComponentStatus>({ ...defaultComponentStatus })
+  const [preprocessorStatus, setPreprocessorStatus] = useState<ComponentStatus>({ ...defaultComponentStatus })
+  const [deciderStatus, setDeciderStatus] = useState<ComponentStatus>({ ...defaultComponentStatus })
+  const [experimentCoordinatorStatus, setExperimentCoordinatorStatus] = useState<ComponentStatus>({ ...defaultComponentStatus })
+  const [resourceMonitorStatus, setResourceMonitorStatus] = useState<ComponentStatus>({ ...defaultComponentStatus })
+
+  const updateComponentStatus = (setter: React.Dispatch<React.SetStateAction<ComponentStatus>>) => {
+    const now = Date.now()
+    setter({
+      health: ComponentHealth.HEALTHY,
+      lastHeartbeat: now,
+    })
+  }
+
+  const checkTimeouts = () => {
+    const now = Date.now()
+
+    const updateIfTimedOut = (status: ComponentStatus, setter: React.Dispatch<React.SetStateAction<ComponentStatus>>) => {
+      if (status.lastHeartbeat && now - status.lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
+        setter({
+          ...status,
+          health: ComponentHealth.UNHEALTHY,
+        })
+      }
+    }
+
+    updateIfTimedOut(eegBridgeStatus, setEegBridgeStatus)
+    updateIfTimedOut(eegSimulatorStatus, setEegSimulatorStatus)
+    updateIfTimedOut(preprocessorStatus, setPreprocessorStatus)
+    updateIfTimedOut(deciderStatus, setDeciderStatus)
+    updateIfTimedOut(experimentCoordinatorStatus, setExperimentCoordinatorStatus)
+    updateIfTimedOut(resourceMonitorStatus, setResourceMonitorStatus)
+  }
 
   useEffect(() => {
-    const eegSubscriber = new Topic<Healthcheck>({
+    const eegBridgeSubscriber = new Topic<HeartbeatMessage>({
       ros: ros,
-      name: '/eeg/healthcheck',
-      messageType: 'system_interfaces/Healthcheck',
+      name: '/health/eeg_bridge/heartbeat',
+      messageType: 'std_msgs/Empty',
     })
 
-    const eegSimulatorSubscriber = new Topic<Healthcheck>({
+    const eegSimulatorSubscriber = new Topic<HeartbeatMessage>({
       ros: ros,
-      name: '/eeg_simulator/healthcheck',
-      messageType: 'system_interfaces/Healthcheck',
+      name: '/health/eeg_simulator/heartbeat',
+      messageType: 'std_msgs/Empty',
     })
 
-    const preprocessorSubscriber = new Topic<Healthcheck>({
+    const preprocessorSubscriber = new Topic<HeartbeatMessage>({
       ros: ros,
-      name: '/eeg/preprocessor/healthcheck',
-      messageType: 'system_interfaces/Healthcheck',
+      name: '/health/preprocessor/heartbeat',
+      messageType: 'std_msgs/Empty',
     })
 
-    const deciderSubscriber = new Topic<Healthcheck>({
+    const deciderSubscriber = new Topic<HeartbeatMessage>({
       ros: ros,
-      name: '/eeg/decider/healthcheck',
-      messageType: 'system_interfaces/Healthcheck',
+      name: '/health/decider/heartbeat',
+      messageType: 'std_msgs/Empty',
     })
 
-    const resourceMonitorSubscriber = new Topic<Healthcheck>({
+    const experimentCoordinatorSubscriber = new Topic<HeartbeatMessage>({
       ros: ros,
-      name: '/system/resource_monitor/healthcheck',
-      messageType: 'system_interfaces/Healthcheck',
+      name: '/health/experiment_coordinator/heartbeat',
+      messageType: 'std_msgs/Empty',
     })
 
-    eegSubscriber.subscribe((message) => {
-      setEegHealthcheck(message)
+    const resourceMonitorSubscriber = new Topic<HeartbeatMessage>({
+      ros: ros,
+      name: '/health/resource_monitor/heartbeat',
+      messageType: 'std_msgs/Empty',
     })
 
-    eegSimulatorSubscriber.subscribe((message) => {
-      setEegSimulatorHealthcheck(message)
+    eegBridgeSubscriber.subscribe(() => {
+      updateComponentStatus(setEegBridgeStatus)
     })
 
-    preprocessorSubscriber.subscribe((message) => {
-      setPreprocessorHealthcheck(message)
+    eegSimulatorSubscriber.subscribe(() => {
+      updateComponentStatus(setEegSimulatorStatus)
     })
 
-    deciderSubscriber.subscribe((message) => {
-      setDeciderHealthcheck(message)
+    preprocessorSubscriber.subscribe(() => {
+      updateComponentStatus(setPreprocessorStatus)
     })
 
-    resourceMonitorSubscriber.subscribe((message) => {
-      setResourceMonitorHealthcheck(message)
+    deciderSubscriber.subscribe(() => {
+      updateComponentStatus(setDeciderStatus)
     })
+
+    experimentCoordinatorSubscriber.subscribe(() => {
+      updateComponentStatus(setExperimentCoordinatorStatus)
+    })
+
+    resourceMonitorSubscriber.subscribe(() => {
+      updateComponentStatus(setResourceMonitorStatus)
+    })
+
+    // Check for timeouts every 100ms
+    const timeoutChecker = setInterval(checkTimeouts, 100)
 
     return () => {
-      eegSubscriber.unsubscribe()
+      eegBridgeSubscriber.unsubscribe()
       eegSimulatorSubscriber.unsubscribe()
       preprocessorSubscriber.unsubscribe()
       deciderSubscriber.unsubscribe()
+      experimentCoordinatorSubscriber.unsubscribe()
       resourceMonitorSubscriber.unsubscribe()
+      clearInterval(timeoutChecker)
     }
   }, [])
 
   return (
     <HealthcheckContext.Provider
       value={{
-        eegHealthcheck,
-        eegSimulatorHealthcheck,
-        preprocessorHealthcheck,
-        deciderHealthcheck,
-        resourceMonitorHealthcheck,
+        eegBridgeStatus,
+        eegSimulatorStatus,
+        preprocessorStatus,
+        deciderStatus,
+        experimentCoordinatorStatus,
+        resourceMonitorStatus,
       }}
     >
       {children}

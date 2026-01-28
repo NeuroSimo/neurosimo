@@ -8,7 +8,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
-from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfig
+from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfig, AbortSession
 from system_interfaces.msg import SessionConfig
 from pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
@@ -21,7 +21,6 @@ from eeg_interfaces.srv import InitializeEegDeviceStream, StartStreaming, StopSt
 from eeg_interfaces.msg import StreamInfo, EegDeviceInfo
 
 from std_msgs.msg import String
-from std_srvs.srv import Trigger
 from threading import Lock, Event, Thread, current_thread
 import time
 import uuid
@@ -42,7 +41,7 @@ class SessionManagerNode(Node):
         )
 
         self.create_service(
-            Trigger,
+            AbortSession,
             '/session/abort',
             self.abort_session_callback,
             callback_group=self.callback_group
@@ -204,7 +203,7 @@ class SessionManagerNode(Node):
 
     def abort_session_callback(self, request, response):
         """Handle abort session service calls."""
-        self.logger.info('Received abort session request')
+        self.logger.info(f'Received abort session request from {request.source}')
 
         with self._thread_lock:
             if self._session_thread is None or not self._session_thread.is_alive():

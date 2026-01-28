@@ -1,0 +1,7 @@
+# system_interfaces/srv/AbortSession.srv
+
+# Who is requesting the abort (e.g. "ui", "trigger_timer", "decider")
+string source
+
+---
+bool success

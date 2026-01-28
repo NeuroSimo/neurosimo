@@ -18,7 +18,7 @@ interface SessionState {
 interface SessionContextType {
   sessionState: SessionState
   startSession: (callback?: (success: boolean, message?: string) => void) => void
-  abortSession: (callback?: (success: boolean, message?: string) => void) => void
+  abortSession: (callback?: (success: boolean) => void) => void
 }
 
 // Default state
@@ -66,7 +66,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) =>
     startSessionRos(callback)
   }
 
-  const abortSession = (callback: (success: boolean, message?: string) => void = noopCallback) => {
+  const abortSession = (callback: (success: boolean) => void = noopCallback) => {
     abortSessionRos(callback)
   }
 

@@ -19,6 +19,7 @@
 #include "eeg_interfaces/msg/stream_info.hpp"
 
 #include "system_interfaces/msg/component_health.hpp"
+#include "system_interfaces/srv/abort_session.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -73,6 +74,8 @@ private:
   void publish_python_logs(double sample_time, bool is_initialization);
   void publish_sentinel_sample(double_t sample_time);
 
+  void abort_session();
+
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
   bool is_sample_window_valid() const;
@@ -90,6 +93,9 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr preprocessed_eeg_publisher;
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
+
+  /* Service client for session abort */
+  rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   /* Service server for initialization */
   rclcpp::Service<pipeline_interfaces::srv::InitializePreprocessor>::SharedPtr initialize_service_server;

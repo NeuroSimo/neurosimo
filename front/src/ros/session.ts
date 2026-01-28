@@ -19,7 +19,7 @@ const startSessionService = new ROSLIB.Service({
 const abortSessionService = new ROSLIB.Service({
   ros: ros,
   name: '/session/abort',
-  serviceType: 'std_srvs/Trigger',
+  serviceType: 'system_interfaces/AbortSession',
 })
 
 const exportSessionService = new ROSLIB.Service({
@@ -54,19 +54,21 @@ export const startSessionRos = (
 }
 
 export const abortSessionRos = (
-  callback: (success: boolean, message?: string) => void
+  callback: (success: boolean) => void
 ) => {
-  const request = new ROSLIB.ServiceRequest({}) as any
+  const request = new ROSLIB.ServiceRequest({
+    source: 'ui'
+  }) as any
 
   abortSessionService.callService(
     request,
-    (response: { success: boolean; message: string }) => {
-      callback(response.success, response.message)
+    (response: { success: boolean }) => {
+      callback(response.success)
     },
     (error: any) => {
       console.log('ERROR: Failed to abort session, error:')
       console.log(error)
-      callback(false, 'Service call failed')
+      callback(false)
     }
   )
 }

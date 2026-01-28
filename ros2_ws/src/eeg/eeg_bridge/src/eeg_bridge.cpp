@@ -141,6 +141,13 @@ void EegBridge::create_publishers() {
     "/eeg_device/initialize",
     std::bind(&EegBridge::handle_initialize, this, std::placeholders::_1, std::placeholders::_2));
 
+  /* Service client for session abort. */
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+
+  while (!abort_session_client->wait_for_service(2s)) {
+    RCLCPP_INFO(get_logger(), "Service /session/abort not available, waiting...");
+  }
+
   /* Publish initial states. */
   publish_streamer_state();
   publish_device_info();
@@ -164,6 +171,14 @@ void EegBridge::set_device_state(EegDeviceState new_state) {
   if (previous_state != this->device_state) {
     publish_device_info();
   }
+}
+
+void EegBridge::abort_session() {
+  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  request->source = "eeg_bridge";
+
+  auto result = this->abort_session_client->async_send_request(request);
+  RCLCPP_INFO(this->get_logger(), "Requested session abort due to run-time error");
 }
 
 void EegBridge::publish_heartbeat() {
@@ -267,11 +282,12 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
 
     this->error_state = ErrorState::ERROR_SAMPLES_DROPPED;
 
-    RCLCPP_ERROR(this->get_logger(), 
+    RCLCPP_ERROR(this->get_logger(),
                  "Samples dropped. Previous device sample index: %lu, current: %lu.",
                  previous_device_sample_index,
                  device_sample_index);
     this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Samples dropped");
+    this->abort_session();
     return false;  // Samples were dropped
   }
   
@@ -402,6 +418,7 @@ void EegBridge::process_eeg_packet() {
   case ERROR:
     RCLCPP_ERROR(this->get_logger(), "Error reading data packet.");
     set_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
+    this->abort_session();
     break;
 
   case END:

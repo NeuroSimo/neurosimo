@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
+import { HealthcheckContext, ComponentHealth } from 'providers/HealthcheckProvider'
 import { StyledPanel } from 'styles/General'
 
 const HealthcheckMessagePanel = styled(StyledPanel)`
@@ -29,30 +29,41 @@ const Message = styled.div`
 `
 
 export const HealthcheckMessageDisplay: React.FC = () => {
-  const { eegHealthcheck, preprocessorHealthcheck, deciderHealthcheck, resourceMonitorHealthcheck } =
-    useContext(HealthcheckContext)
+  const {
+    eegBridgeStatus,
+    eegSimulatorStatus,
+    preprocessorStatus,
+    deciderStatus,
+    experimentCoordinatorStatus,
+    resourceMonitorStatus,
+  } = useContext(HealthcheckContext)
 
   let displayMessage
 
-  // Prioritize eegHealthcheck > preprocessorHealthcheck > deciderHealthcheck > resourceMonitorHealthcheck
-  if (eegHealthcheck?.status.value !== HealthcheckStatus.READY) {
-    displayMessage = eegHealthcheck?.actionable_message
+  // Prioritize unhealthy components in order of importance
+  if (eegBridgeStatus.health === ComponentHealth.UNHEALTHY) {
+    displayMessage = 'EEG Bridge unresponsive'
+  } else if (eegSimulatorStatus.health === ComponentHealth.UNHEALTHY) {
+    displayMessage = 'EEG Simulator unresponsive'
+  } else if (preprocessorStatus.health === ComponentHealth.UNHEALTHY) {
+    displayMessage = 'EEG Preprocessor unresponsive'
+  } else if (deciderStatus.health === ComponentHealth.UNHEALTHY) {
+    displayMessage = 'EEG Decider unresponsive'
+  } else if (experimentCoordinatorStatus.health === ComponentHealth.UNHEALTHY) {
+    displayMessage = 'Experiment Coordinator unresponsive'
+  } else if (resourceMonitorStatus.health === ComponentHealth.UNHEALTHY) {
+    displayMessage = 'Resource Monitor unresponsive'
   } else if (
-    preprocessorHealthcheck?.status.value === HealthcheckStatus.DISABLED ||
-    preprocessorHealthcheck?.status.value === HealthcheckStatus.ERROR
+    eegBridgeStatus.health === ComponentHealth.UNKNOWN ||
+    eegSimulatorStatus.health === ComponentHealth.UNKNOWN ||
+    preprocessorStatus.health === ComponentHealth.UNKNOWN ||
+    deciderStatus.health === ComponentHealth.UNKNOWN ||
+    experimentCoordinatorStatus.health === ComponentHealth.UNKNOWN ||
+    resourceMonitorStatus.health === ComponentHealth.UNKNOWN
   ) {
-    displayMessage = preprocessorHealthcheck?.actionable_message
-  } else if (
-    deciderHealthcheck?.status.value === HealthcheckStatus.DISABLED ||
-    deciderHealthcheck?.status.value === HealthcheckStatus.ERROR
-  ) {
-    displayMessage = deciderHealthcheck?.actionable_message
-  } else if (
-    resourceMonitorHealthcheck?.status.value === HealthcheckStatus.ERROR
-  ) {
-    displayMessage = resourceMonitorHealthcheck?.actionable_message
+    displayMessage = 'Waiting for component status...'
   } else {
-    displayMessage = 'Ready'
+    displayMessage = 'All systems operational'
   }
 
   return (

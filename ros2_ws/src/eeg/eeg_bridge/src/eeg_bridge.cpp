@@ -21,7 +21,7 @@ using namespace std::placeholders;
 /* Publisher topics */
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string DEVICE_INFO_TOPIC = "/eeg_device/info";
-const std::string HEALTHCHECK_TOPIC = "/eeg/healthcheck";
+const std::string HEARTBEAT_TOPIC = "/health/eeg_bridge/heartbeat";
 
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -118,11 +118,11 @@ void EegBridge::create_publishers() {
   this->streamer_state_publisher =
       this->create_publisher<system_interfaces::msg::StreamerState>("/eeg_bridge/state", qos_persist_latest);
 
-  this->healthcheck_publisher =
-      this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
+  this->heartbeat_publisher =
+    this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
-  this->healthcheck_publisher_timer = this->create_wall_timer(
-      std::chrono::milliseconds(500), [this] { publish_eeg_healthcheck(); });
+  this->heartbeat_publisher_timer = this->create_wall_timer(
+      std::chrono::milliseconds(500), [this] { publish_heartbeat(); });
 
   /* Services for starting/stopping streaming. */
   this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
@@ -163,14 +163,9 @@ void EegBridge::set_device_state(EegDeviceState new_state) {
   }
 }
 
-void EegBridge::publish_eeg_healthcheck() {
-  auto healtcheck = system_interfaces::msg::Healthcheck();
-
-  healtcheck.status.value = this->status;
-  healtcheck.status_message = this->status_message;
-  healtcheck.actionable_message = this->actionable_message;
-
-  this->healthcheck_publisher->publish(healtcheck);
+void EegBridge::publish_heartbeat() {
+  auto heartbeat = std_msgs::msg::Empty();
+  this->heartbeat_publisher->publish(heartbeat);
 }
 
 bool EegBridge::reset_state() {
@@ -239,12 +234,6 @@ void EegBridge::handle_initialize(
 }
 
 
-void EegBridge::update_healthcheck(uint8_t status, std::string status_message,
-                                   std::string actionable_message) {
-  this->status = status;
-  this->status_message = status_message;
-  this->actionable_message = actionable_message;
-}
 
 bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
   /* Warn if the device sample index wraps around. */
@@ -423,17 +412,6 @@ void EegBridge::spin() {
 
       process_eeg_packet();
 
-      /* Update healthcheck based on component health only. */
-      if (this->error_state == ErrorState::ERROR_SAMPLES_DROPPED) {
-        /* Error state indicates component health issue. */
-        this->update_healthcheck(system_interfaces::msg::HealthcheckStatus::ERROR,
-                                 "Samples dropped in EEG device",
-                                 "Samples dropped in EEG device.");
-      } else {
-        this->update_healthcheck(system_interfaces::msg::HealthcheckStatus::READY,
-                                 "EEG bridge is operational",
-                                 "EEG bridge is ready and functioning properly");
-      }
     }
   } catch (const rclcpp::exceptions::RCLError &exception) {
     RCLCPP_ERROR(rclcpp::get_logger("eeg_bridge"), "Failed with %s", exception.what());

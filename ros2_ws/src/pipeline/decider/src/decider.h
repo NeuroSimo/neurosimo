@@ -23,8 +23,6 @@
 
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
-#include "system_interfaces/msg/healthcheck.hpp"
-#include "system_interfaces/msg/healthcheck_status.hpp"
 
 #include "pipeline_interfaces/msg/coil_target.hpp"
 
@@ -82,7 +80,7 @@ private:
 
   bool reset_state();
 
-  void publish_healthcheck();
+  void publish_heartbeat();
 
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
@@ -112,8 +110,8 @@ private:
 
   rclcpp::Logger logger;
 
-  rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
-  rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
+  rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
 
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 

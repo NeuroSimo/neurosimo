@@ -13,12 +13,10 @@
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/msg/stream_info.hpp"
-
-#include "system_interfaces/msg/healthcheck.hpp"
-#include "system_interfaces/msg/healthcheck_status.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -59,7 +57,7 @@ public:
   EegPreprocessor();
 
 private:
-  void publish_healthcheck();
+  void publish_heartbeat();
 
   bool reset_state();
 
@@ -81,8 +79,8 @@ private:
 
   rclcpp::Logger logger;
 
-  rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
-  rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
+  rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
 
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_subscriber;
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr preprocessed_eeg_publisher;

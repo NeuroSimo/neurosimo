@@ -9,9 +9,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
-#include "system_interfaces/msg/healthcheck.hpp"
-#include "system_interfaces/msg/healthcheck_status.hpp"
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 #include "pipeline_interfaces/msg/experiment_state.hpp"
@@ -36,7 +35,7 @@ private:
   
   // Publishers
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
-  rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
 
   // Clients
@@ -50,7 +49,7 @@ private:
   rclcpp::Service<pipeline_interfaces::srv::InitializeProtocol>::SharedPtr initialize_protocol_service;
     
   // Timers
-  rclcpp::TimerBase::SharedPtr healthcheck_timer;
+  rclcpp::TimerBase::SharedPtr heartbeat_timer;
   
   /* Protocol and state */
   std::optional<experiment_coordinator::Protocol> protocol;
@@ -89,7 +88,7 @@ private:
   void reset_experiment_state();
   
   /* Healthcheck */
-  void publish_healthcheck();
+  void publish_heartbeat();
   
   /* Time utilities */
   double get_experiment_time(double sample_time);

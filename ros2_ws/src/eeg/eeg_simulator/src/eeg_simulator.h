@@ -24,7 +24,7 @@
 #include "std_srvs/srv/trigger.hpp"
 
 #include "system_interfaces/msg/component_health.hpp"
-#include "system_interfaces/msg/streamer_state.hpp"
+#include "system_interfaces/msg/data_source_state.hpp"
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
@@ -56,7 +56,7 @@ private:
      Returns true if the samples were published successfully. */
   bool publish_until(double_t until_time);
 
-  void publish_streamer_state();
+  void publish_data_source_state();
   void stream_timer_callback();
   void handle_start_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
@@ -67,7 +67,7 @@ private:
 
   project_interfaces::msg::DatasetInfo dataset_info;
 
-  system_interfaces::msg::StreamerState::_state_type streamer_state = system_interfaces::msg::StreamerState::READY;
+  system_interfaces::msg::DataSourceState::_state_type data_source_state = system_interfaces::msg::DataSourceState::READY;
 
   double_t play_dataset_from = 0.0;
 
@@ -110,7 +110,7 @@ private:
 
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_publisher;
 
-  rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
+  rclcpp::Publisher<system_interfaces::msg::DataSourceState>::SharedPtr data_source_state_publisher;
   rclcpp::Service<eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service;
   rclcpp::Service<eeg_interfaces::srv::StopStreaming>::SharedPtr stop_streaming_service;
   rclcpp::TimerBase::SharedPtr stream_timer;

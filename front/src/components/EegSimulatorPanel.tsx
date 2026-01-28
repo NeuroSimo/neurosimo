@@ -16,7 +16,7 @@ import {
   StyledRedButton,
 } from 'styles/General'
 
-import { EegSimulatorContext, StreamerStateValue } from 'providers/EegSimulatorProvider'
+import { EegSimulatorContext, DataSourceStateValue } from 'providers/EegSimulatorProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
@@ -70,7 +70,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     datasetList,
     dataset,
     startTime,
-    streamerState,
+    dataSourceState,
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(PipelineContext)
   const { eegDeviceInfo } = useContext(EegStreamContext)
@@ -126,12 +126,12 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   }
     
 
-  const streamerStateLabel =
-    streamerState === StreamerStateValue.RUNNING
+  const dataSourceStateLabel =
+    dataSourceState === DataSourceStateValue.RUNNING
       ? 'Running'
-      : streamerState === StreamerStateValue.LOADING
+      : dataSourceState === DataSourceStateValue.LOADING
       ? 'Loading'
-      : streamerState === StreamerStateValue.ERROR
+      : dataSourceState === DataSourceStateValue.ERROR
       ? 'Error'
       : 'Ready'
 
@@ -191,7 +191,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       </CompactRow>
       <CompactRow>
         <ConfigLabel>Status:</ConfigLabel>
-        <ConfigValue>{streamerStateLabel}</ConfigValue>
+        <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
       <div style={{ height: '8px' }} />
       <CompactRow>

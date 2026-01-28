@@ -8,15 +8,13 @@
 
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 #include "eeg_interfaces/msg/eeg_device_info.hpp"
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/srv/start_streaming.hpp"
 #include "eeg_interfaces/srv/stop_streaming.hpp"
 #include "eeg_interfaces/srv/initialize_eeg_device_stream.hpp"
-
-#include "system_interfaces/msg/healthcheck.hpp"
-#include "system_interfaces/msg/healthcheck_status.hpp"
 #include "system_interfaces/msg/streamer_state.hpp"
 
 #include "std_srvs/srv/trigger.hpp"
@@ -71,8 +69,6 @@ private:
   bool reset_state();
 
   void process_eeg_packet();
-  void update_healthcheck(uint8_t status, std::string status_message,
-                          std::string actionable_message);
 
   eeg_interfaces::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
                                           const eeg_interfaces::msg::EegDeviceInfo& device_info);
@@ -82,7 +78,7 @@ private:
 
   void create_publishers();
 
-  void publish_eeg_healthcheck();
+  void publish_heartbeat();
   void publish_device_info();
   void publish_streamer_state();
 
@@ -114,10 +110,10 @@ private:
   /* Publishers */
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;
   rclcpp::Publisher<eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
-  rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
 
-  rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
+  rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
 
   /* Services */
   rclcpp::Service<eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service;
@@ -137,10 +133,6 @@ private:
 
   double_t time_offset = UNSET_TIME;     // in seconds
 
-  /* Healthcheck */
-  uint8_t status = system_interfaces::msg::HealthcheckStatus::NOT_READY;
-  std::string status_message;
-  std::string actionable_message;
 };
 
 #endif

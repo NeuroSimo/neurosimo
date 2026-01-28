@@ -14,7 +14,7 @@ using namespace std::placeholders;
 
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
-const std::string HEALTHCHECK_TOPIC = "/eeg/preprocessor/healthcheck";
+const std::string HEARTBEAT_TOPIC = "/health/preprocessor/heartbeat";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
@@ -24,8 +24,8 @@ const std::string DEFAULT_PREPROCESSOR_NAME = "example";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
 EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_logger("preprocessor")) {
-  /* Publisher for healthcheck. */
-  this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(HEALTHCHECK_TOPIC, 10);
+  /* Publisher for heartbeat. */
+  this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
   /* Publisher for preprocessed EEG data. */
   this->preprocessed_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
@@ -62,9 +62,9 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
   this->preprocessed_sample = eeg_interfaces::msg::Sample();
 
-  this->healthcheck_publisher_timer = this->create_wall_timer(
+  this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
-    std::bind(&EegPreprocessor::publish_healthcheck, this));
+    std::bind(&EegPreprocessor::publish_heartbeat, this));
 }
 
 void EegPreprocessor::handle_initialize_preprocessor(
@@ -208,23 +208,9 @@ bool EegPreprocessor::reset_state() {
   return success;
 }
 
-void EegPreprocessor::publish_healthcheck() {
-  auto healthcheck = system_interfaces::msg::Healthcheck();
-
-  switch (this->error_occurred) {
-    case true:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::NOT_READY;
-      healthcheck.status_message = "Error occurred";
-      healthcheck.actionable_message = "An error occurred in preprocessor.";
-      break;
-
-    case false:
-      healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
-      healthcheck.status_message = "Ready";
-      healthcheck.actionable_message = "No error occurred in preprocessor.";
-      break;
-  } 
-  this->healthcheck_publisher->publish(healthcheck);
+void EegPreprocessor::publish_heartbeat() {
+  auto heartbeat = std_msgs::msg::Empty();
+  this->heartbeat_publisher->publish(heartbeat);
 }
 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {

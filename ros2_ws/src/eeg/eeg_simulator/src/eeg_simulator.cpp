@@ -34,9 +34,9 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   rclcpp::SubscriptionOptions subscription_options;
   subscription_options.callback_group = callback_group;
 
-  /* Publisher for EEG simulator healthcheck. */
-  this->healthcheck_publisher = this->create_publisher<system_interfaces::msg::Healthcheck>(
-    "/eeg_simulator/healthcheck",
+  /* Publisher for EEG simulator heartbeat. */
+  this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
+    "/health/eeg_simulator/heartbeat",
     10);
 
   /* Subscriber for active project. */
@@ -83,10 +83,10 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   this->stream_timer = this->create_wall_timer(STREAMING_INTERVAL,
                                                std::bind(&EegSimulator::stream_timer_callback, this));
 
-  /* Create a timer for publishing healthcheck. */
-  this->healthcheck_publisher_timer = this->create_wall_timer(
+  /* Create a timer for publishing heartbeat. */
+  this->heartbeat_publisher_timer = this->create_wall_timer(
       std::chrono::milliseconds(500),
-      [this] { publish_healthcheck(); },
+      [this] { publish_heartbeat(); },
       callback_group);
 
   /* Initialize action server for simulator initialization */
@@ -101,20 +101,9 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   publish_streamer_state();
 }
 
-void EegSimulator::publish_healthcheck() {
-  auto healthcheck = system_interfaces::msg::Healthcheck();
-
-  /* TODO: How healthcheck is used here is a bit confusing; please clarify. */
-  if (this->streamer_state == system_interfaces::msg::StreamerState::ERROR) {
-    healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::ERROR;
-    healthcheck.status_message = "Streaming error";
-    healthcheck.actionable_message = "Please check the logs.";
-  } else {
-    healthcheck.status.value = system_interfaces::msg::HealthcheckStatus::READY;
-    healthcheck.status_message = "Ready";
-    healthcheck.actionable_message = "Start streaming to stream data.";
-  }
-  this->healthcheck_publisher->publish(healthcheck);
+void EegSimulator::publish_heartbeat() {
+  auto heartbeat = std_msgs::msg::Empty();
+  this->heartbeat_publisher->publish(heartbeat);
 }
 
 rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(

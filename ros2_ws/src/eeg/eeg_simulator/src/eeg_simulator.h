@@ -15,14 +15,13 @@
 #include "eeg_interfaces/srv/stop_streaming.hpp"
 
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 #include "project_interfaces/msg/dataset_info.hpp"
 
 #include "dataset_manager.h"
 
 #include "std_srvs/srv/trigger.hpp"
-
-#include "system_interfaces/msg/healthcheck.hpp"
 #include "system_interfaces/msg/streamer_state.hpp"
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
@@ -33,7 +32,7 @@ public:
   EegSimulator();
 
 private:
-  void publish_healthcheck();
+  void publish_heartbeat();
 
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
 
@@ -98,8 +97,8 @@ private:
 
   rclcpp::CallbackGroup::SharedPtr callback_group;
 
-  rclcpp::Publisher<system_interfaces::msg::Healthcheck>::SharedPtr healthcheck_publisher;
-  rclcpp::TimerBase::SharedPtr healthcheck_publisher_timer;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
 

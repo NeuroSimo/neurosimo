@@ -4,4 +4,3 @@ uint8 RUNNING=2
 uint8 ERROR=3
 
 uint8 state
-

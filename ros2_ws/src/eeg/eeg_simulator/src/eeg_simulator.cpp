@@ -56,7 +56,7 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     subscription_options);
 
   /* Publisher for streamer state. */
-  streamer_state_publisher = this->create_publisher<system_interfaces::msg::StreamerState>(
+  data_source_state_publisher = this->create_publisher<system_interfaces::msg::DataSourceState>(
     "/eeg_simulator/state",
     qos_persist_latest);
 
@@ -103,7 +103,7 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     std::bind(&EegSimulator::handle_initialize_accepted, this, std::placeholders::_1));
 
   /* Publish initial streamer state. */
-  publish_streamer_state();
+  publish_data_source_state();
 }
 
 void EegSimulator::publish_heartbeat() {
@@ -165,15 +165,15 @@ void EegSimulator::execute_initialize(
   this->pulse_times = pulse_times;
 
   // Load dataset into buffer
-  this->streamer_state = system_interfaces::msg::StreamerState::LOADING;
-  publish_streamer_state();
+  this->data_source_state = system_interfaces::msg::DataSourceState::LOADING;
+  publish_data_source_state();
 
   auto [load_success, error_msg] = this->dataset_manager_->load_dataset(goal->project_name, dataset_info, this->dataset_buffer);
   if (!load_success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load dataset: %s", error_msg.c_str());
-    this->streamer_state = system_interfaces::msg::StreamerState::ERROR;
+    this->data_source_state = system_interfaces::msg::DataSourceState::ERROR;
     this->error_message = error_msg;
-    publish_streamer_state();
+    publish_data_source_state();
     this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Failed to load dataset: " + error_msg);
     goal_handle->abort(result);
     return;
@@ -192,8 +192,8 @@ void EegSimulator::execute_initialize(
                 this->pulse_times.size(), this->pulse_times[0]);
   }
 
-  this->streamer_state = system_interfaces::msg::StreamerState::READY;
-  publish_streamer_state();
+  this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+  publish_data_source_state();
 
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 
@@ -213,10 +213,10 @@ void EegSimulator::execute_initialize(
   goal_handle->succeed(result);
 }
 
-void EegSimulator::publish_streamer_state() {
-  system_interfaces::msg::StreamerState msg;
-  msg.state = this->streamer_state;
-  this->streamer_state_publisher->publish(msg);
+void EegSimulator::publish_data_source_state() {
+  system_interfaces::msg::DataSourceState msg;
+  msg.state = this->data_source_state;
+  this->data_source_state_publisher->publish(msg);
 }
 
 void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
@@ -237,9 +237,9 @@ void EegSimulator::handle_start_streaming(
   this->session_sample_index = 0;
   this->is_session_start = true;
   this->is_session_end = false;
-  this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
+  this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
   response->success = true;
-  publish_streamer_state();
+  publish_data_source_state();
 }
 
 void EegSimulator::handle_stop_streaming(
@@ -247,7 +247,7 @@ void EegSimulator::handle_stop_streaming(
       std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
-  if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
+  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     response->success = true;
     return;
   }
@@ -258,7 +258,7 @@ void EegSimulator::handle_stop_streaming(
 
 
 void EegSimulator::stream_timer_callback() {
-  if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
+  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     return;
   }
 
@@ -272,8 +272,8 @@ void EegSimulator::stream_timer_callback() {
   bool success = this->publish_until(target_time);
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to publish samples until target time. Stopping streaming.");
-    this->streamer_state = system_interfaces::msg::StreamerState::ERROR;
-    publish_streamer_state();
+    this->data_source_state = system_interfaces::msg::DataSourceState::ERROR;
+    publish_data_source_state();
     return;
   }
 }
@@ -395,8 +395,8 @@ bool EegSimulator::publish_until(double_t until_time) {
     // If we just published a sample ending the session, stop streaming
     if (is_session_end) {
       this->is_session_end = false;  // Reset the flag since we've handled it
-      this->streamer_state = system_interfaces::msg::StreamerState::READY;
-      publish_streamer_state();
+      this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+      publish_data_source_state();
       return true;
     }
 

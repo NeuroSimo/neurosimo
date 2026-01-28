@@ -5,7 +5,7 @@ import { ros } from 'ros/ros'
 import { useParameters } from './ParameterProvider'
 import { FilenameList } from './PipelineProvider'
 
-export enum StreamerStateValue {
+export enum DataSourceStateValue {
   READY = 0,
   LOADING = 1,
   RUNNING = 2,
@@ -40,22 +40,22 @@ interface RosFloat64 extends ROSLIB.Message {
   data: number
 }
 
-interface RosStreamerState extends ROSLIB.Message {
-  state: StreamerStateValue
+interface RosDataSourceState extends ROSLIB.Message {
+  state: DataSourceStateValue
 }
 
 interface EegSimulatorContextType {
   datasetList: string[]
   dataset: string
   startTime: number
-  streamerState: StreamerStateValue
+  dataSourceState: DataSourceStateValue
 }
 
 const defaultDatasetState: EegSimulatorContextType = {
   datasetList: [],
   dataset: '',
   startTime: 0,
-  streamerState: StreamerStateValue.READY,
+  dataSourceState: DataSourceStateValue.READY,
 }
 
 export const EegSimulatorContext = React.createContext<EegSimulatorContextType>(defaultDatasetState)
@@ -68,7 +68,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const { simulator } = useParameters()
 
   const [datasetList, setDatasetList] = useState<string[]>([])
-  const [streamerState, setStreamerState] = useState<StreamerStateValue>(StreamerStateValue.READY)
+  const [dataSourceState, setDataSourceState] = useState<DataSourceStateValue>(DataSourceStateValue.READY)
 
   // Get parameter values from structured parameter store
   const dataset = simulator.dataset_filename
@@ -87,14 +87,14 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
     })
 
     /* Subscriber for simulator state. */
-    const stateSubscriber = new Topic<RosStreamerState>({
+    const stateSubscriber = new Topic<RosDataSourceState>({
       ros: ros,
       name: '/eeg_simulator/state',
-      messageType: 'system_interfaces/StreamerState',
+      messageType: 'system_interfaces/DataSourceState',
     })
 
-    stateSubscriber.subscribe((message: RosStreamerState) => {
-      setStreamerState(message.state)
+    stateSubscriber.subscribe((message: RosDataSourceState) => {
+      setDataSourceState(message.state)
     })
 
     /* Unsubscribers */
@@ -110,7 +110,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
         datasetList,
         dataset,
         startTime,
-        streamerState,
+        dataSourceState,
       }}
     >
       {children}

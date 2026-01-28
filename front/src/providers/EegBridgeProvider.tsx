@@ -10,7 +10,7 @@ export enum EegBridgeStateValue {
   ERROR = 3,
 }
 
-interface RosStreamerState extends ROSLIB.Message {
+interface RosDataSourceState extends ROSLIB.Message {
   state: EegBridgeStateValue
 }
 
@@ -33,13 +33,13 @@ export const EegBridgeProvider: React.FC<EegBridgeProviderProps> = ({ children }
 
   useEffect(() => {
     /* Subscriber for EEG bridge state. */
-    const stateSubscriber = new Topic<RosStreamerState>({
+    const stateSubscriber = new Topic<RosDataSourceState>({
       ros: ros,
       name: '/eeg_bridge/state',
-      messageType: 'system_interfaces/StreamerState',
+      messageType: 'system_interfaces/DataSourceState',
     })
 
-    stateSubscriber.subscribe((message: RosStreamerState) => {
+    stateSubscriber.subscribe((message: RosDataSourceState) => {
       setBridgeState(message.state)
     })
 

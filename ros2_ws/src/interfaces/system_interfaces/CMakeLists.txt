@@ -29,7 +29,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RecorderState.msg"
   "msg/SessionConfig.msg"
   "msg/SessionState.msg"
-  "msg/StreamerState.msg"
+  "msg/DataSourceState.msg"
   "msg/ComponentHealth.msg"
   "srv/AbortSession.srv"
   "srv/CancelExport.srv"

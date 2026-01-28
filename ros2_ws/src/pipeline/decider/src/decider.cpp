@@ -16,7 +16,7 @@ using namespace std::placeholders;
 
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string HEARTBEAT_TOPIC = "/health/decider/heartbeat";
+const std::string HEARTBEAT_TOPIC = "/decider/heartbeat";
 const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
@@ -76,6 +76,10 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
         .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+
+  /* Publisher for health. */
+  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+    "/decider/health", qos_persist_latest);
 
   /* Subscriber for is coil at target. */
   this->is_coil_at_target_subscriber = create_subscription<std_msgs::msg::Bool>(
@@ -262,6 +266,8 @@ void EegDecider::handle_initialize_decider(
   // Mark as initialized
   this->is_initialized = true;
 
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+
   RCLCPP_INFO(this->get_logger(), "Decider initialized successfully: project=%s, module=%s",
               request->project_name.c_str(), request->module_filename.c_str());
 
@@ -329,6 +335,13 @@ bool EegDecider::reset_state() {
 void EegDecider::publish_heartbeat() {
   auto heartbeat = std_msgs::msg::Empty();
   this->heartbeat_publisher->publish(heartbeat);
+}
+
+void EegDecider::publish_health_status(uint8_t health_level, const std::string& message) {
+  auto health = system_interfaces::msg::ComponentHealth();
+  health.health_level = health_level;
+  health.message = message;
+  this->health_publisher->publish(health);
 }
 
 void EegDecider::log_section_header(const std::string& title) {
@@ -483,6 +496,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
                  "Python call failed, not processing EEG sample at time %.3f (s).",
                  sample_time);
     this->error_occurred = true;
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
     return;
   }
 

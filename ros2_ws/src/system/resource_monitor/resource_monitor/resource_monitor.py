@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from system_interfaces.msg import DiskStatus
+from system_interfaces.msg import DiskStatus, ComponentHealth
 from std_msgs.msg import Empty
 from .utils import parse_size_string
 
@@ -46,15 +46,25 @@ class ResourceMonitorNode(Node):
         # Create heartbeat publisher
         self._heartbeat_publisher = self.create_publisher(
             Empty,
-            '/health/resource_monitor/heartbeat',
+            '/resource_monitor/heartbeat',
             10
+        )
+
+        # Create health publisher
+        self._health_publisher = self.create_publisher(
+            ComponentHealth,
+            '/resource_monitor/health',
+            status_qos
         )
 
         # Create timer for periodic disk checks
         self._check_timer = self.create_timer(CHECK_INTERVAL_SEC, self._check_disk_space)
 
-        # Create timer for heartbeat publishing
+        # Create timer for heartbeat publishing (2 Hz)
         self._heartbeat_timer = self.create_timer(HEARTBEAT_INTERVAL_SEC, self._publish_heartbeat)
+
+        # Publish initial READY state
+        self._publish_health_status(ComponentHealth.READY, '')
 
         # Perform initial check immediately
         self._check_disk_space()
@@ -92,13 +102,31 @@ class ResourceMonitorNode(Node):
 
         self._disk_status_publisher.publish(msg)
 
-        # Publish heartbeat message
-        self._publish_heartbeat()
+        # Update health status based on disk space
+        if not is_ok:
+            self._publish_health_status(
+                ComponentHealth.ERROR,
+                f'Critical disk space: {usage.free / (1024**3):.1f} GiB free'
+            )
+        elif usage.free < self._warning_threshold_bytes:
+            self._publish_health_status(
+                ComponentHealth.DEGRADED,
+                f'Low disk space: {usage.free / (1024**3):.1f} GiB free'
+            )
+        else:
+            self._publish_health_status(ComponentHealth.READY, '')
 
     def _publish_heartbeat(self):
         """Publish heartbeat message."""
         heartbeat = Empty()
         self._heartbeat_publisher.publish(heartbeat)
+
+    def _publish_health_status(self, health_level, message):
+        """Publish component health status."""
+        health = ComponentHealth()
+        health.health_level = health_level
+        health.message = message
+        self._health_publisher.publish(health)
 
 
 def main(args=None):

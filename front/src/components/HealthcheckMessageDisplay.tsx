@@ -36,32 +36,61 @@ export const HealthcheckMessageDisplay: React.FC = () => {
     deciderStatus,
     experimentCoordinatorStatus,
     resourceMonitorStatus,
+    presenterStatus,
+    triggerTimerStatus,
   } = useContext(HealthcheckContext)
 
   let displayMessage
 
-  // Prioritize unhealthy components in order of importance
-  if (eegBridgeStatus.health === ComponentHealth.UNHEALTHY) {
+  // Prioritize error states, then degraded states, then unknown states
+  if (eegBridgeStatus.health === ComponentHealth.ERROR) {
+    displayMessage = eegBridgeStatus.message || 'EEG Bridge error'
+  } else if (eegSimulatorStatus.health === ComponentHealth.ERROR) {
+    displayMessage = eegSimulatorStatus.message || 'EEG Simulator error'
+  } else if (preprocessorStatus.health === ComponentHealth.ERROR) {
+    displayMessage = preprocessorStatus.message || 'EEG Preprocessor error'
+  } else if (deciderStatus.health === ComponentHealth.ERROR) {
+    displayMessage = deciderStatus.message || 'EEG Decider error'
+  } else if (experimentCoordinatorStatus.health === ComponentHealth.ERROR) {
+    displayMessage = experimentCoordinatorStatus.message || 'Experiment Coordinator error'
+  } else if (resourceMonitorStatus.health === ComponentHealth.ERROR) {
+    displayMessage = resourceMonitorStatus.message || 'Resource Monitor error'
+  } else if (presenterStatus.health === ComponentHealth.ERROR) {
+    displayMessage = presenterStatus.message || 'Presenter error'
+  } else if (triggerTimerStatus.health === ComponentHealth.ERROR) {
+    displayMessage = triggerTimerStatus.message || 'Trigger Timer error'
+  } else if (eegBridgeStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = eegBridgeStatus.message || 'EEG Bridge degraded'
+  } else if (eegSimulatorStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = eegSimulatorStatus.message || 'EEG Simulator degraded'
+  } else if (preprocessorStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = preprocessorStatus.message || 'EEG Preprocessor degraded'
+  } else if (deciderStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = deciderStatus.message || 'EEG Decider degraded'
+  } else if (experimentCoordinatorStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = experimentCoordinatorStatus.message || 'Experiment Coordinator degraded'
+  } else if (resourceMonitorStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = resourceMonitorStatus.message || 'Resource Monitor degraded'
+  } else if (presenterStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = presenterStatus.message || 'Presenter degraded'
+  } else if (triggerTimerStatus.health === ComponentHealth.DEGRADED) {
+    displayMessage = triggerTimerStatus.message || 'Trigger Timer degraded'
+  } else if (eegBridgeStatus.health === ComponentHealth.UNKNOWN) {
     displayMessage = 'EEG Bridge unresponsive'
-  } else if (eegSimulatorStatus.health === ComponentHealth.UNHEALTHY) {
+  } else if (eegSimulatorStatus.health === ComponentHealth.UNKNOWN) {
     displayMessage = 'EEG Simulator unresponsive'
-  } else if (preprocessorStatus.health === ComponentHealth.UNHEALTHY) {
+  } else if (preprocessorStatus.health === ComponentHealth.UNKNOWN) {
     displayMessage = 'EEG Preprocessor unresponsive'
-  } else if (deciderStatus.health === ComponentHealth.UNHEALTHY) {
+  } else if (deciderStatus.health === ComponentHealth.UNKNOWN) {
     displayMessage = 'EEG Decider unresponsive'
-  } else if (experimentCoordinatorStatus.health === ComponentHealth.UNHEALTHY) {
+  } else if (experimentCoordinatorStatus.health === ComponentHealth.UNKNOWN) {
     displayMessage = 'Experiment Coordinator unresponsive'
-  } else if (resourceMonitorStatus.health === ComponentHealth.UNHEALTHY) {
+  } else if (resourceMonitorStatus.health === ComponentHealth.UNKNOWN) {
     displayMessage = 'Resource Monitor unresponsive'
-  } else if (
-    eegBridgeStatus.health === ComponentHealth.UNKNOWN ||
-    eegSimulatorStatus.health === ComponentHealth.UNKNOWN ||
-    preprocessorStatus.health === ComponentHealth.UNKNOWN ||
-    deciderStatus.health === ComponentHealth.UNKNOWN ||
-    experimentCoordinatorStatus.health === ComponentHealth.UNKNOWN ||
-    resourceMonitorStatus.health === ComponentHealth.UNKNOWN
-  ) {
-    displayMessage = 'Waiting for component status...'
+  } else if (presenterStatus.health === ComponentHealth.UNKNOWN) {
+    displayMessage = 'Presenter unresponsive'
+  } else if (triggerTimerStatus.health === ComponentHealth.UNKNOWN) {
+    displayMessage = 'Trigger Timer unresponsive'
   } else {
     displayMessage = 'All systems operational'
   }

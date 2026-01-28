@@ -21,7 +21,7 @@ using namespace std::placeholders;
 /* Publisher topics */
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string DEVICE_INFO_TOPIC = "/eeg_device/info";
-const std::string HEARTBEAT_TOPIC = "/health/eeg_bridge/heartbeat";
+const std::string HEARTBEAT_TOPIC = "/eeg_bridge/heartbeat";
 
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -121,6 +121,9 @@ void EegBridge::create_publishers() {
   this->heartbeat_publisher =
     this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
+  this->health_publisher =
+    this->create_publisher<system_interfaces::msg::ComponentHealth>("/eeg_bridge/health", qos_persist_latest);
+
   this->heartbeat_publisher_timer = this->create_wall_timer(
       std::chrono::milliseconds(500), [this] { publish_heartbeat(); });
 
@@ -168,6 +171,13 @@ void EegBridge::publish_heartbeat() {
   this->heartbeat_publisher->publish(heartbeat);
 }
 
+void EegBridge::publish_health_status(uint8_t health_level, const std::string& message) {
+  auto health = system_interfaces::msg::ComponentHealth();
+  health.health_level = health_level;
+  health.message = message;
+  this->health_publisher->publish(health);
+}
+
 bool EegBridge::reset_state() {
   this->session_sample_index = 0;
   this->time_offset = UNSET_TIME;
@@ -178,6 +188,8 @@ bool EegBridge::reset_state() {
 
   this->streamer_state = system_interfaces::msg::StreamerState::READY;
   publish_streamer_state();
+
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 
   return true;
 }
@@ -259,6 +271,7 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
                  "Samples dropped. Previous device sample index: %lu, current: %lu.",
                  previous_device_sample_index,
                  device_sample_index);
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Samples dropped");
     return false;  // Samples were dropped
   }
   

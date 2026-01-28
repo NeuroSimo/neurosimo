@@ -15,6 +15,8 @@
 #include "eeg_interfaces/srv/start_streaming.hpp"
 #include "eeg_interfaces/srv/stop_streaming.hpp"
 #include "eeg_interfaces/srv/initialize_eeg_device_stream.hpp"
+
+#include "system_interfaces/msg/component_health.hpp"
 #include "system_interfaces/msg/streamer_state.hpp"
 
 #include "std_srvs/srv/trigger.hpp"
@@ -79,6 +81,7 @@ private:
   void create_publishers();
 
   void publish_heartbeat();
+  void publish_health_status(uint8_t health_level, const std::string& message);
   void publish_device_info();
   void publish_streamer_state();
 
@@ -111,6 +114,7 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;
   rclcpp::Publisher<eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
 
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;

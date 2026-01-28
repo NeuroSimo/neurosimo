@@ -18,6 +18,8 @@
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/msg/stream_info.hpp"
 
+#include "system_interfaces/msg/component_health.hpp"
+
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 
@@ -58,6 +60,7 @@ public:
 
 private:
   void publish_heartbeat();
+  void publish_health_status(uint8_t health_level, const std::string& message);
 
   bool reset_state();
 
@@ -81,6 +84,7 @@ private:
 
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
 
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_subscriber;
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr preprocessed_eeg_publisher;

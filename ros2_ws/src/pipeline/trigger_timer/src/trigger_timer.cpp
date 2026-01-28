@@ -8,6 +8,8 @@
 #include "realtime_utils/utils.h"
 
 using namespace std::chrono;
+
+const double_t HEARTBEAT_INTERVAL_SEC = 0.5;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
@@ -84,6 +86,28 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   this->pipeline_latency_publisher = this->create_publisher<pipeline_interfaces::msg::PipelineLatency>(
     "/pipeline/latency",
     10);
+
+  /* Create QoS profile for latched topics */
+  auto status_qos = rclcpp::QoS(rclcpp::KeepLast(1));
+  status_qos.durability(rclcpp::DurabilityPolicy::TransientLocal);
+
+  /* Create heartbeat publisher */
+  this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
+    "/trigger_timer/heartbeat",
+    10);
+
+  /* Create health publisher */
+  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+    "/trigger_timer/health",
+    status_qos);
+
+  /* Create heartbeat timer */
+  this->heartbeat_timer = this->create_wall_timer(
+    std::chrono::duration<double>(HEARTBEAT_INTERVAL_SEC),
+    std::bind(&TriggerTimer::_publish_heartbeat, this));
+
+  /* Publish initial READY state */
+  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 TriggerTimer::~TriggerTimer() {
@@ -93,6 +117,18 @@ TriggerTimer::~TriggerTimer() {
   if (labjack_manager) {
     labjack_manager->stop();
   }
+}
+
+void TriggerTimer::_publish_heartbeat() {
+  auto heartbeat = std_msgs::msg::Empty();
+  this->heartbeat_publisher->publish(heartbeat);
+}
+
+void TriggerTimer::_publish_health_status(uint8_t health_level, const std::string& message) {
+  auto health = system_interfaces::msg::ComponentHealth();
+  health.health_level = health_level;
+  health.message = message;
+  this->health_publisher->publish(health);
 }
 
 void TriggerTimer::attempt_labjack_connection() {
@@ -130,6 +166,10 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
     } else {
       RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms) at triggering time, rejecting stimulation.",
                    this->current_latency * 1000, this->pipeline_latency_threshold * 1000);
+
+      /* Publish degraded health status */
+      this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
+                                   "Timing latency exceeds threshold, stimulation rejected");
     }
     trigger_queue.pop();
 
@@ -194,11 +234,14 @@ void TriggerTimer::handle_request_timed_trigger(
   double_t trigger_time = request->timed_trigger.time;
 
   bool is_labjack_connected = labjack_manager && labjack_manager->is_connected();
-  bool accepted = is_labjack_connected;
 
-  if (!accepted) {
+  if (!is_labjack_connected) {
     RCLCPP_WARN(logger, "LabJack is not connected, rejecting trigger at time: %.4f (s).", trigger_time);
     response->success = false;
+
+    /* Publish degraded health status */
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
+                                 "LabJack device not connected");
   } else {
     std::lock_guard<std::mutex> lock(queue_mutex);
     trigger_queue.push(request);
@@ -216,8 +259,8 @@ void TriggerTimer::handle_request_timed_trigger(
   auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
   decision_trace.session_id = request->session_id;
   decision_trace.decision_id = request->decision_id;
-  decision_trace.status = accepted ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED
-                                   : pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+  decision_trace.status = is_labjack_connected ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED
+                                               : pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
   decision_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
   decision_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
 
@@ -279,6 +322,10 @@ void TriggerTimer::handle_initialize_trigger_timer(
     RCLCPP_ERROR(this->get_logger(), "Failed to connect to LabJack device during initialization");
     response->success = false;
 
+    /* Publish error health status */
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                 "Failed to connect to LabJack device during initialization");
+
     /* Clean up on failure */
     reset_state();
     return;
@@ -286,6 +333,9 @@ void TriggerTimer::handle_initialize_trigger_timer(
 
   RCLCPP_INFO(this->get_logger(), "Trigger timer initialized successfully");
   response->success = true;
+
+  /* Publish ready health status */
+  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 void TriggerTimer::handle_finalize_trigger_timer(

@@ -30,12 +30,12 @@ const CompactRow = styled(ConfigRow)`
 `
 
 export const EegDevicePanel: React.FC = () => {
-  const { eegInfo } = useContext(EegStreamContext)
+  const { eegDeviceInfo } = useContext(EegStreamContext)
   const { bridgeState } = useContext(EegBridgeContext)
 
-  const samplingFrequency = eegInfo?.sampling_frequency ? formatFrequency(eegInfo.sampling_frequency) : '\u2013'
-  const numEegChannels = eegInfo?.num_eeg_channels ? eegInfo.num_eeg_channels : '\u2013'
-  const numEmgChannels = eegInfo?.num_emg_channels ? eegInfo.num_emg_channels : '\u2013'
+  const samplingFrequency = eegDeviceInfo?.sampling_frequency ? formatFrequency(eegDeviceInfo.sampling_frequency) : '\u2013'
+  const numEegChannels = eegDeviceInfo?.num_eeg_channels ? eegDeviceInfo.num_eeg_channels : '\u2013'
+  const numEmgChannels = eegDeviceInfo?.num_emg_channels ? eegDeviceInfo.num_emg_channels : '\u2013'
 
   const isRunning = bridgeState === EegBridgeStateValue.RUNNING
   const isLoading = bridgeState === EegBridgeStateValue.LOADING

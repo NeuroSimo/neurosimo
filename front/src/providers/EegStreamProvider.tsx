@@ -10,11 +10,11 @@ interface EegDeviceInfo extends Message {
 }
 
 interface EegStreamContextType {
-  eegInfo: EegDeviceInfo | null
+  eegDeviceInfo: EegDeviceInfo | null
 }
 
 const defaultEegStreamState: EegStreamContextType = {
-  eegInfo: null,
+  eegDeviceInfo: null,
 }
 
 export const EegStreamContext = React.createContext<EegStreamContextType>(defaultEegStreamState)
@@ -24,7 +24,7 @@ interface EegStreamProviderProps {
 }
 
 export const EegStreamProvider: React.FC<EegStreamProviderProps> = ({ children }) => {
-  const [eegInfo, setEegInfo] = useState<EegDeviceInfo | null>(null)
+  const [eegDeviceInfo, setEegDeviceInfo] = useState<EegDeviceInfo | null>(null)
 
   useEffect(() => {
     const eegInfoSubscriber = new Topic<EegDeviceInfo>({
@@ -34,7 +34,7 @@ export const EegStreamProvider: React.FC<EegStreamProviderProps> = ({ children }
     })
 
     eegInfoSubscriber.subscribe((message) => {
-      setEegInfo(message)
+      setEegDeviceInfo(message)
     })
 
     return () => {
@@ -42,5 +42,5 @@ export const EegStreamProvider: React.FC<EegStreamProviderProps> = ({ children }
     }
   }, [])
 
-  return <EegStreamContext.Provider value={{ eegInfo }}>{children}</EegStreamContext.Provider>
+  return <EegStreamContext.Provider value={{ eegDeviceInfo }}>{children}</EegStreamContext.Provider>
 }

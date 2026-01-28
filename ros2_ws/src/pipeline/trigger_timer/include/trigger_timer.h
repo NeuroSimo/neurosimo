@@ -15,9 +15,6 @@
 #include "pipeline_interfaces/msg/pipeline_latency.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 
-#include "system_interfaces/msg/healthcheck.hpp"
-#include "system_interfaces/msg/healthcheck_status.hpp"
-
 #include "pipeline_interfaces/msg/timed_trigger.hpp"
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 #include "pipeline_interfaces/srv/initialize_trigger_timer.hpp"
@@ -79,11 +76,6 @@ private:
   void handle_finalize_trigger_timer(
     const std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response);
-
-  /* Healthcheck */
-  uint8_t status;
-  std::string status_message;
-  std::string actionable_message;
 };
 
 #endif //EEG_PROCESSOR_TRIGGERTIMER_H

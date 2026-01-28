@@ -16,8 +16,6 @@
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/srv/initialize_stimulation_tracer.hpp"
 #include "pipeline_interfaces/srv/finalize_stimulation_tracer.hpp"
-#include "system_interfaces/msg/healthcheck.hpp"
-#include "system_interfaces/msg/healthcheck_status.hpp"
 
 class StimulationTracer : public rclcpp::Node {
 public:
@@ -63,11 +61,6 @@ private:
 
   /* Check if a decision trace is terminal (finalized) */
   bool is_terminal_status(uint8_t status);
-
-  /* Healthcheck */
-  uint8_t status;
-  std::string status_message;
-  std::string actionable_message;
 };
 
 #endif // STIMULATION_TRACER_H

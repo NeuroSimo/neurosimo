@@ -38,11 +38,11 @@ TOPICS_TO_RECORD = [
     # Session state
     '/session/state',
 
-    # Healthchecks (for debugging)
-    '/healthcheck/eeg_bridge',
-    '/healthcheck/preprocessor',
-    '/healthcheck/decider',
-    '/healthcheck/experiment_coordinator',
+    # Heartbeats (for debugging)
+    '/health/eeg_bridge/heartbeat',
+    '/health/preprocessor/heartbeat',
+    '/health/decider/heartbeat',
+    '/health/experiment_coordinator/heartbeat',
 ]
 
 

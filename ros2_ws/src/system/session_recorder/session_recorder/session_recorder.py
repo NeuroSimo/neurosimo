@@ -39,10 +39,24 @@ TOPICS_TO_RECORD = [
     '/session/state',
 
     # Heartbeats (for debugging)
-    '/health/eeg_bridge/heartbeat',
-    '/health/preprocessor/heartbeat',
-    '/health/decider/heartbeat',
-    '/health/experiment_coordinator/heartbeat',
+    '/eeg_bridge/heartbeat',
+    '/eeg_simulator/heartbeat',
+    '/preprocessor/heartbeat',
+    '/presenter/heartbeat',
+    '/decider/heartbeat',
+    '/experiment_coordinator/heartbeat',
+    '/resource_monitor/heartbeat',
+    '/trigger_timer/heartbeat',
+
+    # Health (for debugging)
+    '/eeg_bridge/health',
+    '/eeg_simulator/health',
+    '/preprocessor/health',
+    '/presenter/health',
+    '/decider/health',
+    '/experiment_coordinator/health',
+    '/resource_monitor/health',
+    '/trigger_timer/health',
 ]
 
 

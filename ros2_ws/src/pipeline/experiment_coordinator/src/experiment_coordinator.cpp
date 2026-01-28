@@ -10,7 +10,7 @@ using namespace experiment_coordinator;
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string DECISION_TRACE_FINAL_TOPIC = "/pipeline/decision_trace/final";
-const std::string HEARTBEAT_TOPIC = "/health/experiment_coordinator/heartbeat";
+const std::string HEARTBEAT_TOPIC = "/experiment_coordinator/heartbeat";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
@@ -26,6 +26,10 @@ ExperimentCoordinator::ExperimentCoordinator()
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
         .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+  
+  /* Publisher for health. */
+  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+    "/experiment_coordinator/health", qos_persist_latest);
   
   /* Publisher for enriched EEG data. */
   this->enriched_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(
@@ -79,6 +83,13 @@ ExperimentCoordinator::ExperimentCoordinator()
 void ExperimentCoordinator::publish_heartbeat() {
   auto heartbeat = std_msgs::msg::Empty();
   this->heartbeat_publisher->publish(heartbeat);
+}
+
+void ExperimentCoordinator::publish_health_status(uint8_t health_level, const std::string& message) {
+  auto health = system_interfaces::msg::ComponentHealth();
+  health.health_level = health_level;
+  health.message = message;
+  this->health_publisher->publish(health);
 }
 
 void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
@@ -237,7 +248,6 @@ void ExperimentCoordinator::handle_initialize_protocol(
     const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response) {
 
-  this->error_occurred = false;
   this->is_protocol_initialized = false;
 
   RCLCPP_INFO(this->get_logger(), "Initializing protocol: project='%s', protocol='%s'",
@@ -255,7 +265,8 @@ void ExperimentCoordinator::handle_initialize_protocol(
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s",
       result.error_message.c_str());
 
-    this->error_occurred = true;
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, 
+      "Protocol loading error: " + result.error_message);
     response->success = false;
 
     return;
@@ -268,6 +279,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
   /* Reset experiment state. */
   reset_experiment_state();
 
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
   response->success = true;
 }
 

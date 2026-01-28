@@ -22,6 +22,8 @@
 #include "dataset_manager.h"
 
 #include "std_srvs/srv/trigger.hpp"
+
+#include "system_interfaces/msg/component_health.hpp"
 #include "system_interfaces/msg/streamer_state.hpp"
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
@@ -33,6 +35,7 @@ public:
 
 private:
   void publish_heartbeat();
+  void publish_health_status(uint8_t health_level, const std::string& message);
 
   void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
 
@@ -98,6 +101,7 @@ private:
   rclcpp::CallbackGroup::SharedPtr callback_group;
 
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;

@@ -36,13 +36,18 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
 
   /* Publisher for EEG simulator heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/health/eeg_simulator/heartbeat",
+    "/eeg_simulator/heartbeat",
     10);
 
   /* Subscriber for active project. */
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
         .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+
+  /* Publisher for health. */
+  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+    "/eeg_simulator/health",
+    qos_persist_latest);
 
   this->active_project_subscriber = create_subscription<std_msgs::msg::String>(
     "/projects/active",
@@ -106,6 +111,13 @@ void EegSimulator::publish_heartbeat() {
   this->heartbeat_publisher->publish(heartbeat);
 }
 
+void EegSimulator::publish_health_status(uint8_t health_level, const std::string& message) {
+  auto health = system_interfaces::msg::ComponentHealth();
+  health.health_level = health_level;
+  health.message = message;
+  this->health_publisher->publish(health);
+}
+
 rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(
   const rclcpp_action::GoalUUID & uuid,
   std::shared_ptr<const eeg_interfaces::action::InitializeSimulatorStream::Goal> goal) {
@@ -145,6 +157,7 @@ void EegSimulator::execute_initialize(
   auto [success, dataset_info, pulse_times] = this->dataset_manager_->get_dataset_info(goal->dataset_filename, data_directory);
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to get dataset info: %s", goal->dataset_filename.c_str());
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Failed to get dataset info");
     goal_handle->abort(result);
     return;
   }
@@ -161,6 +174,7 @@ void EegSimulator::execute_initialize(
     this->streamer_state = system_interfaces::msg::StreamerState::ERROR;
     this->error_message = error_msg;
     publish_streamer_state();
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Failed to load dataset: " + error_msg);
     goal_handle->abort(result);
     return;
   }
@@ -180,6 +194,8 @@ void EegSimulator::execute_initialize(
 
   this->streamer_state = system_interfaces::msg::StreamerState::READY;
   publish_streamer_state();
+
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 
   // Set the start time
   this->play_dataset_from = goal->start_time;

@@ -34,6 +34,7 @@
 #include "pipeline_interfaces/msg/log_messages.hpp"
 #include "pipeline_interfaces/srv/initialize_decider.hpp"
 #include "pipeline_interfaces/srv/finalize_decider.hpp"
+#include "system_interfaces/srv/abort_session.hpp"
 
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
@@ -90,6 +91,8 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
+  void abort_session();
+
   void log_section_header(const std::string& title);
   void publish_python_logs(double sample_time, bool is_initialization);
 
@@ -122,6 +125,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
 
   rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
+  rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;

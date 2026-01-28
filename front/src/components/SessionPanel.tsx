@@ -71,12 +71,12 @@ export const SessionPanel: React.FC = () => {
   const handleAbortSession = () => {
     setIsLoading(true)
 
-    abortSession((success: boolean, message?: string) => {
+    abortSession((success: boolean) => {
       setIsLoading(false)
       if (success) {
         console.log('Session abort requested successfully')
       } else {
-        console.log('Failed to abort session:', message)
+        console.log('Failed to abort session')
       }
     })
   }

@@ -17,6 +17,7 @@
 #include "eeg_interfaces/srv/initialize_eeg_device_stream.hpp"
 
 #include "system_interfaces/msg/component_health.hpp"
+#include "system_interfaces/srv/abort_session.hpp"
 #include "system_interfaces/msg/streamer_state.hpp"
 
 #include "std_srvs/srv/trigger.hpp"
@@ -87,6 +88,8 @@ private:
 
   void set_device_state(EegDeviceState new_state);
 
+  void abort_session();
+
   void handle_start_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
       std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response);
@@ -123,6 +126,9 @@ private:
   rclcpp::Service<eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service;
   rclcpp::Service<eeg_interfaces::srv::StopStreaming>::SharedPtr stop_streaming_service;
   rclcpp::Service<eeg_interfaces::srv::InitializeEegDeviceStream>::SharedPtr initialize_service;
+
+  /* Service client for session abort */
+  rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   /* Streaming state */
   system_interfaces::msg::StreamerState::_state_type streamer_state = system_interfaces::msg::StreamerState::READY;

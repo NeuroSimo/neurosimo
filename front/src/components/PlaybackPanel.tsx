@@ -84,7 +84,7 @@ const OpenFolderButton = styled.button<{ disabled: boolean }>`
 `
 
 export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
-  const { eegInfo } = useContext(EegStreamContext)
+  const { eegDeviceInfo } = useContext(EegStreamContext)
   const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useParameters()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(PlaybackContext)
@@ -98,7 +98,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const [playbackIsPreprocessed, setPlaybackIsPreprocessedState] = useState<boolean>(false)
 
   const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
-  const isEegStreaming = eegInfo?.is_streaming || false
+  const isEegStreaming = eegDeviceInfo?.is_streaming || false
   const isElectron = !!(window as any).electronAPI
 
   // Fetch recording info when selected recording changes

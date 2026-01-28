@@ -73,7 +73,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     streamerState,
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(PipelineContext)
-  const { eegInfo } = useContext(EegStreamContext)
+  const { eegDeviceInfo } = useContext(EegStreamContext)
   const { activeProject } = useContext(ProjectContext)
   const { setSimulatorDataset, setSimulatorStartTime } = useParameters()
   const { sessionState } = useSession()
@@ -81,7 +81,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
 
   const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
-  const isEegStreaming = eegInfo?.is_streaming || false
+  const isEegStreaming = eegDeviceInfo?.is_streaming || false
   const isElectron = !!(window as any).electronAPI
 
   // Fetch dataset info when dataset changes

@@ -47,7 +47,7 @@ export const StatisticsProvider: React.FC<StatisticsProviderProps> = ({ children
 
     const droppedSamplesSubscriber = new Topic<Int32>({
       ros: ros,
-      name: '/pipeline/dropped_samples',
+      name: '/eeg_bridge/dropped_samples',
       messageType: 'std_msgs/Int32',
     })
 
@@ -56,7 +56,6 @@ export const StatisticsProvider: React.FC<StatisticsProviderProps> = ({ children
     })
 
     droppedSamplesSubscriber.subscribe((message) => {
-      console.log('Dropped samples:', message.data)
       setDroppedSamples(message.data)
     })
 

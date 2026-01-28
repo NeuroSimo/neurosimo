@@ -20,6 +20,9 @@
 #include "pipeline_interfaces/srv/initialize_trigger_timer.hpp"
 #include "pipeline_interfaces/srv/finalize_trigger_timer.hpp"
 
+#include "system_interfaces/msg/component_health.hpp"
+#include "std_msgs/msg/empty.hpp"
+
 
 class TriggerTimer : public rclcpp::Node {
 public:
@@ -33,8 +36,11 @@ private:
   rclcpp::Service<pipeline_interfaces::srv::FinalizeTriggerTimer>::SharedPtr finalize_service;
   rclcpp::Publisher<pipeline_interfaces::msg::PipelineLatency>::SharedPtr pipeline_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
+  rclcpp::TimerBase::SharedPtr heartbeat_timer;
 
   std::unique_ptr<LabJackInterface> labjack_manager;
 
@@ -65,6 +71,9 @@ private:
 
   void trigger_pulses_until_time(double_t sample_time);
   void measure_latency(bool latency_trigger, double_t sample_time);
+
+  void _publish_heartbeat();
+  void _publish_health_status(uint8_t health_level, const std::string& message);
 
   void handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_request_timed_trigger(

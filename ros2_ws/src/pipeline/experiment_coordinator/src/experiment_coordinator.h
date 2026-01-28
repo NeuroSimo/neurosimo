@@ -16,6 +16,7 @@
 #include "pipeline_interfaces/msg/experiment_state.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/srv/initialize_protocol.hpp"
+#include "system_interfaces/msg/component_health.hpp"
 
 #include "protocol.h"
 #include "protocol_loader.h"
@@ -36,6 +37,7 @@ private:
   // Publishers
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
 
   // Clients
@@ -56,7 +58,6 @@ private:
   experiment_coordinator::ExperimentState state;
   experiment_coordinator::ProtocolLoader protocol_loader;
   bool is_protocol_initialized = false;
-  bool error_occurred = false;
     
   /* Logger */
   rclcpp::Logger logger;
@@ -89,6 +90,7 @@ private:
   
   /* Component health */
   void publish_heartbeat();
+  void publish_health_status(uint8_t health_level, const std::string& message);
   
   /* Time utilities */
   double get_experiment_time(double sample_time);

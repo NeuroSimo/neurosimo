@@ -8,8 +8,12 @@
 #include "filesystem_utils/filesystem_utils.h"
 
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/empty.hpp"
+#include "system_interfaces/msg/component_health.hpp"
 
 using namespace std::chrono;
+
+const double_t HEARTBEAT_INTERVAL_SEC = 0.5;
 using namespace std::placeholders;
 
 const std::string SENSORY_STIMULUS_TOPIC = "/pipeline/sensory_stimulus";
@@ -58,6 +62,28 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePresenter>(
     "/pipeline/presenter/finalize",
     std::bind(&EegPresenter::handle_finalize_presenter, this, std::placeholders::_1, std::placeholders::_2));
+
+  /* Create QoS profile for latched topics */
+  auto status_qos = rclcpp::QoS(rclcpp::KeepLast(1));
+  status_qos.durability(rclcpp::DurabilityPolicy::TransientLocal);
+
+  /* Create heartbeat publisher */
+  this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
+    "/presenter/heartbeat",
+    10);
+
+  /* Create health publisher */
+  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+    "/presenter/health",
+    status_qos);
+
+  /* Create heartbeat timer */
+  this->heartbeat_timer = this->create_wall_timer(
+    std::chrono::duration<double>(HEARTBEAT_INTERVAL_SEC),
+    std::bind(&EegPresenter::_publish_heartbeat, this));
+
+  /* Publish initial READY state */
+  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
@@ -110,7 +136,7 @@ void EegPresenter::handle_initialize_presenter(
 
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Loading presenter: %s.", module_name.c_str());
-  RCLCPP_INFO(this->get_logger(), "");
+  RCLCPP_INFO(this->get_logger(), " ");
 
   // Initialize the presenter wrapper
   bool success = this->presenter_wrapper->initialize_module(
@@ -120,6 +146,8 @@ void EegPresenter::handle_initialize_presenter(
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                 "Failed to initialize");
     response->success = false;
     return;
   }
@@ -130,6 +158,9 @@ void EegPresenter::handle_initialize_presenter(
   // Mark as initialized
   this->is_initialized = true;
 
+  /* Publish ready health status */
+  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+
   RCLCPP_INFO(this->get_logger(), "Presenter initialized successfully: project=%s, module=%s",
               request->project_name.c_str(), request->module_filename.c_str());
 
@@ -137,7 +168,7 @@ void EegPresenter::handle_initialize_presenter(
 }
 
 void EegPresenter::handle_finalize_presenter(
-  const std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Request> request,
+  const std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Request> /* request */,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Response> response) {
 
   RCLCPP_INFO(this->get_logger(), "Received finalize request");
@@ -242,7 +273,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
     for (const auto &kv : stimulus->parameters) {
       RCLCPP_INFO(this->get_logger(), "    - %s: %s", kv.key.c_str(), kv.value.c_str());
     }
-    RCLCPP_INFO(this->get_logger(), "");  // blank line
+    RCLCPP_INFO(this->get_logger(), " ");  // blank line
   }
 
   // Process the stimulus using the presenter wrapper
@@ -254,6 +285,8 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");
     this->error_occurred = true;
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
+    return;
   }
 }
 
@@ -275,6 +308,18 @@ void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interf
     return;
   }
   this->sensory_stimuli.push(msg);
+}
+
+void EegPresenter::_publish_heartbeat() {
+  auto heartbeat = std_msgs::msg::Empty();
+  this->heartbeat_publisher->publish(heartbeat);
+}
+
+void EegPresenter::_publish_health_status(uint8_t health_level, const std::string& message) {
+  auto health = system_interfaces::msg::ComponentHealth();
+  health.health_level = health_level;
+  health.message = message;
+  this->health_publisher->publish(health);
 }
 
 int main(int argc, char *argv[]) {

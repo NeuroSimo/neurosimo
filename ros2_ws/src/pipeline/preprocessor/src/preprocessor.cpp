@@ -14,7 +14,7 @@ using namespace std::placeholders;
 
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
-const std::string HEARTBEAT_TOPIC = "/health/preprocessor/heartbeat";
+const std::string HEARTBEAT_TOPIC = "/preprocessor/heartbeat";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
@@ -26,6 +26,14 @@ const uint16_t EEG_QUEUE_LENGTH = 65535;
 EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_logger("preprocessor")) {
   /* Publisher for heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
+
+  /* Publisher for health. */
+  auto health_qos = rclcpp::QoS(rclcpp::KeepLast(1))
+    .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
+    .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+    "/preprocessor/health",
+    health_qos);
 
   /* Publisher for preprocessed EEG data. */
   this->preprocessed_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
@@ -155,6 +163,9 @@ void EegPreprocessor::handle_initialize_preprocessor(
   // Mark as initialized
   this->is_initialized = true;
 
+  // Publish READY health status
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %d Hz", request->stream_info.sampling_frequency);
@@ -211,6 +222,13 @@ bool EegPreprocessor::reset_state() {
 void EegPreprocessor::publish_heartbeat() {
   auto heartbeat = std_msgs::msg::Empty();
   this->heartbeat_publisher->publish(heartbeat);
+}
+
+void EegPreprocessor::publish_health_status(uint8_t health_level, const std::string& message) {
+  auto health = system_interfaces::msg::ComponentHealth();
+  health.health_level = health_level;
+  health.message = message;
+  this->health_publisher->publish(health);
 }
 
 void EegPreprocessor::publish_python_logs(double sample_time, bool is_initialization) {
@@ -321,6 +339,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
                  "Python call failed, not processing EEG sample at time %.3f (s).",
                  sample_time);
     this->error_occurred = true;
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
     return;
   }
 

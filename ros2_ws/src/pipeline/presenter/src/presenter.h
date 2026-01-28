@@ -19,6 +19,9 @@
 #include "pipeline_interfaces/srv/initialize_presenter.hpp"
 #include "pipeline_interfaces/srv/finalize_presenter.hpp"
 
+#include "system_interfaces/msg/component_health.hpp"
+#include "std_msgs/msg/empty.hpp"
+
 #include "project_interfaces/msg/filename_list.hpp"
 #include "project_interfaces/srv/set_module.hpp"
 
@@ -46,6 +49,8 @@ public:
 
 private:
   void publish_python_logs(double sample_time, bool is_initialization);
+  void _publish_heartbeat();
+  void _publish_health_status(uint8_t health_level, const std::string& message);
 
   void handle_initialize_presenter(
     const std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Request> request,
@@ -64,6 +69,10 @@ private:
   rclcpp::Subscription<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_subscriber;
 
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
+
+  rclcpp::TimerBase::SharedPtr heartbeat_timer;
 
   /* Service server for initialization */
   rclcpp::Service<pipeline_interfaces::srv::InitializePresenter>::SharedPtr initialize_service_server;

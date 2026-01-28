@@ -21,6 +21,8 @@
 #include "eeg_interfaces/msg/sample.hpp"
 #include "eeg_interfaces/msg/stream_info.hpp"
 
+#include "system_interfaces/msg/component_health.hpp"
+
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
 
@@ -81,6 +83,7 @@ private:
   bool reset_state();
 
   void publish_heartbeat();
+  void publish_health_status(uint8_t health_level, const std::string& message);
 
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
@@ -112,6 +115,7 @@ private:
 
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
 
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 

@@ -170,17 +170,15 @@ class SessionManagerNode(Node):
         self._stop_event = Event()
 
         # Publish initial idle state
-        self.publish_session_state(False, SessionState.STOPPED)
+        self.publish_session_state(SessionState.STOPPED)
 
         self.logger.info("Session Manager initialized")
 
     # Helper functions
-    def publish_session_state(self, is_running, stage, message=''):
+    def publish_session_state(self, state):
         """Publish current session state."""
         msg = SessionState()
-        msg.is_running = is_running
-        msg.stage = stage
-        msg.message = message
+        msg.state = state
         self.session_state_publisher.publish(msg)
 
     # Service callbacks
@@ -246,27 +244,27 @@ class SessionManagerNode(Node):
         session_id = list(uuid.uuid4().bytes)
 
         # Set session state to initializing
-        self.publish_session_state(True, SessionState.INITIALIZING)
+        self.publish_session_state(SessionState.INITIALIZING)
 
         # Fetch session parameters
         session_config = self.get_session_config()
         if session_config is None or not self.validate_session_config(session_config):
             self.logger.error('Failed to get or validate session parameters')
-            self.publish_session_state(False, SessionState.ERROR, 'Failed to get or validate session parameters')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Initialize data stream first to get stream info
         stream_info = self.initialize_stream(session_id, session_config)
         if stream_info is None:
             self.logger.error('Stream initialization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Stream initialization failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Initialize protocol
         if not self.initialize_protocol(session_id, session_config):
             self.logger.error('Protocol initialization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Protocol initialization failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Initialize presenter.
         #
@@ -274,99 +272,99 @@ class SessionManagerNode(Node):
         #       during initialization are properly queued.
         if not self.initialize_presenter(session_config, session_id, stream_info):
             self.logger.error('Presenter initialization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Presenter initialization failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Initialize decider
         if not self.initialize_decider(session_config, session_id, stream_info):
             self.logger.error('Decider initialization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Decider initialization failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Initialize preprocessor
         if not self.initialize_preprocessor(session_config, session_id, stream_info):
             self.logger.error('Preprocessor initialization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Preprocessor initialization failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Initialize stimulation tracer
         if not self.initialize_stimulation_tracer(session_id, session_config.data_source):
             self.logger.error('StimulationTracer initialization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'StimulationTracer initialization failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Initialize trigger timer
         if not self.initialize_trigger_timer(session_id):
             self.logger.error('TriggerTimer initialization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'TriggerTimer initialization failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Start recording
         if not self.start_recording(session_id, session_config, stream_info):
             self.logger.error('Recording start failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Recording start failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Start data streaming
         if not self.start_data_streaming(session_config, session_id):
             self.logger.error('Data streaming start failed')
             self.stop_recording(session_id)  # Clean up recording on failure
-            self.publish_session_state(False, SessionState.ERROR, 'Data streaming start failed')
-            return
+            self.publish_session_state(SessionState.STOPPED)
+            return False
 
         # Set session state to running
-        self.publish_session_state(True, SessionState.RUNNING)
+        self.publish_session_state(SessionState.RUNNING)
 
         # Run session loop
         while rclpy.ok() and not self._stop_event.wait(timeout=0.1):
             pass
 
-        self.publish_session_state(False, SessionState.FINALIZING)
+        self.publish_session_state(SessionState.FINALIZING)
 
         # Stop data streaming first
         if not self.stop_data_streaming(session_config, session_id):
             self.logger.error('Data streaming stop failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Data streaming stop failed')
+            self.publish_session_state(SessionState.STOPPED)
             return False
 
         # Stop recording
         if not self.stop_recording(session_id):
             self.logger.error('Recording stop failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Recording stop failed')
+            self.publish_session_state(SessionState.STOPPED)
             return False
 
         # Finalize presenter
         if not self.finalize_presenter(session_id):
             self.logger.error('Presenter finalization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Presenter finalization failed')
+            self.publish_session_state(SessionState.STOPPED)
             return False
 
         # Finalize decider
         if not self.finalize_decider(session_id):
             self.logger.error('Decider finalization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Decider finalization failed')
+            self.publish_session_state(SessionState.STOPPED)
             return False
 
         # Finalize preprocessor
         if not self.finalize_preprocessor(session_id):
             self.logger.error('Preprocessor finalization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'Preprocessor finalization failed')
+            self.publish_session_state(SessionState.STOPPED)
             return False
 
         # Finalize stimulation tracer
         if not self.finalize_stimulation_tracer(session_id):
             self.logger.error('StimulationTracer finalization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'StimulationTracer finalization failed')
+            self.publish_session_state(SessionState.STOPPED)
             return False
 
         # Finalize trigger timer
         if not self.finalize_trigger_timer(session_id):
             self.logger.error('TriggerTimer finalization failed')
-            self.publish_session_state(False, SessionState.ERROR, 'TriggerTimer finalization failed')
+            self.publish_session_state(SessionState.STOPPED)
             return False
 
         # Publish stopped state
-        self.publish_session_state(False, SessionState.STOPPED)
+        self.publish_session_state(SessionState.STOPPED)
 
         # Clear thread reference
         with self._thread_lock:

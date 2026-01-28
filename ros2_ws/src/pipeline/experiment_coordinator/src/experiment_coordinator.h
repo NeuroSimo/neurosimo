@@ -87,7 +87,7 @@ private:
   void start_stage(const experiment_coordinator::Stage& stage, double current_time);
   void reset_experiment_state();
   
-  /* Healthcheck */
+  /* Component health */
   void publish_heartbeat();
   
   /* Time utilities */

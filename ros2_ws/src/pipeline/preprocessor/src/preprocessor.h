@@ -118,11 +118,6 @@ private:
                       std::vector<DeferredProcessingRequest>,
                       std::greater<DeferredProcessingRequest>> deferred_processing_queue;
 
-  /* Healthcheck */
-  uint8_t status;
-  std::string status_message;
-  std::string actionable_message;
-
   /* When determining if a sample is ready to be processed, allow some tolerance to account
      for finite precision of floating point numbers. */
   static constexpr double_t TOLERANCE_S = 2 * pow(10, -5);

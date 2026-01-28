@@ -18,7 +18,7 @@
 
 #include "system_interfaces/msg/component_health.hpp"
 #include "system_interfaces/srv/abort_session.hpp"
-#include "system_interfaces/msg/streamer_state.hpp"
+#include "system_interfaces/msg/data_source_state.hpp"
 
 #include "std_srvs/srv/trigger.hpp"
 
@@ -84,7 +84,7 @@ private:
   void publish_heartbeat();
   void publish_health_status(uint8_t health_level, const std::string& message);
   void publish_device_info();
-  void publish_streamer_state();
+  void publish_data_source_state();
 
   void set_device_state(EegDeviceState new_state);
 
@@ -118,7 +118,7 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
-  rclcpp::Publisher<system_interfaces::msg::StreamerState>::SharedPtr streamer_state_publisher;
+  rclcpp::Publisher<system_interfaces::msg::DataSourceState>::SharedPtr data_source_state_publisher;
 
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
 
@@ -130,8 +130,8 @@ private:
   /* Service client for session abort */
   rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
-  /* Streaming state */
-  system_interfaces::msg::StreamerState::_state_type streamer_state = system_interfaces::msg::StreamerState::READY;
+  /* Data source state */
+  system_interfaces::msg::DataSourceState::_state_type data_source_state = system_interfaces::msg::DataSourceState::READY;
   bool is_session_start = false;
   bool is_session_end = false;
   

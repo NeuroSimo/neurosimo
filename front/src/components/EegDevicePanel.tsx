@@ -40,7 +40,7 @@ export const EegDevicePanel: React.FC = () => {
   const isRunning = bridgeState === EegBridgeStateValue.RUNNING
   const isLoading = bridgeState === EegBridgeStateValue.LOADING
 
-  const streamerStateLabel =
+  const dataSourceStateLabel =
     bridgeState === EegBridgeStateValue.RUNNING
       ? 'Running'
       : bridgeState === EegBridgeStateValue.LOADING
@@ -68,7 +68,7 @@ export const EegDevicePanel: React.FC = () => {
       </CompactRow>
       <CompactRow>
         <ConfigLabel>Status:</ConfigLabel>
-        <ConfigValue>{streamerStateLabel}</ConfigValue>
+        <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
     </EegDeviceContainer>
   )

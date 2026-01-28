@@ -115,8 +115,8 @@ void EegBridge::create_publishers() {
   this->device_info_publisher =
       this->create_publisher<eeg_interfaces::msg::EegDeviceInfo>(DEVICE_INFO_TOPIC, qos_persist_latest);
 
-  this->streamer_state_publisher =
-      this->create_publisher<system_interfaces::msg::StreamerState>("/eeg_bridge/state", qos_persist_latest);
+  this->data_source_state_publisher =
+      this->create_publisher<system_interfaces::msg::DataSourceState>("/eeg_bridge/state", qos_persist_latest);
 
   this->heartbeat_publisher =
     this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
@@ -149,7 +149,7 @@ void EegBridge::create_publishers() {
   }
 
   /* Publish initial states. */
-  publish_streamer_state();
+  publish_data_source_state();
   publish_device_info();
 }
 
@@ -159,10 +159,10 @@ void EegBridge::publish_device_info() {
   this->device_info_publisher->publish(device_info);
 }
 
-void EegBridge::publish_streamer_state() {
-  system_interfaces::msg::StreamerState msg;
-  msg.state = this->streamer_state;
-  this->streamer_state_publisher->publish(msg);
+void EegBridge::publish_data_source_state() {
+  system_interfaces::msg::DataSourceState msg;
+  msg.state = this->data_source_state;
+  this->data_source_state_publisher->publish(msg);
 }
 
 void EegBridge::set_device_state(EegDeviceState new_state) {
@@ -201,8 +201,8 @@ bool EegBridge::reset_state() {
   this->is_session_end = false;
   this->error_state = ErrorState::NO_ERROR;
 
-  this->streamer_state = system_interfaces::msg::StreamerState::READY;
-  publish_streamer_state();
+  this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+  publish_data_source_state();
 
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 
@@ -224,8 +224,8 @@ void EegBridge::handle_start_streaming(
     return;
   }
 
-  this->streamer_state = system_interfaces::msg::StreamerState::RUNNING;
-  publish_streamer_state();
+  this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
+  publish_data_source_state();
 
   this->is_session_start = true;
   response->success = true;
@@ -236,7 +236,7 @@ void EegBridge::handle_stop_streaming(
       std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
-  if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
+  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     response->success = true;
     return;
   }
@@ -310,7 +310,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
 void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   set_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
 
-  if (this->streamer_state != system_interfaces::msg::StreamerState::RUNNING) {
+  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
                           "Waiting for streaming to start...");
     return;

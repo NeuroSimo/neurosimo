@@ -6,7 +6,7 @@ import { faPlus, faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
 import { PipelineContext } from 'providers/PipelineProvider'
-import { useSession, SessionStage } from 'providers/SessionProvider'
+import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { CommittableTextInput } from 'components/CommittableTextInput'
 import { CommittableNumericInput } from 'components/CommittableNumericInput'
 import { CreateProjectModal } from 'components/CreateProjectModal'
@@ -49,7 +49,7 @@ export const ExperimentPanel: React.FC = () => {
   const [projects, setProjects] = useState<string[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
-  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
+  const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isElectron = !!(window as any).electronAPI
 
   useEffect(() => {

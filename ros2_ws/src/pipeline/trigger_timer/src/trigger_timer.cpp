@@ -216,8 +216,11 @@ void TriggerTimer::measure_latency(bool latency_trigger, double_t sample_time) {
 void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   double_t sample_time = msg->time;
 
+  // Update latest sample information for calculating stimulation horizon
+  this->latest_sample_time = sample_time;
+
   std::lock_guard<std::mutex> lock(queue_mutex);
-    
+
   trigger_pulses_until_time(sample_time);
   measure_latency(msg->latency_trigger, sample_time);
 }
@@ -255,12 +258,19 @@ void TriggerTimer::handle_request_timed_trigger(
   uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
     end_time.time_since_epoch()).count();
 
+  /* Calculate stimulation horizon. */
+  double_t stimulation_horizon = this->latest_sample_time - request->reference_sample_time;
+
+  /* Determine status. */
+  uint8_t status = is_labjack_connected ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED
+                                        : pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+
   /* Publish first DecisionTrace (scheduled or rejected). */
   auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
   decision_trace.session_id = request->session_id;
   decision_trace.decision_id = request->decision_id;
-  decision_trace.status = is_labjack_connected ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED
-                                               : pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+  decision_trace.status = status;
+  decision_trace.stimulation_horizon = stimulation_horizon;
   decision_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
   decision_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
 
@@ -283,6 +293,9 @@ void TriggerTimer::reset_state() {
   /* Reset latency state */
   this->current_latency = 0.0;
   this->last_latency_measurement_time = 0.0;
+
+  /* Reset latest sample information */
+  this->latest_sample_time = 0.0;
 }
 
 void TriggerTimer::handle_initialize_trigger_timer(

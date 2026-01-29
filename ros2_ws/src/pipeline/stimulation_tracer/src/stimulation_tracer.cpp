@@ -214,6 +214,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     if (trace.reference_sample_index != 0) final_trace.reference_sample_index = trace.reference_sample_index;
     if (trace.stimulate) final_trace.stimulate = trace.stimulate;
     if (trace.requested_stimulation_time != 0.0) final_trace.requested_stimulation_time = trace.requested_stimulation_time;
+    if (trace.stimulation_horizon != 0.0) final_trace.stimulation_horizon = trace.stimulation_horizon;
 
     /* Timing */
     if (trace.decider_duration != 0.0) final_trace.decider_duration = trace.decider_duration;

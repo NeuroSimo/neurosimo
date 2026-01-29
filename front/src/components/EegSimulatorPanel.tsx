@@ -21,7 +21,7 @@ import { PipelineContext } from 'providers/PipelineProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { useParameters } from 'providers/ParameterProvider'
-import { useSession, SessionStage } from 'providers/SessionProvider'
+import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext } from 'providers/HealthProvider'
 import { getDatasetInfoRos, DatasetInfo } from 'ros/eeg_simulator'
@@ -80,7 +80,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
 
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
 
-  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
+  const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
   const isElectron = !!(window as any).electronAPI
 

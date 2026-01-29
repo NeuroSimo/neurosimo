@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
-import { useSession, SessionStage } from 'providers/SessionProvider'
+import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
@@ -16,18 +16,16 @@ const Container = styled(StyledPanel)`
   left: 0;
 `
 
-const getStageDisplayText = (stage: SessionStage): string => {
-  switch (stage) {
-    case SessionStage.STOPPED:
+const getStateDisplayText = (stateValue: SessionStateValue): string => {
+  switch (stateValue) {
+    case SessionStateValue.STOPPED:
       return 'Stopped'
-    case SessionStage.INITIALIZING:
+    case SessionStateValue.INITIALIZING:
       return 'Initializing'
-    case SessionStage.RUNNING:
+    case SessionStateValue.RUNNING:
       return 'Running'
-    case SessionStage.FINALIZING:
+    case SessionStateValue.FINALIZING:
       return 'Finalizing'
-    case SessionStage.ERROR:
-      return 'Error'
     default:
       return 'Unknown'
   }
@@ -39,27 +37,23 @@ export const SessionPanel: React.FC = () => {
   const { recordingsList } = useContext(PlaybackContext)
   const { datasetList } = useContext(EegSimulatorContext)
   const { clearAllLogs } = useContext(PipelineContext)
-  const [isLoading, setIsLoading] = useState(false)
-  const [displayedStage, setDisplayedStage] = useState(sessionState.stage)
+  const [displayedState, setDisplayedState] = useState(sessionState.state)
 
-  /* Add 500ms hysteresis to prevent rapid flashing of stage changes,
-     as stages (like INITIALIZING, FINALIZING) may sometimes change very quickly. */
+  /* Add 500ms hysteresis to prevent rapid flashing of state changes,
+     as states (like INITIALIZING, FINALIZING) may sometimes change very quickly. */
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      setDisplayedStage(sessionState.stage)
+      setDisplayedState(sessionState.state)
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [sessionState.stage])
+  }, [sessionState.state])
 
   const handleStartSession = () => {
-    setIsLoading(true)
-
     // Clear pipeline logs before starting the session
     clearAllLogs()
 
     startSession((success: boolean, message?: string) => {
-      setIsLoading(false)
       if (success) {
         console.log('Session start requested successfully')
       } else {
@@ -69,10 +63,7 @@ export const SessionPanel: React.FC = () => {
   }
 
   const handleAbortSession = () => {
-    setIsLoading(true)
-
     abortSession((success: boolean) => {
-      setIsLoading(false)
       if (success) {
         console.log('Session abort requested successfully')
       } else {
@@ -82,7 +73,7 @@ export const SessionPanel: React.FC = () => {
   }
 
   const handleButtonClick = () => {
-    if (sessionState.isRunning) {
+    if (sessionState.state === SessionStateValue.RUNNING) {
       handleAbortSession()
     } else {
       handleStartSession()
@@ -90,20 +81,32 @@ export const SessionPanel: React.FC = () => {
   }
 
   const getButtonText = () => {
-    if (isLoading) {
-      return sessionState.isRunning ? 'Stopping...' : 'Starting...'
+    if (sessionState.state === SessionStateValue.INITIALIZING) {
+      return 'Starting...'
     }
-    return sessionState.isRunning ? 'Stop' : 'Start'
+    if (sessionState.state === SessionStateValue.FINALIZING) {
+      return 'Stopping...'
+    }
+    if (sessionState.state === SessionStateValue.STOPPED) {
+      return 'Start'
+    }
+    if (sessionState.state === SessionStateValue.RUNNING) {
+      return 'Stop'
+    }
+    return 'Unknown'
   }
 
-  // Disable start button if no data is available for the selected data source
-  const isStartDisabled = !sessionState.isRunning && (
+  // Disable button if no data is available for the selected data source
+  const isNoDataAvailable = sessionState.state !== SessionStateValue.RUNNING && (
     (dataSource === 'playback' && recordingsList.length === 0) ||
     (dataSource === 'simulator' && datasetList.length === 0)
   )
 
-  const ButtonComponent = sessionState.isRunning ? StyledRedButton : StyledButton
+  const isButtonDisabled = isNoDataAvailable ||
+    sessionState.state === SessionStateValue.INITIALIZING ||
+    sessionState.state === SessionStateValue.FINALIZING
 
+  const ButtonComponent = sessionState.state === SessionStateValue.RUNNING ? StyledRedButton : StyledButton
   return (
     <Container>
       <SmallerTitle>Session</SmallerTitle>
@@ -111,7 +114,7 @@ export const SessionPanel: React.FC = () => {
         <StateTitle>Control:</StateTitle>
         <ButtonComponent
           onClick={handleButtonClick}
-          disabled={isLoading || isStartDisabled}
+          disabled={isButtonDisabled}
           style={{ marginRight: '9px' }}
         >
           {getButtonText()}
@@ -120,7 +123,7 @@ export const SessionPanel: React.FC = () => {
 
       <StateRow>
         <StateTitle>State:</StateTitle>
-        <StateValue>{getStageDisplayText(displayedStage)}</StateValue>
+        <StateValue>{getStateDisplayText(displayedState)}</StateValue>
       </StateRow>
     </Container>
   )

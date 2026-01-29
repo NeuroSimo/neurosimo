@@ -7,7 +7,7 @@ import { StyledPanel, SmallerTitle, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { PipelineContext } from 'providers/PipelineProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
-import { useSession, SessionStage } from 'providers/SessionProvider'
+import { useSession, SessionStateValue } from 'providers/SessionProvider'
 
 const Container = styled(StyledPanel)`
   width: 490px;
@@ -74,7 +74,7 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
 }) => {
   const { sessionState } = useSession()
   const { activeProject } = useContext(ProjectContext)
-  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
+  const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isElectron = !!(window as any).electronAPI
 
   const handleModuleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {

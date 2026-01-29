@@ -1,18 +1,15 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
-import { startSessionRos, abortSessionRos, subscribeToSessionState, SessionState as SessionStateMessage } from 'ros/session'
+import { startSessionRos, abortSessionRos, subscribeToSessionState } from 'ros/session'
 
-export enum SessionStage {
+export enum SessionStateValue {
   STOPPED = 0,
   INITIALIZING = 1,
   RUNNING = 2,
   FINALIZING = 3,
-  ERROR = 4,
 }
 
 interface SessionState {
-  isRunning: boolean
-  stage: SessionStage
-  message: string
+  state: SessionStateValue
 }
 
 interface SessionContextType {
@@ -26,9 +23,7 @@ interface SessionContextType {
 const noopCallback = () => {}
 const defaultSessionState: SessionContextType = {
   sessionState: {
-    isRunning: false,
-    stage: SessionStage.STOPPED,
-    message: '',
+    state: SessionStateValue.STOPPED,
   },
   startSession: noopCallback,
   abortSession: noopCallback,
@@ -42,18 +37,14 @@ interface SessionProviderProps {
 
 export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) => {
   const [sessionState, setSessionState] = useState<SessionState>({
-    isRunning: false,
-    stage: SessionStage.STOPPED,
-    message: '',
+    state: SessionStateValue.STOPPED,
   })
 
   useEffect(() => {
     // Subscribe to session state topic for persistence across refreshes
-    const topic = subscribeToSessionState((state: SessionStateMessage) => {
+    const topic = subscribeToSessionState((state: SessionStateValue) => {
       setSessionState({
-        isRunning: state.is_running,
-        stage: state.stage,
-        message: state.message,
+        state: state,
       })
     })
 

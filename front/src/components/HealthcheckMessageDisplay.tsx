@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-import { HealthcheckContext, ComponentHealth } from 'providers/HealthcheckProvider'
+import { HealthcheckContext, ComponentHealth } from 'providers/HealthProvider'
 import { StyledPanel } from 'styles/General'
 
 const HealthcheckMessagePanel = styled(StyledPanel)`

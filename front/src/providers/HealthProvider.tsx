@@ -10,9 +10,9 @@ export const ComponentHealth = {
   UNKNOWN: 'unknown',
 } as const
 
+
 type ComponentHealthType = typeof ComponentHealth[keyof typeof ComponentHealth]
 
-interface HeartbeatMessage extends ROSLIB.Message {}
 
 interface ComponentHealthMessage extends ROSLIB.Message {
   health_level: number
@@ -57,11 +57,11 @@ const defaultHealthcheckState: HealthcheckContextType = {
 
 export const HealthcheckContext = React.createContext<HealthcheckContextType>(defaultHealthcheckState)
 
-interface HealthcheckProviderProps {
+interface HealthProviderProps {
   children: ReactNode
 }
 
-export const HealthcheckProvider: React.FC<HealthcheckProviderProps> = ({ children }) => {
+export const HealthProvider: React.FC<HealthProviderProps> = ({ children }) => {
   const [eegBridgeStatus, setEegBridgeStatus] = useState<ComponentHealth>({ ...defaultComponentHealth })
   const [eegSimulatorStatus, setEegSimulatorStatus] = useState<ComponentHealth>({ ...defaultComponentHealth })
   const [preprocessorStatus, setPreprocessorStatus] = useState<ComponentHealth>({ ...defaultComponentHealth })
@@ -126,49 +126,49 @@ export const HealthcheckProvider: React.FC<HealthcheckProviderProps> = ({ childr
 
   useEffect(() => {
     // Heartbeat subscribers
-    const eegBridgeHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const eegBridgeHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/eeg_bridge/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
-    const eegSimulatorHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const eegSimulatorHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/eeg_simulator/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
-    const preprocessorHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const preprocessorHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/essor/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
-    const deciderHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const deciderHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/decider/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
-    const experimentCoordinatorHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const experimentCoordinatorHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/experiment_coordinator/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
-    const resourceMonitorHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const resourceMonitorHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/resource_monitor/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
-    const presenterHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const presenterHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/presenter/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
-    const triggerTimerHeartbeatSubscriber = new Topic<HeartbeatMessage>({
+    const triggerTimerHeartbeatSubscriber = new Topic({
       ros: ros,
       name: '/trigger_timer/heartbeat',
       messageType: 'std_msgs/Empty',

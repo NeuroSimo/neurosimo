@@ -9,6 +9,7 @@ from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
 from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfig, AbortSession
+from std_srvs.srv import Trigger
 from system_interfaces.msg import SessionConfig
 from pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,

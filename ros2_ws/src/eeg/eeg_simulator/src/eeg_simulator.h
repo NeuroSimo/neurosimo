@@ -58,6 +58,7 @@ private:
 
   void publish_data_source_state();
   void stream_timer_callback();
+  void stop_streaming_timer();
   void handle_start_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
       std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response);

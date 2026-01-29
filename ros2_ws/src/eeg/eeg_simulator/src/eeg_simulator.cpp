@@ -84,9 +84,8 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     EEG_RAW_TOPIC,
     EEG_QUEUE_LENGTH);
 
-  /* Timer to drive streaming. */
-  this->stream_timer = this->create_wall_timer(STREAMING_INTERVAL,
-                                               std::bind(&EegSimulator::stream_timer_callback, this));
+  /* Timer to drive streaming - created/destroyed on demand to avoid CPU usage when idle. */
+  this->stream_timer = nullptr;
 
   /* Create a timer for publishing heartbeat. */
   this->heartbeat_publisher_timer = this->create_wall_timer(
@@ -219,6 +218,14 @@ void EegSimulator::publish_data_source_state() {
   this->data_source_state_publisher->publish(msg);
 }
 
+void EegSimulator::stop_streaming_timer() {
+  if (this->stream_timer) {
+    this->stream_timer->cancel();
+    this->stream_timer = nullptr;
+    RCLCPP_INFO(this->get_logger(), "Streaming timer stopped");
+  }
+}
+
 void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
   this->dataset_manager_->set_active_project(msg->data);
 
@@ -238,6 +245,14 @@ void EegSimulator::handle_start_streaming(
   this->is_session_start = true;
   this->is_session_end = false;
   this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
+  
+  /* Create the streaming timer to drive sample publication. */
+  if (!this->stream_timer) {
+    this->stream_timer = this->create_wall_timer(STREAMING_INTERVAL,
+                                                 std::bind(&EegSimulator::stream_timer_callback, this));
+    RCLCPP_INFO(this->get_logger(), "Streaming timer started (interval: %ld ms)", STREAMING_INTERVAL.count());
+  }
+  
   response->success = true;
   publish_data_source_state();
 }
@@ -253,6 +268,7 @@ void EegSimulator::handle_stop_streaming(
   }
 
   this->is_session_end = true;
+  stop_streaming_timer();
   response->success = true;
 }
 
@@ -273,6 +289,7 @@ void EegSimulator::stream_timer_callback() {
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to publish samples until target time. Stopping streaming.");
     this->data_source_state = system_interfaces::msg::DataSourceState::ERROR;
+    stop_streaming_timer();
     publish_data_source_state();
     return;
   }
@@ -396,6 +413,7 @@ bool EegSimulator::publish_until(double_t until_time) {
     if (is_session_end) {
       this->is_session_end = false;  // Reset the flag since we've handled it
       this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+      stop_streaming_timer();
       publish_data_source_state();
       return true;
     }

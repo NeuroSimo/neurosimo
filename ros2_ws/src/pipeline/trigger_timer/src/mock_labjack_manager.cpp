@@ -63,7 +63,7 @@ bool MockLabJackManager::trigger_output(const char* output_name) {
   if (strcmp(output_name, "FIO5") == 0) {
     trigger_type = "pulse_trigger";
   } else if (strcmp(output_name, "FIO4") == 0) {
-    trigger_type = "latency_trigger";
+    trigger_type = "loopback_trigger";
   } else {
     RCLCPP_ERROR(logger_, "Unknown output name: %s", output_name);
     return false;

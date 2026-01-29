@@ -302,7 +302,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.emg = adapter_sample.emg;
   sample.time = adapter_sample.time;
   sample.pulse_trigger = adapter_sample.trigger_a;
-  sample.latency_trigger = adapter_sample.trigger_b;
+  sample.loopback_trigger = adapter_sample.trigger_b;
   
   return sample;
 }
@@ -353,7 +353,7 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   this->eeg_sample_publisher->publish(sample);
 
   // Log latency trigger when present
-  if (sample.latency_trigger) {
+  if (sample.loopback_trigger) {
     RCLCPP_DEBUG(this->get_logger(), "Received latency trigger at time: %.4f s.", sample.time);
   }
   

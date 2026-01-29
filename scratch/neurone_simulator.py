@@ -84,7 +84,7 @@ class NeurOneSimulator:
 
         # Trigger flags for the next sample
         self.next_pulse_trigger = False
-        self.next_latency_trigger = False
+        self.next_loopback_trigger = False
         self.trigger_lock = threading.Lock()
 
         # Generate some realistic channel configurations
@@ -136,8 +136,8 @@ class NeurOneSimulator:
                 with self.trigger_lock:
                     if message == "pulse_trigger":
                         self.next_pulse_trigger = True
-                    elif message == "latency_trigger":
-                        self.next_latency_trigger = True
+                    elif message == "loopback_trigger":
+                        self.next_loopback_trigger = True
 
         except socket.timeout:
             pass  # Timeout is expected
@@ -187,7 +187,7 @@ class NeurOneSimulator:
         print(f"Sending measurement start packet: {self.total_channels} channels, {self.sampling_rate} Hz")
         self.sock.sendto(packet, (self.device_ip, self.port))
 
-    def generate_sample_data(self, channel_index, pulse_trigger=False, latency_trigger=False):
+    def generate_sample_data(self, channel_index, pulse_trigger=False, loopback_trigger=False):
         """Generate realistic EEG/EMG sample data"""
         t = self.sample_index / self.sampling_rate
 
@@ -208,7 +208,7 @@ class NeurOneSimulator:
             trigger_value = 0
             if pulse_trigger:
                 trigger_value |= (1 << 3)  # Set bit 3 for pulse trigger
-            if latency_trigger:
+            if loopback_trigger:
                 trigger_value |= (1 << 1)  # Set bit 1 for latency trigger
 
             return trigger_value
@@ -240,14 +240,14 @@ class NeurOneSimulator:
         # Check for trigger flags and include them in the sample data
         with self.trigger_lock:
             pulse_trigger = self.next_pulse_trigger
-            latency_trigger = self.next_latency_trigger
+            loopback_trigger = self.next_loopback_trigger
             # Reset flags after reading
             self.next_pulse_trigger = False
-            self.next_latency_trigger = False
+            self.next_loopback_trigger = False
 
         # Sample data (3 bytes per channel, big-endian)
         for i in range(self.total_channels):
-            sample_value = self.generate_sample_data(i, pulse_trigger, latency_trigger)
+            sample_value = self.generate_sample_data(i, pulse_trigger, loopback_trigger)
             sample_bytes = self.int32_to_int24_bytes(sample_value)
             offset = SamplesPacketFieldIndex.SAMPLE_SAMPLES + 3 * i
             packet[offset:offset+3] = sample_bytes

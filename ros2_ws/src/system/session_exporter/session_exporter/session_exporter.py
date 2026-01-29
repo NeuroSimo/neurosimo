@@ -27,7 +27,7 @@ DATA_TYPE_TO_TOPIC = {
     ExportDataType.RAW_EEG: '/eeg/raw',
     ExportDataType.ENRICHED_EEG: '/eeg/enriched',
     ExportDataType.PREPROCESSED_EEG: '/eeg/preprocessed',
-    ExportDataType.STIMULATION_DECISIONS: '/pipeline/decision_info',
+    ExportDataType.STIMULATION_DECISIONS: '/pipeline/decision_trace/final',
     ExportDataType.DECIDER_LOGS: '/pipeline/decider/log',
     ExportDataType.PREPROCESSOR_LOGS: '/pipeline/preprocessor/log',
     ExportDataType.PRESENTER_LOGS: '/pipeline/presenter/log',
@@ -78,15 +78,49 @@ TOPIC_TO_FIELDS = {
     '/eeg/preprocessed': EEG_FIELDS_PREPROCESSED,
 }
 
-# Decision info export fields
-DECISION_INFO_FIELDS = [
-    'decision_time',
+# Decision trace export fields
+DECISION_TRACE_FIELDS = [
+    'decision_id',
+    'status',
+    'reference_sample_time',
+    'reference_sample_index',
     'stimulate',
-    'feasible',
-    'decider_latency',
-    'preprocessor_latency',
-    'total_latency',
+    'requested_stimulation_time',
+    'decider_duration',
+    'preprocessor_duration',
+    'system_time_decider_received',
+    'system_time_decider_finished',
+    'system_time_trigger_timer_received',
+    'system_time_trigger_timer_finished',
+    'system_time_hardware_fired',
+    'sample_time_at_firing',
+    'pipeline_latency_at_firing',
+    'latency_corrected_time_at_firing',
+    'actual_stimulation_time',
+    'actual_stimulation_sample_index',
+    'timing_error',
+    'pulse_confirmed',
+    'pulse_confirmation_method',
 ]
+
+# Status mapping for human-readable export
+DECISION_TRACE_STATUS_MAP = {
+    0: 'decided_no',
+    1: 'decided_yes',
+    2: 'scheduled',
+    3: 'rejected',
+    4: 'fired',
+    5: 'pulse_observed',
+    6: 'missed',
+    7: 'error',
+}
+
+# Pulse confirmation method mapping for human-readable export
+DECISION_TRACE_PULSE_CONFIRMATION_MAP = {
+    0: 'none',
+    1: 'eeg_trigger',
+    2: 'trigger_timer_fire',
+}
 
 # Log export fields
 LOG_FIELDS = [
@@ -333,8 +367,8 @@ class SessionExporterNode(Node):
             
             if topic in ['/eeg/raw', '/eeg/enriched', '/eeg/preprocessed']:
                 writers[topic] = self._create_eeg_writer(output_file, topic)
-            elif topic == '/pipeline/decision_info':
-                writers[topic] = self._create_decision_info_writer(output_file)
+            elif topic == '/pipeline/decision_trace/final':
+                writers[topic] = self._create_decision_trace_writer(output_file)
             elif topic in ['/pipeline/decider/log', '/pipeline/preprocessor/log', '/pipeline/presenter/log']:
                 writers[topic] = self._create_log_writer(output_file)
             elif topic == '/pipeline/sensory_stimulus':
@@ -388,8 +422,8 @@ class SessionExporterNode(Node):
             
             if topic_name in ['/eeg/raw', '/eeg/enriched', '/eeg/preprocessed']:
                 self._write_eeg_message(writer_info, timestamp, msg)
-            elif topic_name == '/pipeline/decision_info':
-                self._write_decision_info_message(writer_info, timestamp, msg)
+            elif topic_name == '/pipeline/decision_trace/final':
+                self._write_decision_trace_message(writer_info, timestamp, msg)
             elif topic_name in ['/pipeline/decider/log', '/pipeline/preprocessor/log', '/pipeline/presenter/log']:
                 self._write_log_message(writer_info, timestamp, msg)
             elif topic_name == '/pipeline/sensory_stimulus':
@@ -456,10 +490,10 @@ class SessionExporterNode(Node):
         
         writer_info['writer'].writerow(row_data)
 
-    def _create_decision_info_writer(self, output_file):
-        """Create a CSV writer for decision info messages."""
+    def _create_decision_trace_writer(self, output_file):
+        """Create a CSV writer for decision trace messages."""
         f = open(output_file, 'w', newline='')
-        writer = csv.DictWriter(f, fieldnames=DECISION_INFO_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=DECISION_TRACE_FIELDS)
         writer.writeheader()
         return {
             'file': f,
@@ -467,9 +501,22 @@ class SessionExporterNode(Node):
             'path': output_file,
         }
 
-    def _write_decision_info_message(self, writer_info, timestamp, msg):
-        """Write a single decision info message to CSV."""
-        row_data = {field: getattr(msg, field) for field in DECISION_INFO_FIELDS}
+    def _write_decision_trace_message(self, writer_info, timestamp, msg):
+        """Write a single decision trace message to CSV."""
+        row_data = {}
+        for field in DECISION_TRACE_FIELDS:
+            value = getattr(msg, field)
+            # Convert session_id array to string representation
+            if field == 'session_id':
+                row_data[field] = ''.join(f'{b:02x}' for b in value)
+            # Convert status to human-readable text
+            elif field == 'status':
+                row_data[field] = DECISION_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
+            # Convert pulse_confirmation_method to human-readable text
+            elif field == 'pulse_confirmation_method':
+                row_data[field] = DECISION_TRACE_PULSE_CONFIRMATION_MAP.get(value, f'unknown_{value}')
+            else:
+                row_data[field] = value
         writer_info['writer'].writerow(row_data)
 
     def _create_log_writer(self, output_file):

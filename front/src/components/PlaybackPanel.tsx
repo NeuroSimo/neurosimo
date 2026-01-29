@@ -18,7 +18,7 @@ import {
 
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useParameters } from 'providers/ParameterProvider'
-import { useSession, SessionStage } from 'providers/SessionProvider'
+import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { exportSessionRos } from 'ros/session'
@@ -97,7 +97,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const [playbackBagFilename, setPlaybackBagFilenameState] = useState<string>('')
   const [playbackIsPreprocessed, setPlaybackIsPreprocessedState] = useState<boolean>(false)
 
-  const isSessionRunning = sessionState.stage !== SessionStage.STOPPED
+  const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
   const isElectron = !!(window as any).electronAPI
 

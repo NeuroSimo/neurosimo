@@ -1,13 +1,7 @@
 import ROSLIB from 'roslib'
 import { ros } from './ros'
-import { SessionStage } from 'providers/SessionProvider'
+import { SessionStateValue } from 'providers/SessionProvider'
 import { ExportDataType } from 'components/ExportModal'
-
-export interface SessionState extends ROSLIB.Message {
-  is_running: boolean
-  stage: SessionStage
-  message: string
-}
 
 /* Session services */
 const startSessionService = new ROSLIB.Service({
@@ -74,10 +68,10 @@ export const abortSessionRos = (
 }
 
 export const subscribeToSessionState = (
-  callback: (state: SessionState) => void
+  callback: (state: SessionStateValue) => void
 ): ROSLIB.Topic => {
   sessionStateTopic.subscribe((message: ROSLIB.Message) => {
-    callback(message as SessionState)
+    callback((message as any).state)
   })
   return sessionStateTopic
 }

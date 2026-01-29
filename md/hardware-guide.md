@@ -54,12 +54,12 @@ on Amazon.
 
 The LabJack outputs used are:
 
-- FIO5: TMS trigger
-- FIO4: Latency measurement trigger
+- FIO4: TMS trigger
+- FIO5: Loopback trigger
 
 Overall, the setup looks like this:
 
-LabJack T4 -> LJTick DigitalOut5V (connected to FIO5, FIO4, and GND) -> Converter cable -> BNC cable -> TMS device
+LabJack T4 -> LJTick DigitalOut5V (connected to FIO4, FIO5, and GND) -> Converter cable -> BNC cable -> TMS device
 
 After LabJack T4 is connected to the computer via USB, it is automatically detected by NeuroSimo. It can be checked
 by selecting 'example' decider in the user interface, setting up the EEG simulator to stream data, and pressing

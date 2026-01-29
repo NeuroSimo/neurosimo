@@ -5,6 +5,7 @@ import theme from 'styles/theme'
 import { ParameterProvider } from './ParameterProvider'
 import { ProjectProvider } from './ProjectProvider'
 import { PipelineConfigProvider } from './PipelineConfigProvider'
+import { PipelineProvider } from './PipelineProvider'
 import { LogProvider } from './LogProvider'
 import { ExperimentProvider } from './ExperimentProvider'
 import { EegStreamProvider } from './EegStreamProvider'
@@ -26,7 +27,8 @@ const Providers: React.FC<Props> = ({ children }) => {
       <ParameterProvider>
         <ProjectProvider>
           <PipelineConfigProvider>
-            <LogProvider>
+            <PipelineProvider>
+              <LogProvider>
               <ExperimentProvider>
                 <EegStreamProvider>
               <StatisticsProvider>
@@ -43,8 +45,9 @@ const Providers: React.FC<Props> = ({ children }) => {
                 </EegSimulatorProvider>
               </StatisticsProvider>
                 </EegStreamProvider>
-              </ExperimentProvider>
-            </LogProvider>
+                </ExperimentProvider>
+              </LogProvider>
+            </PipelineProvider>
           </PipelineConfigProvider>
         </ProjectProvider>
       </ParameterProvider>

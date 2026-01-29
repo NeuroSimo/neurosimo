@@ -53,6 +53,11 @@ const Panel = styled(StyledPanel)`
   z-index: 1000;
 `
 
+const VariableContentContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+`
+
 export const ExperimentStatePanel: React.FC = () => {
   const { experimentState } = useContext(ExperimentContext)
 
@@ -100,7 +105,7 @@ export const ExperimentStatePanel: React.FC = () => {
       <Panel>
         <ConfigRow>
           <ConfigLabel>Status:</ConfigLabel>
-          <ConfigLabel>{experimentState?.ongoing ? (isPaused ? 'Paused' : 'Running') : 'Idle'}</ConfigLabel>
+          <ConfigLabel>{experimentState?.ongoing ? (isPaused ? 'Paused' : (experimentState.in_rest ? 'Rest' : 'Running')) : 'Idle'}</ConfigLabel>
         </ConfigRow>
         <ConfigRow>
           <ConfigLabel>Stage:</ConfigLabel>
@@ -113,18 +118,39 @@ export const ExperimentStatePanel: React.FC = () => {
         <ConfigRow>
           <ConfigLabel>Trial:</ConfigLabel>
           <ConfigLabel>
-            {experimentState ? `${experimentState.trial}/${experimentState.total_trials_in_stage || 0}` : '—'}
+            {experimentState ? (experimentState.in_rest ? '—' : `${experimentState.trial}/${experimentState.total_trials_in_stage || 0}`) : '—'}
           </ConfigLabel>
         </ConfigRow>
         <ConfigRow>
           <ConfigLabel>Experiment time:</ConfigLabel>
           <ConfigLabel>{formatSeconds(experimentState?.experiment_time)}</ConfigLabel>
         </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Stage elapsed:</ConfigLabel>
-          <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
-        </ConfigRow>
-        <br />
+        <VariableContentContainer>
+          {experimentState?.in_rest ? (
+            <>
+              <ConfigRow>
+                <ConfigLabel>Rest elapsed:</ConfigLabel>
+                <ConfigLabel>{formatSeconds(experimentState.rest_elapsed)}</ConfigLabel>
+              </ConfigRow>
+              <ConfigRow>
+                <ConfigLabel>Rest remaining:</ConfigLabel>
+                <ConfigLabel>{formatSeconds(experimentState.rest_remaining)}</ConfigLabel>
+              </ConfigRow>
+            </>
+          ) : (
+            <>
+              <ConfigRow>
+                <ConfigLabel>Stage elapsed:</ConfigLabel>
+                <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
+              </ConfigRow>
+              <ConfigRow style={{ visibility: 'hidden' }}>
+                <ConfigLabel>&nbsp;</ConfigLabel>
+                <ConfigLabel>&nbsp;</ConfigLabel>
+              </ConfigRow>
+            </>
+          )}
+        </VariableContentContainer>
+        <div style={{ height: '14px' }} />
         <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
           <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing}>
             {pauseResumeLabel}

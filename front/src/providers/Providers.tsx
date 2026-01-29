@@ -9,7 +9,7 @@ import { EegStreamProvider } from './EegStreamProvider'
 import { StatisticsProvider } from './StatisticsProvider'
 import { EegSimulatorProvider } from './EegSimulatorProvider'
 import { EegBridgeProvider } from './EegBridgeProvider'
-import { HealthcheckProvider } from './HealthcheckProvider'
+import { HealthProvider } from './HealthProvider'
 import { DiskStatusProvider } from './DiskStatusProvider'
 import { SessionProvider } from './SessionProvider'
 import { PlaybackProvider } from './PlaybackProvider'
@@ -29,11 +29,11 @@ const Providers: React.FC<Props> = ({ children }) => {
                 <EegSimulatorProvider>
                   <EegBridgeProvider>
                     <SessionProvider>
-                      <HealthcheckProvider>
+                      <HealthProvider>
                         <DiskStatusProvider>
                           <PlaybackProvider>{children}</PlaybackProvider>
                         </DiskStatusProvider>
-                      </HealthcheckProvider>
+                      </HealthProvider>
                     </SessionProvider>
                   </EegBridgeProvider>
                 </EegSimulatorProvider>

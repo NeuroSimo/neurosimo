@@ -6,13 +6,13 @@ import './App.css'
 
 import Providers from './providers/Providers'
 import { EegSimulatorProvider } from './providers/EegSimulatorProvider'
-import { HealthcheckProvider } from './providers/HealthcheckProvider'
+import { HealthProvider } from './providers/HealthProvider'
 import { PipelineProvider } from './providers/PipelineProvider'
 import { EegStreamProvider } from './providers/EegStreamProvider'
 import { StatisticsProvider } from './providers/StatisticsProvider'
 
 import { HealthcheckMessageDisplay } from 'components/HealthcheckMessageDisplay'
-import { HealthcheckStatusDisplay } from 'components/HealthcheckStatusDisplay'
+import { HealthDisplay } from 'components/HealthDisplay'
 import { PipelineView } from 'views/PipelineView'
 import { DashboardView } from 'views/DashboardView'
 import { ProjectProvider } from 'providers/ProjectProvider'
@@ -31,7 +31,7 @@ const App = () => {
 
   return (
     <Providers>
-      <HealthcheckStatusDisplay />
+      <HealthDisplay />
       <HealthcheckMessageDisplay />
       <Wrapper>
         <PipelineView />

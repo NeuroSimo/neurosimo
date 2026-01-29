@@ -23,7 +23,7 @@ import { ProjectContext } from 'providers/ProjectProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { useSession, SessionStage } from 'providers/SessionProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
-import { HealthcheckContext, HealthcheckStatus } from 'providers/HealthcheckProvider'
+import { HealthcheckContext } from 'providers/HealthProvider'
 import { getDatasetInfoRos, DatasetInfo } from 'ros/eeg_simulator'
 
 const SimulatorPanel = styled(StyledPanel)`
@@ -65,7 +65,7 @@ const OpenFolderButton = styled.button<{ disabled: boolean }>`
 
 
 export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
-  const { eegSimulatorHealthcheck } = useContext(HealthcheckContext)
+  const { eegSimulatorStatus } = useContext(HealthcheckContext)
   const {
     datasetList,
     dataset,

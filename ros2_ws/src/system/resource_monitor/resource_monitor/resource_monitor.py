@@ -106,12 +106,12 @@ class ResourceMonitorNode(Node):
         if not is_ok:
             self._publish_health_status(
                 ComponentHealth.ERROR,
-                f'Critical disk space: {usage.free / (1024**3):.1f} GiB free'
+                f'Critical disk space'
             )
         elif usage.free < self._warning_threshold_bytes:
             self._publish_health_status(
                 ComponentHealth.DEGRADED,
-                f'Low disk space: {usage.free / (1024**3):.1f} GiB free'
+                f'Low disk space'
             )
         else:
             self._publish_health_status(ComponentHealth.READY, '')

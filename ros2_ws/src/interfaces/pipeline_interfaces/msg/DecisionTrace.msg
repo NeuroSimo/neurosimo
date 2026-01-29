@@ -56,7 +56,7 @@ uint64 system_time_trigger_timer_finished
 uint64 system_time_hardware_fired    # steady clock ns
 
 float64 sample_time_at_firing              # seconds since recording start
-float64 trigger_loopback_latency_at_firing
+float64 loopback_latency_at_firing
 float64 latency_corrected_time_at_firing
 
 # ----------------------------------------------------------------------------

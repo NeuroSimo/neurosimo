@@ -529,7 +529,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   
   msg.stage_index = static_cast<uint32_t>(stage_index);
   msg.total_stages = static_cast<uint32_t>(total_stages);
-  msg.trial = state.trial;
+  msg.trial = state.in_rest ? 0 : state.trial;
   msg.total_trials_in_stage = total_trials_in_stage;
   
   /* Stage timing */

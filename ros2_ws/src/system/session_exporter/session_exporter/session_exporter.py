@@ -86,6 +86,7 @@ DECISION_TRACE_FIELDS = [
     'reference_sample_index',
     'stimulate',
     'requested_stimulation_time',
+    'stimulation_horizon',
     'decider_duration',
     'preprocessor_duration',
     'decision_path_latency',

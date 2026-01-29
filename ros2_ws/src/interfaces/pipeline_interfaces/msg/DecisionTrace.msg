@@ -50,6 +50,8 @@ uint64 system_time_decider_finished  # steady clock ns
 # ----------------------------------------------------------------------------
 # TriggerTimer timing (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
+float64 stimulation_horizon          # how near in the future we can stimulate? In seconds.
+
 uint64 system_time_trigger_timer_received
 uint64 system_time_trigger_timer_finished
 

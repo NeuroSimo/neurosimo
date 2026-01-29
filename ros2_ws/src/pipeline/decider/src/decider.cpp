@@ -591,6 +591,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   request_msg->timed_trigger = *timed_trigger;
   request_msg->session_id = this->session_id;
   request_msg->decision_id = this->decision_id;
+  request_msg->reference_sample_time = sample_time;
   this->request_timed_trigger(request_msg);
 
   RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", timed_trigger->time);

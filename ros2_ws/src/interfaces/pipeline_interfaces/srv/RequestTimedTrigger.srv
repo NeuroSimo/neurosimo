@@ -3,5 +3,6 @@ uint8[16] session_id
 uint64 decision_id
 
 TimedTrigger timed_trigger
+float64 reference_sample_time  # seconds since recording start
 ---
 bool success

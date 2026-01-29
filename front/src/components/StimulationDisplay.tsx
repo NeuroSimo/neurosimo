@@ -34,116 +34,112 @@ const StimulationPanel = styled(StyledPanel)`
   z-index: 1000;
 `
 
+const statusLabels = {
+  0: 'No decision',
+  1: 'Decided yes',
+  2: 'Scheduled',
+  3: 'Rejected',
+  4: 'Fired',
+  5: 'Pulse observed',
+  6: 'Missed',
+  7: 'Error'
+}
+
 export const StimulationDisplay: React.FC = () => {
   const { pipelineLatency, setPipelineLatency } = useContext(PipelineContext)
   const { decisionTrace } = useContext(PipelineContext)
 
-  const [positiveDecision, setPositiveDecision] = useState<any>(null)
-  const [latestDecision, setLatestDecision] = useState<any>(null)
-
-  useEffect(() => {
-    console.log('decisionTrace', decisionTrace)
-    if (decisionTrace) {
-      // Update the latest decision
-      setLatestDecision(decisionTrace)
-
-      // Update positive decision if `stimulate` is true
-      if (decisionTrace.stimulate) {
-        setPositiveDecision(decisionTrace)
-      }
-    }
-  }, [decisionTrace])
-
   const formattedLatency = pipelineLatency ? (pipelineLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
 
-  // Latest Decision Stats
-  const formattedLatestSampleTime = latestDecision?.sample_time
-    ? latestDecision.sample_time.toFixed(1) + ' s'
+  // Decision Stats
+  const formattedStatus = decisionTrace ? statusLabels[decisionTrace.status as keyof typeof statusLabels] || 'Unknown' : '\u2013'
+
+  const formattedReferenceSampleTime = decisionTrace?.reference_sample_time
+    ? decisionTrace.reference_sample_time.toFixed(1) + ' s'
     : '\u2013'
 
-  const formattedLatestDeciderProcessingDuration = latestDecision?.decider_processing_duration
-    ? (latestDecision.decider_processing_duration * 1000).toFixed(1) + ' ms'
+  const formattedDeciderDuration = decisionTrace?.decider_duration
+    ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedLatestPreprocessorProcessingDuration = latestDecision?.preprocessor_processing_duration
-    ? (latestDecision.preprocessor_processing_duration * 1000).toFixed(1) + ' ms'
+  const formattedPreprocessorDuration = decisionTrace?.preprocessor_duration
+    ? (decisionTrace.preprocessor_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedLatestTotalLatency = latestDecision?.total_latency
-    ? (latestDecision.total_latency * 1000).toFixed(1) + ' ms'
+  const formattedRequestedStimulationTime = decisionTrace?.requested_stimulation_time
+    ? decisionTrace.requested_stimulation_time.toFixed(1) + ' s'
     : '\u2013'
 
-  // Positive Decision Stats
-  const formattedPositiveSampleTime = positiveDecision?.sample_time
-    ? positiveDecision.sample_time.toFixed(1) + ' s'
+  const formattedActualStimulationTime = decisionTrace?.actual_stimulation_time
+    ? decisionTrace.actual_stimulation_time.toFixed(1) + ' s'
     : '\u2013'
 
-  const formattedPositiveDeciderProcessingDuration = positiveDecision?.decider_processing_duration
-    ? (positiveDecision.decider_processing_duration * 1000).toFixed(1) + ' ms'
+  const formattedTimingError = decisionTrace?.timing_error !== undefined
+    ? (decisionTrace.timing_error * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedPositivePreprocessorProcessingDuration = positiveDecision?.preprocessor_processing_duration
-    ? (positiveDecision.preprocessor_processing_duration * 1000).toFixed(1) + ' ms'
-    : '\u2013'
-
-  const formattedPositiveTotalLatency = positiveDecision?.total_latency
-    ? (positiveDecision.total_latency * 1000).toFixed(1) + ' ms'
-    : '\u2013'
+  const formattedPulseConfirmed = decisionTrace ? (decisionTrace.pulse_confirmed ? 'Yes' : 'No') : '\u2013'
 
   return (
     <>
       <StimulationPanelTitle>Stimulation</StimulationPanelTitle>
       <StimulationPanel>
-        {/* Latest Decision Info */}
+        {/* Decision trace */}
         <StateRow>
-        <StateTitle>Decisions:</StateTitle>
-      </StateRow>
-      <StateRow>
-        <IndentedStateTitle>Latest time</IndentedStateTitle>
-        <StateValue>{formattedLatestSampleTime}</StateValue>
-      </StateRow>
-      <StateRow>
-        <IndentedStateTitle>Latency</IndentedStateTitle>
-      </StateRow>
-      <StateRow>
-        <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
-        <StateValue>{formattedLatestDeciderProcessingDuration}</StateValue>
-      </StateRow>
-      <StateRow>
-        <DoubleIndentedStateTitle>Preprocessor</DoubleIndentedStateTitle>
-        <StateValue>{formattedLatestPreprocessorProcessingDuration}</StateValue>
-      </StateRow>
-      <StateRow>
-        <DoubleIndentedStateTitle>Total</DoubleIndentedStateTitle>
-        <StateValue>{formattedLatestTotalLatency}</StateValue>
-      </StateRow>
-      <br />
-      {/* Positive Decision Info */}
-      <StateRow>
-        <IndentedStateTitle>Latest stimulation time</IndentedStateTitle>
-        <StateValue>{formattedPositiveSampleTime}</StateValue>
-      </StateRow>
-      <StateRow>
-        <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
-        <StateValue>{formattedPositiveDeciderProcessingDuration}</StateValue>
-      </StateRow>
-      <StateRow>
-        <DoubleIndentedStateTitle>Preprocessor</DoubleIndentedStateTitle>
-        <StateValue>{formattedPositivePreprocessorProcessingDuration}</StateValue>
-      </StateRow>
-      <StateRow>
-        <DoubleIndentedStateTitle>Total</DoubleIndentedStateTitle>
-        <StateValue>{formattedPositiveTotalLatency}</StateValue>
-      </StateRow>
-      <br />
-      {/* Timing Info */}
-      <StateRow>
-        <StateTitle>Timing:</StateTitle>
-      </StateRow>
-      <StateRow>
-        <IndentedStateTitle>Latency</IndentedStateTitle>
-        <StateValue>{formattedLatency}</StateValue>
-      </StateRow>
+          <StateTitle>Status:</StateTitle>
+          <StateValue>{formattedStatus}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Stimulate</IndentedStateTitle>
+          <StateValue>{decisionTrace ? (decisionTrace.stimulate ? 'Yes' : 'No') : '\u2013'}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Reference time</IndentedStateTitle>
+          <StateValue>{formattedReferenceSampleTime}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Requested time</IndentedStateTitle>
+          <StateValue>{formattedRequestedStimulationTime}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Actual time</IndentedStateTitle>
+          <StateValue>{formattedActualStimulationTime}</StateValue>
+        </StateRow>
+        <br />
+        {/* Processing Times */}
+        <StateRow>
+          <StateTitle>Processing:</StateTitle>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Decider</IndentedStateTitle>
+          <StateValue>{formattedDeciderDuration}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Preprocessor</IndentedStateTitle>
+          <StateValue>{formattedPreprocessorDuration}</StateValue>
+        </StateRow>
+        <br />
+        {/* Pulse Info */}
+        <StateRow>
+          <StateTitle>Pulse:</StateTitle>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Confirmed</IndentedStateTitle>
+          <StateValue>{formattedPulseConfirmed}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Timing error</IndentedStateTitle>
+          <StateValue>{formattedTimingError}</StateValue>
+        </StateRow>
+        <br />
+        {/* Timing Info */}
+        <StateRow>
+          <StateTitle>Timing:</StateTitle>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Latency</IndentedStateTitle>
+          <StateValue>{formattedLatency}</StateValue>
+        </StateRow>
       </StimulationPanel>
     </>
   )

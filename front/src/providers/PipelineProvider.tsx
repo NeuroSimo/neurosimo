@@ -61,6 +61,7 @@ interface PipelineProviderProps {
 export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) => {
   const [triggerLoopbackLatency, setTriggerLoopbackLatency] = useState<TriggerLoopbackLatency | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
+  const [latencyTimeoutId, setLatencyTimeoutId] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     /* Subscriber for pipeline latency. */
@@ -73,6 +74,17 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     triggerLoopbackLatencySubscriber.subscribe((message) => {
       console.log('triggerLoopbackLatency', message)
       setTriggerLoopbackLatency(message)
+
+      // Clear existing timeout
+      if (latencyTimeoutId) {
+        clearTimeout(latencyTimeoutId)
+      }
+
+      // Set new timeout to clear latency after 0.5 seconds of no messages
+      const timeoutId = setTimeout(() => {
+        setTriggerLoopbackLatency(null)
+      }, 500)
+      setLatencyTimeoutId(timeoutId)
     })
 
     /* Subscriber for decision info. */
@@ -91,6 +103,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     return () => {
       triggerLoopbackLatencySubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
+      if (latencyTimeoutId) {
+        clearTimeout(latencyTimeoutId)
+      }
     }
   }, [])
 

@@ -24,14 +24,14 @@ def generate_launch_description():
     )
 
     loopback_latency_threshold_arg = DeclareLaunchArgument(
-        "pipeline-latency-threshold",
-        description="Maximum pipeline latency, above which stimulation is prevented",
+        "loopback-latency-threshold",
+        description="Maximum loopback latency, above which stimulation is prevented",
     )
 
     logger = LaunchConfiguration("log-level")
     triggering_tolerance = LaunchConfiguration("triggering-tolerance")
     simulate_labjack = LaunchConfiguration("simulate-labjack")
-    loopback_latency_threshold = LaunchConfiguration("pipeline-latency-threshold")
+    loopback_latency_threshold = LaunchConfiguration("loopback-latency-threshold")
 
     node = Node(
         package="trigger_timer",
@@ -41,7 +41,7 @@ def generate_launch_description():
             {
                 "triggering-tolerance": triggering_tolerance,
                 "simulate-labjack": simulate_labjack,
-                "pipeline-latency-threshold": loopback_latency_threshold,
+                "loopback-latency-threshold": loopback_latency_threshold,
             }
         ],
         arguments=['--ros-args', '--log-level', logger]

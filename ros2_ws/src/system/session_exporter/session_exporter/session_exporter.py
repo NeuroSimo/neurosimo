@@ -94,7 +94,7 @@ DECISION_TRACE_FIELDS = [
     'system_time_trigger_timer_finished',
     'system_time_hardware_fired',
     'sample_time_at_firing',
-    'trigger_loopback_latency_at_firing',
+    'loopback_latency_at_firing',
     'latency_corrected_time_at_firing',
     'actual_stimulation_time',
     'actual_stimulation_sample_index',

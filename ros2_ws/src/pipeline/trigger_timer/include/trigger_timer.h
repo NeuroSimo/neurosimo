@@ -48,6 +48,9 @@ private:
   double_t current_latency = 0.0;
   double_t current_time = 0.0;
 
+  // Latest sample information for calculating stimulation horizon
+  double_t latest_sample_time = 0.0;
+
   double_t triggering_tolerance = 0.0;
   double_t loopback_latency_threshold = 0.0;
   bool simulate_labjack = false;

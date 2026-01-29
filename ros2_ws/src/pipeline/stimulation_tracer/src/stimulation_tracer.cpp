@@ -218,6 +218,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     /* Timing */
     if (trace.decider_duration != 0.0) final_trace.decider_duration = trace.decider_duration;
     if (trace.preprocessor_duration != 0.0) final_trace.preprocessor_duration = trace.preprocessor_duration;
+    if (trace.decision_path_latency != 0.0) final_trace.decision_path_latency = trace.decision_path_latency;
     if (trace.system_time_decider_received != 0) final_trace.system_time_decider_received = trace.system_time_decider_received;
     if (trace.system_time_decider_finished != 0) final_trace.system_time_decider_finished = trace.system_time_decider_finished;
 

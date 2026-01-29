@@ -88,6 +88,7 @@ DECISION_TRACE_FIELDS = [
     'requested_stimulation_time',
     'decider_duration',
     'preprocessor_duration',
+    'decision_path_latency',
     'system_time_decider_received',
     'system_time_decider_finished',
     'system_time_trigger_timer_received',

@@ -17,6 +17,7 @@ interface DecisionTrace extends ROSLIB.Message {
   requested_stimulation_time: number
   decider_duration: number
   preprocessor_duration: number
+  decision_path_latency: number
   system_time_decider_received: number
   system_time_decider_finished: number
   system_time_trigger_timer_received: number

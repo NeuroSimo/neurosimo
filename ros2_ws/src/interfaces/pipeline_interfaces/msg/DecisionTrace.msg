@@ -42,6 +42,7 @@ float64 requested_stimulation_time   # seconds since recording start
 # ----------------------------------------------------------------------------
 float64 decider_duration             # seconds
 float64 preprocessor_duration        # seconds
+float64 decision_path_latency        # seconds from sample publish to decider decision
 
 uint64 system_time_decider_received  # steady clock ns
 uint64 system_time_decider_finished  # steady clock ns

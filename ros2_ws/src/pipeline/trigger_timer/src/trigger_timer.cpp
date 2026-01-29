@@ -187,9 +187,9 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
   }
 }
 
-void TriggerTimer::measure_latency(bool latency_trigger, double_t sample_time) {
+void TriggerTimer::measure_latency(bool loopback_trigger, double_t sample_time) {
   /* Update current latency if latency trigger is present. */
-  if (latency_trigger) {
+  if (loopback_trigger) {
     this->current_latency = sample_time - this->last_latency_measurement_time;
 
     /* Publish pipeline latency ROS message. */
@@ -222,7 +222,7 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sam
   std::lock_guard<std::mutex> lock(queue_mutex);
 
   trigger_pulses_until_time(sample_time);
-  measure_latency(msg->latency_trigger, sample_time);
+  measure_latency(msg->loopback_trigger, sample_time);
 }
 
 void TriggerTimer::handle_request_timed_trigger(

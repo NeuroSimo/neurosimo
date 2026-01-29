@@ -5,7 +5,7 @@ import { faPlus, faFolderOpen, faInfoCircle } from '@fortawesome/free-solid-svg-
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
-import { PipelineContext } from 'providers/PipelineProvider'
+import { PipelineConfigContext } from 'providers/PipelineConfigProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { CommittableTextInput } from 'components/CommittableTextInput'
 import { CommittableNumericInput } from 'components/CommittableNumericInput'
@@ -44,7 +44,7 @@ const IconButton = styled.button<{ disabled: boolean }>`
 `
 
 export const ExperimentPanel: React.FC = () => {
-  const { protocolName, protocolList } = useContext(PipelineContext)
+  const { protocolName, protocolList } = useContext(PipelineConfigContext)
   const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useParameters()
   const { sessionState } = useSession()
   const { activeProject } = useContext(ProjectContext)

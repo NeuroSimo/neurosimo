@@ -3,7 +3,7 @@ import { Topic, Message } from 'roslib'
 
 import { ros } from 'ros/ros'
 import { useParameters } from './ParameterProvider'
-import { FilenameList } from './PipelineProvider'
+import { FilenameList } from './PipelineConfigProvider'
 
 export enum DataSourceStateValue {
   READY = 0,

@@ -12,7 +12,7 @@ import {
   DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
-import { PipelineContext } from 'providers/PipelineProvider'
+import { ExperimentContext } from 'providers/ExperimentProvider'
 
 const StimulationPanelTitle = styled.div`
   width: 220px;
@@ -35,13 +35,14 @@ const StimulationPanel = styled(StyledPanel)`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { pipelineLatency, setPipelineLatency } = useContext(PipelineContext)
-  const { decisionTrace } = useContext(PipelineContext)
+  const { pipelineLatency, setPipelineLatency } = useContext(ExperimentContext)
+  const { decisionTrace } = useContext(ExperimentContext)
 
   const [positiveDecision, setPositiveDecision] = useState<any>(null)
   const [latestDecision, setLatestDecision] = useState<any>(null)
 
   useEffect(() => {
+    console.log('decisionTrace', decisionTrace)
     if (decisionTrace) {
       // Update the latest decision
       setLatestDecision(decisionTrace)

@@ -17,7 +17,7 @@ import {
 } from 'styles/General'
 
 import { EegSimulatorContext, DataSourceStateValue } from 'providers/EegSimulatorProvider'
-import { PipelineContext } from 'providers/PipelineProvider'
+import { ExperimentContext } from 'providers/ExperimentProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { useParameters } from 'providers/ParameterProvider'
@@ -72,7 +72,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     startTime,
     dataSourceState,
   } = useContext(EegSimulatorContext)
-  const { experimentState } = useContext(PipelineContext)
+  const { experimentState } = useContext(ExperimentContext)
   const { eegDeviceInfo } = useContext(EegStreamContext)
   const { activeProject } = useContext(ProjectContext)
   const { setSimulatorDataset, setSimulatorStartTime } = useParameters()

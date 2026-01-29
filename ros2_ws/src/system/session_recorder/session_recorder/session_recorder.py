@@ -25,7 +25,6 @@ TOPICS_TO_RECORD = [
     '/eeg/preprocessed',
 
     # Pipeline outputs
-    '/pipeline/decision_info',
     '/pipeline/pipeline_latency',
     '/pipeline/experiment_state',
     '/pipeline/sensory_stimulus',
@@ -37,6 +36,10 @@ TOPICS_TO_RECORD = [
 
     # Session state
     '/session/state',
+
+    # Decision traces
+    '/pipeline/decision_trace',        # Mostly for debugging
+    '/pipeline/decision_trace/final',
 
     # Heartbeats (for debugging)
     '/eeg_bridge/heartbeat',

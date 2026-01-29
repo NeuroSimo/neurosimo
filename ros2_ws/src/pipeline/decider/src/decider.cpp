@@ -537,6 +537,9 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
+  /* Calculate the latency of the decision path. */
+  auto decision_path_latency = (system_time_decider_finished - request.triggering_sample->system_time_data_source_published) / 1e9;  // Convert nanoseconds to seconds
+
   /* Publish decision trace. */
   auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
 
@@ -557,6 +560,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   // Decider / preprocessing timing
   decision_trace.decider_duration = decider_duration;
   decision_trace.preprocessor_duration = request.triggering_sample->preprocessor_duration;
+  decision_trace.decision_path_latency = decision_path_latency;
 
   // System timing
   decision_trace.system_time_decider_received = system_time_decider_received;

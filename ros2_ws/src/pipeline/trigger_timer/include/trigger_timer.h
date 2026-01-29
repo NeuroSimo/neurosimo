@@ -44,13 +44,14 @@ private:
 
   std::unique_ptr<LabJackInterface> labjack_manager;
 
-  double_t last_latency_measurement_time = 0.0;
-  double_t current_latency = 0.0;
+  double_t last_loopback_time = 0.0;
+  double_t current_loopback_latency = 0.0;
   double_t current_time = 0.0;
 
   // Latest sample information for calculating stimulation horizon
   double_t latest_sample_time = 0.0;
 
+  // Configuration parameters
   double_t triggering_tolerance = 0.0;
   double_t loopback_latency_threshold = 0.0;
   bool simulate_labjack = false;
@@ -73,7 +74,7 @@ private:
   void reset_state();
 
   void trigger_pulses_until_time(double_t sample_time);
-  void measure_latency(bool loopback_trigger, double_t sample_time);
+  void measure_loopback_latency(bool loopback_trigger, double_t sample_time);
 
   void _publish_heartbeat();
   void _publish_health_status(uint8_t health_level, const std::string& message);

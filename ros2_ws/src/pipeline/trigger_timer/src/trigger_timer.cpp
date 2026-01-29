@@ -16,10 +16,10 @@ using namespace std::placeholders;
 const std::string TIMED_TRIGGER_SERVICE = "/pipeline/timed_trigger";
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 
-const double_t latency_measurement_interval = 0.1;
+const double_t loopback_interval = 0.1;
 
 const char* tms_trigger_fio = "FIO4";
-const char* latency_measurement_trigger_fio = "FIO5";
+const char* loopback_trigger_fio = "FIO5";
 
 TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger("trigger_timer")) {
   /* Read ROS parameter: Maximum triggering error */
@@ -42,17 +42,17 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   this->declare_parameter("simulate-labjack", false, simulate_labjack_descriptor);
   this->get_parameter("simulate-labjack", this->simulate_labjack);
 
-  /* Read ROS parameter: pipeline latency threshold */
+  /* Read ROS parameter: loopback latency threshold */
   auto loopback_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  loopback_latency_threshold_descriptor.description = "The threshold for the pipeline latency (in seconds) before stimulation is prevented";
-  this->declare_parameter("pipeline-latency-threshold", 0.005, loopback_latency_threshold_descriptor);
-  this->get_parameter("pipeline-latency-threshold", this->loopback_latency_threshold);
+  loopback_latency_threshold_descriptor.description = "The threshold for the loopback latency (in seconds) before stimulation is prevented";
+  this->declare_parameter("loopback-latency-threshold", 0.005, loopback_latency_threshold_descriptor);
+  this->get_parameter("loopback-latency-threshold", this->loopback_latency_threshold);
 
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Triggering tolerance (ms): %.1f", 1000 * this->triggering_tolerance);
-  RCLCPP_INFO(this->get_logger(), "  Pipeline latency threshold: %.1f (ms)", 1000 * this->loopback_latency_threshold);
+  RCLCPP_INFO(this->get_logger(), "  Loopback latency threshold: %.1f (ms)", 1000 * this->loopback_latency_threshold);
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 
@@ -138,7 +138,7 @@ void TriggerTimer::attempt_labjack_connection() {
 }
 
 void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
-  double_t latency_corrected_time = sample_time + this->current_latency;
+  double_t latency_corrected_time = sample_time + this->current_loopback_latency;
 
   /* Trigger all events until the given time. */
   while (!trigger_queue.empty() && trigger_queue.top()->timed_trigger.time <= latency_corrected_time) {
@@ -154,7 +154,7 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
       now.time_since_epoch()).count();
 
     /* Check that timing latency is within threshold. */
-    if (this->current_latency <= this->loopback_latency_threshold) {
+    if (this->current_loopback_latency <= this->loopback_latency_threshold) {
       RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (current time: %.4f, error: %.4f)",
                   scheduled_time, latency_corrected_time, error);
 
@@ -165,7 +165,7 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
       }
     } else {
       RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms) at triggering time, rejecting stimulation.",
-                   this->current_latency * 1000, this->loopback_latency_threshold * 1000);
+                   this->current_loopback_latency * 1000, this->loopback_latency_threshold * 1000);
 
       /* Publish degraded health status */
       this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
@@ -181,34 +181,34 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
     decision_trace.system_time_hardware_fired = system_time_hardware_fired;
     decision_trace.sample_time_at_firing = sample_time;
     decision_trace.latency_corrected_time_at_firing = latency_corrected_time;
-    decision_trace.loopback_latency_at_firing = this->current_latency;
+    decision_trace.loopback_latency_at_firing = this->current_loopback_latency;
 
     this->decision_trace_publisher->publish(decision_trace);
   }
 }
 
-void TriggerTimer::measure_latency(bool loopback_trigger, double_t sample_time) {
-  /* Update current latency if latency trigger is present. */
+void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t sample_time) {
+  /* Update current latency if loopback trigger is present. */
   if (loopback_trigger) {
-    this->current_latency = sample_time - this->last_latency_measurement_time;
+    this->current_loopback_latency = sample_time - this->last_loopback_time;
 
-    /* Publish pipeline latency ROS message. */
+    /* Publish loopback latency ROS message. */
     auto msg = pipeline_interfaces::msg::LoopbackLatency();
-    msg.latency = this->current_latency;
+    msg.latency = this->current_loopback_latency;
   
     this->loopback_latency_publisher->publish(msg);  
   }
 
-  /* Trigger latency measurement at specific intervals. */
-  double_t time_since_last_latency_measurement = sample_time - this->last_latency_measurement_time;
-  if (time_since_last_latency_measurement < latency_measurement_interval) {
+  /* Trigger loopback trigger at specific intervals. */
+  double_t time_since_last_loopback = sample_time - this->last_loopback_time;
+  if (time_since_last_loopback < loopback_interval) {
     return;
   }
 
-  this->last_latency_measurement_time = sample_time;
+  this->last_loopback_time = sample_time;
 
-  if (!labjack_manager || !labjack_manager->trigger_output(latency_measurement_trigger_fio)) {
-    RCLCPP_ERROR(logger, "Failed to trigger latency measurement trigger.");
+  if (!labjack_manager || !labjack_manager->trigger_output(loopback_trigger_fio)) {
+    RCLCPP_ERROR(logger, "Failed to trigger loopback trigger.");
     return;
   }
 }
@@ -222,7 +222,7 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sam
   std::lock_guard<std::mutex> lock(queue_mutex);
 
   trigger_pulses_until_time(sample_time);
-  measure_latency(msg->loopback_trigger, sample_time);
+  measure_loopback_latency(msg->loopback_trigger, sample_time);
 }
 
 void TriggerTimer::handle_request_timed_trigger(
@@ -291,8 +291,8 @@ void TriggerTimer::reset_state() {
   }
 
   /* Reset latency state */
-  this->current_latency = 0.0;
-  this->last_latency_measurement_time = 0.0;
+  this->current_loopback_latency = 0.0;
+  this->last_loopback_time = 0.0;
 
   /* Reset latest sample information */
   this->latest_sample_time = 0.0;

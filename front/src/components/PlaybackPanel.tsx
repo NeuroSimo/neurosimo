@@ -167,6 +167,12 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
       (success, message) => {
         if (success) {
           console.log('Export completed successfully')
+          // Refetch recording info to update the "exported" field
+          getRecordingInfoRos(recordingToExport, (recordingInfo) => {
+            if (recordingInfo) {
+              setSelectedRecordingInfo(recordingInfo)
+            }
+          })
         } else {
           console.error('Export failed:', message)
         }

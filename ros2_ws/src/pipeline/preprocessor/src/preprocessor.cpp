@@ -191,6 +191,8 @@ void EegPreprocessor::handle_finalize_preprocessor(
 
   if (!response->success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor state");
+  } else {
+    RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully");
   }
 }
 
@@ -405,6 +407,11 @@ void EegPreprocessor::enqueue_deferred_request(const std::shared_ptr<eeg_interfa
 void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   /* Return early if preprocessor is not enabled or initialized. */
   if (!this->is_enabled || !this->is_initialized) {
+    RCLCPP_INFO_THROTTLE(this->get_logger(),
+                         *this->get_clock(),
+                         5000,
+                         "Preprocessor not processing samples (is_enabled=%d, is_initialized=%d)",
+                         this->is_enabled, this->is_initialized);
     return;
   }
 

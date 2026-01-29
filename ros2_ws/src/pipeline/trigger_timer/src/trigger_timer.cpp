@@ -43,16 +43,16 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   this->get_parameter("simulate-labjack", this->simulate_labjack);
 
   /* Read ROS parameter: pipeline latency threshold */
-  auto trigger_loopback_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  trigger_loopback_latency_threshold_descriptor.description = "The threshold for the pipeline latency (in seconds) before stimulation is prevented";
-  this->declare_parameter("pipeline-latency-threshold", 0.005, trigger_loopback_latency_threshold_descriptor);
-  this->get_parameter("pipeline-latency-threshold", this->trigger_loopback_latency_threshold);
+  auto loopback_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  loopback_latency_threshold_descriptor.description = "The threshold for the pipeline latency (in seconds) before stimulation is prevented";
+  this->declare_parameter("pipeline-latency-threshold", 0.005, loopback_latency_threshold_descriptor);
+  this->get_parameter("pipeline-latency-threshold", this->loopback_latency_threshold);
 
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Triggering tolerance (ms): %.1f", 1000 * this->triggering_tolerance);
-  RCLCPP_INFO(this->get_logger(), "  Pipeline latency threshold: %.1f (ms)", 1000 * this->trigger_loopback_latency_threshold);
+  RCLCPP_INFO(this->get_logger(), "  Pipeline latency threshold: %.1f (ms)", 1000 * this->loopback_latency_threshold);
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 
@@ -83,7 +83,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     10);
 
   /* Publisher for timing latency. */
-  this->trigger_loopback_latency_publisher = this->create_publisher<pipeline_interfaces::msg::TriggerLoopbackLatency>(
+  this->loopback_latency_publisher = this->create_publisher<pipeline_interfaces::msg::LoopbackLatency>(
     "/pipeline/latency/trigger_loopback",
     10);
 
@@ -154,7 +154,7 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
       now.time_since_epoch()).count();
 
     /* Check that timing latency is within threshold. */
-    if (this->current_latency <= this->trigger_loopback_latency_threshold) {
+    if (this->current_latency <= this->loopback_latency_threshold) {
       RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (current time: %.4f, error: %.4f)",
                   scheduled_time, latency_corrected_time, error);
 
@@ -165,7 +165,7 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
       }
     } else {
       RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms) at triggering time, rejecting stimulation.",
-                   this->current_latency * 1000, this->trigger_loopback_latency_threshold * 1000);
+                   this->current_latency * 1000, this->loopback_latency_threshold * 1000);
 
       /* Publish degraded health status */
       this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
@@ -181,7 +181,7 @@ void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
     decision_trace.system_time_hardware_fired = system_time_hardware_fired;
     decision_trace.sample_time_at_firing = sample_time;
     decision_trace.latency_corrected_time_at_firing = latency_corrected_time;
-    decision_trace.trigger_loopback_latency_at_firing = this->current_latency;
+    decision_trace.loopback_latency_at_firing = this->current_latency;
 
     this->decision_trace_publisher->publish(decision_trace);
   }
@@ -193,10 +193,10 @@ void TriggerTimer::measure_latency(bool latency_trigger, double_t sample_time) {
     this->current_latency = sample_time - this->last_latency_measurement_time;
 
     /* Publish pipeline latency ROS message. */
-    auto msg = pipeline_interfaces::msg::TriggerLoopbackLatency();
+    auto msg = pipeline_interfaces::msg::LoopbackLatency();
     msg.latency = this->current_latency;
   
-    this->trigger_loopback_latency_publisher->publish(msg);  
+    this->loopback_latency_publisher->publish(msg);  
   }
 
   /* Trigger latency measurement at specific intervals. */

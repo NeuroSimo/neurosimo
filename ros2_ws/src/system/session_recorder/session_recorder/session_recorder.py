@@ -25,7 +25,7 @@ TOPICS_TO_RECORD = [
     '/eeg/preprocessed',
 
     # Pipeline outputs
-    '/pipeline/trigger_loopback_latency',
+    '/pipeline/loopback_latency',
     '/pipeline/experiment_state',
     '/pipeline/sensory_stimulus',
 

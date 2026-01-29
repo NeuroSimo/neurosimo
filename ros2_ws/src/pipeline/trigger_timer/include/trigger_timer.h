@@ -73,7 +73,7 @@ private:
   void reset_state();
 
   void trigger_pulses_until_time(double_t sample_time);
-  void measure_latency(bool latency_trigger, double_t sample_time);
+  void measure_latency(bool loopback_trigger, double_t sample_time);
 
   void _publish_heartbeat();
   void _publish_health_status(uint8_t health_level, const std::string& message);

@@ -16,7 +16,7 @@ uint64 sample_index             # Sample count (0-based)
 # Hardware triggers/events (filled by EEG bridge or EEG simulator)
 # ============================================================================
 bool pulse_trigger
-bool latency_trigger
+bool loopback_trigger
 
 # ============================================================================
 # Experiment state (filled by ExperimentCoordinator)

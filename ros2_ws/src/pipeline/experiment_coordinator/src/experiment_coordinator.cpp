@@ -74,6 +74,11 @@ ExperimentCoordinator::ExperimentCoordinator()
     "/pipeline/protocol/initialize",
     std::bind(&ExperimentCoordinator::handle_initialize_protocol, this, _1, _2));
   
+  /* Service for protocol info. */
+  this->get_protocol_info_service = this->create_service<pipeline_interfaces::srv::GetProtocolInfo>(
+    "/experiment_coordinator/protocol/get_info",
+    std::bind(&ExperimentCoordinator::handle_get_protocol_info, this, _1, _2));
+  
   /* Create timers. */
   this->heartbeat_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
@@ -253,13 +258,8 @@ void ExperimentCoordinator::handle_initialize_protocol(
   RCLCPP_INFO(this->get_logger(), "Initializing protocol: project='%s', protocol='%s'",
     request->project_name.c_str(), request->protocol_filename.c_str());
 
-  /* Generate filepath from project name and protocol filename. */
-  std::string filepath = PROJECTS_DIRECTORY + std::string("/") + request->project_name +
-                         "/protocols/" + request->protocol_filename;
-
-  RCLCPP_INFO(this->get_logger(), "Loading protocol from: %s", filepath.c_str());
-
-  LoadResult result = this->protocol_loader.load_from_file(filepath);
+  LoadResult result = this->protocol_loader.load_from_project(
+    PROJECTS_DIRECTORY, request->project_name, request->protocol_filename);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s",
@@ -281,6 +281,32 @@ void ExperimentCoordinator::handle_initialize_protocol(
 
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
   response->success = true;
+}
+
+void ExperimentCoordinator::handle_get_protocol_info(
+    const std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Response> response) {
+
+  RCLCPP_INFO(this->get_logger(), "Getting protocol info for: project='%s', protocol='%s'",
+    request->project_name.c_str(), request->filename.c_str());
+
+  experiment_coordinator::ProtocolInfoResult result = 
+    this->protocol_loader.get_protocol_info(
+      PROJECTS_DIRECTORY, request->project_name, request->filename);
+
+  if (!result.success) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to get protocol info: %s",
+      result.error_message.c_str());
+    response->success = false;
+    return;
+  }
+
+  /* Set response with the ROS message directly. */
+  response->protocol_info = result.protocol_info.value();
+  response->success = true;
+  
+  RCLCPP_INFO(this->get_logger(), "Protocol info retrieved: %s (%zu elements)",
+    response->protocol_info.name.c_str(), response->protocol_info.elements.size());
 }
 
 void ExperimentCoordinator::update_experiment_state(double current_time) {

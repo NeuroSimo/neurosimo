@@ -1,0 +1,5 @@
+string project_name
+string filename
+---
+pipeline_interfaces/ProtocolInfo protocol_info
+bool success

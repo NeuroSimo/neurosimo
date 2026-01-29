@@ -46,10 +46,10 @@ const statusLabels = {
 }
 
 export const StimulationDisplay: React.FC = () => {
-  const { pipelineLatency, setPipelineLatency } = useContext(PipelineContext)
+  const { triggerLoopbackLatency, setTriggerLoopbackLatency } = useContext(PipelineContext)
   const { decisionTrace } = useContext(PipelineContext)
 
-  const formattedLatency = pipelineLatency ? (pipelineLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedLatency = triggerLoopbackLatency ? (triggerLoopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
 
   // Decision Stats
   const formattedStatus = decisionTrace ? statusLabels[decisionTrace.status as keyof typeof statusLabels] || 'Unknown' : '\u2013'

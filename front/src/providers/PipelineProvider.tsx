@@ -3,7 +3,7 @@ import { Topic } from 'roslib'
 
 import { ros } from 'ros/ros'
 
-interface PipelineLatency extends ROSLIB.Message {
+interface TriggerLoopbackLatency extends ROSLIB.Message {
   latency: number
 }
 
@@ -23,7 +23,7 @@ interface DecisionTrace extends ROSLIB.Message {
   system_time_trigger_timer_finished: number
   system_time_hardware_fired: number
   sample_time_at_firing: number
-  pipeline_latency_at_firing: number
+  trigger_loopback_latency_at_firing: number
   latency_corrected_time_at_firing: number
   actual_stimulation_time: number
   actual_stimulation_sample_index: number
@@ -33,19 +33,19 @@ interface DecisionTrace extends ROSLIB.Message {
 }
 
 interface PipelineContextType {
-  pipelineLatency: PipelineLatency | null
+  triggerLoopbackLatency: TriggerLoopbackLatency | null
   decisionTrace: DecisionTrace | null
 
-  setPipelineLatency: React.Dispatch<React.SetStateAction<PipelineLatency | null>>
+  setTriggerLoopbackLatency: React.Dispatch<React.SetStateAction<TriggerLoopbackLatency | null>>
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
 }
 
 const defaultPipelineState: PipelineContextType = {
-  pipelineLatency: null,
+  triggerLoopbackLatency: null,
   decisionTrace: null,
 
-  setPipelineLatency: () => {
-    console.warn('setPipelineLatency is not yet initialized.')
+  setTriggerLoopbackLatency: () => {
+    console.warn('setTriggerLoopbackLatency is not yet initialized.')
   },
   setDecisionTrace: () => {
     console.warn('setDecisionTrace is not yet initialized.')
@@ -59,20 +59,20 @@ interface PipelineProviderProps {
 }
 
 export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) => {
-  const [pipelineLatency, setPipelineLatency] = useState<PipelineLatency | null>(null)
+  const [triggerLoopbackLatency, setTriggerLoopbackLatency] = useState<TriggerLoopbackLatency | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
 
   useEffect(() => {
     /* Subscriber for pipeline latency. */
-    const pipelineLatencySubscriber = new Topic<PipelineLatency>({
+    const triggerLoopbackLatencySubscriber = new Topic<TriggerLoopbackLatency>({
       ros: ros,
-      name: '/pipeline/latency',
-      messageType: 'pipeline_interfaces/PipelineLatency',
+      name: '/pipeline/latency/trigger_loopback',
+      messageType: 'pipeline_interfaces/TriggerLoopbackLatency',
     })
 
-    pipelineLatencySubscriber.subscribe((message) => {
-      console.log('pipelineLatency', message)
-      setPipelineLatency(message)
+    triggerLoopbackLatencySubscriber.subscribe((message) => {
+      console.log('triggerLoopbackLatency', message)
+      setTriggerLoopbackLatency(message)
     })
 
     /* Subscriber for decision info. */
@@ -89,7 +89,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
 
     /* Unsubscribers */
     return () => {
-      pipelineLatencySubscriber.unsubscribe()
+      triggerLoopbackLatencySubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
     }
   }, [])
@@ -97,9 +97,9 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   return (
     <PipelineContext.Provider
       value={{
-        pipelineLatency,
+        triggerLoopbackLatency,
         decisionTrace,
-        setPipelineLatency,
+        setTriggerLoopbackLatency,
         setDecisionTrace,
       }}
     >

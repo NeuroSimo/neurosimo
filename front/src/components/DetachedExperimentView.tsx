@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
-import { PipelineContext } from 'providers/PipelineProvider'
+import { ExperimentContext } from 'providers/ExperimentProvider'
 
 const DragBar = styled.div`
   position: fixed;
@@ -42,7 +42,7 @@ const Timer = styled.div`
 `
 
 export const DetachedExperimentView: React.FC = () => {
-  const { experimentState } = useContext(PipelineContext)
+  const { experimentState } = useContext(ExperimentContext)
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)

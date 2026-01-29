@@ -6,7 +6,7 @@ import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
-import { PipelineContext } from 'providers/PipelineProvider'
+import { LogContext } from 'providers/LogProvider'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -36,7 +36,7 @@ export const SessionPanel: React.FC = () => {
   const { dataSource } = useParameters()
   const { recordingsList } = useContext(PlaybackContext)
   const { datasetList } = useContext(EegSimulatorContext)
-  const { clearAllLogs } = useContext(PipelineContext)
+  const { clearAllLogs } = useContext(LogContext)
   const [displayedState, setDisplayedState] = useState(sessionState.state)
 
   /* Add 500ms hysteresis to prevent rapid flashing of state changes,

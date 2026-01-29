@@ -5,7 +5,6 @@ import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
-import { PipelineContext } from 'providers/PipelineProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 

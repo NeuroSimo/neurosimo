@@ -1,11 +1,11 @@
 import React, { useContext } from 'react'
 
 import { useParameters } from 'providers/ParameterProvider'
-import { PipelineContext } from 'providers/PipelineProvider'
+import { PipelineConfigContext } from 'providers/PipelineConfigProvider'
 import { PipelineNode } from './PipelineNode'
 
 export const DeciderNode: React.FC = () => {
-  const { deciderEnabled, deciderModule, deciderList } = useContext(PipelineContext)
+  const { deciderEnabled, deciderModule, deciderList } = useContext(PipelineConfigContext)
   const { setDeciderEnabled, setDeciderModule } = useParameters()
 
   const handleToggle = (next: boolean) => {

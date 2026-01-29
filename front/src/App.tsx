@@ -7,7 +7,6 @@ import './App.css'
 import Providers from './providers/Providers'
 import { EegSimulatorProvider } from './providers/EegSimulatorProvider'
 import { HealthProvider } from './providers/HealthProvider'
-import { PipelineProvider } from './providers/PipelineProvider'
 import { EegStreamProvider } from './providers/EegStreamProvider'
 import { StatisticsProvider } from './providers/StatisticsProvider'
 

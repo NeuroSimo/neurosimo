@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel, DASHBOARD_PANEL_OFFSET_FROM_TOP } from 'styles/General'
 
-import { PipelineContext, LogMessage, LogLevel } from 'providers/PipelineProvider'
+import { LogContext, LogMessage, LogLevel } from 'providers/LogProvider'
 
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
@@ -143,7 +143,7 @@ const LogText = styled.span`
 `
 
 export const PipelineLogDisplay: React.FC = () => {
-  const { preprocessorLogs, deciderLogs, presenterLogs, clearAllLogs } = useContext(PipelineContext)
+  const { preprocessorLogs, deciderLogs, presenterLogs, clearAllLogs } = useContext(LogContext)
   const [selectedSource, setSelectedSource] = useState<LogSource>('decider')
   const logContainerRef = useRef<HTMLDivElement>(null)
 

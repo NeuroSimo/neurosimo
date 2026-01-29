@@ -13,7 +13,7 @@ import {
   StyledButton,
   StyledRedButton,
 } from 'styles/General'
-import { PipelineContext } from 'providers/PipelineProvider'
+import { ExperimentContext } from 'providers/ExperimentProvider'
 import { pauseExperimentRos, resumeExperimentRos } from 'ros/experiment'
 
 const ExperimentStateTitle = styled.div`
@@ -54,7 +54,7 @@ const Panel = styled(StyledPanel)`
 `
 
 export const ExperimentStatePanel: React.FC = () => {
-  const { experimentState } = useContext(PipelineContext)
+  const { experimentState } = useContext(ExperimentContext)
 
   const isExperimentOngoing = experimentState?.ongoing ?? false
   const isPaused = experimentState?.paused ?? false

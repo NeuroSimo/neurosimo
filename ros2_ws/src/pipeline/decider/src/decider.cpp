@@ -289,6 +289,8 @@ void EegDecider::handle_finalize_decider(
 
   if (!response->success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to reset decider state");
+  } else {
+    RCLCPP_INFO(this->get_logger(), "Decider finalized successfully");
   }
 }
 
@@ -666,6 +668,11 @@ void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::B
 void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
   /* Return early if decider is not enabled or initialized. */
   if (!this->is_enabled || !this->is_initialized) {
+    RCLCPP_INFO_THROTTLE(this->get_logger(),
+                         *this->get_clock(),
+                         5000,
+                         "Decider not processing samples (is_enabled=%d, is_initialized=%d)",
+                         this->is_enabled, this->is_initialized);
     return;
   }
   double_t sample_time = msg->time;
@@ -734,11 +741,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 }
 
 void EegDecider::spin() {
-  auto base_interface = this->get_node_base_interface();
-
-  while (rclcpp::ok()) {
-    rclcpp::spin_some(base_interface);
-  }
+  rclcpp::spin(this->shared_from_this());
 }
 
 

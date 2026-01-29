@@ -60,9 +60,9 @@ bool MockLabJackManager::trigger_output(const char* output_name) {
   std::string trigger_type;
 
   // Map output names to trigger types
-  if (strcmp(output_name, "FIO5") == 0) {
+  if (strcmp(output_name, "FIO4") == 0) {
     trigger_type = "pulse_trigger";
-  } else if (strcmp(output_name, "FIO4") == 0) {
+  } else if (strcmp(output_name, "FIO5") == 0) {
     trigger_type = "loopback_trigger";
   } else {
     RCLCPP_ERROR(logger_, "Unknown output name: %s", output_name);

@@ -18,8 +18,8 @@ const std::string EEG_RAW_TOPIC = "/eeg/raw";
 
 const double_t latency_measurement_interval = 0.1;
 
-const char* tms_trigger_fio = "FIO5";
-const char* latency_measurement_trigger_fio = "FIO4";
+const char* tms_trigger_fio = "FIO4";
+const char* latency_measurement_trigger_fio = "FIO5";
 
 TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger("trigger_timer")) {
   /* Read ROS parameter: Maximum triggering error */

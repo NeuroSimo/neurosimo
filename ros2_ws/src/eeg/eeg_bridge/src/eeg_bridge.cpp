@@ -301,8 +301,8 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.eeg = adapter_sample.eeg;
   sample.emg = adapter_sample.emg;
   sample.time = adapter_sample.time;
-  sample.pulse_trigger = adapter_sample.trigger_b;
-  sample.latency_trigger = adapter_sample.trigger_a;
+  sample.pulse_trigger = adapter_sample.trigger_a;
+  sample.latency_trigger = adapter_sample.trigger_b;
   
   return sample;
 }

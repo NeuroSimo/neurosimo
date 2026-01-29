@@ -8,11 +8,28 @@ interface PipelineLatency extends ROSLIB.Message {
 }
 
 interface DecisionTrace extends ROSLIB.Message {
-  sample_time: number
+  session_id: number[]
+  decision_id: number
+  status: number
+  reference_sample_time: number
+  reference_sample_index: number
   stimulate: boolean
-  decider_processing_duration: number
-  preprocessor_processing_duration: number
-  total_latency: number
+  requested_stimulation_time: number
+  decider_duration: number
+  preprocessor_duration: number
+  system_time_decider_received: number
+  system_time_decider_finished: number
+  system_time_trigger_timer_received: number
+  system_time_trigger_timer_finished: number
+  system_time_hardware_fired: number
+  sample_time_at_firing: number
+  pipeline_latency_at_firing: number
+  latency_corrected_time_at_firing: number
+  actual_stimulation_time: number
+  actual_stimulation_sample_index: number
+  timing_error: number
+  pulse_confirmation_method: number
+  pulse_confirmed: boolean
 }
 
 interface PipelineContextType {
@@ -54,17 +71,19 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     })
 
     pipelineLatencySubscriber.subscribe((message) => {
+      console.log('pipelineLatency', message)
       setPipelineLatency(message)
     })
 
     /* Subscriber for decision info. */
     const decisionTraceSubscriber = new Topic<DecisionTrace>({
       ros: ros,
-      name: '/pipeline/decision_info',
+      name: '/pipeline/decision_trace/final',
       messageType: 'pipeline_interfaces/DecisionTrace',
     })
 
     decisionTraceSubscriber.subscribe((message) => {
+      console.log('decisionTrace', message)
       setDecisionTrace(message)
     })
 

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus, faFolderOpen } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faFolderOpen, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
@@ -10,8 +10,10 @@ import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { CommittableTextInput } from 'components/CommittableTextInput'
 import { CommittableNumericInput } from 'components/CommittableNumericInput'
 import { CreateProjectModal } from 'components/CreateProjectModal'
+import { ProtocolInfoModal } from 'components/ProtocolInfoModal'
 import { listProjects, setActiveProject } from 'ros/project'
 import { ProjectContext } from 'providers/ProjectProvider'
+import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
 
 const Container = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -48,6 +50,8 @@ export const ExperimentPanel: React.FC = () => {
   const { activeProject } = useContext(ProjectContext)
   const [projects, setProjects] = useState<string[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isProtocolInfoModalOpen, setIsProtocolInfoModalOpen] = useState(false)
+  const [protocolInfo, setProtocolInfo] = useState<ProtocolInfo | null>(null)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isElectron = !!(window as any).electronAPI
@@ -91,6 +95,19 @@ export const ExperimentPanel: React.FC = () => {
     
     const error = await (window as any).electronAPI?.openProjectFolder(activeProject, 'protocols')
     if (error) console.error('Failed to open folder:', error)
+  }
+
+  const handleProtocolInfo = () => {
+    if (!protocolName || protocolName.trim() === '' || !activeProject) return
+    
+    getProtocolInfoRos(activeProject, protocolName, (info) => {
+      if (!info) {
+        console.error('Failed to get protocol info for:', protocolName)
+        return
+      }
+      setProtocolInfo(info)
+      setIsProtocolInfoModalOpen(true)
+    })
   }
 
   return (
@@ -148,6 +165,13 @@ export const ExperimentPanel: React.FC = () => {
           >
             <FontAwesomeIcon icon={faFolderOpen} />
           </IconButton>
+          <IconButton
+            onClick={handleProtocolInfo}
+            disabled={!protocolName || protocolName.trim() === '' || !activeProject}
+            title="Show protocol info"
+          >
+            <FontAwesomeIcon icon={faInfoCircle} />
+          </IconButton>
           <Select onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
             {protocolList.map((protocol, index) => (
               <option key={index} value={protocol}>
@@ -162,6 +186,12 @@ export const ExperimentPanel: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onProjectCreated={refreshProjects}
+      />
+
+      <ProtocolInfoModal
+        isOpen={isProtocolInfoModalOpen}
+        onClose={() => setIsProtocolInfoModalOpen(false)}
+        protocolInfo={protocolInfo}
       />
     </Container>
   )

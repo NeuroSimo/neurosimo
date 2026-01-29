@@ -15,7 +15,9 @@
 #include "project_interfaces/srv/set_module.hpp"
 #include "pipeline_interfaces/msg/experiment_state.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
+#include "pipeline_interfaces/msg/protocol_info.hpp"
 #include "pipeline_interfaces/srv/initialize_protocol.hpp"
+#include "pipeline_interfaces/srv/get_protocol_info.hpp"
 #include "system_interfaces/msg/component_health.hpp"
 
 #include "protocol.h"
@@ -49,6 +51,7 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_service;
   rclcpp::Service<pipeline_interfaces::srv::InitializeProtocol>::SharedPtr initialize_protocol_service;
+  rclcpp::Service<pipeline_interfaces::srv::GetProtocolInfo>::SharedPtr get_protocol_info_service;
     
   // Timers
   rclcpp::TimerBase::SharedPtr heartbeat_timer;
@@ -76,6 +79,9 @@ private:
   void handle_initialize_protocol(
     const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response);
+  void handle_get_protocol_info(
+    const std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Response> response);
   void request_finish_session();
   void mark_protocol_complete();
   void publish_experiment_state(double current_time);

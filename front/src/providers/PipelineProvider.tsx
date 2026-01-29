@@ -66,7 +66,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   const [latencyTimeoutId, setLatencyTimeoutId] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    /* Subscriber for pipeline latency. */
+    /* Subscriber for loopback latency. */
     const loopbackLatencySubscriber = new Topic<LoopbackLatency>({
       ros: ros,
       name: '/pipeline/latency/trigger_loopback',

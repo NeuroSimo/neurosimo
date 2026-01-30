@@ -240,73 +240,45 @@
         mode: "0755"
 
     ########################################################################
-    # Update .bash_env and .bashrc
+    # Create .bash_env from scratch
     ########################################################################
-    - name: Ensure .bash_env exists
-      file:
-        path: "{{ target_home }}/.bash_env"
-        state: touch
+    - name: Create fresh .bash_env file
+      copy:
+        dest: "{{ target_home }}/.bash_env"
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
         mode: "0644"
+        content: |
+          # NeuroSimo environment configuration
+          # This file is managed by Ansible - do not edit manually
 
-    - name: Ensure script directory is in PATH in .bash_env
-      lineinfile:
-        dest: "{{ target_home }}/.bash_env"
-        line: "export PATH=$PATH:{{ repo_root }}/scripts/"
-        state: present
+          # Add NeuroSimo scripts to PATH
+          export PATH=$PATH:{{ repo_root }}/scripts/
 
-    - name: Ensure NEUROSIMO_ROOT is exported
-      lineinfile:
-        dest: "{{ target_home }}/.bash_env"
-        line: "export NEUROSIMO_ROOT={{ repo_root }}"
-        state: present
+          # NeuroSimo root directory
+          export NEUROSIMO_ROOT={{ repo_root }}
 
-    - name: Ensure PROJECTS_ROOT is exported
-      lineinfile:
-        dest: "{{ target_home }}/.bash_env"
-        line: "export PROJECTS_ROOT={{ projects_root }}"
-        state: present
+          # Projects directory
+          export PROJECTS_ROOT={{ projects_root }}
 
-    - name: Ensure RMW_IMPLEMENTATION is set to CycloneDDS
-      lineinfile:
-        dest: "{{ target_home }}/.bash_env"
-        line: "export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp"
-        state: present
+          # ROS2 middleware configuration
+          export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+          export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/config/cyclonedds.xml
 
-    - name: Ensure CycloneDDS config is set
-      lineinfile:
-        dest: "{{ target_home }}/.bash_env"
-        line: "export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/config/cyclonedds.xml"
-        state: present
+          # Source ROS2 base installation
+          source /opt/ros/{{ ros_distro }}/setup.bash
 
-    - name: Ensure ROS is sourced
-      lineinfile:
-        dest: "{{ target_home }}/.bash_env"
-        line: "source /opt/ros/{{ ros_distro }}/setup.bash"
-        state: present
-
-    - name: Ensure workspace is sourced (with conditional check)
-      blockinfile:
-        dest: "{{ target_home }}/.bash_env"
-        marker: "# {mark} ANSIBLE MANAGED BLOCK"
-        block: |
+          # Source NeuroSimo workspace if it exists
           if [ -f {{ repo_root }}/ros2_ws/install/setup.bash ]; then
               source {{ repo_root }}/ros2_ws/install/setup.bash
           fi
-        state: present
 
-    - name: Ensure .env is sourced in .bash_env
-      lineinfile:
-        dest: "{{ target_home }}/.bash_env"
-        line: |
+          # Source .env file if it exists
           if [ -f {{ repo_root }}/.env ]; then
               set -a
               source {{ repo_root }}/.env
               set +a
           fi
-        state: present
-        insertafter: EOF
 
     - name: Ensure .bash_env is sourced in .bashrc
       lineinfile:
@@ -314,7 +286,6 @@
         line: "source {{ target_home }}/.bash_env"
         state: present
         insertafter: EOF
-
 
     ########################################################################
     # Set up the environment

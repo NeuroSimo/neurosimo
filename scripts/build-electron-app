@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e
+
+# Get the script directory and navigate to project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+echo "Building NeuroSimo desktop app..."
+cd "$PROJECT_ROOT/front"
+npm install
+DISABLE_ESLINT_PLUGIN=true npm run build
+npm run electron-pack-linux
+cd "$PROJECT_ROOT"
+
+echo "Electron app build complete!"

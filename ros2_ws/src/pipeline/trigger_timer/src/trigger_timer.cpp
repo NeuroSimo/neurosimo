@@ -319,11 +319,11 @@ void TriggerTimer::handle_initialize_trigger_timer(
     std::chrono::seconds(1),
     std::bind(&TriggerTimer::attempt_labjack_connection, this));
 
-  /* Wait for LabJack connection - try for up to 30 seconds */
+  /* Wait for LabJack connection - try for up to 1 second */
   auto start_time = std::chrono::steady_clock::now();
   bool connected = false;
 
-  while (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(30)) {
+  while (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(1)) {
     if (labjack_manager && labjack_manager->is_connected()) {
       connected = true;
       break;

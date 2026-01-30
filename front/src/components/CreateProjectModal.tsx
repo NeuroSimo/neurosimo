@@ -117,7 +117,7 @@ const ErrorMessage = styled.div`
 interface CreateProjectModalProps {
   isOpen: boolean
   onClose: () => void
-  onProjectCreated: () => void
+  onProjectCreated: (projectName: string) => void
 }
 
 export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
@@ -153,7 +153,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         setIsLoading(false)
 
         if (success) {
-          onProjectCreated()
+          const createdProjectName = projectName.trim()
+          onProjectCreated(createdProjectName)
           onClose()
           setProjectName('')
         } else {

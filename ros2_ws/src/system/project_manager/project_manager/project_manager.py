@@ -64,6 +64,10 @@ class ProjectManagerNode(Node):
         eeg_simulator_dir = os.path.join(project_dir, 'eeg_simulator')
         os.makedirs(eeg_simulator_dir, exist_ok=True)
 
+        # Create recordings directory
+        recordings_dir = os.path.join(project_dir, 'recordings')
+        os.makedirs(recordings_dir, exist_ok=True)
+
         # Create a single generator instance
         generator = RandomDataGenerator()
 

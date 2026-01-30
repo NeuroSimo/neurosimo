@@ -588,7 +588,7 @@ class SessionManagerNode(Node):
         response = self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize')
 
         if response is None or not response.success:
-            self.logger.error(f'Presenter finalization failed: {response.message}' if response else 'Presenter finalization failed: no response')
+            self.logger.error('Presenter finalization failed')
             return False
 
         self.logger.info('Presenter finalized successfully')
@@ -601,7 +601,7 @@ class SessionManagerNode(Node):
         response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
 
         if response is None or not response.success:
-            self.logger.error(f'Decider finalization failed: {response.message}' if response else 'Decider finalization failed: no response')
+            self.logger.error('Decider finalization failed')
             return False
 
         self.logger.info('Decider finalized successfully')
@@ -614,7 +614,7 @@ class SessionManagerNode(Node):
         response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
 
         if response is None or not response.success:
-            self.logger.error(f'Preprocessor finalization failed: {response.message}' if response else 'Preprocessor finalization failed: no response')
+            self.logger.error('Preprocessor finalization failed')
             return False
 
         self.logger.info('Preprocessor finalized successfully')
@@ -627,7 +627,7 @@ class SessionManagerNode(Node):
         response = self.call_service(self.stimulation_tracer_finalize_client, request, '/pipeline/stimulation_tracer/finalize')
 
         if response is None or not response.success:
-            self.logger.error(f'StimulationTracer finalization failed: {response.message}' if response else 'StimulationTracer finalization failed: no response')
+            self.logger.error('StimulationTracer finalization failed')
             return False
 
         self.logger.info('StimulationTracer finalized successfully')
@@ -640,7 +640,7 @@ class SessionManagerNode(Node):
         response = self.call_service(self.trigger_timer_finalize_client, request, '/pipeline/trigger_timer/finalize')
 
         if response is None or not response.success:
-            self.logger.error(f'TriggerTimer finalization failed: {response.message}' if response else 'TriggerTimer finalization failed: no response')
+            self.logger.error('TriggerTimer finalization failed')
             return False
 
         self.logger.info('TriggerTimer finalized successfully')
@@ -653,7 +653,7 @@ class SessionManagerNode(Node):
         response = self.call_service(self.protocol_finalize_client, request, '/pipeline/protocol/finalize')
 
         if response is None or not response.success:
-            self.logger.error('Protocol finalization failed: no response' if response is None else 'Protocol finalization failed')
+            self.logger.error('Protocol finalization failed')
             return False
 
         self.logger.info('Protocol finalized successfully')

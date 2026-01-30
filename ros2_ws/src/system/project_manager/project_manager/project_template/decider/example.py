@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Decider:
-    def __init__(self, subject_id: str, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: float):
+    def __init__(self, subject_id: str, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: int):
         self.subject_id = subject_id
         self.num_eeg_channels = num_eeg_channels
         self.num_emg_channels = num_emg_channels

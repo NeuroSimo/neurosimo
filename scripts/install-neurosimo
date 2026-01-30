@@ -2,6 +2,14 @@
 
 set -e
 
+# Clean up previous installation artifacts if NEUROSIMO_ROOT is defined
+if [ -n "$NEUROSIMO_ROOT" ]; then
+    echo "Cleaning up previous installation artifacts..."
+    rm -rf "$NEUROSIMO_ROOT/ros2_ws/build"
+    rm -rf "$NEUROSIMO_ROOT/ros2_ws/install"
+    rm -rf "$NEUROSIMO_ROOT/ros2_ws/log"
+fi
+
 # Check if Ansible is installed
 if ! command -v ansible-playbook &> /dev/null; then
     echo "Ansible is not installed. Installing Ansible..."

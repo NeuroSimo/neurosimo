@@ -337,7 +337,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
 
     /* Publish error health status */
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
-                                 "Failed to connect to LabJack device during initialization");
+                                 "Failed to connect to LabJack device");
 
     /* Clean up on failure */
     reset_state();

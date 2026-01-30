@@ -2,7 +2,7 @@
 
 NeuroSimo is an open-source software platform for real-time EEG- and EMG-guided transcranial magnetic stimulation (TMS) [1].
 
-**Note:** mTMS integration is maintained until v0.2.0 only. Future versions focus on generic TMS device support. For mTMS integration, use v0.2.0.
+**Note:** mTMS integration was maintained until v0.2.0 only. If you need mTMS support, please use v0.2.0.
 
 ## Installation
 
@@ -14,13 +14,13 @@ curl -fsSL https://raw.githubusercontent.com/neurosimo/neurosimo/main/scripts/in
 
 This will install NeuroSimo to `~/neurosimo`.
 
-If you're new to Linux, see the [Installation guide](md/installation-guide.md) for detailed instructions.
+For more detailed instructions, see the [Installation guide](md/installation-guide.md).
 
 ## Hardware configuration
 
-NeuroSimo currently supports two EEG devices: Bittium NeurOne and BrainProducts actiCHamp Plus (via TurboLink interface).
+NeuroSimo currently supports the following EEG devices: Bittium NeurOne and BrainProducts actiCHamp Plus (via TurboLink interface).
 
-Triggering the TMS device is done via LabJack T4, which is connected to the computer via USB.
+Triggering the TMS device is done via LabJack T4, connected to the computer via USB.
 
 See the [Hardware configuration guide](md/hardware-guide.md) for instructions on how to set up the EEG and TMS devices.
 

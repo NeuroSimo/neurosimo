@@ -17,6 +17,7 @@
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/msg/protocol_info.hpp"
 #include "pipeline_interfaces/srv/initialize_protocol.hpp"
+#include "pipeline_interfaces/srv/finalize_protocol.hpp"
 #include "pipeline_interfaces/srv/get_protocol_info.hpp"
 #include "system_interfaces/msg/component_health.hpp"
 
@@ -51,6 +52,7 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_service;
   rclcpp::Service<pipeline_interfaces::srv::InitializeProtocol>::SharedPtr initialize_protocol_service;
+  rclcpp::Service<pipeline_interfaces::srv::FinalizeProtocol>::SharedPtr finalize_protocol_service;
   rclcpp::Service<pipeline_interfaces::srv::GetProtocolInfo>::SharedPtr get_protocol_info_service;
     
   // Timers
@@ -79,6 +81,9 @@ private:
   void handle_initialize_protocol(
     const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response);
+  void handle_finalize_protocol(
+    const std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Response> response);
   void handle_get_protocol_info(
     const std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Response> response);

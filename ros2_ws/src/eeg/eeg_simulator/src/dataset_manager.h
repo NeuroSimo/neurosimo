@@ -26,6 +26,7 @@ public:
 
 private:
   std::tuple<bool, size_t> get_sample_count(const std::string& data_file_path);
+  std::tuple<bool, std::vector<double_t>> read_pulse_times_from_csv(const std::string& pulse_file_path);
   void handle_get_dataset_info(
       const std::shared_ptr<project_interfaces::srv::GetDatasetInfo::Request> request,
       std::shared_ptr<project_interfaces::srv::GetDatasetInfo::Response> response);

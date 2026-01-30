@@ -146,12 +146,35 @@ export const PipelineLogDisplay: React.FC = () => {
   const { preprocessorLogs, deciderLogs, presenterLogs, clearAllLogs } = useContext(LogContext)
   const [selectedSource, setSelectedSource] = useState<LogSource>('decider')
   const logContainerRef = useRef<HTMLDivElement>(null)
+  const prevLogLengthsRef = useRef({ preprocessor: 0, decider: 0, presenter: 0 })
 
   // Get the currently selected logs
-  const currentLogs = 
+  const currentLogs =
     selectedSource === 'preprocessor' ? preprocessorLogs :
     selectedSource === 'decider' ? deciderLogs :
     presenterLogs
+
+  // Auto-switch to tab when new error messages arrive
+  useEffect(() => {
+    const checkForNewErrors = (logs: LogMessage[], source: LogSource, prevLength: number) => {
+      const newLogs = logs.slice(prevLength)
+      const hasNewErrors = newLogs.some(log => log.level === LogLevel.ERROR)
+      if (hasNewErrors && selectedSource !== source) {
+        setSelectedSource(source)
+      }
+    }
+
+    checkForNewErrors(preprocessorLogs, 'preprocessor', prevLogLengthsRef.current.preprocessor)
+    checkForNewErrors(deciderLogs, 'decider', prevLogLengthsRef.current.decider)
+    checkForNewErrors(presenterLogs, 'presenter', prevLogLengthsRef.current.presenter)
+
+    // Update previous lengths
+    prevLogLengthsRef.current = {
+      preprocessor: preprocessorLogs.length,
+      decider: deciderLogs.length,
+      presenter: presenterLogs.length,
+    }
+  }, [preprocessorLogs, deciderLogs, presenterLogs, selectedSource])
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -177,8 +200,21 @@ export const PipelineLogDisplay: React.FC = () => {
     }
   }
 
+  const handleClearAllLogs = () => {
+    clearAllLogs()
+    // Reset error tracking when clearing logs
+    prevLogLengthsRef.current = { preprocessor: 0, decider: 0, presenter: 0 }
+  }
+
   const handleSourceChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedSource(event.target.value as LogSource)
+    const newSource = event.target.value as LogSource
+    setSelectedSource(newSource)
+    // Reset error tracking when manually switching tabs
+    prevLogLengthsRef.current = {
+      preprocessor: preprocessorLogs.length,
+      decider: deciderLogs.length,
+      presenter: presenterLogs.length,
+    }
   }
 
   return (
@@ -196,7 +232,7 @@ export const PipelineLogDisplay: React.FC = () => {
           <LogButton onClick={handleCopyLogs} disabled={currentLogs.length === 0}>
             Copy
           </LogButton>
-          <LogButton onClick={clearAllLogs}>Clear All</LogButton>
+          <LogButton onClick={handleClearAllLogs}>Clear All</LogButton>
         </ButtonGroup>
       </PipelineLogPanelTitle>
       <PipelineLogPanel>

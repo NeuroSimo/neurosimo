@@ -147,7 +147,7 @@ bool PreprocessorWrapper::initialize_module(
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%.6f s, %.6f s]%s",
+  RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%.3f s, %.3f s]%s",
               bold_on.c_str(),
               window_earliest_seconds,
               window_latest_seconds,

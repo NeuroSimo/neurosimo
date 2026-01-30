@@ -13,7 +13,6 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    fullscreen: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -35,6 +34,7 @@ function createWindow() {
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize();
     mainWindow.show();
   });
 

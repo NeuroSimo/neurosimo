@@ -356,7 +356,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
                  "Python call failed, not processing EEG sample at time %.3f (s).",
                  sample_time);
     this->error_occurred = true;
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Preprocessor: Python error");
     this->abort_session();
     return;
   }

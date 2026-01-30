@@ -1,4 +1,4 @@
-import ROSLIB from 'roslib'
+import ROSLIB from '@foxglove/roslibjs'
 import { ros } from './ros'
 
 export interface DatasetInfo extends ROSLIB.Message {

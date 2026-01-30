@@ -1,5 +1,5 @@
 import React, { useState, useEffect, ReactNode } from 'react'
-import { Topic, Message } from 'roslib'
+import { Topic, Message } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
 import { useParameters } from './ParameterProvider'

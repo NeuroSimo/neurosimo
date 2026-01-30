@@ -60,8 +60,11 @@ export const ExperimentPanel: React.FC = () => {
     listProjects(setProjects)
   }, [])
 
-  const refreshProjects = () => {
+  const handleProjectCreated = (projectName: string) => {
     listProjects(setProjects)
+    setActiveProject(projectName, () => {
+      console.log('Switched to newly created project:', projectName)
+    })
   }
 
   const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -185,7 +188,7 @@ export const ExperimentPanel: React.FC = () => {
       <CreateProjectModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onProjectCreated={refreshProjects}
+        onProjectCreated={handleProjectCreated}
       />
 
       <ProtocolInfoModal

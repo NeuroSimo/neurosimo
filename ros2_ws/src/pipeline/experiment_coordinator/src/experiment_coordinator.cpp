@@ -74,6 +74,11 @@ ExperimentCoordinator::ExperimentCoordinator()
     "/pipeline/protocol/initialize",
     std::bind(&ExperimentCoordinator::handle_initialize_protocol, this, _1, _2));
   
+  /* Service for protocol finalization. */
+  this->finalize_protocol_service = this->create_service<pipeline_interfaces::srv::FinalizeProtocol>(
+    "/pipeline/protocol/finalize",
+    std::bind(&ExperimentCoordinator::handle_finalize_protocol, this, _1, _2));
+  
   /* Service for protocol info. */
   this->get_protocol_info_service = this->create_service<pipeline_interfaces::srv::GetProtocolInfo>(
     "/experiment_coordinator/protocol/get_info",
@@ -280,6 +285,21 @@ void ExperimentCoordinator::handle_initialize_protocol(
   reset_experiment_state();
 
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  response->success = true;
+}
+
+void ExperimentCoordinator::handle_finalize_protocol(
+    const std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Request> request,
+    std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Response> response) {
+  (void)request;  // session_id not currently used
+  
+  RCLCPP_INFO(this->get_logger(), "Finalizing protocol");
+  
+  /* Reset state */
+  this->is_protocol_initialized = false;
+  this->protocol.reset();
+  reset_experiment_state();
+  
   response->success = true;
 }
 

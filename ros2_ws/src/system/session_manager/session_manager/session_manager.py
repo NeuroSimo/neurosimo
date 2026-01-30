@@ -12,7 +12,7 @@ from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfi
 from std_srvs.srv import Trigger
 from system_interfaces.msg import SessionConfig
 from pipeline_interfaces.srv import (
-    InitializeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
+    InitializeProtocol, FinalizeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
     InitializeStimulationTracer, FinalizeStimulationTracer,
     InitializeTriggerTimer, FinalizeTriggerTimer
@@ -71,6 +71,8 @@ class SessionManagerNode(Node):
         # Create clients for initialization operations
         self.protocol_init_client = self.create_client(
             InitializeProtocol, '/pipeline/protocol/initialize', callback_group=self.callback_group)
+        self.protocol_finalize_client = self.create_client(
+            FinalizeProtocol, '/pipeline/protocol/finalize', callback_group=self.callback_group)
         self.preprocessor_init_client = self.create_client(
             InitializePreprocessor, '/pipeline/preprocessor/initialize', callback_group=self.callback_group)
         self.decider_init_client = self.create_client(
@@ -141,6 +143,7 @@ class SessionManagerNode(Node):
 
         service_clients = [
             (self.protocol_init_client, '/pipeline/protocol/initialize'),
+            (self.protocol_finalize_client, '/pipeline/protocol/finalize'),
             (self.preprocessor_init_client, '/pipeline/preprocessor/initialize'),
             (self.decider_init_client, '/pipeline/decider/initialize'),
             (self.presenter_init_client, '/pipeline/presenter/initialize'),
@@ -360,6 +363,12 @@ class SessionManagerNode(Node):
         # Finalize trigger timer
         if not self.finalize_trigger_timer(session_id):
             self.logger.error('TriggerTimer finalization failed')
+            self.publish_session_state(SessionState.STOPPED)
+            return False
+
+        # Finalize protocol
+        if not self.finalize_protocol(session_id):
+            self.logger.error('Protocol finalization failed')
             self.publish_session_state(SessionState.STOPPED)
             return False
 
@@ -635,6 +644,19 @@ class SessionManagerNode(Node):
             return False
 
         self.logger.info('TriggerTimer finalized successfully')
+        return True
+
+    def finalize_protocol(self, session_id):
+        """Finalize the protocol component."""
+        request = FinalizeProtocol.Request()
+        request.session_id = session_id
+        response = self.call_service(self.protocol_finalize_client, request, '/pipeline/protocol/finalize')
+
+        if response is None or not response.success:
+            self.logger.error('Protocol finalization failed: no response' if response is None else 'Protocol finalization failed')
+            return False
+
+        self.logger.info('Protocol finalized successfully')
         return True
 
     # Streaming functions

@@ -236,14 +236,14 @@ void EegDecider::handle_initialize_decider(
     this->sensory_stimuli,
     this->event_queue);
 
+  // Publish initialization logs from Python constructor
+  publish_python_logs(0.0, true);
+
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module");
     response->success = false;
     return;
   }
-
-  // Publish initialization logs from Python constructor
-  publish_python_logs(0.0, true);
 
   // Get buffer size and set up sample buffer
   size_t buffer_size = this->decider_wrapper->get_buffer_size();
@@ -260,6 +260,7 @@ void EegDecider::handle_initialize_decider(
   bool was_warmup_successful = this->decider_wrapper->warm_up();
   if (!was_warmup_successful) {
     RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
+    publish_python_logs(0.0, true);  // Publish error logs from failed warm-up
     response->success = false;
     return;
   }

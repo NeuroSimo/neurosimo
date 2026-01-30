@@ -151,6 +151,9 @@ void EegPresenter::handle_initialize_presenter(
     module_name,
     request->subject_id);
 
+  // Publish initialization logs from Python constructor
+  publish_python_logs(0.0, true);
+
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
@@ -158,9 +161,6 @@ void EegPresenter::handle_initialize_presenter(
     response->success = false;
     return;
   }
-
-  // Publish initialization logs from Python constructor
-  publish_python_logs(0.0, true);
 
   // Mark as initialized
   this->is_initialized = true;

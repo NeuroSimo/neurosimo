@@ -165,12 +165,7 @@ echo "Building NeuroSimo..."
 sg docker -c "./scripts/build-neurosimo"
 
 # Build Electron app
-echo "Building NeuroSimo desktop app..."
-cd front
-npm install
-DISABLE_ESLINT_PLUGIN=true npm run build
-npm run electron-pack-linux
-cd ..
+./scripts/build-electron-app
 
 # Install desktop launcher
 echo "Installing desktop launcher..."

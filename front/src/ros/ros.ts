@@ -1,5 +1,5 @@
 import React from 'react'
-import ROSLIB from 'roslib'
+import ROSLIB from '@foxglove/roslibjs'
 
 const ROSBRIDGE_URL = 'ws://localhost:9090'
 

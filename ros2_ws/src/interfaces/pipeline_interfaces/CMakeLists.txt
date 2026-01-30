@@ -41,6 +41,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
   "srv/InitializeProtocol.srv"
   "srv/GetProtocolInfo.srv"
+  "srv/FinalizeProtocol.srv"
   "srv/FinalizePreprocessor.srv"
   "srv/FinalizeDecider.srv"
   "srv/FinalizePresenter.srv"

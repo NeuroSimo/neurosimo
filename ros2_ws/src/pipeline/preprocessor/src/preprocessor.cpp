@@ -154,14 +154,14 @@ void EegPreprocessor::handle_initialize_preprocessor(
     request->stream_info.num_emg_channels,
     request->stream_info.sampling_frequency);
 
+  // Publish initialization logs from Python constructor
+  publish_python_logs(0.0, true);
+
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize preprocessor module");
     response->success = false;
     return;
   }
-
-  // Publish initialization logs from Python constructor
-  publish_python_logs(0.0, true);
 
   // Get buffer size and set up sample buffer
   size_t buffer_size = this->preprocessor_wrapper->get_buffer_size();

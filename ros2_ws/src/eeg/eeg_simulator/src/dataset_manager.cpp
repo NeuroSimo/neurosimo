@@ -126,23 +126,24 @@ std::tuple<bool, project_interfaces::msg::DatasetInfo, std::vector<double_t>> Da
       dataset_msg.loop = false;
     }
 
-    /* Read optional "pulse_times" array. */
+    /* Read optional "pulse_file" field and load pulse times from CSV. */
     std::vector<double_t> parsed_pulse_times;
-    if (json_data.contains("pulse_times") && json_data["pulse_times"].is_array()) {
-      for (const auto& pulse_time : json_data["pulse_times"]) {
-        if (pulse_time.is_number()) {
-          parsed_pulse_times.push_back(pulse_time.get<double>());
-        } else {
-          RCLCPP_WARN(node_->get_logger(), "Non-numeric value in pulse_times array in %s, skipping", json_filename.c_str());
-        }
-      }
+    if (json_data.contains("pulse_file") && json_data["pulse_file"].is_string()) {
+      std::string pulse_file = json_data["pulse_file"];
+      std::string pulse_file_path = directory_path + "/" + pulse_file;
 
-      /* Warn if loop is enabled with pulse_times - this combination is not supported. */
+      auto [success, pulse_times] = read_pulse_times_from_csv(pulse_file_path);
+      if (!success) {
+        return std::make_tuple(false, project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
+      }
+      parsed_pulse_times = pulse_times;
+
+      /* Warn if loop is enabled with pulse_file - this combination is not supported. */
       if (dataset_msg.loop && !parsed_pulse_times.empty()) {
-        RCLCPP_WARN(node_->get_logger(), "Warning: pulse_times with loop=true is not supported in %s, pulse_times will be ignored", json_filename.c_str());
+        RCLCPP_WARN(node_->get_logger(), "Warning: pulse_file with loop=true is not supported in %s, pulse times will be ignored", json_filename.c_str());
         parsed_pulse_times.clear();
       } else if (!parsed_pulse_times.empty()) {
-        RCLCPP_INFO(node_->get_logger(), "Loaded %zu pulse times from %s", parsed_pulse_times.size(), json_filename.c_str());
+        RCLCPP_INFO(node_->get_logger(), "Loaded %zu pulse times from %s", parsed_pulse_times.size(), pulse_file.c_str());
       }
     }
     dataset_msg.pulse_count = parsed_pulse_times.size();
@@ -181,6 +182,42 @@ std::tuple<bool, size_t> DatasetManager::get_sample_count(const std::string& dat
   }
 
   return std::make_tuple(true, line_count);
+}
+
+std::tuple<bool, std::vector<double_t>> DatasetManager::read_pulse_times_from_csv(const std::string& pulse_file_path) {
+  std::vector<double_t> pulse_times;
+
+  if (!std::filesystem::exists(pulse_file_path)) {
+    RCLCPP_ERROR(node_->get_logger(), "Pulse file not found: %s", pulse_file_path.c_str());
+    return std::make_tuple(false, pulse_times);
+  }
+
+  std::ifstream pulse_file_stream(pulse_file_path);
+  if (!pulse_file_stream.is_open()) {
+    RCLCPP_ERROR(node_->get_logger(), "Error opening pulse file: %s", pulse_file_path.c_str());
+    return std::make_tuple(false, pulse_times);
+  }
+
+  std::string line;
+  while (std::getline(pulse_file_stream, line)) {
+    /* Skip empty lines */
+    if (line.empty() || line.find_first_not_of(" \t\r\n") == std::string::npos) {
+      continue;
+    }
+
+    try {
+      double_t pulse_time = std::stod(line);
+      pulse_times.push_back(pulse_time);
+    } catch (const std::exception& e) {
+      RCLCPP_ERROR(node_->get_logger(), "Error parsing pulse time from line '%s' in %s: %s", 
+                   line.c_str(), pulse_file_path.c_str(), e.what());
+      return std::make_tuple(false, std::vector<double_t>());
+    }
+  }
+
+  pulse_file_stream.close();
+
+  return std::make_tuple(true, pulse_times);
 }
 
 std::tuple<bool, std::string> DatasetManager::load_dataset(

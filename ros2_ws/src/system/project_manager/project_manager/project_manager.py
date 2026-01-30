@@ -94,21 +94,29 @@ class ProjectManagerNode(Node):
         return response
 
     def _set_project_permissions(self, project_dir):
-        """Set proper permissions on project directory and contents for user access."""
+        """Set proper permissions and ownership on project directory and contents."""
+        # Get the ownership of the parent projects directory to determine target user/group
+        projects_root = os.path.dirname(project_dir)
+        parent_stat = os.stat(projects_root)
+        target_uid = parent_stat.st_uid
+        target_gid = parent_stat.st_gid
+
         # Set directory permissions to 775 (rwxrwxr-x) for group access
         # Set file permissions to 664 (rw-rw-r--) for group access
         for root, dirs, files in os.walk(project_dir):
-            # Set directory permissions
+            # Set directory permissions and ownership
             for dir_name in dirs:
                 dir_path = os.path.join(root, dir_name)
                 os.chmod(dir_path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IXOTH)
+                os.chown(dir_path, target_uid, target_gid)
 
-            # Set file permissions
+            # Set file permissions and ownership
             for file_name in files:
                 file_path = os.path.join(root, file_name)
                 os.chmod(file_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)
+                os.chown(file_path, target_uid, target_gid)
 
-        self.logger.info(f'Set permissions on project directory: {project_dir}')
+        self.logger.info(f'Set permissions and ownership on project directory: {project_dir}')
 
 
 def main(args=None):

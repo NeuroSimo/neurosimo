@@ -292,7 +292,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");
     this->error_occurred = true;
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Python error");
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Presenter: Python error");
     this->abort_session();
     return;
   }

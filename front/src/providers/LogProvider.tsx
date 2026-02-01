@@ -7,7 +7,7 @@ export interface LogMessage extends ROSLIB.Message {
   message: string
   sample_time: number
   level: number  // 0 = INFO, 1 = WARNING, 2 = ERROR
-  is_initialization: boolean
+  phase: number  // 0 = RUNTIME, 1 = INITIALIZATION, 2 = FINALIZATION
 }
 
 export interface LogMessages extends ROSLIB.Message {
@@ -18,6 +18,12 @@ export const LogLevel = {
   INFO: 0,
   WARNING: 1,
   ERROR: 2,
+} as const
+
+export const LogPhase = {
+  RUNTIME: 0,
+  INITIALIZATION: 1,
+  FINALIZATION: 2,
 } as const
 
 interface LogContextType {

@@ -94,7 +94,7 @@ private:
   void abort_session();
 
   void log_section_header(const std::string& title);
-  void publish_python_logs(double sample_time, bool is_initialization);
+  void publish_python_logs(uint8_t phase, double sample_time);
 
   void handle_initialize_decider(
     const std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Request> request,

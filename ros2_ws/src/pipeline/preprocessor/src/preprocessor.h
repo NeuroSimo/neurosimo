@@ -71,7 +71,7 @@ private:
   void handle_finalize_preprocessor(
     const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response);
-  void publish_python_logs(double sample_time, bool is_initialization);
+  void publish_python_logs(uint8_t phase, double sample_time);
   void publish_sentinel_sample(double_t sample_time);
 
   void abort_session();

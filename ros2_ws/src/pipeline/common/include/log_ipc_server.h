@@ -3,12 +3,15 @@
 
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/select.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -40,6 +43,37 @@ public:
     running_.store(true);
     thread_ = std::thread([this] { this->loop(); });
     return true;
+  }
+
+  /* Drain any pending messages from the socket. Call before get_and_clear_logs()
+     to ensure all IPC messages have been processed. */
+  void drain() {
+    if (fd_ < 0) return;
+
+    char buf[8192];
+    fd_set readfds;
+    struct timeval tv;
+
+    while (true) {
+      FD_ZERO(&readfds);
+      FD_SET(fd_, &readfds);
+      tv.tv_sec = 0;
+      tv.tv_usec = 1000; // 1ms timeout
+
+      int ready = ::select(fd_ + 1, &readfds, nullptr, nullptr, &tv);
+      if (ready <= 0) {
+        break; // timeout or error - no more pending messages
+      }
+
+      ssize_t n = ::recvfrom(fd_, buf, sizeof(buf) - 1, MSG_DONTWAIT, nullptr, nullptr);
+      if (n <= 0) {
+        break;
+      }
+      buf[n] = '\0';
+      
+      std::lock_guard<std::mutex> lock(sink_mutex_);
+      sink_(std::string(buf, static_cast<size_t>(n)));
+    }
   }
 
   void stop() {
@@ -75,11 +109,14 @@ private:
         continue;
       }
       buf[n] = '\0';
+      
+      std::lock_guard<std::mutex> lock(sink_mutex_);
       sink_(std::string(buf, static_cast<size_t>(n)));
     }
   }
 
   SinkFn sink_;
+  std::mutex sink_mutex_;
   std::atomic<bool> running_{false};
   std::thread thread_;
   int fd_ = -1;

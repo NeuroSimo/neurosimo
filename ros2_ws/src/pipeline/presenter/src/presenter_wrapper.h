@@ -48,6 +48,9 @@ public:
   /* Get buffered logs and clear the buffer */
   std::vector<LogEntry> get_and_clear_logs();
 
+  /* Drain any pending log messages. Call at session end. */
+  void drain_logs();
+
 private:
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */
   static rclcpp::Logger* logger_ptr;

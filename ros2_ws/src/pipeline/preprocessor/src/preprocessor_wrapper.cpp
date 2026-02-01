@@ -283,6 +283,12 @@ std::vector<LogEntry> PreprocessorWrapper::get_and_clear_logs() {
   return logs;
 }
 
+void PreprocessorWrapper::drain_logs() {
+  if (log_server) {
+    log_server->drain();
+  }
+}
+
 rclcpp::Logger* PreprocessorWrapper::logger_ptr = nullptr;
 std::vector<LogEntry> PreprocessorWrapper::log_buffer;
 std::mutex PreprocessorWrapper::log_buffer_mutex;

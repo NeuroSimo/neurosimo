@@ -283,8 +283,14 @@ void EegDecider::handle_initialize_decider(
 }
 
 void EegDecider::handle_finalize_decider(
-  const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
+  [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response) {
+
+  /* Drain and publish any remaining logs. */
+  if (this->decider_wrapper) {
+    this->decider_wrapper->drain_logs();
+    publish_python_logs(0.0, false);
+  }
 
   response->success = this->reset_state();
 

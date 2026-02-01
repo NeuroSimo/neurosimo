@@ -1,10 +1,9 @@
 import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { ExportModal, ExportDataType } from 'components/ExportModal'
+import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 
 import {
   StyledPanel,
@@ -62,24 +61,6 @@ const ExportButton = styled.button<{ disabled: boolean }>`
 
   &:hover {
     background-color: ${props => props.disabled ? '#cccccc' : '#0056b3'};
-  }
-`
-
-const OpenFolderButton = styled.button<{ disabled: boolean }>`
-  background-color: ${props => props.disabled ? '#cccccc' : '#28a745'};
-  color: ${props => props.disabled ? '#666666' : 'white'};
-  border: none;
-  border-radius: 4px;
-  padding: 6px 8px;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 10px;
-
-  &:hover {
-    background-color: ${props => props.disabled ? '#cccccc' : '#218838'};
   }
 `
 
@@ -180,13 +161,6 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
     )
   }
 
-  const handleOpenFolder = async () => {
-    if (!activeProject || !selectedRecordingInfo?.exported || !selectedRecordingInfo?.export_directory) return
-
-    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, selectedRecordingInfo.export_directory)
-    if (error) console.error('Failed to open folder:', error)
-  }
-
   return (
     <PlaybackContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
@@ -274,26 +248,32 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         </>
       )}
       <CompactRow>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
           <ExportButton
             disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming}
             onClick={handleExportClick}
           >
             Export
           </ExportButton>
-          <OpenFolderButton
-            disabled={!activeProject || !isElectron || !selectedRecordingInfo?.exported}
-            onClick={handleOpenFolder}
-            title={
+          <FolderTerminalButtons
+            folderName={selectedRecordingInfo?.export_directory || ''}
+            disabled={!selectedRecordingInfo?.exported}
+            folderTitle={
               !selectedRecordingInfo?.exported
                 ? "No export available"
                 : isElectron
                 ? "Open export folder"
                 : "Only available in Electron"
             }
-          >
-            <FontAwesomeIcon icon={faFolderOpen} />
-          </OpenFolderButton>
+            terminalTitle={
+              !selectedRecordingInfo?.exported
+                ? "No export available"
+                : isElectron
+                ? "Open terminal in export folder"
+                : "Only available in Electron"
+            }
+            size={26}
+          />
         </div>
       </CompactRow>
       <ExportModal

@@ -31,6 +31,7 @@ add_executable(
 target_include_directories(decider
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../common/include>
         $<INSTALL_INTERFACE:lib>)
 
 target_link_libraries(decider
@@ -77,6 +78,11 @@ add_library(cpp_bindings MODULE src/cpp_bindings.cpp src/decider_wrapper.cpp)
 # XXX: The value of PREFIX should be "${PYTHON_MODULE_PREFIX}" and SUFFIX should be "${PYTHON_MODULE_EXTENSION}".
 #   However, they seem to be undefined, resulting in empty strings, hence hardcode the suffix to .so.
 set_target_properties(cpp_bindings PROPERTIES PREFIX "" SUFFIX ".so")
+
+target_include_directories(cpp_bindings
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
+)
 
 ament_target_dependencies(
   cpp_bindings

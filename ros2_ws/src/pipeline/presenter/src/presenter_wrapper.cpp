@@ -10,6 +10,15 @@ namespace py = pybind11;
 PresenterWrapper::PresenterWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
 
+  /* Start IPC log server first, so cpp_bindings.log() can forward immediately. */
+  log_server = std::make_unique<LogIpcServer>([](std::string&& msg) {
+    std::lock_guard<std::mutex> lock(log_buffer_mutex);
+    log_buffer.push_back({std::move(msg), LogLevel::INFO});
+  });
+  if (!log_server->start()) {
+    RCLCPP_WARN(*logger_ptr, "Failed to start log IPC server; worker logs may be lost.");
+  }
+
   /* Initialize the Python interpreter. */
   interpreter = std::make_unique<py::scoped_interpreter>();
   setup_custom_print();
@@ -18,27 +27,20 @@ PresenterWrapper::PresenterWrapper(rclcpp::Logger& logger) {
 void PresenterWrapper::setup_custom_print() {
     py::exec(R"(
 import builtins
+import multiprocessing
 import cpp_bindings
 
-def custom_print(*args, sep=' ', end='\n', file=None, flush=False):
-    output = sep.join(map(str, args))
-    cpp_bindings.log(output)
-    if file is not None:
-        file.write(output + end)
-        if flush:
-            file.flush()
+# Force fork so workers inherit this print patch (Linux-only).
+try:
+    multiprocessing.set_start_method("fork", force=True)
+except RuntimeError:
+    pass
 
-def print_throttle(*args, period=1.0, sep=' ', end='\n', file=None, flush=False):
-    assert period > 0.0, 'The period must be greater than zero.'
-    output = sep.join(map(str, args))
-    cpp_bindings.log_throttle(output, period)
-    if file is not None:
-        file.write(output + end)
-        if flush:
-            file.flush()
+def _print(*args, sep=' ', end='\n', file=None, flush=False):
+    msg = sep.join(map(str, args)) + end
+    cpp_bindings.log(msg)
 
-builtins.print = custom_print
-builtins.print_throttle = print_throttle
+builtins.print = _print
     )", py::globals());
 }
 
@@ -241,6 +243,10 @@ std::vector<LogEntry> PresenterWrapper::get_and_clear_logs() {
   std::vector<LogEntry> logs = std::move(log_buffer);
   log_buffer.clear();
   return logs;
+}
+
+PresenterWrapper::~PresenterWrapper() {
+  if (log_server) log_server->stop();
 }
 
 rclcpp::Logger* PresenterWrapper::logger_ptr = nullptr;

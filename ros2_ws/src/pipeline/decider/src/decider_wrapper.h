@@ -24,6 +24,7 @@
 #include "std_msgs/msg/string.hpp"
 
 #include "ring_buffer.h"
+#include "log_ipc_server.h"
 
 namespace py = pybind11;
 
@@ -90,9 +91,8 @@ public:
 
   void setup_custom_print();
 
-  /* log and log_throttle are exposed to Python, defined in cpp_bindings.cpp. */
+  /* log is exposed to Python, defined in cpp_bindings.cpp. */
   static void log(const std::string& message);
-  static void log_throttle(const std::string& message, const double_t period);
 
   /* Get buffered logs and clear the buffer */
   std::vector<LogEntry> get_and_clear_logs();
@@ -105,6 +105,9 @@ private:
   /* Buffer for Python logs - static to be accessible from static log functions */
   static std::vector<LogEntry> log_buffer;
   static std::mutex log_buffer_mutex;
+
+  /* IPC server for receiving logs from multiprocessing workers */
+  std::unique_ptr<LogIpcServer> log_server;
 
   std::unique_ptr<py::module> decider_module;
   std::unique_ptr<py::object> decider_instance;

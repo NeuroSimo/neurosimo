@@ -53,6 +53,7 @@ COPY ros2_ws/src/utils/filesystem_utils src/utils/filesystem_utils/
 RUN source /opt/ros/iron/setup.bash && colcon build
 
 # ROS node
+COPY ros2_ws/src/pipeline/common src/pipeline/common/
 COPY ros2_ws/src/pipeline/presenter src/pipeline/presenter/
 RUN source /opt/ros/iron/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select presenter
 

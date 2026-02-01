@@ -32,6 +32,7 @@ add_library(presenter_core SHARED
 target_include_directories(presenter_core
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../common/include>
     $<INSTALL_INTERFACE:lib>
     ${Python3_INCLUDE_DIRS}
 )
@@ -102,6 +103,7 @@ set_target_properties(cpp_bindings PROPERTIES SUFFIX "${PYTHON_EXT_SUFFIX}")
 target_include_directories(cpp_bindings
   PRIVATE
     ${Python3_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
 )
 
 ament_target_dependencies(cpp_bindings

@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel, DASHBOARD_PANEL_OFFSET_FROM_TOP } from 'styles/General'
 
-import { LogContext, LogMessage, LogLevel } from 'providers/LogProvider'
+import { LogContext, LogMessage, LogLevel, LogPhase } from 'providers/LogProvider'
 
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
@@ -115,23 +115,26 @@ const LogEntry = styled.div`
   gap: 0;
 `
 
-const Timestamp = styled.span<{ $isInit: boolean; $level: number }>`
+const Timestamp = styled.span<{ $phase: number; $level: number }>`
   color: ${props => {
-    if (props.$isInit) return '#000'  // INIT - black
+    if (props.$phase === 1) return '#000'  // INITIALIZATION - black
+    if (props.$phase === 2) return '#000'  // FINALIZATION - black
     if (props.$level === 2) return '#fff'  // ERROR - white
     return '#555'  // INFO/WARNING - dark gray
   }};
   font-weight: bold;
   text-align: right;
   background-color: ${props => {
-    if (props.$isInit) return '#d46c0b'  // INIT - orange
+    if (props.$phase === 1) return '#d46c0b'  // INITIALIZATION - orange
+    if (props.$phase === 2) return '#6c757d'  // FINALIZATION - gray
     if (props.$level === 2) return '#dc3545'  // ERROR - red
     if (props.$level === 1) return '#ffc107'  // WARNING - yellow
     return '#e8e8e8'  // INFO - light gray
   }};
   padding: 2px 3px;
   border-right: 2px solid ${props => {
-    if (props.$isInit) return '#b85a09'  // INIT - darker orange
+    if (props.$phase === 1) return '#b85a09'  // INITIALIZATION - darker orange
+    if (props.$phase === 2) return '#545b62'  // FINALIZATION - darker gray
     if (props.$level === 2) return '#c82333'  // ERROR - darker red
     if (props.$level === 1) return '#e0a800'  // WARNING - darker yellow
     return '#ccc'  // INFO - gray
@@ -184,7 +187,8 @@ export const PipelineLogDisplay: React.FC = () => {
   }, [currentLogs])
 
   const getTimestampLabel = (log: LogMessage): string => {
-    if (log.is_initialization) return 'Init'
+    if (log.phase === LogPhase.INITIALIZATION) return 'Init'
+    if (log.phase === LogPhase.FINALIZATION) return 'Final'
     if (log.level === LogLevel.ERROR) return 'Error'
     return log.sample_time.toFixed(3)
   }
@@ -244,7 +248,7 @@ export const PipelineLogDisplay: React.FC = () => {
           ) : (
             currentLogs.map((log: LogMessage, index: number) => (
               <LogEntry key={index}>
-                <Timestamp $isInit={log.is_initialization} $level={log.level}>
+                <Timestamp $phase={log.phase} $level={log.level}>
                   {getTimestampLabel(log)}
                 </Timestamp>
                 <LogText>{log.message}</LogText>

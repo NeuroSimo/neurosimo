@@ -237,7 +237,7 @@ void EegDecider::handle_initialize_decider(
     this->event_queue);
 
   // Publish initialization logs from Python constructor
-  publish_python_logs(0.0, true);
+  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module");
@@ -260,7 +260,7 @@ void EegDecider::handle_initialize_decider(
   bool was_warmup_successful = this->decider_wrapper->warm_up();
   if (!was_warmup_successful) {
     RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
-    publish_python_logs(0.0, true);  // Publish error logs from failed warm-up
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);  // Publish error logs from failed warm-up
     response->success = false;
     return;
   }
@@ -289,7 +289,7 @@ void EegDecider::handle_finalize_decider(
   /* Drain and publish any remaining logs. */
   if (this->decider_wrapper) {
     this->decider_wrapper->drain_logs();
-    publish_python_logs(0.0, false);
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
   }
 
   response->success = this->reset_state();
@@ -367,7 +367,7 @@ void EegDecider::log_section_header(const std::string& title) {
   RCLCPP_INFO(this->get_logger(), " ");
 }
 
-void EegDecider::publish_python_logs(double sample_time, bool is_initialization) {
+void EegDecider::publish_python_logs(uint8_t phase, double sample_time) {
   auto logs = this->decider_wrapper->get_and_clear_logs();
   
   if (logs.empty()) {
@@ -383,7 +383,7 @@ void EegDecider::publish_python_logs(double sample_time, bool is_initialization)
     log_msg.message = log_entry.message;
     log_msg.sample_time = sample_time;
     log_msg.level = static_cast<uint8_t>(log_entry.level);
-    log_msg.is_initialization = is_initialization;
+    log_msg.phase = phase;
     
     batch_msg.messages.push_back(log_msg);
     
@@ -504,7 +504,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     this->is_coil_at_target);
 
   /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  publish_python_logs(sample_time, false);
+  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, sample_time);
 
   /* Log and return early if the Python call failed. */
   if (!success) {

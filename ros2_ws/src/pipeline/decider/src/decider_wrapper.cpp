@@ -666,6 +666,12 @@ std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
   return logs;
 }
 
+void DeciderWrapper::drain_logs() {
+  if (log_server) {
+    log_server->drain();
+  }
+}
+
 std::size_t DeciderWrapper::get_buffer_size() const {
   return this->buffer_size;
 }

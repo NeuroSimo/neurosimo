@@ -96,6 +96,9 @@ public:
 
   /* Get buffered logs and clear the buffer */
   std::vector<LogEntry> get_and_clear_logs();
+
+  /* Drain any pending log messages. Call at session end. */
+  void drain_logs();
   void log_section_header(const std::string& title);
 
 private:

@@ -187,6 +187,12 @@ void EegPreprocessor::handle_finalize_preprocessor(
   [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
 
+  /* Drain and publish any remaining logs. */
+  if (this->preprocessor_wrapper) {
+    this->preprocessor_wrapper->drain_logs();
+    publish_python_logs(0.0, false);
+  }
+
   response->success = this->reset_state();
 
   if (!response->success) {

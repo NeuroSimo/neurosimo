@@ -245,6 +245,12 @@ std::vector<LogEntry> PresenterWrapper::get_and_clear_logs() {
   return logs;
 }
 
+void PresenterWrapper::drain_logs() {
+  if (log_server) {
+    log_server->drain();
+  }
+}
+
 PresenterWrapper::~PresenterWrapper() {
   if (log_server) log_server->stop();
 }

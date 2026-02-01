@@ -180,6 +180,12 @@ void EegPresenter::handle_finalize_presenter(
 
   RCLCPP_INFO(this->get_logger(), "Received finalize request");
 
+  /* Drain and publish any remaining logs. */
+  if (this->presenter_wrapper) {
+    this->presenter_wrapper->drain_logs();
+    publish_python_logs(0.0, false);
+  }
+
   // Finalize the presenter module if initialized
   if (this->is_initialized && this->presenter_wrapper) {
     bool success = this->presenter_wrapper->reset_module_state();

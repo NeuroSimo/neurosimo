@@ -1,9 +1,8 @@
 import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 
 import { ValidatedInput } from 'components/ValidatedInput'
+import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 
 import {
   StyledPanel,
@@ -19,7 +18,6 @@ import {
 import { EegSimulatorContext, DataSourceStateValue } from 'providers/EegSimulatorProvider'
 import { ExperimentContext } from 'providers/ExperimentProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
-import { ProjectContext } from 'providers/ProjectProvider'
 import { useParameters } from 'providers/ParameterProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
@@ -44,25 +42,6 @@ const CompactRow = styled(ConfigRow)`
   gap: 4px;
 `
 
-const OpenFolderButton = styled.button<{ disabled: boolean }>`
-  background-color: ${props => props.disabled ? '#cccccc' : '#28a745'};
-  color: ${props => props.disabled ? '#666666' : 'white'};
-  border: none;
-  border-radius: 4px;
-  padding: 6px 8px;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: auto;
-  margin-right: 10px;
-
-  &:hover {
-    background-color: ${props => props.disabled ? '#cccccc' : '#218838'};
-  }
-`
-
 
 export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegSimulatorStatus } = useContext(HealthcheckContext)
@@ -74,7 +53,6 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(ExperimentContext)
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { activeProject } = useContext(ProjectContext)
   const { setSimulatorDataset, setSimulatorStartTime } = useParameters()
   const { sessionState } = useSession()
 
@@ -82,7 +60,6 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
-  const isElectron = !!(window as any).electronAPI
 
   // Fetch dataset info when dataset changes
   useEffect(() => {
@@ -117,14 +94,6 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       console.log('Start time set to ' + startTime)
     })
   }
-
-  const handleOpenFolder = async () => {
-    if (!activeProject) return
-    
-    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, 'eeg_simulator')
-    if (error) console.error('Failed to open folder:', error)
-  }
-    
 
   const dataSourceStateLabel =
     dataSourceState === DataSourceStateValue.RUNNING
@@ -194,14 +163,8 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
       <div style={{ height: '8px' }} />
-      <CompactRow>
-        <OpenFolderButton
-          disabled={!activeProject || !isElectron}
-          onClick={handleOpenFolder}
-          title={isElectron ? "Open EEG simulator folder" : "Only available in Electron"}
-        >
-          <FontAwesomeIcon icon={faFolderOpen} />
-        </OpenFolderButton>
+      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '10px' }}>
+        <FolderTerminalButtons folderName="eeg_simulator" />
       </CompactRow>
     </SimulatorPanel>
   )

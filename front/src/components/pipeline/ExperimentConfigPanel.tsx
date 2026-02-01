@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus, faFolderOpen, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useParameters } from 'providers/ParameterProvider'
@@ -11,6 +11,7 @@ import { CommittableTextInput } from 'components/CommittableTextInput'
 import { CommittableNumericInput } from 'components/CommittableNumericInput'
 import { CreateProjectModal } from 'components/CreateProjectModal'
 import { ProtocolInfoModal } from 'components/ProtocolInfoModal'
+import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { listProjects, setActiveProject } from 'ros/project'
 import { ProjectContext } from 'providers/ProjectProvider'
 import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
@@ -93,13 +94,6 @@ export const ExperimentPanel: React.FC = () => {
     })
   }
 
-  const handleOpenProtocolsFolder = async () => {
-    if (!activeProject) return
-    
-    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, 'protocols')
-    if (error) console.error('Failed to open folder:', error)
-  }
-
   const handleProtocolInfo = () => {
     if (!protocolName || protocolName.trim() === '' || !activeProject) return
     
@@ -161,13 +155,7 @@ export const ExperimentPanel: React.FC = () => {
       <ConfigRow>
         <ConfigLabel>Protocol:</ConfigLabel>
         <IconButtonWrapper>
-          <IconButton
-            onClick={handleOpenProtocolsFolder}
-            disabled={!activeProject || !isElectron}
-            title={isElectron ? "Open protocols folder" : "Only available in Electron"}
-          >
-            <FontAwesomeIcon icon={faFolderOpen} />
-          </IconButton>
+          <FolderTerminalButtons folderName="protocols" />
           <IconButton
             onClick={handleProtocolInfo}
             disabled={!protocolName || protocolName.trim() === '' || !activeProject}

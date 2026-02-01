@@ -1,11 +1,9 @@
-import React, { useContext } from 'react'
+import React from 'react'
 import styled from 'styled-components'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
-import { ProjectContext } from 'providers/ProjectProvider'
+import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 
 const Container = styled(StyledPanel)`
@@ -37,21 +35,6 @@ const PipelineSelect = styled(Select)`
   flex-shrink: 0;
 `
 
-const IconButton = styled.button<{ disabled: boolean }>`
-  background: none;
-  border: 0.5px solid #666666;
-  border-radius: 3px;
-  width: 22px;
-  height: 22px;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666666;
-  opacity: ${props => props.disabled ? 0.5 : 1};
-  margin-left: 0px;
-`
-
 interface PipelineNodeProps {
   title: string
   enabled: boolean
@@ -72,19 +55,10 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
   folderName,
 }) => {
   const { sessionState } = useSession()
-  const { activeProject } = useContext(ProjectContext)
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
-  const isElectron = !!(window as any).electronAPI
 
   const handleModuleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     onModuleChange(event.target.value)
-  }
-
-  const handleOpenFolder = async () => {
-    if (!activeProject) return
-    
-    const error = await (window as any).electronAPI?.openProjectFolder(activeProject, folderName)
-    if (error) console.error('Failed to open folder:', error)
   }
 
   return (
@@ -99,13 +73,7 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
             </option>
           ))}
         </PipelineSelect>
-        <IconButton
-          onClick={handleOpenFolder}
-          disabled={!activeProject || !isElectron}
-          title={isElectron ? `Open ${folderName} folder` : "Only available in Electron"}
-        >
-          <FontAwesomeIcon icon={faFolderOpen} />
-        </IconButton>
+        <FolderTerminalButtons folderName={folderName} />
       </HorizontalRow>
     </Container>
   )

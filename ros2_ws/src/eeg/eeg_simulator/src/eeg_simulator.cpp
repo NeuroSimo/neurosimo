@@ -101,6 +101,9 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     std::bind(&EegSimulator::handle_initialize_cancel, this, std::placeholders::_1),
     std::bind(&EegSimulator::handle_initialize_accepted, this, std::placeholders::_1));
 
+  /* Initialize client for aborting session */
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+
   /* Publish initial streamer state. */
   publish_data_source_state();
 }
@@ -115,6 +118,14 @@ void EegSimulator::publish_health_status(uint8_t health_level, const std::string
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
+}
+
+void EegSimulator::abort_session() {
+  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  request->source = "eeg_simulator";
+
+  auto result = this->abort_session_client->async_send_request(request);
+  RCLCPP_INFO(this->get_logger(), "Requested session abort: dataset finished (non-looping mode)");
 }
 
 rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(
@@ -394,7 +405,7 @@ bool EegSimulator::publish_until(double_t until_time) {
     bool is_last_sample = !this->dataset_info.loop && 
                           (this->current_index == dataset_buffer.size() - 1);
     if (is_last_sample) {
-      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session abort.");
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session end.");
       this->is_session_end = true;
     }
 
@@ -415,6 +426,7 @@ bool EegSimulator::publish_until(double_t until_time) {
       this->data_source_state = system_interfaces::msg::DataSourceState::READY;
       stop_streaming_timer();
       publish_data_source_state();
+      abort_session();
       return true;
     }
 

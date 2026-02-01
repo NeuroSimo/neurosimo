@@ -129,6 +129,20 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Handle Escape key to close modal
+  React.useEffect(() => {
+    if (!isOpen) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isLoading) {
+        handleClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen, isLoading])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 

@@ -256,6 +256,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   }, [selectedTypes, preprocessorEnabled, deciderEnabled, presenterEnabled])
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
+
   const handleTypeChange = (type: ExportDataType, checked: boolean) => {
     const newSelected = new Set(selectedTypes)
     if (checked) {

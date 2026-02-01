@@ -25,6 +25,7 @@
 
 #include "system_interfaces/msg/component_health.hpp"
 #include "system_interfaces/msg/data_source_state.hpp"
+#include "system_interfaces/srv/abort_session.hpp"
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
@@ -65,6 +66,8 @@ private:
   void handle_stop_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
       std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response);
+
+  void abort_session();
 
   project_interfaces::msg::DatasetInfo dataset_info;
 
@@ -118,6 +121,9 @@ private:
 
   /* Action server for initialization */
   rclcpp_action::Server<eeg_interfaces::action::InitializeSimulatorStream>::SharedPtr initialize_action_server;
+
+  /* Client for aborting session */
+  rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 };
 
 #endif //EEG_SIMULATOR_H

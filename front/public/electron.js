@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
 const isDev = process.env.NODE_ENV === 'development';
@@ -87,6 +88,42 @@ function toggleDetachedWindow() {
 ipcMain.handle('open-project-folder', async (event, projectName, subdir) => {
   const folderPath = path.join(os.homedir(), 'projects', projectName, subdir);
   return await shell.openPath(folderPath);
+});
+
+ipcMain.handle('open-terminal-in-folder', async (event, projectName, subdir) => {
+  const folderPath = path.join(os.homedir(), 'projects', projectName, subdir);
+  
+  // Try common Linux terminal emulators in order of preference
+  const terminals = [
+    'gnome-terminal',
+    'konsole',
+    'xfce4-terminal',
+    'xterm'
+  ];
+  
+  for (const terminal of terminals) {
+    try {
+      let args = [];
+      if (terminal === 'gnome-terminal') {
+        args = ['--working-directory=' + folderPath];
+      } else if (terminal === 'konsole') {
+        args = ['--workdir', folderPath];
+      } else if (terminal === 'xfce4-terminal') {
+        args = ['--working-directory=' + folderPath];
+      } else if (terminal === 'xterm') {
+        // xterm requires shell to cd first
+        args = ['-e', 'bash', '-c', `cd "${folderPath}" && bash`];
+      }
+      
+      spawn(terminal, args, { detached: true, stdio: 'ignore' });
+      return null; // Success
+    } catch (err) {
+      // Try next terminal
+      continue;
+    }
+  }
+  
+  return 'No supported terminal emulator found';
 });
 
 ipcMain.handle('toggle-detached-experiment-window', async () => {

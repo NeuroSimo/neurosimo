@@ -49,7 +49,7 @@ public:
   EegPresenter();
 
 private:
-  void publish_python_logs(double sample_time, bool is_initialization);
+  void publish_python_logs(uint8_t phase, double sample_time);
   void _publish_heartbeat();
   void _publish_health_status(uint8_t health_level, const std::string& message);
 

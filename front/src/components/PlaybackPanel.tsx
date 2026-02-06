@@ -20,6 +20,7 @@ import { useParameters } from 'providers/ParameterProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
+import { useExporter, ExporterStateValue } from 'providers/ExporterProvider'
 import { exportSessionRos } from 'ros/session'
 import { getRecordingInfoRos, RecordingInfo } from 'ros/session_player'
 import { formatTime, formatDateTime, formatFrequency } from 'utils/utils'
@@ -58,10 +59,17 @@ const ExportButton = styled.button<{ disabled: boolean }>`
   font-size: 14px;
   font-weight: 500;
   margin-right: 8px;
+  min-width: 115px;
 
   &:hover {
     background-color: ${props => props.disabled ? '#cccccc' : '#0056b3'};
   }
+`
+
+const ExportProgress = styled.span`
+  font-size: 12px;
+  color: #666;
+  margin-right: 8px;
 `
 
 export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
@@ -70,6 +78,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const { sessionState } = useSession()
   const { recordingsList } = useContext(PlaybackContext)
   const { activeProject } = useContext(ProjectContext)
+  const { exporterState } = useExporter()
 
   const [selectedRecordingInfo, setSelectedRecordingInfo] = useState<RecordingInfo | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
@@ -81,6 +90,18 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
   const isElectron = !!(window as any).electronAPI
+  const isExporting = exporterState.state === ExporterStateValue.EXPORTING
+
+  // Refetch recording info when export completes
+  useEffect(() => {
+    if (exporterState.state === ExporterStateValue.IDLE && playbackBagFilename) {
+      getRecordingInfoRos(playbackBagFilename, (recordingInfo) => {
+        if (recordingInfo) {
+          setSelectedRecordingInfo(recordingInfo)
+        }
+      })
+    }
+  }, [exporterState.state, playbackBagFilename])
 
   // Fetch recording info when selected recording changes
   useEffect(() => {
@@ -146,15 +167,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
       recordingName,
       selectedTypes,
       (success, message) => {
-        if (success) {
-          console.log('Export completed successfully')
-          // Refetch recording info to update the "exported" field
-          getRecordingInfoRos(recordingToExport, (recordingInfo) => {
-            if (recordingInfo) {
-              setSelectedRecordingInfo(recordingInfo)
-            }
-          })
-        } else {
+        if (!success) {
           console.error('Export failed:', message)
         }
       }
@@ -249,11 +262,16 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
       )}
       <CompactRow>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {isExporting && (
+            <ExportProgress>
+              {Math.round(exporterState.progress * 100)}%
+            </ExportProgress>
+          )}
           <ExportButton
-            disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming}
+            disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming || isExporting}
             onClick={handleExportClick}
           >
-            Export
+            {isExporting ? 'Exporting...' : 'Export'}
           </ExportButton>
           <FolderTerminalButtons
             folderName={selectedRecordingInfo?.export_directory || ''}

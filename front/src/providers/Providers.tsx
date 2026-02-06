@@ -16,6 +16,7 @@ import { HealthProvider } from './HealthProvider'
 import { DiskStatusProvider } from './DiskStatusProvider'
 import { SessionProvider } from './SessionProvider'
 import { PlaybackProvider } from './PlaybackProvider'
+import { ExporterProvider } from './ExporterProvider'
 
 interface Props {
   children: React.ReactNode
@@ -37,7 +38,9 @@ const Providers: React.FC<Props> = ({ children }) => {
                     <SessionProvider>
                       <HealthProvider>
                         <DiskStatusProvider>
-                          <PlaybackProvider>{children}</PlaybackProvider>
+                          <ExporterProvider>
+                            <PlaybackProvider>{children}</PlaybackProvider>
+                          </ExporterProvider>
                         </DiskStatusProvider>
                       </HealthProvider>
                     </SessionProvider>

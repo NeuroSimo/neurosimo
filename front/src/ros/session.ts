@@ -29,6 +29,13 @@ const sessionStateTopic = new ROSLIB.Topic({
   messageType: 'system_interfaces/SessionState',
 })
 
+/* Session exporter state topic */
+const exporterStateTopic = new ROSLIB.Topic({
+  ros: ros,
+  name: '/session_exporter/state',
+  messageType: 'system_interfaces/ExporterState',
+})
+
 export const startSessionRos = (
   callback: (success: boolean, message?: string) => void
 ) => {
@@ -74,6 +81,21 @@ export const subscribeToSessionState = (
     callback((message as any).state)
   })
   return sessionStateTopic
+}
+
+export interface ExporterState {
+  state: number  // 0 = IDLE, 1 = EXPORTING, 2 = ERROR
+  recording_name: string
+  progress: number  // 0.0 to 1.0
+}
+
+export const subscribeToExporterState = (
+  callback: (state: ExporterState) => void
+): ROSLIB.Topic => {
+  exporterStateTopic.subscribe((message: ROSLIB.Message) => {
+    callback(message as any)
+  })
+  return exporterStateTopic
 }
 
 export const exportSessionRos = (

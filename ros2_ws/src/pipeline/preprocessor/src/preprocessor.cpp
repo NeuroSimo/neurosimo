@@ -367,11 +367,22 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     return;
   }
 
-  /* Copy arrival time from the triggering sample. */
+  /* Copy metadata from the triggering sample. */
   preprocessed_sample.system_time_data_source_published = triggering_sample->system_time_data_source_published;
+  preprocessed_sample.sample_index = triggering_sample->sample_index;
 
   /* Copy hardware trigger information. */
   preprocessed_sample.pulse_trigger = triggering_sample->pulse_trigger;
+  preprocessed_sample.loopback_trigger = triggering_sample->loopback_trigger;
+
+  /* Copy experiment state. */
+  preprocessed_sample.in_rest = triggering_sample->in_rest;
+  preprocessed_sample.paused = triggering_sample->paused;
+  preprocessed_sample.experiment_time = triggering_sample->experiment_time;
+  preprocessed_sample.stage_name = triggering_sample->stage_name;
+  preprocessed_sample.stage_index = triggering_sample->stage_index;
+  preprocessed_sample.trial = triggering_sample->trial;
+  preprocessed_sample.pulse_count = triggering_sample->pulse_count;
 
   /* Carry forward any pending session markers. */
   preprocessed_sample.is_session_start = this->pending_session_start;

@@ -72,7 +72,6 @@ private:
     const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response);
   void publish_python_logs(uint8_t phase, double sample_time);
-  void publish_sentinel_sample(double_t sample_time);
 
   void abort_session(const std::string& reason);
 
@@ -112,9 +111,8 @@ private:
 
   bool error_occurred = false;
 
-  /* Pending session markers to be carried forward to the next published sample. */
+  /* Pending session start marker to be carried forward to the next published sample. */
   bool pending_session_start = false;
-  bool pending_session_end = false;
 
   StreamInfo stream_info;
 

@@ -51,7 +51,7 @@ private:
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle);
 
   /* Publish a single sample at the given index with the specified session flags. */
-  bool publish_single_sample(size_t sample_index, bool is_session_start, bool is_session_end);
+  bool publish_single_sample(size_t sample_index, bool is_session_start);
 
   /* Publish samples from current_index until (but not including) the first sample that is after until_time.
      Returns true if the samples were published successfully. */
@@ -85,7 +85,6 @@ private:
   double_t session_start_time = UNSET_TIME;  // Unix timestamp when streaming started
   uint64_t session_sample_index = 0;         // Monotonic sample index within a streaming run
   bool is_session_start = false;
-  bool is_session_end = false;
 
   std::vector<std::vector<double_t>> dataset_buffer;
   size_t current_sample_index = 0;

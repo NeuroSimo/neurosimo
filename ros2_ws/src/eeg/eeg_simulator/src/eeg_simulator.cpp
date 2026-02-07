@@ -254,7 +254,6 @@ void EegSimulator::handle_start_streaming(
   this->session_start_time = this->get_clock()->now().seconds();
   this->session_sample_index = 0;
   this->is_session_start = true;
-  this->is_session_end = false;
   this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
   
   /* Create the streaming timer to drive sample publication. */
@@ -274,12 +273,17 @@ void EegSimulator::handle_stop_streaming(
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
   if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
-    response->success = true;
+    RCLCPP_ERROR(this->get_logger(), "Not streaming, cannot stop streaming.");
+
+    response->success = false;
     return;
   }
 
-  this->is_session_end = true;
   stop_streaming_timer();
+
+  this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+  publish_data_source_state();
+
   response->success = true;
 }
 
@@ -307,7 +311,7 @@ void EegSimulator::stream_timer_callback() {
 }
 
 /* Publish a single sample at the given index with the specified session flags. */
-bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_start, bool is_session_end) {
+bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_start) {
   if (sample_index >= dataset_buffer.size()) {
     RCLCPP_ERROR(this->get_logger(), "Sample index %zu out of bounds (max: %zu)", sample_index, dataset_buffer.size() - 1);
     return false;
@@ -332,7 +336,6 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
   msg.emg.insert(msg.emg.end(), data.begin() + this->dataset_info.num_eeg_channels, data.end());
 
   msg.is_session_start = is_session_start;
-  msg.is_session_end = is_session_end;
 
   msg.time = time;
 
@@ -401,32 +404,26 @@ bool EegSimulator::publish_until(double_t until_time) {
       break;
     }
 
-    // Check if this is the last sample in the dataset (non-looping mode)
-    bool is_last_sample = !this->dataset_info.loop && 
-                          (this->current_index == dataset_buffer.size() - 1);
-    if (is_last_sample) {
-      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session end.");
-      this->is_session_end = true;
-    }
-
-    // Capture session flag values at a single point in time to avoid race conditions.
-    bool is_session_start = this->is_session_start;
-    bool is_session_end = this->is_session_end;
-
     // Publish this sample with the captured flag values
-    bool success = publish_single_sample(this->current_index, is_session_start, is_session_end);
+    bool success = publish_single_sample(this->current_index, this->is_session_start);
     if (!success) {
       RCLCPP_ERROR(this->get_logger(), "Failed to publish sample at index %zu", current_index);
       break;
     }
 
-    // If we just published a sample ending the session, stop streaming
-    if (is_session_end) {
-      this->is_session_end = false;  // Reset the flag since we've handled it
-      this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+    // Check if this is the last sample in the dataset (non-looping mode)
+    bool is_last_sample = !this->dataset_info.loop && 
+                          (this->current_index == dataset_buffer.size() - 1);
+    if (is_last_sample) {
+      RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session end.");
+
       stop_streaming_timer();
+
+      this->data_source_state = system_interfaces::msg::DataSourceState::READY;
       publish_data_source_state();
+
       abort_session();
+
       return true;
     }
 

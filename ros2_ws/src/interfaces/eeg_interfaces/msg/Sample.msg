@@ -2,7 +2,6 @@
 # Session state (filled by EEG bridge or EEG simulator)
 # ============================================================================
 bool is_session_start           # First sample of session
-bool is_session_end             # Last sample of session
 
 # ============================================================================
 # Core data (filled by EEG bridge or EEG simulator)

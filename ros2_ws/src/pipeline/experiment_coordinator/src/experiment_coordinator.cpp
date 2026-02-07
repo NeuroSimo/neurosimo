@@ -146,13 +146,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
   this->enriched_eeg_publisher->publish(enriched);
 
   publish_experiment_state(sample_time);
-
-  /* Handle session end marker from EEG bridge/simulator (after publishing enriched sample). */
-  if (msg->is_session_end) {
-    RCLCPP_INFO(this->get_logger(), "Session aborted");
-    state.is_session_ongoing = false;
-    publish_experiment_state(state.last_sample_time);
-  }
 }
 
 void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg) {
@@ -299,7 +292,7 @@ void ExperimentCoordinator::handle_finalize_protocol(
   this->is_protocol_initialized = false;
   this->protocol.reset();
   reset_experiment_state();
-  
+
   response->success = true;
 }
 

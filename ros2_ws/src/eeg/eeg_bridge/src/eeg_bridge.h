@@ -129,7 +129,6 @@ private:
   /* Data source state */
   system_interfaces::msg::DataSourceState::_state_type data_source_state = system_interfaces::msg::DataSourceState::READY;
   bool is_session_start = false;
-  bool is_session_end = false;
   
   /* Device sample tracking for dropped sample detection */
   uint64_t previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;

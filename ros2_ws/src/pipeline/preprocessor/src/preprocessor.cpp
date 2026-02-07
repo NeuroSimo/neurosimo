@@ -320,7 +320,6 @@ void EegPreprocessor::publish_sentinel_sample(double_t sample_time) {
   /* Publish a sentinel sample with the session end marker. */
   auto sentinel_sample = std::make_shared<eeg_interfaces::msg::Sample>();
   sentinel_sample->time = sample_time;
-  sentinel_sample->is_session_end = this->pending_session_end;
 
   /* Clear the pending session end marker. */
   this->pending_session_end = false;
@@ -386,7 +385,6 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
 
   /* Carry forward any pending session markers. */
   preprocessed_sample.is_session_start = this->pending_session_start;
-  preprocessed_sample.is_session_end = this->pending_session_end;
 
   /* Clear the pending markers after carrying them forward. */
   this->pending_session_start = false;
@@ -439,11 +437,6 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   /* Handle session start marker by marking that we need to carry it over to the next published sample. */
   if (msg->is_session_start) {
     this->pending_session_start = true;
-  }
-
-  /* Handle session end marker similarly. */
-  if (msg->is_session_end) {
-    this->pending_session_end = true;
   }
 
   /* Check that no error has occurred. */

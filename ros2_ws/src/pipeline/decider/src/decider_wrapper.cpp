@@ -549,103 +549,106 @@ bool DeciderWrapper::warm_up() {
     return false;
   }
 
-  try {
-    // Check if the Python module has a warm_up_rounds attribute
-    int warm_up_rounds = 0;
-    if (py::hasattr(*decider_instance, "warm_up_rounds")) {
-      warm_up_rounds = decider_instance->attr("warm_up_rounds").cast<int>();
-    }
+  // Check if the Python module has a warm_up_rounds attribute
+  int warm_up_rounds = 0;
+  if (py::hasattr(*decider_instance, "warm_up_rounds")) {
+    warm_up_rounds = decider_instance->attr("warm_up_rounds").cast<int>();
+  }
 
-    log_section_header("Warm-up");
+  log_section_header("Warm-up");
 
-    if (warm_up_rounds <= 0) {
-      RCLCPP_INFO(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
-      RCLCPP_INFO(*logger_ptr, " ");
-      log_section_header("Operation");
-
-      // Return true to indicate that warm-up was successful (even though it was disabled).
-      return true;
-    }
-
-    RCLCPP_INFO(*logger_ptr, "Starting %d warm-up rounds...", warm_up_rounds);
-
-    // Initialize RNG with constant seed for reproducible warm-up data
-    std::srand(12345);
-
-    // Get pointers to numpy arrays
-    auto time_offsets_ptr = py_time_offsets->mutable_data();
-    auto eeg_ptr = py_eeg->mutable_data();
-    auto emg_ptr = py_emg->mutable_data();
-
-    // Dummy parameters for process method (constant across all rounds)
-    double_t dummy_reference_time = 0.0;
-    int dummy_reference_index = look_back_samples;
-    bool dummy_is_coil_at_target = true;
-
-    // Perform warm-up rounds with fresh random data for each round
-    for (int round = 0; round < warm_up_rounds; round++) {
-      // Generate fresh random data for this round
-      for (size_t i = 0; i < buffer_size; i++) {
-        time_offsets_ptr[i] = -static_cast<double>(buffer_size - 1 - i) / sampling_frequency;
-
-        // Fill EEG data with small random values
-        for (size_t j = 0; j < eeg_size; j++) {
-          eeg_ptr[i * eeg_size + j] = (static_cast<double>(std::rand()) / RAND_MAX - 0.5) * 1e-6;
-        }
-        
-        // Fill EMG data with small random values
-        for (size_t j = 0; j < emg_size; j++) {
-          emg_ptr[i * emg_size + j] = (static_cast<double>(std::rand()) / RAND_MAX - 0.5) * 1e-6;
-        }
-      }
-
-      try {
-        auto start_time = std::chrono::high_resolution_clock::now();
-        
-        py::object py_result = decider_instance->attr("process_periodic")(
-          dummy_reference_time,
-          dummy_reference_index,
-          *py_time_offsets,
-          *py_eeg,
-          *py_emg,
-          dummy_is_coil_at_target
-        );
-        
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration<double, std::milli>(end_time - start_time).count();
-        
-        RCLCPP_INFO(*logger_ptr, "  Round %d/%d: %.2f ms", 
-                     round + 1, warm_up_rounds, duration);
-        
-      } catch (const py::error_already_set& e) {
-        RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (Python error: %s)", round + 1, warm_up_rounds, e.what());
-        return false;
-      } catch (const std::exception& e) {
-        RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (C++ error: %s)", round + 1, warm_up_rounds, e.what());
-        return false;
-      }
-    }
-
+  if (warm_up_rounds <= 0) {
+    RCLCPP_INFO(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
     RCLCPP_INFO(*logger_ptr, " ");
-    RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", warm_up_rounds);
-    RCLCPP_INFO(*logger_ptr, " ");
-    
-    // Clear any logs accumulated during warm-up to prevent them from being published
-    get_and_clear_logs();
-    
     log_section_header("Operation");
 
-  } catch (const py::error_already_set& e) {
-    RCLCPP_ERROR(*logger_ptr, "Warm-up failed with Python error: %s", e.what());
-    // Clear logs from failed warm-up as well
-    get_and_clear_logs();
-    return false;
-  } catch (const std::exception& e) {
-    RCLCPP_ERROR(*logger_ptr, "Warm-up failed with C++ error: %s", e.what());
-    // Clear logs from failed warm-up as well
-    get_and_clear_logs();
-    return false;
+    // Return true to indicate that warm-up was successful (even though it was disabled).
+    return true;
   }
+
+  RCLCPP_INFO(*logger_ptr, "Starting %d warm-up rounds...", warm_up_rounds);
+
+  // Initialize RNG with constant seed for reproducible warm-up data
+  std::srand(12345);
+
+  // Get pointers to numpy arrays
+  auto time_offsets_ptr = py_time_offsets->mutable_data();
+  auto eeg_ptr = py_eeg->mutable_data();
+  auto emg_ptr = py_emg->mutable_data();
+
+  // Dummy parameters for process method (constant across all rounds)
+  double_t dummy_reference_time = 0.0;
+  int dummy_reference_index = look_back_samples;
+  bool dummy_is_coil_at_target = true;
+
+  // Perform warm-up rounds with fresh random data for each round
+  for (int round = 0; round < warm_up_rounds; round++) {
+    // Generate fresh random data for this round
+    for (size_t i = 0; i < buffer_size; i++) {
+      time_offsets_ptr[i] = -static_cast<double>(buffer_size - 1 - i) / sampling_frequency;
+
+      // Fill EEG data with small random values
+      for (size_t j = 0; j < eeg_size; j++) {
+        eeg_ptr[i * eeg_size + j] = (static_cast<double>(std::rand()) / RAND_MAX - 0.5) * 1e-6;
+      }
+      
+      // Fill EMG data with small random values
+      for (size_t j = 0; j < emg_size; j++) {
+        emg_ptr[i * emg_size + j] = (static_cast<double>(std::rand()) / RAND_MAX - 0.5) * 1e-6;
+      }
+    }
+
+    try {
+      auto start_time = std::chrono::high_resolution_clock::now();
+      
+      py::object py_result = decider_instance->attr("process_periodic")(
+        dummy_reference_time,
+        dummy_reference_index,
+        *py_time_offsets,
+        *py_eeg,
+        *py_emg,
+        dummy_is_coil_at_target
+      );
+      
+      auto end_time = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+      
+      RCLCPP_INFO(*logger_ptr, "  Round %d/%d: %.2f ms", 
+                    round + 1, warm_up_rounds, duration);
+      
+    } catch (const py::error_already_set& e) {
+      std::string error_msg = std::string("Python error: ") + e.what();
+      RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, warm_up_rounds, error_msg.c_str());
+      
+      // Add error to log buffer so it can be published to UI
+      {
+        std::lock_guard<std::mutex> lock(log_buffer_mutex);
+        log_buffer.push_back({error_msg, LogLevel::ERROR});
+      }
+      
+      return false;
+    } catch (const std::exception& e) {
+      std::string error_msg = std::string("C++ error: ") + e.what();
+      RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, warm_up_rounds, error_msg.c_str());
+      
+      // Add error to log buffer so it can be published to UI
+      {
+        std::lock_guard<std::mutex> lock(log_buffer_mutex);
+        log_buffer.push_back({error_msg, LogLevel::ERROR});
+      }
+      
+      return false;
+    }
+  }
+
+  RCLCPP_INFO(*logger_ptr, " ");
+  RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", warm_up_rounds);
+  RCLCPP_INFO(*logger_ptr, " ");
+  
+  // Clear any logs accumulated during warm-up to prevent them from being published
+  get_and_clear_logs();
+  
+  log_section_header("Operation");
 
   return true;
 }

@@ -154,6 +154,7 @@ void EegBridge::create_publishers() {
   /* Publish initial states. */
   publish_data_source_state();
   publish_device_info();
+  publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 void EegBridge::publish_device_info() {
@@ -176,12 +177,13 @@ void EegBridge::set_device_state(EegDeviceState new_state) {
   }
 }
 
-void EegBridge::abort_session() {
+void EegBridge::abort_session(const std::string& reason) {
   auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
   request->source = "eeg_bridge";
+  request->reason = reason;
 
   auto result = this->abort_session_client->async_send_request(request);
-  RCLCPP_INFO(this->get_logger(), "Requested session abort due to run-time error");
+  RCLCPP_INFO(this->get_logger(), "Requested session abort: %s", reason.c_str());
 }
 
 void EegBridge::publish_heartbeat() {
@@ -202,7 +204,6 @@ bool EegBridge::reset_state() {
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   this->is_session_start = false;
   this->is_session_end = false;
-  this->error_state = ErrorState::NO_ERROR;
   this->last_sample_time = std::chrono::steady_clock::now();
 
   this->data_source_state = system_interfaces::msg::DataSourceState::READY;
@@ -219,11 +220,6 @@ void EegBridge::handle_start_streaming(
   RCLCPP_INFO(this->get_logger(), "Received start streaming request");
 
   if (this->device_state != EegDeviceState::EEG_DEVICE_STREAMING) {
-    response->success = false;
-    return;
-  }
-
-  if (this->error_state != ErrorState::NO_ERROR) {
     response->success = false;
     return;
   }
@@ -284,14 +280,11 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
       /* Ignore the case where the sample index wraps around. */
       device_sample_index != 0) {
 
-    this->error_state = ErrorState::ERROR_SAMPLES_DROPPED;
-
     RCLCPP_ERROR(this->get_logger(),
                  "Samples dropped. Previous device sample index: %lu, current: %lu.",
                  previous_device_sample_index,
                  device_sample_index);
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Samples dropped");
-    this->abort_session();
+    this->abort_session("EEG samples dropped");
     return false;  // Samples were dropped
   }
   
@@ -300,9 +293,8 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
 }
 
 void EegBridge::check_for_sample_timeout() {
-  /* Only check timeout when streaming is active and no other error has occurred */
-  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING ||
-      this->error_state != ErrorState::NO_ERROR) {
+  /* Only check timeout when streaming is active */
+  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     return;
   }
 
@@ -311,15 +303,11 @@ void EegBridge::check_for_sample_timeout() {
     now - this->last_sample_time).count();
 
   if (time_since_last_sample > SAMPLE_TIMEOUT_MS) {
-    this->error_state = ErrorState::ERROR_SAMPLE_TIMEOUT;
-
     RCLCPP_ERROR(this->get_logger(),
                  "Sample timeout: No sample received in %ld ms",
                  time_since_last_sample);
     
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
-                                "EEG device sample timeout");
-    this->abort_session();
+    this->abort_session("EEG device sample timeout");
   }
 }
 
@@ -344,11 +332,6 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
                           "Waiting for streaming to start...");
-    return;
-  }
-
-  /* Ignore the sample if in an error state, preventing streaming. */
-  if (this->error_state != ErrorState::NO_ERROR) {
     return;
   }
 
@@ -449,7 +432,7 @@ void EegBridge::process_eeg_packet() {
   case ERROR:
     RCLCPP_ERROR(this->get_logger(), "Error reading data packet.");
     set_device_state(EegDeviceState::WAITING_FOR_EEG_DEVICE);
-    this->abort_session();
+    this->abort_session("Error reading EEG data packet");
     break;
 
   case END:

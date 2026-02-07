@@ -4,3 +4,6 @@ uint8 RUNNING = 2
 uint8 FINALIZING = 3
 
 uint8 state
+
+# Optional reason for abort (shown when state is STOPPED after abort)
+string abort_reason

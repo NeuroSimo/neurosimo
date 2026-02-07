@@ -3,5 +3,8 @@
 # Who is requesting the abort (e.g. "ui", "trigger_timer", "decider")
 string source
 
+# Reason for the abort (shown in UI until new session starts)
+string reason
+
 ---
 bool success

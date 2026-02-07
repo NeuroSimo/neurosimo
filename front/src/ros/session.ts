@@ -58,7 +58,8 @@ export const abortSessionRos = (
   callback: (success: boolean) => void
 ) => {
   const request = new ROSLIB.ServiceRequest({
-    source: 'ui'
+    source: 'ui',
+    reason: 'User aborted session'
   }) as any
 
   abortSessionService.callService(
@@ -75,10 +76,11 @@ export const abortSessionRos = (
 }
 
 export const subscribeToSessionState = (
-  callback: (state: SessionStateValue) => void
+  callback: (state: SessionStateValue, abortReason: string) => void
 ): ROSLIB.Topic => {
   sessionStateTopic.subscribe((message: ROSLIB.Message) => {
-    callback((message as any).state)
+    const msg = message as any
+    callback(msg.state, msg.abort_reason || '')
   })
   return sessionStateTopic
 }

@@ -26,6 +26,9 @@ const std::string HEARTBEAT_TOPIC = "/eeg_bridge/heartbeat";
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
+/* Sample timeout in milliseconds */
+const int64_t SAMPLE_TIMEOUT_MS = 200;
+
 EegBridge::EegBridge() : Node("eeg_bridge") {
 
   /* Port parameter */
@@ -200,6 +203,7 @@ bool EegBridge::reset_state() {
   this->is_session_start = false;
   this->is_session_end = false;
   this->error_state = ErrorState::NO_ERROR;
+  this->last_sample_time = std::chrono::steady_clock::now();
 
   this->data_source_state = system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
@@ -295,6 +299,30 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
   return true;  // No samples dropped
 }
 
+void EegBridge::check_for_sample_timeout() {
+  /* Only check timeout when streaming is active and no other error has occurred */
+  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING ||
+      this->error_state != ErrorState::NO_ERROR) {
+    return;
+  }
+
+  auto now = std::chrono::steady_clock::now();
+  auto time_since_last_sample = std::chrono::duration_cast<std::chrono::milliseconds>(
+    now - this->last_sample_time).count();
+
+  if (time_since_last_sample > SAMPLE_TIMEOUT_MS) {
+    this->error_state = ErrorState::ERROR_SAMPLE_TIMEOUT;
+
+    RCLCPP_ERROR(this->get_logger(),
+                 "Sample timeout: No sample received in %ld ms",
+                 time_since_last_sample);
+    
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                "EEG device sample timeout");
+    this->abort_session();
+  }
+}
+
 eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
                                                     const eeg_interfaces::msg::EegDeviceInfo& [[maybe_unused]] device_info) {
   auto sample = eeg_interfaces::msg::Sample();
@@ -309,6 +337,9 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
 
 void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
   set_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
+
+  /* Update last sample time */
+  this->last_sample_time = std::chrono::steady_clock::now();
 
   if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
@@ -442,6 +473,7 @@ void EegBridge::spin() {
 
       process_eeg_packet();
 
+      check_for_sample_timeout();
     }
   } catch (const rclcpp::exceptions::RCLError &exception) {
     RCLCPP_ERROR(rclcpp::get_logger("eeg_bridge"), "Failed with %s", exception.what());

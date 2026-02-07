@@ -213,7 +213,6 @@ bool EegPreprocessor::reset_state() {
   this->is_enabled = false;
   this->error_occurred = false;
   this->pending_session_start = false;
-  this->pending_session_end = false;
 
   /* Reset sample buffer. */
   this->sample_buffer.reset(0);
@@ -316,17 +315,6 @@ bool EegPreprocessor::is_sample_window_valid() const {
   return !has_invalid_sample;
 }
 
-void EegPreprocessor::publish_sentinel_sample(double_t sample_time) {
-  /* Publish a sentinel sample with the session end marker. */
-  auto sentinel_sample = std::make_shared<eeg_interfaces::msg::Sample>();
-  sentinel_sample->time = sample_time;
-
-  /* Clear the pending session end marker. */
-  this->pending_session_end = false;
-
-  this->preprocessed_eeg_publisher->publish(*sentinel_sample);
-}
-
 void EegPreprocessor::abort_session(const std::string& reason) {
   auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
   request->source = "preprocessor";
@@ -383,12 +371,11 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   preprocessed_sample.trial = triggering_sample->trial;
   preprocessed_sample.pulse_count = triggering_sample->pulse_count;
 
-  /* Carry forward any pending session markers. */
+  /* Carry forward any pending session start marker. */
   preprocessed_sample.is_session_start = this->pending_session_start;
 
-  /* Clear the pending markers after carrying them forward. */
+  /* Clear the pending marker after carrying it forward. */
   this->pending_session_start = false;
-  this->pending_session_end = false;
 
   /* Calculate preprocessing duration. */
   auto end_time = std::chrono::high_resolution_clock::now();
@@ -461,12 +448,6 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   /* Process any deferred requests that are now ready (= have enough look-ahead samples),
      including the one that was just added. */
   process_ready_deferred_requests(sample_time);
-
-  /* If there's a pending session end marker, meaning that this is the last sample of the session,
-     publish a sentinel sample with the marker for downstream nodes. */
-  if (this->pending_session_end) {
-    publish_sentinel_sample(sample_time);
-  }
 }
 
 int main(int argc, char *argv[]) {

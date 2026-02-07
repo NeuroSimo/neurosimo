@@ -137,56 +137,6 @@ void TriggerTimer::attempt_labjack_connection() {
   }
 }
 
-void TriggerTimer::trigger_pulses_until_time(double_t sample_time) {
-  double_t latency_corrected_time = sample_time + this->current_loopback_latency;
-
-  /* Trigger all events until the given time. */
-  while (!trigger_queue.empty() && trigger_queue.top()->timed_trigger.time <= latency_corrected_time) {
-    auto request = trigger_queue.top();
-    double_t scheduled_time = request->timed_trigger.time;
-    double_t error = latency_corrected_time - scheduled_time;
-
-    uint8_t status = pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
-
-    /* Capture timing when hardware trigger is fired. */
-    auto now = std::chrono::high_resolution_clock::now();
-    uint64_t system_time_hardware_fired = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      now.time_since_epoch()).count();
-
-    /* Check that timing latency is within threshold. */
-    if (this->current_loopback_latency <= this->loopback_latency_threshold) {
-      RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (current time: %.4f, error: %.4f)",
-                  scheduled_time, latency_corrected_time, error);
-
-      if (labjack_manager && labjack_manager->trigger_output(tms_trigger_fio)) {
-        status = pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
-      } else {
-        RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
-      }
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Timing latency (%.1f ms) exceeds threshold (%.1f ms) at triggering time, rejecting stimulation.",
-                   this->current_loopback_latency * 1000, this->loopback_latency_threshold * 1000);
-
-      /* Publish degraded health status */
-      this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
-                                   "Timing latency exceeds threshold, stimulation rejected");
-    }
-    trigger_queue.pop();
-
-    /* Publish second DecisionTrace (fired). */
-    auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
-    decision_trace.session_id = request->session_id;
-    decision_trace.decision_id = request->decision_id;
-    decision_trace.status = pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
-    decision_trace.system_time_hardware_fired = system_time_hardware_fired;
-    decision_trace.sample_time_at_firing = sample_time;
-    decision_trace.latency_corrected_time_at_firing = latency_corrected_time;
-    decision_trace.loopback_latency_at_firing = this->current_loopback_latency;
-
-    this->decision_trace_publisher->publish(decision_trace);
-  }
-}
-
 void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t sample_time) {
   /* Update current latency if loopback trigger is present. */
   if (loopback_trigger) {
@@ -214,20 +164,107 @@ void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t samp
 }
 
 void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  std::lock_guard<std::mutex> lock(handler_mutex);
+
   double_t sample_time = msg->time;
 
   // Update latest sample information for calculating stimulation horizon
   this->latest_sample_time = sample_time;
 
-  std::lock_guard<std::mutex> lock(queue_mutex);
+  // Store sample time and corresponding system time for time estimation
+  this->stored_sample_time = sample_time;
+  this->stored_system_time = std::chrono::high_resolution_clock::now();
 
-  trigger_pulses_until_time(sample_time);
   measure_loopback_latency(msg->loopback_trigger, sample_time);
+}
+
+double_t TriggerTimer::estimate_current_sample_time() {
+  if (this->stored_sample_time == 0.0) {
+    return 0.0;
+  }
+
+  auto current_system_time = std::chrono::high_resolution_clock::now();
+  auto elapsed_system_time = std::chrono::duration_cast<std::chrono::duration<double>>(
+    current_system_time - this->stored_system_time);
+
+  return this->stored_sample_time + elapsed_system_time.count() + this->current_loopback_latency;
+}
+
+bool TriggerTimer::schedule_trigger_with_timer(
+    std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
+
+  double_t trigger_time = request->timed_trigger.time;
+  double_t estimated_current_time = estimate_current_sample_time();
+
+  if (estimated_current_time == 0.0) {
+    RCLCPP_WARN(logger, "No sample time reference available yet, cannot estimate timing.");
+    return false;
+  }
+
+  /* Check that loopback latency is within threshold. */
+  if (this->current_loopback_latency > this->loopback_latency_threshold) {
+    RCLCPP_ERROR(this->get_logger(), "Loopback latency (%.1f ms) exceeds threshold (%.1f ms), rejecting stimulation.",
+                 this->current_loopback_latency * 1000, this->loopback_latency_threshold * 1000);
+
+    /* Publish degraded health status */
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
+                                 "Loopback latency exceeds threshold, stimulation rejected");
+    return false;
+  }
+
+  double_t time_until_trigger = trigger_time - estimated_current_time;
+
+  if (time_until_trigger <= 0.0) {
+    RCLCPP_WARN(logger, "Trigger time %.4f is in the past (current estimated: %.4f), triggering immediately.",
+                trigger_time, estimated_current_time);
+    time_until_trigger = 0.0;
+  }
+
+  // Create a one-shot timer to fire the trigger
+  auto trigger_timer = this->create_wall_timer(
+    std::chrono::duration<double>(time_until_trigger),
+    [this, request]() {
+      std::lock_guard<std::mutex> lock(handler_mutex);
+
+      double_t trigger_time = request->timed_trigger.time;
+      double_t estimated_current_time = estimate_current_sample_time();
+      double_t error = estimated_current_time - trigger_time;
+
+      uint8_t status = pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+
+      /* Capture timing when hardware trigger is fired. */
+      auto now = std::chrono::high_resolution_clock::now();
+      uint64_t system_time_hardware_fired = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        now.time_since_epoch()).count();
+
+      RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (estimated current time: %.4f, error: %.4f)",
+                  trigger_time, estimated_current_time, error);
+
+      if (labjack_manager && labjack_manager->trigger_output(tms_trigger_fio)) {
+        status = pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
+      } else {
+        RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
+      }
+
+      /* Publish second DecisionTrace (fired). */
+      auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
+      decision_trace.session_id = request->session_id;
+      decision_trace.decision_id = request->decision_id;
+      decision_trace.status = status;
+      decision_trace.system_time_hardware_fired = system_time_hardware_fired;
+      decision_trace.latency_corrected_time_at_firing = estimated_current_time;
+
+      this->decision_trace_publisher->publish(decision_trace);
+    });
+
+  return true;
 }
 
 void TriggerTimer::handle_request_timed_trigger(
     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response) {
+
+  std::lock_guard<std::mutex> lock(handler_mutex);
 
   /* Capture timing at request receipt. */
   auto start_time = std::chrono::high_resolution_clock::now();
@@ -237,20 +274,16 @@ void TriggerTimer::handle_request_timed_trigger(
   double_t trigger_time = request->timed_trigger.time;
 
   bool is_labjack_connected = labjack_manager && labjack_manager->is_connected();
+  bool scheduled = false;
 
   if (!is_labjack_connected) {
     RCLCPP_WARN(logger, "LabJack is not connected, rejecting trigger at time: %.4f (s).", trigger_time);
-    response->success = false;
 
     /* Publish degraded health status */
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
                                  "LabJack device not connected");
   } else {
-    std::lock_guard<std::mutex> lock(queue_mutex);
-    trigger_queue.push(request);
-
-    RCLCPP_INFO(logger, "Scheduled trigger at time: %.4f (s).", trigger_time);
-    response->success = true;
+    scheduled = schedule_trigger_with_timer(request);
   }
 
   /* Capture timing at request finish. */
@@ -262,8 +295,8 @@ void TriggerTimer::handle_request_timed_trigger(
   double_t stimulation_horizon = this->latest_sample_time - request->reference_sample_time;
 
   /* Determine status. */
-  uint8_t status = is_labjack_connected ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED
-                                        : pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+  uint8_t status = scheduled ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED
+                             : pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
 
   /* Publish first DecisionTrace (scheduled or rejected). */
   auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
@@ -273,8 +306,17 @@ void TriggerTimer::handle_request_timed_trigger(
   decision_trace.stimulation_horizon = stimulation_horizon;
   decision_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
   decision_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
+  decision_trace.loopback_latency_at_firing = this->current_loopback_latency;
 
   this->decision_trace_publisher->publish(decision_trace);
+
+  /* Set response success based on scheduling result. */
+  response->success = scheduled;
+  if (scheduled) {
+    RCLCPP_INFO(logger, "Scheduled trigger at time: %.4f (s).", trigger_time);
+  } else {
+    RCLCPP_WARN(logger, "Failed to schedule trigger at time: %.4f (s).", trigger_time);
+  }
 }
 
 void TriggerTimer::reset_state() {
@@ -296,6 +338,10 @@ void TriggerTimer::reset_state() {
 
   /* Reset latest sample information */
   this->latest_sample_time = 0.0;
+
+  /* Reset stored time tracking */
+  this->stored_sample_time = 0.0;
+  this->stored_system_time = std::chrono::high_resolution_clock::time_point();
 }
 
 void TriggerTimer::handle_initialize_trigger_timer(

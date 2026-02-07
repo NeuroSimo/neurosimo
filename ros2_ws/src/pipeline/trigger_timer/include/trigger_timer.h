@@ -51,6 +51,10 @@ private:
   // Latest sample information for calculating stimulation horizon
   double_t latest_sample_time = 0.0;
 
+  // Synchronized time tracking for sample time and system time
+  double_t stored_sample_time = 0.0;
+  std::chrono::high_resolution_clock::time_point stored_system_time;
+
   // Configuration parameters
   double_t triggering_tolerance = 0.0;
   double_t loopback_latency_threshold = 0.0;
@@ -64,17 +68,14 @@ private:
     }
   };
 
-  /* Priority queue for trigger requests. */
-  std::priority_queue<std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>,
-                      std::vector<std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>>,
-                      TriggerRequestComparator> trigger_queue;
-  std::mutex queue_mutex;
+  std::mutex handler_mutex;  // Mutex for trigger request and EEG raw handlers
 
   void attempt_labjack_connection();
   void reset_state();
 
-  void trigger_pulses_until_time(double_t sample_time);
   void measure_loopback_latency(bool loopback_trigger, double_t sample_time);
+  bool schedule_trigger_with_timer(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
+  double_t estimate_current_sample_time();
 
   void _publish_heartbeat();
   void _publish_health_status(uint8_t health_level, const std::string& message);

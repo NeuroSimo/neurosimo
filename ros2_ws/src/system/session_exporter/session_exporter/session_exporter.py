@@ -52,7 +52,6 @@ EEG_FIELDS_RAW = [
     'time',
     'system_time_data_source_published',
     'is_session_start',
-    'is_session_end',
     'pulse_trigger',
 ]
 

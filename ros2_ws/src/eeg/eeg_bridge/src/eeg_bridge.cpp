@@ -203,7 +203,6 @@ bool EegBridge::reset_state() {
   this->time_offset = UNSET_TIME;
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   this->is_session_start = false;
-  this->is_session_end = false;
   this->last_sample_time = std::chrono::steady_clock::now();
 
   this->data_source_state = system_interfaces::msg::DataSourceState::READY;
@@ -237,11 +236,14 @@ void EegBridge::handle_stop_streaming(
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
   if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
-    response->success = true;
+    RCLCPP_ERROR(this->get_logger(), "Not streaming, cannot stop streaming.");
+
+    response->success = false;
     return;
   }
 
-  this->is_session_end = true;
+  this->reset_state();
+
   response->success = true;
 }
 
@@ -259,8 +261,6 @@ void EegBridge::handle_initialize(
 
   this->reset_state();
 }
-
-
 
 bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
   /* Warn if the device sample index wraps around. */
@@ -340,15 +340,10 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
     this->time_offset = sample.time;
   }
 
-  /* Capture the session start and end flags at a single point in time to avoid race conditions. */
-  bool is_session_start = this->is_session_start;
-  bool is_session_end = this->is_session_end;
-
   sample.time -= this->time_offset;
 
-  /* Set session start/end flags. */
-  sample.is_session_start = is_session_start;
-  sample.is_session_end = is_session_end;
+  /* Set session start flag. */
+  sample.is_session_start = this->is_session_start;
 
   /* Set the streaming sample index. */
   sample.sample_index = this->session_sample_index;
@@ -378,12 +373,6 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 
   /* Clear the session start marker after publishing. */
   this->is_session_start = false;
-
-  /* If we just published a sample ending the session, reset state. */
-  if (is_session_end) {
-    RCLCPP_INFO(this->get_logger(), "Session end sample published, stopping streaming.");
-    this->reset_state();
-  }
 }
 
 void EegBridge::process_eeg_packet() {

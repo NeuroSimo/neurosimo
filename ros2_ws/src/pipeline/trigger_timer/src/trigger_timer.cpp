@@ -22,15 +22,15 @@ const char* tms_trigger_fio = "FIO4";
 const char* loopback_trigger_fio = "FIO5";
 
 TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger("trigger_timer")) {
-  /* Read ROS parameter: Maximum triggering error */
-  auto triggering_tolerance_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  triggering_tolerance_descriptor.description = "The maximum triggering error (in seconds)";
-  this->declare_parameter("triggering-tolerance", 0.0, triggering_tolerance_descriptor);
-  this->get_parameter("triggering-tolerance", this->triggering_tolerance);
+  /* Read ROS parameter: Maximum timing error */
+  auto maximum_timing_error_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  maximum_timing_error_descriptor.description = "The maximum triggering error (in seconds)";
+  this->declare_parameter("maximum-timing-error", 0.0, maximum_timing_error_descriptor);
+  this->get_parameter("maximum-timing-error", this->maximum_timing_error);
 
-  /* Check that the triggering tolerance is non-negative. */
-  if (this->triggering_tolerance < 0.0) {
-    RCLCPP_ERROR(this->get_logger(), "Triggering tolerance must be non-negative.");
+  /* Check that the maximum timing error is non-negative. */
+  if (this->maximum_timing_error < 0.0) {
+    RCLCPP_ERROR(this->get_logger(), "Maximum timing error must be non-negative.");
     rclcpp::shutdown();
     return;
   }
@@ -51,7 +51,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
-  RCLCPP_INFO(this->get_logger(), "  Triggering tolerance (ms): %.1f", 1000 * this->triggering_tolerance);
+  RCLCPP_INFO(this->get_logger(), "  Maximum timing error (ms): %.1f", 1000 * this->maximum_timing_error);
   RCLCPP_INFO(this->get_logger(), "  Loopback latency threshold: %.1f (ms)", 1000 * this->loopback_latency_threshold);
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");

@@ -56,7 +56,7 @@ private:
   std::chrono::high_resolution_clock::time_point stored_system_time;
 
   // Configuration parameters
-  double_t triggering_tolerance = 0.0;
+  double_t maximum_timing_error = 0.0;
   double_t loopback_latency_threshold = 0.0;
   bool simulate_labjack = false;
 

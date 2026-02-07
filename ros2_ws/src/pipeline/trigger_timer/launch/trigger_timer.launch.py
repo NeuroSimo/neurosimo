@@ -13,9 +13,9 @@ def generate_launch_description():
         description="Logging level",
     )
 
-    triggering_tolerance_arg = DeclareLaunchArgument(
-        "triggering-tolerance",
-        description="Tolerance when triggering (in seconds)",
+    maximum_timing_error_arg = DeclareLaunchArgument(
+        "maximum-timing-error",
+        description="Maximum timing error (in seconds)",
     )
 
     simulate_labjack_arg = DeclareLaunchArgument(
@@ -29,7 +29,7 @@ def generate_launch_description():
     )
 
     logger = LaunchConfiguration("log-level")
-    triggering_tolerance = LaunchConfiguration("triggering-tolerance")
+    maximum_timing_error = LaunchConfiguration("maximum-timing-error")
     simulate_labjack = LaunchConfiguration("simulate-labjack")
     loopback_latency_threshold = LaunchConfiguration("loopback-latency-threshold")
 
@@ -39,7 +39,7 @@ def generate_launch_description():
         name="trigger_timer",
         parameters=[
             {
-                "triggering-tolerance": triggering_tolerance,
+                "maximum-timing-error": maximum_timing_error,
                 "simulate-labjack": simulate_labjack,
                 "loopback-latency-threshold": loopback_latency_threshold,
             }
@@ -48,7 +48,7 @@ def generate_launch_description():
     )
     ld.add_action(node)
     ld.add_action(log_arg)
-    ld.add_action(triggering_tolerance_arg)
+    ld.add_action(maximum_timing_error_arg)
     ld.add_action(simulate_labjack_arg)
     ld.add_action(loopback_latency_threshold_arg)
 

@@ -5,6 +5,6 @@ source /opt/ros/iron/setup.bash
 source /app/ros2_ws/install/setup.bash
 
 ros2 launch trigger_timer trigger_timer.launch.py log-level:="$ROS_LOG_LEVEL" \
-    triggering-tolerance:="$TRIGGERING_TOLERANCE" \
+    maximum-timing-error:="$MAXIMUM_TIMING_ERROR" \
     simulate-labjack:="$SIMULATE_LABJACK" \
     loopback-latency-threshold:="$LOOPBACK_LATENCY_THRESHOLD"

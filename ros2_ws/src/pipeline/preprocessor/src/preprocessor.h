@@ -74,7 +74,7 @@ private:
   void publish_python_logs(uint8_t phase, double sample_time);
   void publish_sentinel_sample(double_t sample_time);
 
-  void abort_session();
+  void abort_session(const std::string& reason);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 

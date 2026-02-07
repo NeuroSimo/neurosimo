@@ -156,8 +156,6 @@ void EegPresenter::handle_initialize_presenter(
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
-                                 "Failed to initialize");
     response->success = false;
     return;
   }
@@ -298,8 +296,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");
     this->error_occurred = true;
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Presenter: Python error");
-    this->abort_session();
+    this->abort_session("Presenter Python error");
     return;
   }
 }
@@ -336,12 +333,13 @@ void EegPresenter::_publish_health_status(uint8_t health_level, const std::strin
   this->health_publisher->publish(health);
 }
 
-void EegPresenter::abort_session() {
+void EegPresenter::abort_session(const std::string& reason) {
   auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
   request->source = "presenter";
+  request->reason = reason;
 
   auto result = this->abort_session_client->async_send_request(request);
-  RCLCPP_INFO(this->get_logger(), "Requested session abort due to run-time error");
+  RCLCPP_INFO(this->get_logger(), "Requested session abort: %s", reason.c_str());
 }
 
 int main(int argc, char *argv[]) {

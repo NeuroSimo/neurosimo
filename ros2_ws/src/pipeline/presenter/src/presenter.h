@@ -53,7 +53,7 @@ private:
   void _publish_heartbeat();
   void _publish_health_status(uint8_t health_level, const std::string& message);
 
-  void abort_session();
+  void abort_session(const std::string& reason);
 
   void handle_initialize_presenter(
     const std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Request> request,

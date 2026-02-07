@@ -19,7 +19,7 @@ const PipelinePanel = styled.div`
   display: grid;
   grid-template-rows: repeat(4, 1fr);
   grid-template-columns: repeat(2, 1fr);
-  width: 500px;
+  width: 510px;
   height: 400px;
   gap: 30px;
   position: relative;

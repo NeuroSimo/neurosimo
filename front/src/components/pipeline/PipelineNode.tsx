@@ -7,7 +7,7 @@ import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 
 const Container = styled(StyledPanel)`
-  width: 490px;
+  width: 505px;
   height: 20px;
   background-color: #e6ebf2;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 3px 10px rgba(0, 0, 0, 0.14);

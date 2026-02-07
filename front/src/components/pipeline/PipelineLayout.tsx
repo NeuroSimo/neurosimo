@@ -13,7 +13,7 @@ const Layout = styled.div`
   display: grid;
   grid-template-columns: ${CONFIG_PANEL_WIDTH + 60}px 1fr;
   grid-template-rows: auto;
-  gap: 16px 24px;
+  gap: 16px 0px;
   align-items: start;
   max-width: 1600px;
   margin: 0 auto;

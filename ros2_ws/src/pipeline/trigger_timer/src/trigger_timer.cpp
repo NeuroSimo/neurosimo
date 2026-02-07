@@ -214,9 +214,20 @@ bool TriggerTimer::schedule_trigger_with_timer(
 
   double_t time_until_trigger = trigger_time - estimated_current_time;
 
-  if (time_until_trigger <= 0.0) {
-    RCLCPP_WARN(logger, "Trigger time %.4f is in the past (current estimated: %.4f), triggering immediately.",
-                trigger_time, estimated_current_time);
+  /* Check if trigger time is in the past */
+  if (time_until_trigger < 0.0) {
+    double_t timing_error = -time_until_trigger;
+    
+    /* Reject if timing error exceeds maximum allowed */
+    if (timing_error > this->maximum_timing_error) {
+      RCLCPP_ERROR(logger, "Trigger time %.4f is too late (current estimated: %.4f, error: %.4f ms exceeds maximum %.4f ms), rejecting trigger.",
+                   trigger_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
+      return false;
+    }
+    
+    /* Within tolerance, trigger immediately */
+    RCLCPP_WARN(logger, "Trigger time %.4f is in the past (current estimated: %.4f, error: %.4f ms within maximum %.4f ms), triggering immediately.",
+                trigger_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
     time_until_trigger = 0.0;
   }
 

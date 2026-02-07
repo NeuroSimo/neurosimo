@@ -512,8 +512,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
                  "Python call failed, not processing EEG sample at time %.3f (s).",
                  sample_time);
     this->error_occurred = true;
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Decider: Python error");
-    this->abort_session();
+    this->abort_session("Decider Python error");
     return;
   }
 
@@ -658,12 +657,13 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
   }
 }
 
-void EegDecider::abort_session() {
+void EegDecider::abort_session(const std::string& reason) {
   auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
   request->source = "decider";
+  request->reason = reason;
 
   auto result = this->abort_session_client->async_send_request(request);
-  RCLCPP_INFO(this->get_logger(), "Requested session abort due to run-time error");
+  RCLCPP_INFO(this->get_logger(), "Requested session abort: %s", reason.c_str());
 }
 
 /* Initialization and reset functions */

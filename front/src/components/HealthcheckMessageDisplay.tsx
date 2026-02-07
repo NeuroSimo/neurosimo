@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 import { HealthcheckContext, ComponentHealth } from 'providers/HealthProvider'
+import { SessionContext } from 'providers/SessionProvider'
 import { StyledPanel } from 'styles/General'
 
 const HealthcheckMessagePanel = styled(StyledPanel)`
@@ -40,10 +41,16 @@ export const HealthcheckMessageDisplay: React.FC = () => {
     triggerTimerStatus,
   } = useContext(HealthcheckContext)
 
+  const { sessionState } = useContext(SessionContext)
+
   let displayMessage
 
+  // Highest priority: session abort reason
+  if (sessionState.abortReason) {
+    displayMessage = `Session aborted: ${sessionState.abortReason}`
+  }
   // Prioritize error states, then degraded states, then unknown states
-  if (eegBridgeStatus.health === ComponentHealth.ERROR) {
+  else if (eegBridgeStatus.health === ComponentHealth.ERROR) {
     displayMessage = eegBridgeStatus.message || 'EEG Bridge error'
   } else if (eegSimulatorStatus.health === ComponentHealth.ERROR) {
     displayMessage = eegSimulatorStatus.message || 'EEG Simulator error'

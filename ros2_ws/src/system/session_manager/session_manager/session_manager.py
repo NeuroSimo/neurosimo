@@ -171,6 +171,7 @@ class SessionManagerNode(Node):
         self._session_thread = None
         self._thread_lock = Lock()
         self._stop_event = Event()
+        self._abort_reason = ""
 
         # Publish initial idle state
         self.publish_session_state(SessionState.STOPPED)
@@ -178,10 +179,11 @@ class SessionManagerNode(Node):
         self.logger.info("Session Manager initialized")
 
     # Helper functions
-    def publish_session_state(self, state):
+    def publish_session_state(self, state, abort_reason=""):
         """Publish current session state."""
         msg = SessionState()
         msg.state = state
+        msg.abort_reason = abort_reason
         self.session_state_publisher.publish(msg)
 
     # Service callbacks
@@ -196,6 +198,7 @@ class SessionManagerNode(Node):
                 return response
 
             self._stop_event.clear()
+            self._abort_reason = ""
 
             self._session_thread = Thread(target=self.run_session, daemon=True)
             self._session_thread.start()
@@ -207,7 +210,7 @@ class SessionManagerNode(Node):
 
     def abort_session_callback(self, request, response):
         """Handle abort session service calls."""
-        self.logger.info(f'Received abort session request from {request.source}')
+        self.logger.info(f'Received abort session request from {request.source}: {request.reason}')
 
         with self._thread_lock:
             if self._session_thread is None or not self._session_thread.is_alive():
@@ -215,6 +218,7 @@ class SessionManagerNode(Node):
                 response.success = False
                 return response
 
+            self._abort_reason = request.reason
             self._stop_event.set()
 
             response.success = True
@@ -372,8 +376,8 @@ class SessionManagerNode(Node):
             self.publish_session_state(SessionState.STOPPED)
             return False
 
-        # Publish stopped state
-        self.publish_session_state(SessionState.STOPPED)
+        # Publish stopped state with abort reason if present
+        self.publish_session_state(SessionState.STOPPED, abort_reason=self._abort_reason)
 
         # Clear thread reference
         with self._thread_lock:

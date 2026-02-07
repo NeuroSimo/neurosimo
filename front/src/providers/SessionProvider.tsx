@@ -10,6 +10,7 @@ export enum SessionStateValue {
 
 interface SessionState {
   state: SessionStateValue
+  abortReason: string
 }
 
 interface SessionContextType {
@@ -24,6 +25,7 @@ const noopCallback = () => {}
 const defaultSessionState: SessionContextType = {
   sessionState: {
     state: SessionStateValue.STOPPED,
+    abortReason: '',
   },
   startSession: noopCallback,
   abortSession: noopCallback,
@@ -38,13 +40,15 @@ interface SessionProviderProps {
 export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) => {
   const [sessionState, setSessionState] = useState<SessionState>({
     state: SessionStateValue.STOPPED,
+    abortReason: '',
   })
 
   useEffect(() => {
     // Subscribe to session state topic for persistence across refreshes
-    const topic = subscribeToSessionState((state: SessionStateValue) => {
+    const topic = subscribeToSessionState((state: SessionStateValue, abortReason: string) => {
       setSessionState({
         state: state,
+        abortReason: abortReason,
       })
     })
 

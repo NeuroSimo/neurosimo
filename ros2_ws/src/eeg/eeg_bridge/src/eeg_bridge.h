@@ -34,7 +34,8 @@ enum EegDeviceState {
 
 enum ErrorState {
   NO_ERROR,
-  ERROR_SAMPLES_DROPPED
+  ERROR_SAMPLES_DROPPED,
+  ERROR_SAMPLE_TIMEOUT
 };
 
 /**
@@ -78,6 +79,7 @@ private:
 
   void handle_sample(eeg_interfaces::msg::Sample sample);
   bool check_for_dropped_samples(uint64_t device_sample_index);
+  void check_for_sample_timeout();
 
   void create_publishers();
 
@@ -112,6 +114,7 @@ private:
   /* State */
   EegDeviceState device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
   ErrorState error_state = ErrorState::NO_ERROR;
+  std::chrono::steady_clock::time_point last_sample_time;
 
   /* Publishers */
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;

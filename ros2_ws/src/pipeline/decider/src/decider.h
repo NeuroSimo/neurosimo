@@ -91,7 +91,7 @@ private:
   void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
-  void abort_session();
+  void abort_session(const std::string& reason);
 
   void log_section_header(const std::string& title);
   void publish_python_logs(uint8_t phase, double sample_time);

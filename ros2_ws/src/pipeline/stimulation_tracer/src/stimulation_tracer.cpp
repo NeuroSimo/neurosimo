@@ -227,7 +227,6 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     if (trace.system_time_trigger_timer_received != 0) final_trace.system_time_trigger_timer_received = trace.system_time_trigger_timer_received;
     if (trace.system_time_trigger_timer_finished != 0) final_trace.system_time_trigger_timer_finished = trace.system_time_trigger_timer_finished;
     if (trace.system_time_hardware_fired != 0) final_trace.system_time_hardware_fired = trace.system_time_hardware_fired;
-    if (trace.sample_time_at_firing != 0.0) final_trace.sample_time_at_firing = trace.sample_time_at_firing;
     if (trace.loopback_latency_at_scheduling != 0.0) final_trace.loopback_latency_at_scheduling = trace.loopback_latency_at_scheduling;
     if (trace.latency_corrected_time_at_firing != 0.0) final_trace.latency_corrected_time_at_firing = trace.latency_corrected_time_at_firing;
 

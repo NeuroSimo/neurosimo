@@ -58,7 +58,6 @@ uint64 system_time_trigger_timer_finished
 # When TriggerTimer actually fired the hardware output
 uint64 system_time_hardware_fired    # steady clock ns
 
-float64 sample_time_at_firing              # seconds since recording start
 float64 loopback_latency_at_scheduling
 float64 latency_corrected_time_at_firing
 

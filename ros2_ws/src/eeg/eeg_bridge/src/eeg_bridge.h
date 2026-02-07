@@ -32,12 +32,6 @@ enum EegDeviceState {
   EEG_DEVICE_STREAMING
 };
 
-enum ErrorState {
-  NO_ERROR,
-  ERROR_SAMPLES_DROPPED,
-  ERROR_SAMPLE_TIMEOUT
-};
-
 /**
  * Supported EEG Devices
  *
@@ -90,7 +84,7 @@ private:
 
   void set_device_state(EegDeviceState new_state);
 
-  void abort_session();
+  void abort_session(const std::string& reason);
 
   void handle_start_streaming(
       const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
@@ -113,7 +107,6 @@ private:
 
   /* State */
   EegDeviceState device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;
-  ErrorState error_state = ErrorState::NO_ERROR;
   std::chrono::steady_clock::time_point last_sample_time;
 
   /* Publishers */

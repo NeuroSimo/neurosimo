@@ -42,17 +42,17 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   this->declare_parameter("simulate-labjack", false, simulate_labjack_descriptor);
   this->get_parameter("simulate-labjack", this->simulate_labjack);
 
-  /* Read ROS parameter: loopback latency threshold */
-  auto loopback_latency_threshold_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  loopback_latency_threshold_descriptor.description = "The threshold for the loopback latency (in seconds) before stimulation is prevented";
-  this->declare_parameter("loopback-latency-threshold", 0.005, loopback_latency_threshold_descriptor);
-  this->get_parameter("loopback-latency-threshold", this->loopback_latency_threshold);
+  /* Read ROS parameter: maximum loopback latency */
+  auto maximum_loopback_latency_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  maximum_loopback_latency_descriptor.description = "The maximum loopback latency (in seconds) before stimulation is prevented";
+  this->declare_parameter("maximum-loopback-latency", 0.005, maximum_loopback_latency_descriptor);
+  this->get_parameter("maximum-loopback-latency", this->maximum_loopback_latency);
 
   /* Log the configuration. */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Maximum timing error (ms): %.1f", 1000 * this->maximum_timing_error);
-  RCLCPP_INFO(this->get_logger(), "  Loopback latency threshold: %.1f (ms)", 1000 * this->loopback_latency_threshold);
+  RCLCPP_INFO(this->get_logger(), "  Maximum loopback latency (ms): %.1f", 1000 * this->maximum_loopback_latency);
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 
@@ -208,9 +208,9 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
   }
 
   /* Check that loopback latency is within threshold. */
-  if (this->current_loopback_latency > this->loopback_latency_threshold) {
-    RCLCPP_ERROR(this->get_logger(), "Loopback latency (%.1f ms) exceeds threshold (%.1f ms), rejecting stimulation.",
-                 this->current_loopback_latency * 1000, this->loopback_latency_threshold * 1000);
+  if (this->current_loopback_latency > this->maximum_loopback_latency) {
+    RCLCPP_ERROR(this->get_logger(), "Loopback latency (%.1f ms) exceeds maximum (%.1f ms), rejecting stimulation.",
+                 this->current_loopback_latency * 1000, this->maximum_loopback_latency * 1000);
 
     /* Publish degraded health status */
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,

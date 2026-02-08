@@ -23,15 +23,15 @@ def generate_launch_description():
         description="Simulate LabJack device when hardware is not available",
     )
 
-    loopback_latency_threshold_arg = DeclareLaunchArgument(
-        "loopback-latency-threshold",
+    maximum_loopback_latency_arg = DeclareLaunchArgument(
+        "maximum-loopback-latency",
         description="Maximum loopback latency, above which stimulation is prevented",
     )
 
     logger = LaunchConfiguration("log-level")
     maximum_timing_error = LaunchConfiguration("maximum-timing-error")
     simulate_labjack = LaunchConfiguration("simulate-labjack")
-    loopback_latency_threshold = LaunchConfiguration("loopback-latency-threshold")
+    maximum_loopback_latency = LaunchConfiguration("maximum-loopback-latency")
 
     node = Node(
         package="trigger_timer",
@@ -41,7 +41,7 @@ def generate_launch_description():
             {
                 "maximum-timing-error": maximum_timing_error,
                 "simulate-labjack": simulate_labjack,
-                "loopback-latency-threshold": loopback_latency_threshold,
+                "maximum-loopback-latency": maximum_loopback_latency,
             }
         ],
         arguments=['--ros-args', '--log-level', logger]
@@ -50,6 +50,6 @@ def generate_launch_description():
     ld.add_action(log_arg)
     ld.add_action(maximum_timing_error_arg)
     ld.add_action(simulate_labjack_arg)
-    ld.add_action(loopback_latency_threshold_arg)
+    ld.add_action(maximum_loopback_latency_arg)
 
     return ld

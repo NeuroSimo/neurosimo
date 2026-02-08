@@ -49,6 +49,12 @@ uint64 system_time_decider_received  # steady clock ns
 uint64 system_time_decider_finished  # steady clock ns
 
 # ----------------------------------------------------------------------------
+# TriggerTimer configuration (filled by TriggerTimer)
+# ----------------------------------------------------------------------------
+float64 maximum_timing_error         # in seconds
+float64 maximum_loopback_latency     # in seconds
+
+# ----------------------------------------------------------------------------
 # TriggerTimer timing (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
 float64 stimulation_horizon          # how near in the future we can stimulate? In seconds.
@@ -61,7 +67,6 @@ uint64 system_time_hardware_fired    # steady clock ns
 
 float64 loopback_latency_at_scheduling
 float64 latency_corrected_time_at_firing
-float64 maximum_timing_error         # configured maximum timing error in seconds
 
 # ----------------------------------------------------------------------------
 # Observed pulse (filled by StimulationTracer)

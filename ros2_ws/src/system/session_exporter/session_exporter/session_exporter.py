@@ -96,6 +96,7 @@ DECISION_TRACE_FIELDS = [
     'system_time_hardware_fired',
     'loopback_latency_at_scheduling',
     'maximum_timing_error',
+    'maximum_loopback_latency',
     'latency_corrected_time_at_firing',
     'actual_stimulation_time',
     'actual_stimulation_sample_index',

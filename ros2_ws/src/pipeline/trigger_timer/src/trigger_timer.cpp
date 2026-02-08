@@ -198,13 +198,13 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
 
   if (estimated_current_time == 0.0) {
     RCLCPP_WARN(logger, "No sample time reference available yet, cannot estimate timing.");
-    return SchedulingResult::REJECTED;
+    return SchedulingResult::ERROR;
   }
 
   /* Check if a trigger is already scheduled */
   if (active_trigger_timer && !active_trigger_timer->is_canceled()) {
     RCLCPP_ERROR(logger, "Trigger already scheduled, rejecting new trigger request at time %.4f", trigger_time);
-    return SchedulingResult::REJECTED;
+    return SchedulingResult::ERROR;
   }
 
   /* Check that loopback latency is within threshold. */
@@ -247,7 +247,7 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
       double_t estimated_current_time = estimate_current_sample_time();
       double_t error = estimated_current_time - trigger_time;
 
-      uint8_t status = pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+      uint8_t status = pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
 
       /* Capture timing when hardware trigger is fired. */
       auto now = std::chrono::high_resolution_clock::now();
@@ -302,7 +302,7 @@ void TriggerTimer::handle_request_timed_trigger(
     /* Publish degraded health status */
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
                                  "LabJack device not connected");
-    result = SchedulingResult::REJECTED;
+    result = SchedulingResult::ERROR;
   } else {
     result = schedule_trigger_with_timer(request);
   }
@@ -327,8 +327,8 @@ void TriggerTimer::handle_request_timed_trigger(
     case SchedulingResult::LOOPBACK_LATENCY_EXCEEDED:
       status = pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED;
       break;
-    case SchedulingResult::REJECTED:
-      status = pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+    case SchedulingResult::ERROR:
+      status = pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
       break;
   }
 

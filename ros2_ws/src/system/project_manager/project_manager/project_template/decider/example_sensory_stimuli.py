@@ -71,12 +71,12 @@ class Decider:
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG buffer periodically."""
-        print(f"Periodic processing at time {reference_time:.1f}s")
+        print(f"Periodic processing at time {reference_time:.1f} seconds")
 
         # Example: Send dynamic sensory stimuli based on processing time
         # Every 4 seconds (at 2s, 6s, 10s, etc. when we process at 2s intervals)
         if int(reference_time) % 4 == 0:
-            print(f"Sending dynamic visual cue at {reference_time:.1f}s")
+            print(f"Sending dynamic visual cue at {reference_time:.1f} seconds")
             return {
                 'sensory_stimuli': [
                     {

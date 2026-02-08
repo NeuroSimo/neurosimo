@@ -263,6 +263,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
 bool StimulationTracer::is_terminal_status(uint8_t status) {
   /* A decision is finalized when it reaches one of these terminal statuses. */
   if (status == pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED ||
+      status == pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED ||
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE ||
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED ||
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_MISSED ||

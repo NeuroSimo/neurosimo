@@ -201,6 +201,12 @@ bool TriggerTimer::schedule_trigger_with_timer(
     return false;
   }
 
+  /* Check if a trigger is already scheduled */
+  if (active_trigger_timer && !active_trigger_timer->is_canceled()) {
+    RCLCPP_ERROR(logger, "Trigger already scheduled, rejecting new trigger request at time %.4f", trigger_time);
+    return false;
+  }
+
   /* Check that loopback latency is within threshold. */
   if (this->current_loopback_latency > this->loopback_latency_threshold) {
     RCLCPP_ERROR(this->get_logger(), "Loopback latency (%.1f ms) exceeds threshold (%.1f ms), rejecting stimulation.",
@@ -232,7 +238,7 @@ bool TriggerTimer::schedule_trigger_with_timer(
   }
 
   // Create a one-shot timer to fire the trigger
-  auto trigger_timer = this->create_wall_timer(
+  active_trigger_timer = this->create_wall_timer(
     std::chrono::duration<double>(time_until_trigger),
     [this, request]() {
       std::lock_guard<std::mutex> lock(handler_mutex);
@@ -266,6 +272,9 @@ bool TriggerTimer::schedule_trigger_with_timer(
       decision_trace.latency_corrected_time_at_firing = estimated_current_time;
 
       this->decision_trace_publisher->publish(decision_trace);
+
+      /* Cancel timer to make it one-shot. */
+      active_trigger_timer->cancel();
     });
 
   return true;
@@ -324,9 +333,9 @@ void TriggerTimer::handle_request_timed_trigger(
   /* Set response success based on scheduling result. */
   response->success = scheduled;
   if (scheduled) {
-    RCLCPP_INFO(logger, "Scheduled trigger at time: %.4f (s).", trigger_time);
+    RCLCPP_INFO(logger, "Scheduled trigger for time: %.4f (s).", trigger_time);
   } else {
-    RCLCPP_WARN(logger, "Failed to schedule trigger at time: %.4f (s).", trigger_time);
+    RCLCPP_WARN(logger, "Failed to schedule trigger for time: %.4f (s).", trigger_time);
   }
 }
 
@@ -335,6 +344,12 @@ void TriggerTimer::reset_state() {
   if (timer) {
     timer->cancel();
     timer.reset();
+  }
+
+  /* Cancel and reset active trigger timer */
+  if (active_trigger_timer) {
+    active_trigger_timer->cancel();
+    active_trigger_timer.reset();
   }
 
   /* Stop and reset LabJack manager */

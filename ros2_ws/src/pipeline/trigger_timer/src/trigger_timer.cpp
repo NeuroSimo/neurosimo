@@ -215,7 +215,7 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
     /* Publish degraded health status */
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
                                  "Loopback latency exceeds threshold, stimulation rejected");
-    return SchedulingResult::REJECTED;
+    return SchedulingResult::LOOPBACK_LATENCY_EXCEEDED;
   }
 
   double_t time_until_trigger = trigger_time - estimated_current_time;
@@ -323,6 +323,9 @@ void TriggerTimer::handle_request_timed_trigger(
       break;
     case SchedulingResult::TOO_LATE:
       status = pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE;
+      break;
+    case SchedulingResult::LOOPBACK_LATENCY_EXCEEDED:
+      status = pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED;
       break;
     case SchedulingResult::REJECTED:
       status = pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;

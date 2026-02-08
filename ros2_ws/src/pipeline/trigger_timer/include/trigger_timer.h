@@ -64,6 +64,7 @@ private:
   enum class SchedulingResult {
     SCHEDULED,
     TOO_LATE,
+    LOOPBACK_LATENCY_EXCEEDED,
     REJECTED
   };
 

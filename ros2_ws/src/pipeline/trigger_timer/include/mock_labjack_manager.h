@@ -26,7 +26,7 @@ class MockLabJackManager : public LabJackInterface {
 public:
   using ConnectionStatusCallback = std::function<void(bool connected, int error_code, int64_t connection_time_ms)>;
 
-  explicit MockLabJackManager(rclcpp::Logger logger, const std::string& host = "localhost", int port = 60000);
+  explicit MockLabJackManager(rclcpp::Logger logger, const std::string& host = "127.0.0.1", int port = 60000);
   ~MockLabJackManager();
 
   // Connection management

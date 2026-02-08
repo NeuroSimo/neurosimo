@@ -645,7 +645,8 @@ bool DeciderWrapper::warm_up() {
   RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", warm_up_rounds);
   RCLCPP_INFO(*logger_ptr, " ");
   
-  // Clear any logs accumulated during warm-up to prevent them from being published
+  // Drain IPC buffer and clear any logs accumulated during warm-up to prevent them from being published
+  drain_logs();
   get_and_clear_logs();
   
   log_section_header("Operation");

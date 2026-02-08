@@ -57,7 +57,8 @@ float64 maximum_loopback_latency     # in seconds
 # ----------------------------------------------------------------------------
 # TriggerTimer timing (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
-float64 stimulation_horizon          # how near in the future we can stimulate? In seconds.
+float64 stimulation_horizon          # effective horizon accounting for maximum_timing_error, in seconds
+float64 strict_stimulation_horizon   # strict horizon without timing error tolerance, in seconds
 
 uint64 system_time_trigger_timer_received
 uint64 system_time_trigger_timer_finished

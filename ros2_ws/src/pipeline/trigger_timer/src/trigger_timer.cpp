@@ -312,7 +312,7 @@ void TriggerTimer::handle_request_timed_trigger(
     end_time.time_since_epoch()).count();
 
   /* Calculate stimulation horizon. */
-  double_t stimulation_horizon = this->latest_sample_time - request->reference_sample_time;
+  double_t stimulation_horizon = estimate_current_sample_time() - request->reference_sample_time;
 
   /* Determine status. */
   uint8_t status = scheduled ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED

@@ -54,23 +54,23 @@ export const StatisticsDisplay: React.FC = () => {
       <StatisticsPanelTitle>Statistics</StatisticsPanelTitle>
       <StatisticsPanel>
         <StateRow>
-          <StateTitle>Samples:</StateTitle>
+          <StateTitle>Samples</StateTitle>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Raw:</IndentedStateTitle>
+          <IndentedStateTitle>Raw</IndentedStateTitle>
           <StateValue>{eegStatistics?.num_of_raw_samples ?? '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Preprocessed:</IndentedStateTitle>
+          <IndentedStateTitle>Preprocessed</IndentedStateTitle>
           <StateValue>{eegStatistics?.num_of_preprocessed_samples ?? '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Dropped:</IndentedStateTitle>
+          <IndentedStateTitle>Dropped</IndentedStateTitle>
           <StateValue>{droppedSamples !== null && droppedSamples > 0 ? droppedSamples : '\u2013'}</StateValue>
         </StateRow>
         <br />
         <StateRow>
-          <StateTitle>Preprocessing time:</StateTitle>
+          <StateTitle>Preprocessing time</StateTitle>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Median</IndentedStateTitle>
@@ -86,7 +86,7 @@ export const StatisticsDisplay: React.FC = () => {
         </StateRow>
         <br />
         <StateRow>
-          <StateTitle>Maximum sample interval:</StateTitle>
+          <StateTitle>Maximum sample interval</StateTitle>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Raw</IndentedStateTitle>

@@ -16,8 +16,9 @@ const Layout = styled.div`
   gap: 16px 0px;
   align-items: start;
   max-width: 1600px;
-  margin: 0 auto;
+  margin: 0;
   width: 100%;
+  padding-left: 40px;
 `
 
 const SetupPrimary = styled.div`

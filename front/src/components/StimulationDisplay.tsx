@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import {
@@ -34,111 +34,81 @@ const StimulationPanel = styled(StyledPanel)`
   z-index: 1000;
 `
 
-const statusLabels = {
-  0: 'No decision',
-  1: 'Decided yes',
-  2: 'Scheduled',
-  3: 'Rejected',
-  4: 'Fired',
-  5: 'Pulse observed',
-  6: 'Missed',
-  7: 'Error'
-}
-
 export const StimulationDisplay: React.FC = () => {
-  const { loopbackLatency, setLoopbackLatency } = useContext(PipelineContext)
-  const { decisionTrace } = useContext(PipelineContext)
+  const { loopbackLatency, decisionTrace } = useContext(PipelineContext)
 
-  const formattedLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
-
-  // Decision Stats
-  const formattedStatus = decisionTrace ? statusLabels[decisionTrace.status as keyof typeof statusLabels] || 'Unknown' : '\u2013'
-
-  const formattedReferenceSampleTime = decisionTrace?.reference_sample_time
-    ? decisionTrace.reference_sample_time.toFixed(1) + ' s'
+  // Latency
+  const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedDecisionPathLatency = decisionTrace?.decision_path_latency
+    ? (decisionTrace.decision_path_latency * 1000).toFixed(1) + ' ms'
     : '\u2013'
-
+  const formattedPreprocessorDuration = decisionTrace?.preprocessor_duration
+    ? (decisionTrace.preprocessor_duration * 1000).toFixed(1) + ' ms'
+    : '\u2013'
   const formattedDeciderDuration = decisionTrace?.decider_duration
     ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedPreprocessorDuration = decisionTrace?.preprocessor_duration
-    ? (decisionTrace.preprocessor_duration * 1000).toFixed(1) + ' ms'
+  // Pulse
+  const formattedReferenceSampleTime = decisionTrace?.reference_sample_time
+    ? decisionTrace.reference_sample_time.toFixed(3).replace(/\.?0+$/, '') + ' s'
     : '\u2013'
-
-  const formattedRequestedStimulationTime = decisionTrace?.requested_stimulation_time
-    ? decisionTrace.requested_stimulation_time.toFixed(1) + ' s'
+  const formattedRequestedStimulationOffset = 
+    decisionTrace?.requested_stimulation_time !== undefined && decisionTrace?.reference_sample_time !== undefined
+    ? '+' + ((decisionTrace.requested_stimulation_time - decisionTrace.reference_sample_time) * 1000).toFixed(1) + ' ms'
     : '\u2013'
-
-  const formattedActualStimulationTime = decisionTrace?.actual_stimulation_time
-    ? decisionTrace.actual_stimulation_time.toFixed(1) + ' s'
+  const formattedStimulationHorizon = decisionTrace?.stimulation_horizon
+    ? '>' + (decisionTrace.stimulation_horizon * 1000).toFixed(1) + ' ms'
     : '\u2013'
-
   const formattedTimingError = decisionTrace?.timing_error !== undefined
     ? (decisionTrace.timing_error * 1000).toFixed(1) + ' ms'
     : '\u2013'
-
-  const formattedPulseConfirmed = decisionTrace ? (decisionTrace.pulse_confirmed ? 'Yes' : 'No') : '\u2013'
 
   return (
     <>
       <StimulationPanelTitle>Stimulation</StimulationPanelTitle>
       <StimulationPanel>
-        {/* Decision trace */}
+        {/* Latency */}
         <StateRow>
-          <StateTitle>Status:</StateTitle>
-          <StateValue>{formattedStatus}</StateValue>
+          <StateTitle>Latency</StateTitle>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Stimulate</IndentedStateTitle>
-          <StateValue>{decisionTrace ? (decisionTrace.stimulate ? 'Yes' : 'No') : '\u2013'}</StateValue>
+          <IndentedStateTitle>Loopback</IndentedStateTitle>
+          <StateValue>{formattedLoopbackLatency}</StateValue>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Reference time</IndentedStateTitle>
+          <IndentedStateTitle>Decision path</IndentedStateTitle>
+          <StateValue>{formattedDecisionPathLatency}</StateValue>
+        </StateRow>
+        <StateRow>
+          <DoubleIndentedStateTitle>Preprocessor</DoubleIndentedStateTitle>
+          <StateValue>{formattedPreprocessorDuration}</StateValue>
+        </StateRow>
+        <StateRow>
+          <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
+          <StateValue>{formattedDeciderDuration}</StateValue>
+        </StateRow>
+        <br />
+        {/* Pulse */}
+        <StateRow>
+          <StateTitle>Pulse</StateTitle>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Decided at</IndentedStateTitle>
           <StateValue>{formattedReferenceSampleTime}</StateValue>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Requested time</IndentedStateTitle>
-          <StateValue>{formattedRequestedStimulationTime}</StateValue>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Actual time</IndentedStateTitle>
-          <StateValue>{formattedActualStimulationTime}</StateValue>
+          <IndentedStateTitle>Requested for</IndentedStateTitle>
+          <StateValue>{formattedRequestedStimulationOffset}</StateValue>
         </StateRow>
         <br />
-        {/* Processing Times */}
         <StateRow>
-          <StateTitle>Processing:</StateTitle>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Decider</IndentedStateTitle>
-          <StateValue>{formattedDeciderDuration}</StateValue>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Preprocessor</IndentedStateTitle>
-          <StateValue>{formattedPreprocessorDuration}</StateValue>
-        </StateRow>
-        <br />
-        {/* Pulse Info */}
-        <StateRow>
-          <StateTitle>Pulse:</StateTitle>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Confirmed</IndentedStateTitle>
-          <StateValue>{formattedPulseConfirmed}</StateValue>
+          <IndentedStateTitle>Horizon</IndentedStateTitle>
+          <StateValue>{formattedStimulationHorizon}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Timing error</IndentedStateTitle>
           <StateValue>{formattedTimingError}</StateValue>
-        </StateRow>
-        <br />
-        {/* Timing Info */}
-        <StateRow>
-          <StateTitle>Timing:</StateTitle>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Latency</IndentedStateTitle>
-          <StateValue>{formattedLatency}</StateValue>
         </StateRow>
       </StimulationPanel>
     </>

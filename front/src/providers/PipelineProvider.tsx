@@ -3,6 +3,22 @@ import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
 
+const STATUS_LABELS = {
+  1: 'Decided no',
+  2: 'Decided yes',
+  3: 'Scheduled',
+  4: 'Fired',
+  5: 'Pulse observed',
+  6: 'Missed',
+  7: 'Loopback latency exceeded',
+  8: 'Too late',
+  9: 'Error'
+} as const
+
+export const getStatusLabel = (status: number): string => {
+  return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || 'Unknown'
+}
+
 interface LoopbackLatency extends ROSLIB.Message {
   latency: number
 }

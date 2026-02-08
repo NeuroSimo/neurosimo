@@ -24,8 +24,7 @@ uint8 STATUS_PULSE_OBSERVED=5             # pulse observed in EEG stream
 uint8 STATUS_MISSED=6                     # expected pulse not observed within window
 uint8 STATUS_LOOPBACK_LATENCY_EXCEEDED=7  # loopback latency exceeds threshold
 uint8 STATUS_TOO_LATE=8                   # trigger time exceeded maximum timing error
-uint8 STATUS_REJECTED=9                   # trigger timer rejected request (e.g. LabJack not connected, trigger already scheduled)
-uint8 STATUS_ERROR=10                     # generic error
+uint8 STATUS_ERROR=9                      # error (e.g. LabJack not connected, trigger already scheduled)
 uint8 status
 
 # ----------------------------------------------------------------------------

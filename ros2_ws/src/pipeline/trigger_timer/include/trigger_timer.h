@@ -65,7 +65,7 @@ private:
     SCHEDULED,
     TOO_LATE,
     LOOPBACK_LATENCY_EXCEEDED,
-    REJECTED
+    ERROR
   };
 
   /* Comparator for priority queue - sorts by trigger time. */

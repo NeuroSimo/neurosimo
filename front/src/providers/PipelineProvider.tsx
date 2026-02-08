@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactNode } from 'react'
+import React, { useState, useEffect, useRef, ReactNode } from 'react'
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
@@ -81,7 +81,7 @@ interface PipelineProviderProps {
 export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) => {
   const [loopbackLatency, setLoopbackLatency] = useState<LoopbackLatency | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
-  const [latencyTimeoutId, setLatencyTimeoutId] = useState<NodeJS.Timeout | null>(null)
+  const latencyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     /* Subscriber for loopback latency. */
@@ -96,15 +96,14 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       setLoopbackLatency(message)
 
       // Clear existing timeout
-      if (latencyTimeoutId) {
-        clearTimeout(latencyTimeoutId)
+      if (latencyTimeoutRef.current) {
+        clearTimeout(latencyTimeoutRef.current)
       }
 
       // Set new timeout to clear latency after 0.5 seconds of no messages
-      const timeoutId = setTimeout(() => {
+      latencyTimeoutRef.current = setTimeout(() => {
         setLoopbackLatency(null)
       }, 500)
-      setLatencyTimeoutId(timeoutId)
     })
 
     /* Subscriber for decision info. */
@@ -123,8 +122,8 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
     return () => {
       loopbackLatencySubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
-      if (latencyTimeoutId) {
-        clearTimeout(latencyTimeoutId)
+      if (latencyTimeoutRef.current) {
+        clearTimeout(latencyTimeoutRef.current)
       }
     }
   }, [])

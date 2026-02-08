@@ -341,6 +341,7 @@ void TriggerTimer::handle_request_timed_trigger(
   decision_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
   decision_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
   decision_trace.loopback_latency_at_scheduling = this->current_loopback_latency;
+  decision_trace.maximum_timing_error = this->maximum_timing_error;
 
   this->decision_trace_publisher->publish(decision_trace);
 

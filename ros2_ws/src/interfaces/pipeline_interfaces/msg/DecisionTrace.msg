@@ -61,6 +61,7 @@ uint64 system_time_hardware_fired    # steady clock ns
 
 float64 loopback_latency_at_scheduling
 float64 latency_corrected_time_at_firing
+float64 maximum_timing_error         # configured maximum timing error in seconds
 
 # ----------------------------------------------------------------------------
 # Observed pulse (filled by StimulationTracer)

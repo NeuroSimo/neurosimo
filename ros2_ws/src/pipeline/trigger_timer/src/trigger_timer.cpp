@@ -190,7 +190,7 @@ double_t TriggerTimer::estimate_current_sample_time() {
   return this->stored_sample_time + elapsed_system_time.count() + this->current_loopback_latency;
 }
 
-bool TriggerTimer::schedule_trigger_with_timer(
+TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
 
   double_t trigger_time = request->timed_trigger.time;
@@ -198,13 +198,13 @@ bool TriggerTimer::schedule_trigger_with_timer(
 
   if (estimated_current_time == 0.0) {
     RCLCPP_WARN(logger, "No sample time reference available yet, cannot estimate timing.");
-    return false;
+    return SchedulingResult::REJECTED;
   }
 
   /* Check if a trigger is already scheduled */
   if (active_trigger_timer && !active_trigger_timer->is_canceled()) {
     RCLCPP_ERROR(logger, "Trigger already scheduled, rejecting new trigger request at time %.4f", trigger_time);
-    return false;
+    return SchedulingResult::REJECTED;
   }
 
   /* Check that loopback latency is within threshold. */
@@ -215,7 +215,7 @@ bool TriggerTimer::schedule_trigger_with_timer(
     /* Publish degraded health status */
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
                                  "Loopback latency exceeds threshold, stimulation rejected");
-    return false;
+    return SchedulingResult::REJECTED;
   }
 
   double_t time_until_trigger = trigger_time - estimated_current_time;
@@ -228,7 +228,7 @@ bool TriggerTimer::schedule_trigger_with_timer(
     if (timing_error > this->maximum_timing_error) {
       RCLCPP_ERROR(logger, "Trigger time %.4f is too late (current estimated: %.4f, error: %.4f ms exceeds maximum %.4f ms), rejecting trigger.",
                    trigger_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
-      return false;
+      return SchedulingResult::TOO_LATE;
     }
     
     /* Within tolerance, trigger immediately */
@@ -277,7 +277,7 @@ bool TriggerTimer::schedule_trigger_with_timer(
       active_trigger_timer->cancel();
     });
 
-  return true;
+  return SchedulingResult::SCHEDULED;
 }
 
 void TriggerTimer::handle_request_timed_trigger(
@@ -294,7 +294,7 @@ void TriggerTimer::handle_request_timed_trigger(
   double_t trigger_time = request->timed_trigger.time;
 
   bool is_labjack_connected = labjack_manager && labjack_manager->is_connected();
-  bool scheduled = false;
+  SchedulingResult result;
 
   if (!is_labjack_connected) {
     RCLCPP_WARN(logger, "LabJack is not connected, rejecting trigger at time: %.4f (s).", trigger_time);
@@ -302,8 +302,9 @@ void TriggerTimer::handle_request_timed_trigger(
     /* Publish degraded health status */
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
                                  "LabJack device not connected");
+    result = SchedulingResult::REJECTED;
   } else {
-    scheduled = schedule_trigger_with_timer(request);
+    result = schedule_trigger_with_timer(request);
   }
 
   /* Capture timing at request finish. */
@@ -315,8 +316,18 @@ void TriggerTimer::handle_request_timed_trigger(
   double_t stimulation_horizon = estimate_current_sample_time() - request->reference_sample_time;
 
   /* Determine status. */
-  uint8_t status = scheduled ? pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED
-                             : pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+  uint8_t status;
+  switch (result) {
+    case SchedulingResult::SCHEDULED:
+      status = pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED;
+      break;
+    case SchedulingResult::TOO_LATE:
+      status = pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE;
+      break;
+    case SchedulingResult::REJECTED:
+      status = pipeline_interfaces::msg::DecisionTrace::STATUS_REJECTED;
+      break;
+  }
 
   /* Publish first DecisionTrace (scheduled or rejected). */
   auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
@@ -331,8 +342,9 @@ void TriggerTimer::handle_request_timed_trigger(
   this->decision_trace_publisher->publish(decision_trace);
 
   /* Set response success based on scheduling result. */
-  response->success = scheduled;
-  if (scheduled) {
+  bool success = (result == SchedulingResult::SCHEDULED);
+  response->success = success;
+  if (success) {
     RCLCPP_INFO(logger, "Scheduled trigger for time: %.4f (s).", trigger_time);
   } else {
     RCLCPP_WARN(logger, "Failed to schedule trigger for time: %.4f (s).", trigger_time);

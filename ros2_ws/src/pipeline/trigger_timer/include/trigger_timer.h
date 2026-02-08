@@ -61,6 +61,12 @@ private:
   double_t loopback_latency_threshold = 0.0;
   bool simulate_labjack = false;
 
+  enum class SchedulingResult {
+    SCHEDULED,
+    TOO_LATE,
+    REJECTED
+  };
+
   /* Comparator for priority queue - sorts by trigger time. */
   struct TriggerRequestComparator {
     bool operator()(const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>& a,
@@ -75,7 +81,7 @@ private:
   void reset_state();
 
   void measure_loopback_latency(bool loopback_trigger, double_t sample_time);
-  bool schedule_trigger_with_timer(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
+  SchedulingResult schedule_trigger_with_timer(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   double_t estimate_current_sample_time();
 
   void _publish_heartbeat();

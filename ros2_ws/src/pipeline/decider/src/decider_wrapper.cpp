@@ -496,7 +496,7 @@ bool DeciderWrapper::initialize_module(
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "  - Default sample window: %s[%.6f s, %.6f s]%s",
+  RCLCPP_INFO(*logger_ptr, "  - Default sample window: %s[%.3f s, %.3f s]%s",
               bold_on.c_str(),
               default_window_earliest_seconds,
               default_window_latest_seconds,
@@ -508,7 +508,7 @@ bool DeciderWrapper::initialize_module(
     for (const auto& [event_type, window_seconds] : event_window_seconds) {
       double earliest_seconds = window_seconds.first;
       double latest_seconds = window_seconds.second;
-      RCLCPP_INFO(*logger_ptr, "      '%s': %s[%.6f s, %.6f s]%s",
+      RCLCPP_INFO(*logger_ptr, "      '%s': %s[%.3f s, %.3f s]%s",
                   event_type.c_str(),
                   bold_on.c_str(),
                   earliest_seconds,

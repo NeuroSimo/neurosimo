@@ -207,9 +207,9 @@ class NeurOneSimulator:
             # Trigger channel: set bits based on received triggers
             trigger_value = 0
             if pulse_trigger:
-                trigger_value |= (1 << 3)  # Set bit 3 for pulse trigger
+                trigger_value |= (1 << 1)  # Set bit 1 for pulse trigger (TriggerBits::A_IN)
             if loopback_trigger:
-                trigger_value |= (1 << 1)  # Set bit 1 for latency trigger
+                trigger_value |= (1 << 3)  # Set bit 3 for loopback trigger (TriggerBits::B_IN)
 
             return trigger_value
 

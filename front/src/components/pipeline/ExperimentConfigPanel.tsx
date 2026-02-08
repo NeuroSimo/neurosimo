@@ -44,6 +44,10 @@ const IconButton = styled.button<{ disabled: boolean }>`
   opacity: ${props => props.disabled ? 0.5 : 1};
 `
 
+const ProtocolSelect = styled(Select)`
+  max-width: 150px;
+`
+
 export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList } = useContext(PipelineConfigContext)
   const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useParameters()
@@ -163,13 +167,13 @@ export const ExperimentPanel: React.FC = () => {
           >
             <FontAwesomeIcon icon={faInfoCircle} />
           </IconButton>
-          <Select onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
+          <ProtocolSelect onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
             {protocolList.map((protocol, index) => (
               <option key={index} value={protocol}>
                 {protocol}
               </option>
             ))}
-          </Select>
+          </ProtocolSelect>
         </IconButtonWrapper>
       </ConfigRow>
 

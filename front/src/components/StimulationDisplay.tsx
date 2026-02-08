@@ -12,7 +12,7 @@ import {
   DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
-import { PipelineContext } from 'providers/PipelineProvider'
+import { PipelineContext, getStatusLabel } from 'providers/PipelineProvider'
 
 const StimulationPanelTitle = styled.div`
   width: 220px;
@@ -60,8 +60,11 @@ export const StimulationDisplay: React.FC = () => {
   const formattedStimulationHorizon = decisionTrace?.stimulation_horizon
     ? '>' + (decisionTrace.stimulation_horizon * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedTimingError = decisionTrace?.timing_error !== undefined
+  const formattedTimingError = decisionTrace?.timing_error !== undefined && decisionTrace.timing_error !== 0
     ? (decisionTrace.timing_error * 1000).toFixed(1) + ' ms'
+    : '\u2013'
+  const formattedStatus = decisionTrace?.status !== undefined
+    ? getStatusLabel(decisionTrace.status)
     : '\u2013'
 
   return (
@@ -109,6 +112,11 @@ export const StimulationDisplay: React.FC = () => {
         <StateRow>
           <IndentedStateTitle>Timing error</IndentedStateTitle>
           <StateValue>{formattedTimingError}</StateValue>
+        </StateRow>
+        <br />
+        <StateRow>
+          <IndentedStateTitle>Status</IndentedStateTitle>
+          <StateValue>{formattedStatus}</StateValue>
         </StateRow>
       </StimulationPanel>
     </>

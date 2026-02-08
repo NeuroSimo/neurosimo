@@ -230,6 +230,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     if (trace.loopback_latency_at_scheduling != 0.0) final_trace.loopback_latency_at_scheduling = trace.loopback_latency_at_scheduling;
     if (trace.latency_corrected_time_at_firing != 0.0) final_trace.latency_corrected_time_at_firing = trace.latency_corrected_time_at_firing;
     if (trace.maximum_timing_error != 0.0) final_trace.maximum_timing_error = trace.maximum_timing_error;
+    if (trace.maximum_loopback_latency != 0.0) final_trace.maximum_loopback_latency = trace.maximum_loopback_latency;
 
     /* Observed pulse fields */
     if (trace.actual_stimulation_time != 0.0) final_trace.actual_stimulation_time = trace.actual_stimulation_time;

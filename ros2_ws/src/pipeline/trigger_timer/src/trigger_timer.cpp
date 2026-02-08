@@ -270,6 +270,8 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
       decision_trace.status = status;
       decision_trace.system_time_hardware_fired = system_time_hardware_fired;
       decision_trace.latency_corrected_time_at_firing = estimated_current_time;
+      decision_trace.maximum_timing_error = this->maximum_timing_error;
+      decision_trace.maximum_loopback_latency = this->maximum_loopback_latency;
 
       this->decision_trace_publisher->publish(decision_trace);
 
@@ -342,6 +344,7 @@ void TriggerTimer::handle_request_timed_trigger(
   decision_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
   decision_trace.loopback_latency_at_scheduling = this->current_loopback_latency;
   decision_trace.maximum_timing_error = this->maximum_timing_error;
+  decision_trace.maximum_loopback_latency = this->maximum_loopback_latency;
 
   this->decision_trace_publisher->publish(decision_trace);
 

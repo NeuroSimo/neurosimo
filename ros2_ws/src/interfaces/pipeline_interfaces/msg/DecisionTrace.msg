@@ -16,14 +16,15 @@ uint64 decision_id                  # Resets per session
 # ----------------------------------------------------------------------------
 # Status (filled by each stage)
 # ----------------------------------------------------------------------------
-uint8 STATUS_DECIDED_NO=0           # decider decided not to stimulate
-uint8 STATUS_DECIDED_YES=1          # decider decided to stimulate (request created)
-uint8 STATUS_SCHEDULED=2            # trigger_timer accepted and scheduled
-uint8 STATUS_REJECTED=3             # trigger_timer rejected request (e.g. safety/late)
-uint8 STATUS_FIRED=4                # trigger_timer fired hardware trigger
-uint8 STATUS_PULSE_OBSERVED=5             # pulse observed in EEG stream
+uint8 STATUS_DECIDED_NO=1           # decider decided not to stimulate
+uint8 STATUS_DECIDED_YES=2          # decider decided to stimulate (request created)
+uint8 STATUS_SCHEDULED=3            # trigger timer accepted and scheduled
+uint8 STATUS_FIRED=4                # trigger timer fired hardware trigger
+uint8 STATUS_PULSE_OBSERVED=5       # pulse observed in EEG stream
 uint8 STATUS_MISSED=6               # expected pulse not observed within window
-uint8 STATUS_ERROR=7                # generic error
+uint8 STATUS_TOO_LATE=7             # trigger time exceeded maximum timing error
+uint8 STATUS_REJECTED=8             # trigger timer rejected request (e.g. LabJack not connected, loopback latency too high)
+uint8 STATUS_ERROR=9                # generic error
 uint8 status
 
 # ----------------------------------------------------------------------------

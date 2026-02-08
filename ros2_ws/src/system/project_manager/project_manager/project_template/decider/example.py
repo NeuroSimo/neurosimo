@@ -41,11 +41,14 @@ class Decider:
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
         """Process EEG/EMG buffer periodically."""
-        print(f"Periodic processing at time {reference_time}.")
+
+        # Trigger TMS device after 5ms delay
+        trigger_time = reference_time + 0.005
+
+        print(f"Creating trigger for time {trigger_time} seconds")
 
         return {
-            # Trigger TMS device after 5ms delay
-            'timed_trigger': reference_time + 0.005,
+            'timed_trigger': trigger_time,
         }
 
     def process_eeg_trigger(

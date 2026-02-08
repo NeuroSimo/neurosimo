@@ -41,6 +41,7 @@ private:
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
   rclcpp::TimerBase::SharedPtr heartbeat_timer;
+  rclcpp::TimerBase::SharedPtr active_trigger_timer;
 
   std::unique_ptr<LabJackInterface> labjack_manager;
 

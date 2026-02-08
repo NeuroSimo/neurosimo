@@ -314,8 +314,9 @@ void TriggerTimer::handle_request_timed_trigger(
   uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
     end_time.time_since_epoch()).count();
 
-  /* Calculate stimulation horizon. */
-  double_t stimulation_horizon = estimate_current_sample_time() - request->reference_sample_time;
+  /* Calculate stimulation horizons. */
+  double_t strict_stimulation_horizon = estimate_current_sample_time() - request->reference_sample_time;
+  double_t stimulation_horizon = std::max(0.0, strict_stimulation_horizon - this->maximum_timing_error);
 
   /* Determine status. */
   uint8_t status;
@@ -340,6 +341,7 @@ void TriggerTimer::handle_request_timed_trigger(
   decision_trace.decision_id = request->decision_id;
   decision_trace.status = status;
   decision_trace.stimulation_horizon = stimulation_horizon;
+  decision_trace.strict_stimulation_horizon = strict_stimulation_horizon;
   decision_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
   decision_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
   decision_trace.loopback_latency_at_scheduling = this->current_loopback_latency;

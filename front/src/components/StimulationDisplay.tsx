@@ -57,12 +57,11 @@ export const StimulationDisplay: React.FC = () => {
     decisionTrace?.requested_stimulation_time !== undefined && decisionTrace?.reference_sample_time !== undefined
     ? '+' + ((decisionTrace.requested_stimulation_time - decisionTrace.reference_sample_time) * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedStimulationHorizon = 
-    decisionTrace?.stimulation_horizon !== undefined && decisionTrace?.maximum_timing_error !== undefined
-    ? '>' + (Math.max(0, decisionTrace.stimulation_horizon - decisionTrace.maximum_timing_error) * 1000).toFixed(1) + ' ms'
-    : '\u2013'
-  const formattedStrictHorizon = decisionTrace?.stimulation_horizon
+  const formattedStimulationHorizon = decisionTrace?.stimulation_horizon !== undefined
     ? '>' + (decisionTrace.stimulation_horizon * 1000).toFixed(1) + ' ms'
+    : '\u2013'
+  const formattedStrictHorizon = decisionTrace?.strict_stimulation_horizon !== undefined
+    ? '>' + (decisionTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const formattedTimingError = decisionTrace?.timing_error !== undefined && decisionTrace.timing_error !== 0
     ? (decisionTrace.timing_error * 1000).toFixed(1) + ' ms'

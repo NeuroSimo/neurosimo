@@ -419,6 +419,13 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
     setConfig(prev => ({ ...prev, [key]: value }))
   }
 
+  // Format number to show at least one decimal place, but preserve additional significant digits (up to 4 decimals)
+  const formatDecimal = (value: number): string => {
+    const str = value.toFixed(4)
+    const trimmed = str.replace(/(\.\d*?)0+$/, '$1')
+    return trimmed.endsWith('.') ? trimmed + '0' : trimmed
+  }
+
   const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
     const [showTooltip, setShowTooltip] = useState(false)
     
@@ -557,7 +564,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
               <ValidatedInput
                 value={config.minimumIntertrialInterval}
                 onChange={(val) => updateConfig('minimumIntertrialInterval', val)}
-                formatValue={(val) => val.toFixed(1)}
+                formatValue={formatDecimal}
                 min={0}
                 step={0.1}
               />
@@ -571,7 +578,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
               <ValidatedInput
                 value={config.maximumLoopbackLatency}
                 onChange={(val) => updateConfig('maximumLoopbackLatency', val)}
-                formatValue={(val) => (val * 1000).toFixed(1)}
+                formatValue={(val) => formatDecimal(val * 1000)}
                 parseValue={(str) => parseFloat(str) / 1000}
                 min={0}
                 step={0.1}
@@ -586,7 +593,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
               <ValidatedInput
                 value={config.maximumTimingError}
                 onChange={(val) => updateConfig('maximumTimingError', val)}
-                formatValue={(val) => (val * 1000).toFixed(1)}
+                formatValue={(val) => formatDecimal(val * 1000)}
                 parseValue={(str) => parseFloat(str) / 1000}
                 min={0}
                 step={0.1}

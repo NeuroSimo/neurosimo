@@ -284,6 +284,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
 }) => {
   const globalConfig = useGlobalConfig()
   const [config, setConfig] = useState<GlobalConfigValues>(emptyConfig)
+  const [initialConfig, setInitialConfig] = useState<GlobalConfigValues>(emptyConfig)
   const [activeTab, setActiveTab] = useState<TabType>('eeg')
 
   // Helper to parse disk threshold from string (e.g., "100GiB" -> 100)
@@ -293,10 +294,15 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
     return match ? parseInt(match[1]) : 0
   }
 
+  // Check if config has been modified
+  const hasChanges = (): boolean => {
+    return JSON.stringify(config) !== JSON.stringify(initialConfig)
+  }
+
   // Load config when modal opens
   useEffect(() => {
     if (isOpen && globalConfig.eegDevice) {
-      setConfig({
+      const loadedConfig = {
         eegPort: globalConfig.eegPort,
         eegDevice: globalConfig.eegDevice,
         turbolinkSamplingFrequency: globalConfig.turbolinkSamplingFrequency,
@@ -308,28 +314,35 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
         maximumTimingError: globalConfig.maximumTimingError,
         diskWarningThreshold: parseDiskThreshold(globalConfig.diskWarningThreshold),
         diskErrorThreshold: parseDiskThreshold(globalConfig.diskErrorThreshold),
-      })
+      }
+      setConfig(loadedConfig)
+      setInitialConfig(loadedConfig)
       setActiveTab('eeg')
     }
   }, [isOpen, globalConfig])
 
-  // Handle Escape key to close modal
+  // Handle Escape key to close modal with confirmation if there are changes
   useEffect(() => {
     if (!isOpen) return
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        handleClose()
+        event.preventDefault()
+        if (hasChanges()) {
+          if (window.confirm('You have unsaved changes. Do you want to discard them?')) {
+            onClose()
+          }
+        } else {
+          onClose()
+        }
       }
     }
 
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [isOpen])
+  }, [isOpen, config, initialConfig])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const handleSave = async () => {
     // Convert disk thresholds back to string format (e.g., 100 -> "100GiB")
     await globalConfig.setGlobalConfig({
       eegPort: config.eegPort,
@@ -351,7 +364,20 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
   }
 
   const handleClose = () => {
-    onClose()
+    if (hasChanges()) {
+      if (window.confirm('You have unsaved changes. Do you want to discard them?')) {
+        onClose()
+      }
+    } else {
+      onClose()
+    }
+  }
+
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    // Prevent form submission on Enter key
+    if (e.key === 'Enter') {
+      e.preventDefault()
+    }
   }
 
   const updateConfig = <K extends keyof GlobalConfigValues>(
@@ -402,7 +428,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
           </Tab>
         </TabContainer>
 
-        <Form onSubmit={handleSubmit}>
+        <Form onKeyDown={handleFormKeyDown}>
           <TabContent>
             {activeTab === 'eeg' && (
               <Section>
@@ -562,7 +588,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
             <Button type="button" variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="button" variant="primary" onClick={handleSave}>
               Save
             </Button>
           </ButtonGroup>

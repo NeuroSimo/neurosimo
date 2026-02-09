@@ -194,7 +194,8 @@ class SessionRecorderNode(Node):
 
         self._recording_config = {
             'session_id': str(session_uuid),
-            'session_config': message_to_ordereddict(request.config),
+            'global_config': message_to_ordereddict(request.global_config),
+            'session_config': message_to_ordereddict(request.session_config),
             'stream_info': message_to_ordereddict(request.stream_info),
             'software_provenance': self._get_software_provenance(),
             'start_time': datetime.now().isoformat(),
@@ -202,8 +203,8 @@ class SessionRecorderNode(Node):
 
         # Create bag directory
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        bag_name = f'{timestamp}_{request.config.subject_id}'
-        project_bags_dir = f'/app/projects/{request.config.project_name}/recordings'
+        bag_name = f'{timestamp}_{request.session_config.subject_id}'
+        project_bags_dir = f'/app/projects/{request.global_config.active_project}/recordings'
 
         os.makedirs(project_bags_dir, exist_ok=True)
         self._bag_path = os.path.join(project_bags_dir, bag_name)

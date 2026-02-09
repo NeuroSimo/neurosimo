@@ -53,6 +53,7 @@ uint64 system_time_decider_finished  # steady clock ns
 # ----------------------------------------------------------------------------
 float64 maximum_timing_error         # in seconds
 float64 maximum_loopback_latency     # in seconds
+float64 trigger_to_pulse_delay       # in seconds
 
 # ----------------------------------------------------------------------------
 # TriggerTimer timing (filled by TriggerTimer)

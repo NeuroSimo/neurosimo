@@ -604,6 +604,7 @@ class SessionManagerNode(Node):
         # Configuration from global config
         request.maximum_timing_error = global_config.maximum_timing_error
         request.maximum_loopback_latency = global_config.maximum_loopback_latency
+        request.trigger_to_pulse_delay = global_config.trigger_to_pulse_delay
         request.simulate_labjack = global_config.simulate_labjack
 
         response = self.call_service(self.trigger_timer_init_client, request, '/pipeline/trigger_timer/initialize')

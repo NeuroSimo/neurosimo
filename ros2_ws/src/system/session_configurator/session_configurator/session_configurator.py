@@ -107,25 +107,25 @@ class SessionConfiguratorNode(Node):
         
         self.active_project = project_name
         
-        # Load session state for the new project
-        session_state = self.storage_manager.get_session_state_for_project(project_name)
+        # Load session config for the new project
+        session_config = self.storage_manager.get_session_config_for_project(project_name)
 
-        # Set ROS2 parameters from the loaded state
+        # Set ROS2 parameters from the loaded config
         self.set_parameters([
-            rclpy.parameter.Parameter('notes', rclpy.parameter.Parameter.Type.STRING, session_state["notes"]),
-            rclpy.parameter.Parameter('subject_id', rclpy.parameter.Parameter.Type.STRING, session_state["subject_id"]),
-            rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_state["decider.module"]),
-            rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["decider.enabled"]),
-            rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_state["preprocessor.module"]),
-            rclpy.parameter.Parameter('preprocessor.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["preprocessor.enabled"]),
-            rclpy.parameter.Parameter('presenter.module', rclpy.parameter.Parameter.Type.STRING, session_state["presenter.module"]),
-            rclpy.parameter.Parameter('presenter.enabled', rclpy.parameter.Parameter.Type.BOOL, session_state["presenter.enabled"]),
-            rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_state["experiment.protocol"]),
-            rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_state["simulator.dataset_filename"]),
-            rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_state["simulator.start_time"]),
-            rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_state["data_source"]),
-            rclpy.parameter.Parameter('playback.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_state["playback.bag_filename"]),
-            rclpy.parameter.Parameter('playback.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_state["playback.is_preprocessed"]),
+            rclpy.parameter.Parameter('notes', rclpy.parameter.Parameter.Type.STRING, session_config["notes"]),
+            rclpy.parameter.Parameter('subject_id', rclpy.parameter.Parameter.Type.STRING, session_config["subject_id"]),
+            rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_config["decider.module"]),
+            rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_config["decider.enabled"]),
+            rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_config["preprocessor.module"]),
+            rclpy.parameter.Parameter('preprocessor.enabled', rclpy.parameter.Parameter.Type.BOOL, session_config["preprocessor.enabled"]),
+            rclpy.parameter.Parameter('presenter.module', rclpy.parameter.Parameter.Type.STRING, session_config["presenter.module"]),
+            rclpy.parameter.Parameter('presenter.enabled', rclpy.parameter.Parameter.Type.BOOL, session_config["presenter.enabled"]),
+            rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_config["experiment.protocol"]),
+            rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
+            rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
+            rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
+            rclpy.parameter.Parameter('playback.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_config["playback.bag_filename"]),
+            rclpy.parameter.Parameter('playback.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["playback.is_preprocessed"]),
         ])
 
         # Publish the lists of modules for the new project and setup watches
@@ -220,20 +220,20 @@ class SessionConfiguratorNode(Node):
         return response
 
     def parameter_change_callback(self, params):
-        """Callback to handle session parameter changes and save them to session state."""
+        """Callback to handle session parameter changes and save them to session config."""
         try:
             if not self.active_project:
-                self.logger.warning("No active project set, cannot save session state")
+                self.logger.warning("No active project set, cannot save session config")
                 return SetParametersResult(successful=True)
 
-            session_state = self.storage_manager.load_session_state(self.active_project)
+            session_config = self.storage_manager.load_session_config(self.active_project)
 
             for param in params:
-                session_state[param.name] = param.value
+                session_config[param.name] = param.value
 
-            # Save the updated session state
-            self.storage_manager.save_session_state(self.active_project, session_state)
-            self.logger.info(f"Updated session state for project '{self.active_project}' with parameter changes")
+            # Save the updated session config
+            self.storage_manager.save_session_config(self.active_project, session_config)
+            self.logger.info(f"Updated session config for project '{self.active_project}' with parameter changes")
 
         except Exception as e:
             self.logger.error(f"Error handling parameter changes: {e}")

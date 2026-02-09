@@ -11,7 +11,7 @@ import {
   DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
-const DISK_STATUS_PANEL_OFFSET_FROM_TOP = 75
+const DISK_STATUS_PANEL_OFFSET_FROM_TOP = 110
 
 const DiskStatusPanel = styled(StyledPanel)`
   width: 185px;

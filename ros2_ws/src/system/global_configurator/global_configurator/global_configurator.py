@@ -22,10 +22,30 @@ class GlobalConfiguratorNode(Node):
         # Initialize global storage manager
         self.storage_manager = GlobalStorageManager(self.logger)
 
+        # Load global config
+        global_config = self.storage_manager.get_global_config()
+
         # Declare ROS2 parameters
-        # Project parameter
-        active_project = self.storage_manager.get_active_project()
-        self.declare_parameter('active_project', active_project)
+        self.declare_parameter('active_project', global_config['active_project'])
+        
+        # EEG Configuration
+        self.declare_parameter('eeg_port', global_config['eeg_port'])
+        self.declare_parameter('eeg_device', global_config['eeg_device'])
+        self.declare_parameter('turbolink_sampling_frequency', global_config['turbolink_sampling_frequency'])
+        self.declare_parameter('turbolink_eeg_channel_count', global_config['turbolink_eeg_channel_count'])
+        self.declare_parameter('num_of_tolerated_dropped_samples', global_config['num_of_tolerated_dropped_samples'])
+        
+        # LabJack Configuration
+        self.declare_parameter('simulate_labjack', global_config['simulate_labjack'])
+        
+        # Safety Configuration
+        self.declare_parameter('minimum_intertrial_interval', global_config['minimum_intertrial_interval'])
+        self.declare_parameter('maximum_loopback_latency', global_config['maximum_loopback_latency'])
+        self.declare_parameter('maximum_timing_error', global_config['maximum_timing_error'])
+        
+        # Disk Space Monitoring Configuration
+        self.declare_parameter('disk_warning_threshold', global_config['disk_warning_threshold'])
+        self.declare_parameter('disk_error_threshold', global_config['disk_error_threshold'])
 
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
@@ -40,7 +60,6 @@ class GlobalConfiguratorNode(Node):
         self.add_on_set_parameters_callback(self.parameter_change_callback)
 
         # Publish initial global config
-        global_config = {'active_project': active_project}
         self.publish_global_config(global_config)
 
     def set_active_project(self, project_name):
@@ -49,8 +68,9 @@ class GlobalConfiguratorNode(Node):
             self.logger.error(f"Project does not exist: {project_name}")
             return False
 
-        # Store the active project in the project state if it has changed
-        if project_name != self.storage_manager.get_active_project():
+        # Store the active project in the global config if it has changed
+        current_config = self.storage_manager.load_global_config()
+        if project_name != current_config.get('active_project'):
             self.storage_manager.save_active_project(project_name)
             self.logger.info(f"Updated global config with active_project={project_name}")
 
@@ -60,6 +80,26 @@ class GlobalConfiguratorNode(Node):
         """Build and publish global config from dict."""
         config = GlobalConfig()
         config.active_project = global_config.get('active_project', '')
+        
+        # EEG Configuration
+        config.eeg_port = global_config.get('eeg_port', 50000)
+        config.eeg_device = global_config.get('eeg_device', 'neurone')
+        config.turbolink_sampling_frequency = global_config.get('turbolink_sampling_frequency', 5000)
+        config.turbolink_eeg_channel_count = global_config.get('turbolink_eeg_channel_count', 64)
+        config.num_of_tolerated_dropped_samples = global_config.get('num_of_tolerated_dropped_samples', 2)
+        
+        # LabJack Configuration
+        config.simulate_labjack = global_config.get('simulate_labjack', False)
+        
+        # Safety Configuration
+        config.minimum_intertrial_interval = global_config.get('minimum_intertrial_interval', 2.0)
+        config.maximum_loopback_latency = global_config.get('maximum_loopback_latency', 0.005)
+        config.maximum_timing_error = global_config.get('maximum_timing_error', 0.0)
+        
+        # Disk Space Monitoring Configuration
+        config.disk_warning_threshold = global_config.get('disk_warning_threshold', '100GiB')
+        config.disk_error_threshold = global_config.get('disk_error_threshold', '50GiB')
+        
         self.global_config_publisher.publish(config)
 
     # Service callbacks
@@ -77,8 +117,8 @@ class GlobalConfiguratorNode(Node):
     def parameter_change_callback(self, params):
         """Callback to handle global parameter changes and save them to global state."""
         try:
-            # Load current global state
-            global_config = {'active_project': self.storage_manager.get_active_project()}
+            # Load current global config
+            global_config = self.storage_manager.load_global_config()
             
             for param in params:
                 if param.name == 'active_project':
@@ -88,9 +128,13 @@ class GlobalConfiguratorNode(Node):
                     success = self.set_active_project(project_name)
                     if not success:
                         return SetParametersResult(successful=False, reason=f"Project does not exist: {project_name}")
-                    
-                    # Update the global config dict
-                    global_config[param.name] = param.value
+                
+                # Update the global config dict with the new value
+                global_config[param.name] = param.value
+            
+            # Save the updated global config
+            self.storage_manager.save_global_config(global_config)
+            self.logger.info(f"Updated global config with parameter changes")
             
             # Publish the updated global config immediately (from the dict, not from ROS params)
             self.publish_global_config(global_config)

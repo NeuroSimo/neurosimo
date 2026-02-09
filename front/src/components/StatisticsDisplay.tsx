@@ -11,7 +11,7 @@ import {
   DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
-import { StatisticsContext } from 'providers/StatisticsProvider'
+import { EegStatisticsContext } from 'providers/EegStatisticsProvider'
 
 const StatisticsPanelTitle = styled.div`
   width: 210px;
@@ -34,7 +34,7 @@ const StatisticsPanel = styled(StyledPanel)`
 `
 
 export const StatisticsDisplay: React.FC = () => {
-  const { eegStatistics, droppedSamples } = useContext(StatisticsContext)
+  const { eegStatistics, droppedSamples } = useContext(EegStatisticsContext)
 
   const formatValue = (value: number | undefined, formatter: (value: number) => string): string => {
     if (value === undefined || value === null || value === 0) {

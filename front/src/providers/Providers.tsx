@@ -9,7 +9,7 @@ import { PipelineProvider } from './PipelineProvider'
 import { LogProvider } from './LogProvider'
 import { ExperimentProvider } from './ExperimentProvider'
 import { EegStreamProvider } from './EegStreamProvider'
-import { StatisticsProvider } from './StatisticsProvider'
+import { EegStatisticsProvider } from './EegStatisticsProvider'
 import { EegSimulatorProvider } from './EegSimulatorProvider'
 import { EegBridgeProvider } from './EegBridgeProvider'
 import { HealthProvider } from './HealthProvider'
@@ -32,7 +32,7 @@ const Providers: React.FC<Props> = ({ children }) => {
               <LogProvider>
               <ExperimentProvider>
                 <EegStreamProvider>
-              <StatisticsProvider>
+              <EegStatisticsProvider>
                 <EegSimulatorProvider>
                   <EegBridgeProvider>
                     <SessionProvider>
@@ -46,7 +46,7 @@ const Providers: React.FC<Props> = ({ children }) => {
                     </SessionProvider>
                   </EegBridgeProvider>
                 </EegSimulatorProvider>
-              </StatisticsProvider>
+              </EegStatisticsProvider>
                 </EegStreamProvider>
                 </ExperimentProvider>
               </LogProvider>

@@ -18,23 +18,23 @@ interface EegStatistics extends Message {
   preprocessor_duration_median: number
 }
 
-interface StatisticsContextType {
+interface EegStatisticsContextType {
   eegStatistics: EegStatistics | null
   droppedSamples: number | null
 }
 
-const defaultStatisticsState: StatisticsContextType = {
+const defaultEegStatisticsState: EegStatisticsContextType = {
   eegStatistics: null,
   droppedSamples: null,
 }
 
-export const StatisticsContext = React.createContext<StatisticsContextType>(defaultStatisticsState)
+export const EegStatisticsContext = React.createContext<EegStatisticsContextType>(defaultEegStatisticsState)
 
-interface StatisticsProviderProps {
+interface EegStatisticsProviderProps {
   children: ReactNode
 }
 
-export const StatisticsProvider: React.FC<StatisticsProviderProps> = ({ children }) => {
+export const EegStatisticsProvider: React.FC<EegStatisticsProviderProps> = ({ children }) => {
   const [eegStatistics, setEegStatistics] = useState<EegStatistics | null>(null)
   const [droppedSamples, setDroppedSamples] = useState<number | null>(null)
 
@@ -65,5 +65,5 @@ export const StatisticsProvider: React.FC<StatisticsProviderProps> = ({ children
     }
   }, [])
 
-  return <StatisticsContext.Provider value={{ eegStatistics, droppedSamples }}>{children}</StatisticsContext.Provider>
+  return <EegStatisticsContext.Provider value={{ eegStatistics, droppedSamples }}>{children}</EegStatisticsContext.Provider>
 }

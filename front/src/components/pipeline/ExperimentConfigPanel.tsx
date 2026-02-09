@@ -12,7 +12,7 @@ import { CommittableNumericInput } from 'components/CommittableNumericInput'
 import { CreateProjectModal } from 'components/CreateProjectModal'
 import { ProtocolInfoModal } from 'components/ProtocolInfoModal'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
-import { listProjects, setActiveProject } from 'ros/project'
+import { listProjects } from 'ros/project'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
 
@@ -52,7 +52,7 @@ export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList } = useContext(ModuleListContext)
   const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useSessionConfig()
   const { sessionState } = useSession()
-  const { activeProject } = useGlobalConfig()
+  const { activeProject, setActiveProject } = useGlobalConfig()
   const [projects, setProjects] = useState<string[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isProtocolInfoModalOpen, setIsProtocolInfoModalOpen] = useState(false)

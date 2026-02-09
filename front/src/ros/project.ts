@@ -27,34 +27,6 @@ export const listProjects = (callback: (projects: string[]) => void) => {
   )
 }
 
-/* Set active project service */
-const setActiveProjectService = new ROSLIB.Service({
-  ros: ros,
-  name: '/projects/active/set',
-  serviceType: 'project_interfaces/SetActiveProject',
-})
-
-export const setActiveProject = (project: string, callback: () => void) => {
-  const request = new ROSLIB.ServiceRequest({
-    project: project,
-  }) as any
-
-  setActiveProjectService.callService(
-    request,
-    (response) => {
-      if (!response.success) {
-        console.log('ERROR: Failed to set active project: success field was false.')
-      } else {
-        callback()
-      }
-    },
-    (error) => {
-      console.log('ERROR: Failed to set active project, error:')
-      console.log(error)
-    }
-  )
-}
-
 /* Create project service */
 const createProjectService = new ROSLIB.Service({
   ros: ros,

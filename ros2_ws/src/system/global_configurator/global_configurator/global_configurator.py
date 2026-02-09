@@ -6,7 +6,6 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from project_interfaces.srv import ListProjects
-from system_interfaces.srv import GetGlobalConfig
 from system_interfaces.msg import GlobalConfig
 
 from rcl_interfaces.msg import SetParametersResult
@@ -30,7 +29,6 @@ class GlobalConfiguratorNode(Node):
 
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
-        self.create_service(GetGlobalConfig, '/global_configurator/get_config', self.get_global_config_callback, callback_group=self.callback_group)
 
         # Publishers
         qos = QoSProfile(depth=1,
@@ -43,7 +41,7 @@ class GlobalConfiguratorNode(Node):
 
         # Publish initial global config
         global_config = {'active_project': active_project}
-        self.publish_global_config_from_dict(global_config)
+        self.publish_global_config(global_config)
 
     def set_active_project(self, project_name):
         """Set the active project and save to storage."""
@@ -58,28 +56,11 @@ class GlobalConfiguratorNode(Node):
 
         return True
     
-    def build_global_config(self):
-        """Build GlobalConfig message from current parameters."""
-        config = GlobalConfig()
-        config.active_project = self.get_parameter('active_project').get_parameter_value().string_value
-        return config
-    
-    def build_global_config_from_dict(self, global_config: dict):
-        """Build GlobalConfig message from global config dict."""
+    def publish_global_config(self, global_config: dict):
+        """Build and publish global config from dict."""
         config = GlobalConfig()
         config.active_project = global_config.get('active_project', '')
-        return config
-    
-    def publish_global_config(self):
-        """Build and publish global config."""
-        config_msg = self.build_global_config()
-        self.global_config_publisher.publish(config_msg)
-        self.logger.info(f"Published global config: active_project={config_msg.active_project}")
-    
-    def publish_global_config_from_dict(self, global_config: dict):
-        """Build and publish global config from dict."""
-        config_msg = self.build_global_config_from_dict(global_config)
-        self.global_config_publisher.publish(config_msg)
+        self.global_config_publisher.publish(config)
 
     # Service callbacks
 
@@ -91,18 +72,6 @@ class GlobalConfiguratorNode(Node):
         except Exception as e:
             self.logger.error(f"Error listing projects: {e}")
             response.success = False
-        return response
-
-    def get_global_config_callback(self, request, response):
-        """Return the current global configuration."""
-        config = GlobalConfig()
-        config.active_project = self.get_parameter('active_project').get_parameter_value().string_value
-
-        response.config = config
-        response.success = True
-        
-        self.logger.info(f"Returned global config: active_project={config.active_project}")
-        
         return response
     
     def parameter_change_callback(self, params):
@@ -124,7 +93,7 @@ class GlobalConfiguratorNode(Node):
                     global_config[param.name] = param.value
             
             # Publish the updated global config immediately (from the dict, not from ROS params)
-            self.publish_global_config_from_dict(global_config)
+            self.publish_global_config(global_config)
 
         except Exception as e:
             self.logger.error(f"Error handling parameter changes: {e}")

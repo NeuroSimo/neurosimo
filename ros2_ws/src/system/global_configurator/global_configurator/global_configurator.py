@@ -40,7 +40,7 @@ class GlobalConfiguratorNode(Node):
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
-        self.active_project_publisher = self.create_publisher(String, "/projects/active", qos, callback_group=self.callback_group)
+        self.global_config_publisher = self.create_publisher(GlobalConfig, "/global_configurator/config", qos, callback_group=self.callback_group)
 
         # Set active project
         self.set_active_project(active_project)
@@ -59,11 +59,22 @@ class GlobalConfiguratorNode(Node):
             rclpy.parameter.Parameter('active_project', rclpy.parameter.Parameter.Type.STRING, project_name)
         ])
 
-        # Publish active project
-        msg = String(data=project_name)
-        self.active_project_publisher.publish(msg)
+        # Publish global config
+        self.publish_global_config()
 
         return True
+    
+    def build_global_config(self):
+        """Build GlobalConfig message from current parameters."""
+        config = GlobalConfig()
+        config.active_project = self.get_parameter('active_project').get_parameter_value().string_value
+        return config
+    
+    def publish_global_config(self):
+        """Build and publish global config."""
+        config_msg = self.build_global_config()
+        self.global_config_publisher.publish(config_msg)
+        self.logger.info(f"Published global config: active_project={config_msg.active_project}")
 
     # Service callbacks
 

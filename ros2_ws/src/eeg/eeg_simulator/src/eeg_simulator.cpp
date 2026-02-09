@@ -49,10 +49,10 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     "/eeg_simulator/health",
     qos_persist_latest);
 
-  this->active_project_subscriber = create_subscription<std_msgs::msg::String>(
-    "/projects/active",
+  this->global_config_subscriber = create_subscription<system_interfaces::msg::GlobalConfig>(
+    "/global_configurator/config",
     qos_persist_latest,
-    std::bind(&EegSimulator::handle_set_active_project, this, std::placeholders::_1),
+    std::bind(&EegSimulator::handle_global_config, this, std::placeholders::_1),
     subscription_options);
 
   /* Publisher for streamer state. */
@@ -237,10 +237,19 @@ void EegSimulator::stop_streaming_timer() {
   }
 }
 
-void EegSimulator::handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg) {
-  this->dataset_manager_->set_active_project(msg->data);
-
-  RCLCPP_INFO(this->get_logger(), "Active project set to: %s", msg->data.c_str());
+void EegSimulator::handle_global_config(const std::shared_ptr<system_interfaces::msg::GlobalConfig> msg) {
+  std::string project_name = msg->active_project;
+  
+  RCLCPP_INFO(this->get_logger(), "Global config received: active_project=%s", project_name.c_str());
+  
+  // Only process if active project has actually changed
+  if (project_name == this->active_project_name) {
+    return;
+  }
+  
+  this->active_project_name = project_name;
+  this->dataset_manager_->set_active_project(project_name);
+  RCLCPP_INFO(this->get_logger(), "Active project changed to: %s", project_name.c_str());
 }
 
 void EegSimulator::handle_start_streaming(

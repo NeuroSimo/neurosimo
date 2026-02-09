@@ -30,84 +30,9 @@ const uint16_t EEG_QUEUE_LENGTH = 65535;
 const int64_t SAMPLE_TIMEOUT_MS = 200;
 
 EegBridge::EegBridge() : Node("eeg_bridge") {
+  RCLCPP_INFO(this->get_logger(), "Initializing EEG bridge...");
 
-  /* Port parameter */
-  auto port_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-
-  port_descriptor.description = "Port of the eeg device realtime output";
-  port_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
-  this->declare_parameter("port", NULL, port_descriptor);
-
-  this->get_parameter("port", this->port);
-
-  /* EEG device parameter */
-  auto eeg_device_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  eeg_device_descriptor.description = "EEG device to use";
-  eeg_device_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;
-  this->declare_parameter("eeg-device", "", eeg_device_descriptor);
-
-  std::string eeg_device_type;
-  this->get_parameter("eeg-device", eeg_device_type);
-
-  /* The maximum number of dropped samples */
-  auto maximum_dropped_samples_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  maximum_dropped_samples_descriptor.description = "The maximum number of dropped samples";
-  maximum_dropped_samples_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
-  this->declare_parameter("maximum-dropped-samples", NULL, maximum_dropped_samples_descriptor);
-
-  this->get_parameter("maximum-dropped-samples", this->maximum_dropped_samples);
-
-  /* Turbolink sampling frequency */
-  auto turbolink_sampling_frequency_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  turbolink_sampling_frequency_descriptor.description = "Sampling frequency of Turbolink device";
-  turbolink_sampling_frequency_descriptor.type =
-      rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
-  this->declare_parameter("turbolink-sampling-frequency", NULL,
-                          turbolink_sampling_frequency_descriptor);
-
-  uint32_t turbolink_sampling_frequency;
-  this->get_parameter("turbolink-sampling-frequency", turbolink_sampling_frequency);
-
-  /* Turbolink channel count */
-  auto turbolink_eeg_channel_count_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  turbolink_eeg_channel_count_descriptor.description = "EEG channel count of Turbolink device";
-  turbolink_eeg_channel_count_descriptor.type =
-      rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
-  this->declare_parameter("turbolink-eeg-channel-count", NULL,
-                          turbolink_eeg_channel_count_descriptor);
-
-  uint8_t turbolink_eeg_channel_count;
-  this->get_parameter("turbolink-eeg-channel-count", turbolink_eeg_channel_count);
-
-  /* Create UDP socket */
-  this->socket_ = std::make_shared<UdpSocket>(this->port);
-  if (!this->socket_->init_socket()) {
-    throw std::runtime_error("Failed to initialize UDP socket");
-  }
-
-  /* Log configuration. */
-  RCLCPP_INFO(this->get_logger(), "EEG bridge configuration:");
-  RCLCPP_INFO(this->get_logger(), "  Port: %d", this->port);
-  RCLCPP_INFO(this->get_logger(), "  EEG device: %s", eeg_device_type.c_str());
-  RCLCPP_INFO(this->get_logger(), "  Maximum dropped samples: %d",
-              this->maximum_dropped_samples);
-
-  /* TODO: string to enum conversion should be done with cleaner solution at some
-     point, maybe. */
-  if (eeg_device_type == "neurone") {
-    this->eeg_adapter = std::make_shared<NeurOneAdapter>(this->socket_);
-  } else if (eeg_device_type == "turbolink") {
-    this->eeg_adapter = std::make_shared<TurboLinkAdapter>(this->socket_, turbolink_sampling_frequency,
-                                                           turbolink_eeg_channel_count);
-  } else {
-    RCLCPP_ERROR(rclcpp::get_logger("eeg_bridge"), "Unsupported EEG device. %s",
-                 eeg_device_type.c_str());
-  }
-
-  this->create_publishers();
-}
-
-void EegBridge::create_publishers() {
+  /* Create publishers */
   auto qos_persist_latest = rclcpp::QoS(rclcpp::KeepLast(1))
                                 .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
                                 .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
@@ -127,10 +52,7 @@ void EegBridge::create_publishers() {
   this->health_publisher =
     this->create_publisher<system_interfaces::msg::ComponentHealth>("/eeg_bridge/health", qos_persist_latest);
 
-  this->heartbeat_publisher_timer = this->create_wall_timer(
-      std::chrono::milliseconds(500), [this] { publish_heartbeat(); });
-
-  /* Services for starting/stopping streaming. */
+  /* Create services */
   this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
     "/eeg_device/streaming/start",
     std::bind(&EegBridge::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2));
@@ -139,7 +61,6 @@ void EegBridge::create_publishers() {
     "/eeg_device/streaming/stop",
     std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
-  /* Initialize service */
   this->initialize_service = this->create_service<eeg_interfaces::srv::InitializeEegDeviceStream>(
     "/eeg_device/initialize",
     std::bind(&EegBridge::handle_initialize, this, std::placeholders::_1, std::placeholders::_2));
@@ -151,13 +72,125 @@ void EegBridge::create_publishers() {
     RCLCPP_INFO(get_logger(), "Service /session/abort not available, waiting...");
   }
 
-  /* Publish initial states. */
+  /* Create subscribers */
+  this->global_config_subscription = this->create_subscription<system_interfaces::msg::GlobalConfig>(
+      "/global_configurator/config",
+      qos_persist_latest,
+      std::bind(&EegBridge::handle_global_config, this, std::placeholders::_1));
+
+  /* Create heartbeat timer */
+  this->heartbeat_publisher_timer = this->create_wall_timer(
+    std::chrono::milliseconds(500), [this] { publish_heartbeat(); });
+
+  /* Publish initial state */
   publish_data_source_state();
-  publish_device_info();
   publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
 
+void EegBridge::handle_global_config(const system_interfaces::msg::GlobalConfig::SharedPtr msg) {
+  /* Ignore config changes during ongoing session */
+  if (this->data_source_state == system_interfaces::msg::DataSourceState::RUNNING) {
+    RCLCPP_WARN(this->get_logger(), "Ignoring global config update during ongoing session");
+    return;
+  }
+
+  bool needs_adapter_recreation = false;
+  bool needs_socket_recreation = false;
+
+  /* Check if port has changed */
+  if (msg->eeg_port != static_cast<int32_t>(this->port)) {
+    this->port = static_cast<uint16_t>(msg->eeg_port);
+    needs_socket_recreation = true;
+    needs_adapter_recreation = true;
+  }
+
+  /* Check if device type has changed */
+  if (msg->eeg_device != this->eeg_device_type) {
+    this->eeg_device_type = msg->eeg_device;
+    needs_adapter_recreation = true;
+  }
+
+  /* Update maximum dropped samples */
+  if (msg->maximum_dropped_samples != static_cast<int32_t>(this->maximum_dropped_samples)) {
+    this->maximum_dropped_samples = static_cast<uint8_t>(msg->maximum_dropped_samples);
+  }
+
+  /* Check if turbolink parameters have changed */
+  if (msg->turbolink_sampling_frequency != static_cast<int32_t>(this->turbolink_sampling_frequency)) {
+    this->turbolink_sampling_frequency = static_cast<uint32_t>(msg->turbolink_sampling_frequency);
+    if (this->eeg_device_type == "turbolink") {
+      needs_adapter_recreation = true;
+    }
+  }
+
+  if (msg->turbolink_eeg_channel_count != static_cast<int32_t>(this->turbolink_eeg_channel_count)) {
+    this->turbolink_eeg_channel_count = static_cast<uint8_t>(msg->turbolink_eeg_channel_count);
+    if (this->eeg_device_type == "turbolink") {
+      needs_adapter_recreation = true;
+    }
+  }
+
+  /* Recreate socket if port changed */
+  if (needs_socket_recreation) {
+    this->socket_ = std::make_shared<UdpSocket>(this->port);
+    if (!this->socket_->init_socket()) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to initialize UDP socket");
+      this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                   "Failed to initialize UDP socket");
+      return;
+    }
+  }
+
+  /* Recreate adapter if needed */
+  if (needs_adapter_recreation) {
+    /* Ensure socket exists before creating adapter */
+    if (!this->socket_) {
+      this->socket_ = std::make_shared<UdpSocket>(this->port);
+      if (!this->socket_->init_socket()) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to initialize UDP socket");
+        this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                     "Failed to initialize UDP socket");
+        return;
+      }
+    }
+
+    if (this->eeg_device_type == "neurone") {
+      this->eeg_adapter = std::make_shared<NeurOneAdapter>(this->socket_);
+    } else if (this->eeg_device_type == "turbolink") {
+      this->eeg_adapter = std::make_shared<TurboLinkAdapter>(this->socket_,
+                                                             this->turbolink_sampling_frequency,
+                                                             this->turbolink_eeg_channel_count);
+    } else {
+      RCLCPP_ERROR(this->get_logger(), "Unsupported EEG device: %s", this->eeg_device_type.c_str());
+      this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                   "Unsupported EEG device type");
+      return;
+    }
+
+    /* Publish updated device info */
+    publish_device_info();
+  }
+
+  /* Log final configuration */
+  RCLCPP_INFO(this->get_logger(), "EEG bridge configuration:");
+  RCLCPP_INFO(this->get_logger(), "  • Port: %d", this->port);
+  RCLCPP_INFO(this->get_logger(), "  • EEG device: %s", this->eeg_device_type.c_str());
+  RCLCPP_INFO(this->get_logger(), "  • Maximum dropped samples: %d", this->maximum_dropped_samples);
+  if (this->eeg_device_type == "turbolink") {
+    RCLCPP_INFO(this->get_logger(), "  • Turbolink sampling frequency: %d", this->turbolink_sampling_frequency);
+    RCLCPP_INFO(this->get_logger(), "  • Turbolink EEG channel count: %d", this->turbolink_eeg_channel_count);
+  }
+  RCLCPP_INFO(this->get_logger(), " ");
+
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+}
+
 void EegBridge::publish_device_info() {
+  if (!this->eeg_adapter) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                         "Cannot publish device info: EEG adapter not initialized");
+    return;
+  }
   auto device_info = this->eeg_adapter->get_device_info();
   device_info.is_streaming = (this->device_state == EegDeviceState::EEG_DEVICE_STREAMING);
   this->device_info_publisher->publish(device_info);
@@ -331,7 +364,7 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 
   if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
-                          "Waiting for streaming to start...");
+                          "Waiting for session to start...");
     return;
   }
 
@@ -376,6 +409,20 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 }
 
 void EegBridge::process_eeg_packet() {
+  /* Check if adapter is initialized */
+  if (!this->eeg_adapter) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                         "Waiting for global configuration to initialize EEG adapter...");
+    return;
+  }
+
+  /* Check if socket is initialized */
+  if (!this->socket_) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                         "Waiting for socket initialization...");
+    return;
+  }
+
   // Read UDP packet
   if (!this->socket_->read_data(this->buffer, BUFFER_SIZE)) {
     RCLCPP_WARN(this->get_logger(), "Timeout while reading EEG data");
@@ -435,8 +482,6 @@ void EegBridge::process_eeg_packet() {
 }
 
 void EegBridge::spin() {
-  RCLCPP_INFO(this->get_logger(), "EEG bridge ready. Waiting for EEG device to start measurement...");
-
   auto base_interface = this->get_node_base_interface();
 
   try {

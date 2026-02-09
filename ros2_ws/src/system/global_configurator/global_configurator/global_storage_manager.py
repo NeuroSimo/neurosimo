@@ -54,6 +54,7 @@ class GlobalStorageManager:
             "minimum_intertrial_interval": 2.0,
             "maximum_loopback_latency": 0.005,
             "maximum_timing_error": 0.0,
+            "trigger_to_pulse_delay": 0.0,
             # Disk Space Monitoring Configuration
             "disk_warning_threshold": '100GiB',
             "disk_error_threshold": '50GiB',
@@ -71,7 +72,7 @@ class GlobalStorageManager:
             "maximum_dropped_samples",
             "simulate_labjack",
             "minimum_intertrial_interval", "maximum_loopback_latency",
-            "maximum_timing_error",
+            "maximum_timing_error", "trigger_to_pulse_delay",
             "disk_warning_threshold", "disk_error_threshold",
             "locale"
         ]

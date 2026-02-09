@@ -44,6 +44,7 @@ interface DecisionTrace extends ROSLIB.Message {
   loopback_latency_at_scheduling: number
   maximum_timing_error: number
   maximum_loopback_latency: number
+  trigger_to_pulse_delay: number
   latency_corrected_time_at_firing: number
   actual_stimulation_time: number
   actual_stimulation_sample_index: number

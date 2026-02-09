@@ -4,7 +4,7 @@ import theme from 'styles/theme'
 
 import { SessionConfigProvider } from './SessionConfigProvider'
 import { ProjectProvider } from './ProjectProvider'
-import { PipelineConfigProvider } from './PipelineConfigProvider'
+import { ModuleListProvider } from './ModuleListProvider'
 import { PipelineProvider } from './PipelineProvider'
 import { LogProvider } from './LogProvider'
 import { ExperimentProvider } from './ExperimentProvider'
@@ -27,7 +27,7 @@ const Providers: React.FC<Props> = ({ children }) => {
     <ThemeProvider theme={theme}>
       <SessionConfigProvider>
         <ProjectProvider>
-          <PipelineConfigProvider>
+          <ModuleListProvider>
             <PipelineProvider>
               <LogProvider>
               <ExperimentProvider>
@@ -51,7 +51,7 @@ const Providers: React.FC<Props> = ({ children }) => {
                 </ExperimentProvider>
               </LogProvider>
             </PipelineProvider>
-          </PipelineConfigProvider>
+          </ModuleListProvider>
         </ProjectProvider>
       </SessionConfigProvider>
     </ThemeProvider>

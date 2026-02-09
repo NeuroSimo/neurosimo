@@ -1,36 +1,7 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
 import { Topic } from '@foxglove/roslibjs'
-import { extractParameterValue } from '../ros/parameters'
 
 import { ros } from 'ros/ros'
-
-interface ParameterEvent extends ROSLIB.Message {
-  timestamp: { sec: number; nanosec: number }
-  node: string
-  new_parameters: Array<{
-    name: string
-    value: {
-      type: number
-      bool_value?: boolean
-      integer_value?: number
-      double_value?: number
-      string_value?: string
-    }
-  }>
-  changed_parameters: Array<{
-    name: string
-    value: {
-      type: number
-      bool_value?: boolean
-      integer_value?: number
-      double_value?: number
-      string_value?: string
-    }
-  }>
-  deleted_parameters: Array<{
-    name: string
-  }>
-}
 
 // Structured parameter interfaces
 interface MetadataParameters {
@@ -163,69 +134,40 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
   const dataSource = (parameters.get('data_source') as string) || 'simulator'
 
   useEffect(() => {
-    // Fetch initial parameter values on startup
-    const fetchInitialParameters = async () => {
-      try {
-        const { getParametersRos } = await import('../ros/parameters')
-        const parameterNames = [
-          'subject_id', 'notes',
-          'decider.module', 'decider.enabled',
-          'preprocessor.module', 'preprocessor.enabled',
-          'presenter.module', 'presenter.enabled',
-          'experiment.protocol',
-          'simulator.dataset_filename', 'simulator.start_time',
-          'data_source'
-        ]
-
-        const initialParams = await getParametersRos(parameterNames)
-        setParameters(initialParams)
-      } catch (error) {
-        console.log('Failed to fetch initial parameters:', error)
-        // Continue with empty parameters - the events will populate them as they change
-      }
-    }
-
-    fetchInitialParameters()
-
-    /* Subscriber for parameter events. */
-    const parameterEventSubscriber = new Topic<ParameterEvent>({
+    /* Subscriber for session config topic (latched). */
+    const sessionConfigSubscriber = new Topic({
       ros: ros,
-      name: '/parameter_events',
-      messageType: 'rcl_interfaces/ParameterEvent',
+      name: '/session_configurator/config',
+      messageType: 'system_interfaces/SessionConfig',
+      queue_size: 1,
     })
 
-    parameterEventSubscriber.subscribe((message) => {
+    sessionConfigSubscriber.subscribe((message: ROSLIB.Message) => {
+      const msg = message as any
       setParameters((prevParams) => {
         const newParams = new Map(prevParams)
-
-        // Handle new parameters
-        message.new_parameters.forEach((param) => {
-          const value = extractParameterValue(param.value)
-          if (value !== undefined) {
-            newParams.set(param.name, value)
-          }
-        })
-
-        // Handle changed parameters
-        message.changed_parameters.forEach((param) => {
-          const value = extractParameterValue(param.value)
-          if (value !== undefined) {
-            newParams.set(param.name, value)
-          }
-        })
-
-        // Handle deleted parameters
-        message.deleted_parameters.forEach((param) => {
-          newParams.delete(param.name)
-        })
-
+        
+        // Update all session config parameters
+        newParams.set('subject_id', msg.subject_id)
+        newParams.set('notes', msg.notes)
+        newParams.set('decider.module', msg.decider_module)
+        newParams.set('decider.enabled', msg.decider_enabled)
+        newParams.set('preprocessor.module', msg.preprocessor_module)
+        newParams.set('preprocessor.enabled', msg.preprocessor_enabled)
+        newParams.set('presenter.module', msg.presenter_module)
+        newParams.set('presenter.enabled', msg.presenter_enabled)
+        newParams.set('experiment.protocol', msg.protocol_filename)
+        newParams.set('simulator.dataset_filename', msg.simulator_dataset_filename)
+        newParams.set('simulator.start_time', msg.simulator_start_time)
+        newParams.set('data_source', msg.data_source)
+        
         return newParams
       })
     })
 
     /* Cleanup */
     return () => {
-      parameterEventSubscriber.unsubscribe()
+      sessionConfigSubscriber.unsubscribe()
     }
   }, [])
 

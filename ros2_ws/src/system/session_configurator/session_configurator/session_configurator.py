@@ -86,6 +86,9 @@ class SessionConfiguratorNode(Node):
         self.protocol_list_publisher = self.create_publisher(FilenameList, "/experiment/protocol/list", qos, callback_group=self.callback_group)
         self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos, callback_group=self.callback_group)
         self.recordings_list_publisher = self.create_publisher(FilenameList, "/playback/recordings/list", qos, callback_group=self.callback_group)
+        
+        # Session config publisher
+        self.session_config_publisher = self.create_publisher(SessionConfig, "/session_configurator/config", qos, callback_group=self.callback_group)
 
         # Define directory watch configurations
         self.watch_configs = [
@@ -127,6 +130,9 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('playback.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_config["playback.bag_filename"]),
             rclpy.parameter.Parameter('playback.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["playback.is_preprocessed"]),
         ])
+
+        # Publish session config from the loaded dict (not from ROS params)
+        self.publish_session_config_from_dict(session_config)
 
         # Publish the lists of modules for the new project and setup watches
         self.publish_and_watch_directories(project_name)
@@ -189,9 +195,8 @@ class SessionConfiguratorNode(Node):
 
     # Service callbacks
 
-    def get_session_config_callback(self, request, response):
-        """Return the current session configuration."""
-        # Get current parameter values
+    def build_session_config(self):
+        """Build SessionConfig message from current parameters."""
         config = SessionConfig()
 
         config.subject_id = self.get_parameter('subject_id').get_parameter_value().string_value
@@ -211,6 +216,39 @@ class SessionConfiguratorNode(Node):
         config.simulator_dataset_filename = self.get_parameter('simulator.dataset_filename').get_parameter_value().string_value
         config.simulator_start_time = self.get_parameter('simulator.start_time').get_parameter_value().double_value
 
+        return config
+
+    def build_session_config_from_dict(self, session_config: dict):
+        """Build SessionConfig message from session config dict."""
+        config = SessionConfig()
+        
+        config.subject_id = session_config.get('subject_id', '')
+        config.notes = session_config.get('notes', '')
+        
+        config.decider_module = session_config.get('decider.module', '')
+        config.decider_enabled = session_config.get('decider.enabled', False)
+        
+        config.preprocessor_module = session_config.get('preprocessor.module', '')
+        config.preprocessor_enabled = session_config.get('preprocessor.enabled', False)
+        
+        config.presenter_module = session_config.get('presenter.module', '')
+        config.presenter_enabled = session_config.get('presenter.enabled', False)
+        
+        config.protocol_filename = session_config.get('experiment.protocol', '')
+        config.data_source = session_config.get('data_source', 'simulator')
+        config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
+        config.simulator_start_time = session_config.get('simulator.start_time', 0.0)
+        
+        return config
+
+    def publish_session_config_from_dict(self, session_config: dict):
+        """Build and publish session config from dict."""
+        config_msg = self.build_session_config_from_dict(session_config)
+        self.session_config_publisher.publish(config_msg)
+
+    def get_session_config_callback(self, request, response):
+        """Return the current session configuration."""
+        config = self.build_session_config()
         response.config = config
         response.success = True
  
@@ -233,6 +271,9 @@ class SessionConfiguratorNode(Node):
             # Save the updated session config
             self.storage_manager.save_session_config(self.active_project, session_config)
             self.logger.info(f"Updated session config for project '{self.active_project}' with parameter changes")
+
+            # Publish the updated session config immediately (from the dict, not from ROS params)
+            self.publish_session_config_from_dict(session_config)
 
         except Exception as e:
             self.logger.error(f"Error handling parameter changes: {e}")

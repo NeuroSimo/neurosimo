@@ -8,9 +8,9 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
-from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfig, AbortSession
+from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfig, GetGlobalConfig, AbortSession
 from std_srvs.srv import Trigger
-from system_interfaces.msg import SessionConfig
+from system_interfaces.msg import SessionConfig, GlobalConfig
 from pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
@@ -126,6 +126,10 @@ class SessionManagerNode(Node):
         self.eeg_device_streaming_stop_client = self.create_client(
             StopStreaming, '/eeg_device/streaming/stop', callback_group=self.callback_group)
 
+        # Create client for getting global config from global configurator
+        self.get_global_config_client = self.create_client(
+            GetGlobalConfig, '/global_configurator/get_config', callback_group=self.callback_group)
+        
         # Create client for getting session config from session configurator
         self.get_session_config_client = self.create_client(
             GetSessionConfig, '/session_configurator/get_config', callback_group=self.callback_group)
@@ -246,7 +250,7 @@ class SessionManagerNode(Node):
 
         return response
 
-    def initialize_session(self, session_id, session_config, stream_info):
+    def initialize_session(self, session_id, global_config, session_config, stream_info):
         """Initialize all session components. Returns dict tracking what was initialized."""
         initialized = {
             'protocol': False,
@@ -260,25 +264,25 @@ class SessionManagerNode(Node):
         }
 
         # Initialize protocol
-        if not self.initialize_protocol(session_id, session_config):
+        if not self.initialize_protocol(session_id, global_config, session_config):
             self.logger.error('Protocol initialization failed')
             return initialized
         initialized['protocol'] = True
 
         # Initialize presenter (must be before decider)
-        if not self.initialize_presenter(session_config, session_id, stream_info):
+        if not self.initialize_presenter(global_config, session_config, session_id, stream_info):
             self.logger.error('Presenter initialization failed')
             return initialized
         initialized['presenter'] = True
 
         # Initialize decider
-        if not self.initialize_decider(session_config, session_id, stream_info):
+        if not self.initialize_decider(global_config, session_config, session_id, stream_info):
             self.logger.error('Decider initialization failed')
             return initialized
         initialized['decider'] = True
 
         # Initialize preprocessor
-        if not self.initialize_preprocessor(session_config, session_id, stream_info):
+        if not self.initialize_preprocessor(global_config, session_config, session_id, stream_info):
             self.logger.error('Preprocessor initialization failed')
             return initialized
         initialized['preprocessor'] = True
@@ -296,7 +300,7 @@ class SessionManagerNode(Node):
         initialized['trigger_timer'] = True
 
         # Start recording
-        if not self.start_recording(session_id, session_config, stream_info):
+        if not self.start_recording(session_id, global_config, session_config, stream_info):
             self.logger.error('Recording start failed')
             return initialized
         initialized['recording'] = True
@@ -309,7 +313,7 @@ class SessionManagerNode(Node):
 
         return initialized
 
-    def finalize_session(self, session_id, session_config, initialized):
+    def finalize_session(self, session_id, global_config, session_config, initialized):
         """Finalize session components in reverse order."""
         # Stop streaming if it was started
         if initialized['streaming']:
@@ -349,6 +353,7 @@ class SessionManagerNode(Node):
     def run_session(self):
         """Run a complete session lifecycle."""
         session_id = list(uuid.uuid4().bytes)
+        global_config = None
         session_config = None
         stream_info = None
         initialized = {}
@@ -356,20 +361,25 @@ class SessionManagerNode(Node):
         try:
             self.publish_session_state(SessionState.INITIALIZING)
 
-            # Fetch session parameters
+            # Fetch global and session parameters
+            global_config = self.get_global_config()
+            if global_config is None:
+                self.logger.error('Failed to get global configuration')
+                return
+
             session_config = self.get_session_config()
             if session_config is None or not self.validate_session_config(session_config):
                 self.logger.error('Failed to get or validate session parameters')
                 return
 
             # Initialize data stream first to get stream info
-            stream_info = self.initialize_stream(session_id, session_config)
+            stream_info = self.initialize_stream(session_id, global_config, session_config)
             if stream_info is None:
                 self.logger.error('Stream initialization failed')
                 return
 
             # Initialize all components
-            initialized = self.initialize_session(session_id, session_config, stream_info)
+            initialized = self.initialize_session(session_id, global_config, session_config, stream_info)
             
             # Check if initialization completed successfully
             if not all(initialized.values()):
@@ -384,10 +394,10 @@ class SessionManagerNode(Node):
                 pass
 
         finally:
-            # Always finalize if we have session_config
-            if session_config is not None and initialized:
+            # Always finalize if we have configs
+            if global_config is not None and session_config is not None and initialized:
                 self.publish_session_state(SessionState.FINALIZING)
-                self.finalize_session(session_id, session_config, initialized)
+                self.finalize_session(session_id, global_config, session_config, initialized)
 
             # Publish stopped state with abort reason if present
             self.publish_session_state(SessionState.STOPPED, abort_reason=self._abort_reason)
@@ -396,6 +406,19 @@ class SessionManagerNode(Node):
             with self._thread_lock:
                 if self._session_thread is current_thread():
                     self._session_thread = None
+
+    def get_global_config(self):
+        """Get global configuration from global configurator."""
+        request = GetGlobalConfig.Request()
+        response = self.call_service(self.get_global_config_client, request, '/global_configurator/get_config')
+
+        if response is None or not response.success:
+            return None
+
+        config = response.config
+        self.logger.info(f'Fetched global config: active_project={config.active_project}')
+
+        return config
 
     def get_session_config(self):
         """Get session configuration from session configurator."""
@@ -445,10 +468,10 @@ class SessionManagerNode(Node):
 
         return True
 
-    def initialize_stream(self, session_id, session_config):
+    def initialize_stream(self, session_id, global_config, session_config):
         """Initialize the data stream source (simulator, device, or playback)."""
         data_source = session_config.data_source
-        project_name = session_config.project_name
+        project_name = global_config.active_project
         self.logger.info(f'Initializing stream source: {data_source}')
 
         stream_info = StreamInfo()
@@ -492,13 +515,13 @@ class SessionManagerNode(Node):
         self.logger.info(f'Stream initialized successfully. Stream info: {stream_info.sampling_frequency}Hz, {stream_info.num_eeg_channels} EEG channels')
         return stream_info
 
-    def initialize_decider(self, session_config, session_id, stream_info):
+    def initialize_decider(self, global_config, session_config, session_id, stream_info):
         """Initialize the decider component."""
         request = InitializeDecider.Request()
         request.session_id = session_id
         request.stream_info = stream_info
 
-        request.project_name = session_config.project_name
+        request.project_name = global_config.active_project
         request.subject_id = session_config.subject_id
 
         request.module_filename = session_config.decider_module
@@ -514,13 +537,13 @@ class SessionManagerNode(Node):
         self.logger.info('Decider initialized successfully')
         return True
 
-    def initialize_preprocessor(self, session_config, session_id, stream_info):
+    def initialize_preprocessor(self, global_config, session_config, session_id, stream_info):
         """Initialize the preprocessor component."""
         request = InitializePreprocessor.Request()
         request.session_id = session_id
         request.stream_info = stream_info
 
-        request.project_name = session_config.project_name
+        request.project_name = global_config.active_project
         request.subject_id = session_config.subject_id
 
         request.module_filename = session_config.preprocessor_module
@@ -534,12 +557,12 @@ class SessionManagerNode(Node):
         self.logger.info('Preprocessor initialized successfully')
         return True
 
-    def initialize_presenter(self, session_config, session_id, stream_info):
+    def initialize_presenter(self, global_config, session_config, session_id, stream_info):
         """Initialize the presenter component."""
         request = InitializePresenter.Request()
         request.session_id = session_id
 
-        request.project_name = session_config.project_name
+        request.project_name = global_config.active_project
         request.subject_id = session_config.subject_id
 
         request.module_filename = session_config.presenter_module
@@ -580,9 +603,9 @@ class SessionManagerNode(Node):
         self.logger.info('TriggerTimer initialized successfully')
         return True
 
-    def initialize_protocol(self, session_id, session_config):
+    def initialize_protocol(self, session_id, global_config, session_config):
         protocol_filename = session_config.protocol_filename
-        project_name = session_config.project_name
+        project_name = global_config.active_project
 
         request = InitializeProtocol.Request()
         request.session_id = session_id
@@ -737,12 +760,13 @@ class SessionManagerNode(Node):
         return True
 
     # Recording functions
-    def start_recording(self, session_id, session_config, stream_info):
+    def start_recording(self, session_id, global_config, session_config, stream_info):
         """Start session recording."""
         request = StartRecording.Request()
         request.session_id = session_id
 
-        request.config = session_config
+        request.global_config = global_config
+        request.session_config = session_config
         request.stream_info = stream_info
 
         response = self.call_service(self.recording_start_client, request, '/session_recorder/start')

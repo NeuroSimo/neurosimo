@@ -1,48 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
-const StyledInput = styled.input<{ value: string }>`
-  position: relative;
-  display: inline-block;
-  width: 32px;
-  height: 12px;
-  padding: 2.5px 5px;
-  text-align: right;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  background-color: transparent;
-  color: #000;
-  font-size: 10px;
-
-  /* the “track” behind the text */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    height: 3.5px;
-    border-radius: 2px;
-    background: #333;
-    width: ${(p) => {
-      const num = parseFloat(p.value) || 0
-      const pct = Math.min(Math.max((num / 7200) * 100, 0), 100)
-      return `${pct}%`
-    }};
-    transform: translateY(-50%);
-    z-index: -1;
-  }
-
-  /* hide the native spinners */
-  &::-webkit-inner-spin-button,
-  &::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+const StyledInput = styled.input<{ valid?: boolean }>`
+  padding: 8px 12px;
+  border: 1px solid ${(props) => (props.valid ? '#ddd' : 'red')};
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  color: black;
+  
+  &:focus {
+    outline: none;
+    border-color: ${(props) => (props.valid ? '#007bff' : 'red')};
+    box-shadow: 0 0 0 2px ${(props) => (props.valid ? 'rgba(0, 123, 255, 0.25)' : 'rgba(255, 0, 0, 0.25)')};
   }
 `
 
 interface ValidatedInputProps {
   value: number
   onChange: (newValue: number) => void
+  formatValue?: (value: number) => string
+  parseValue?: (value: string) => number
   type?: string
   min?: number
   max?: number
@@ -53,57 +31,52 @@ interface ValidatedInputProps {
 export const ValidatedInput: React.FC<ValidatedInputProps> = ({
   value,
   onChange,
+  formatValue,
+  parseValue,
   type = 'number',
   min,
   max,
-  step,
-  disabled,
+  ...props
 }) => {
-  const [localValue, setLocalValue] = useState<string>(value.toString())
+  const defaultFormat = (val: number) => val.toString()
+  const defaultParse = (val: string) => parseFloat(val)
+  
+  const format = formatValue || defaultFormat
+  const parse = parseValue || defaultParse
+  
+  const [localValue, setLocalValue] = useState<string>(format(value))
+
+  const isValueValid = (strValue: string): boolean => {
+    const numValue = parse(strValue)
+    if (isNaN(numValue)) return false
+    return (min === undefined || numValue >= min) && (max === undefined || numValue <= max)
+  }
 
   const handleChange = (inputValue: string) => {
     setLocalValue(inputValue)
-    const num = parseFloat(inputValue)
-    if (!isNaN(num) && (min === undefined || num >= min) && (max === undefined || num <= max)) {
-      onChange(num)
-    }
   }
 
   const handleBlur = () => {
-    const num = parseFloat(localValue)
-    if (isNaN(num)) {
-      // revert if not a number
-      setLocalValue(value.toString())
-      return
+    if (!isValueValid(localValue)) {
+      setLocalValue(format(value))
+    } else {
+      const parsedValue = parse(localValue)
+      onChange(parsedValue)
+      setLocalValue(format(parsedValue))
     }
-
-    // clamp to [min, max]
-    let clamped = num
-    if (min !== undefined && num < min) clamped = min
-    if (max !== undefined && num > max) clamped = max
-
-    // round to one decimal
-    clamped = Math.round(clamped * 10) / 10
-
-    if (clamped !== value) {
-      onChange(clamped)
-    }
-    setLocalValue(clamped.toString())
   }
 
   useEffect(() => {
-    setLocalValue(value.toString())
+    setLocalValue(format(value))
   }, [value])
 
   return (
     <StyledInput
       type={type}
+      {...props}
       value={localValue}
-      min={min}
-      max={max}
-      step={step}
-      disabled={disabled}
-      onChange={e => handleChange(e.target.value)}
+      valid={isValueValid(localValue)}
+      onChange={(e) => handleChange(e.target.value)}
       onBlur={handleBlur}
     />
   )

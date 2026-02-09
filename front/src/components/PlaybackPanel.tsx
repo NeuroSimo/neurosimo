@@ -16,7 +16,7 @@ import {
 } from 'styles/General'
 
 import { EegStreamContext } from 'providers/EegStreamProvider'
-import { useParameters } from 'providers/ParameterProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { ProjectContext } from 'providers/ProjectProvider'
@@ -74,7 +74,7 @@ const ExportProgress = styled.span`
 
 export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useParameters()
+  const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useSessionConfig()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(PlaybackContext)
   const { activeProject } = useContext(ProjectContext)

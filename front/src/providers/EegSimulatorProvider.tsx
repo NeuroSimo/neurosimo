@@ -2,7 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic, Message } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
-import { useParameters } from './ParameterProvider'
+import { useSessionConfig } from './SessionConfigProvider'
 import { FilenameList } from './PipelineConfigProvider'
 
 export enum DataSourceStateValue {
@@ -65,7 +65,7 @@ interface EegSimulatorProviderProps {
 }
 
 export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ children }) => {
-  const { simulator } = useParameters()
+  const { simulator } = useSessionConfig()
 
   const [datasetList, setDatasetList] = useState<string[]>([])
   const [dataSourceState, setDataSourceState] = useState<DataSourceStateValue>(DataSourceStateValue.READY)

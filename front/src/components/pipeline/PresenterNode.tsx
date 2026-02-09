@@ -1,12 +1,12 @@
 import React, { useContext } from 'react'
 
-import { useParameters } from 'providers/ParameterProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { PipelineConfigContext } from 'providers/PipelineConfigProvider'
 import { PipelineNode } from './PipelineNode'
 
 export const PresenterNode: React.FC = () => {
   const { presenterEnabled, presenterModule, presenterList } = useContext(PipelineConfigContext)
-  const { setPresenterEnabled, setPresenterModule } = useParameters()
+  const { setPresenterEnabled, setPresenterModule } = useSessionConfig()
 
   const handleToggle = (next: boolean) => {
     setPresenterEnabled(next, () => {

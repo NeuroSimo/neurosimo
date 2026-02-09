@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
-import { useParameters } from 'providers/ParameterProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { PlaybackContext } from 'providers/PlaybackProvider'
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
 import { LogContext } from 'providers/LogProvider'
@@ -33,7 +33,7 @@ const getStateDisplayText = (stateValue: SessionStateValue): string => {
 
 export const SessionPanel: React.FC = () => {
   const { sessionState, startSession, abortSession } = useSession()
-  const { dataSource } = useParameters()
+  const { dataSource } = useSessionConfig()
   const { recordingsList } = useContext(PlaybackContext)
   const { datasetList } = useContext(EegSimulatorContext)
   const { clearAllLogs } = useContext(LogContext)

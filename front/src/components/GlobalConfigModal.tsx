@@ -169,7 +169,7 @@ interface GlobalConfigValues {
   eegDevice: string
   turbolinkSamplingFrequency: number
   turbolinkEegChannelCount: number
-  numOfToleratedDroppedSamples: number
+  maximumDroppedSamples: number
   
   // LabJack Configuration
   simulateLabjack: boolean
@@ -190,7 +190,7 @@ const defaultConfig: GlobalConfigValues = {
   eegDevice: 'neurone',
   turbolinkSamplingFrequency: 5000,
   turbolinkEegChannelCount: 64,
-  numOfToleratedDroppedSamples: 2,
+  maximumDroppedSamples: 2,
   
   // LabJack Configuration
   simulateLabjack: false,
@@ -316,14 +316,14 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
             </InputGroup>
 
             <InputGroup>
-              <Label htmlFor="numOfToleratedDroppedSamples">Number of Tolerated Dropped Samples:</Label>
+              <Label htmlFor="maximumDroppedSamples">Maximum Dropped Samples:</Label>
               <Input
-                id="numOfToleratedDroppedSamples"
+                id="maximumDroppedSamples"
                 type="number"
-                value={config.numOfToleratedDroppedSamples}
-                onChange={(e) => updateConfig('numOfToleratedDroppedSamples', parseInt(e.target.value))}
+                value={config.maximumDroppedSamples}
+                onChange={(e) => updateConfig('maximumDroppedSamples', parseInt(e.target.value))}
               />
-              <HelpText>Consecutive dropped samples tolerated before entering error state</HelpText>
+              <HelpText>Maximum consecutive dropped samples tolerated before entering error state</HelpText>
             </InputGroup>
           </Section>
 

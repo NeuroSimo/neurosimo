@@ -49,13 +49,13 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   std::string eeg_device_type;
   this->get_parameter("eeg-device", eeg_device_type);
 
-  /* The number of tolerated dropped samples */
-  auto num_of_tolerated_dropped_samples_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  num_of_tolerated_dropped_samples_descriptor.description = "The number of tolerated dropped samples";
-  num_of_tolerated_dropped_samples_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
-  this->declare_parameter("num-of-tolerated-dropped-samples", NULL, num_of_tolerated_dropped_samples_descriptor);
+  /* The maximum number of dropped samples */
+  auto maximum_dropped_samples_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+  maximum_dropped_samples_descriptor.description = "The maximum number of dropped samples";
+  maximum_dropped_samples_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;
+  this->declare_parameter("maximum-dropped-samples", NULL, maximum_dropped_samples_descriptor);
 
-  this->get_parameter("num-of-tolerated-dropped-samples", this->num_of_tolerated_dropped_samples);
+  this->get_parameter("maximum-dropped-samples", this->maximum_dropped_samples);
 
   /* Turbolink sampling frequency */
   auto turbolink_sampling_frequency_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
@@ -89,8 +89,8 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   RCLCPP_INFO(this->get_logger(), "EEG bridge configuration:");
   RCLCPP_INFO(this->get_logger(), "  Port: %d", this->port);
   RCLCPP_INFO(this->get_logger(), "  EEG device: %s", eeg_device_type.c_str());
-  RCLCPP_INFO(this->get_logger(), "  Number of tolerated dropped samples: %d",
-              this->num_of_tolerated_dropped_samples);
+  RCLCPP_INFO(this->get_logger(), "  Maximum dropped samples: %d",
+              this->maximum_dropped_samples);
 
   /* TODO: string to enum conversion should be done with cleaner solution at some
      point, maybe. */
@@ -276,7 +276,7 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
 
   /* Check for dropped samples using device indices. */
   if (previous_device_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
-      device_sample_index > previous_device_sample_index + 1 + this->num_of_tolerated_dropped_samples &&
+      device_sample_index > previous_device_sample_index + 1 + this->maximum_dropped_samples &&
       /* Ignore the case where the sample index wraps around. */
       device_sample_index != 0) {
 

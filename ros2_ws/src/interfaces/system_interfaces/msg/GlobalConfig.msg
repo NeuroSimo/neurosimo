@@ -6,7 +6,7 @@ int32 eeg_port
 string eeg_device
 int32 turbolink_sampling_frequency
 int32 turbolink_eeg_channel_count
-int32 num_of_tolerated_dropped_samples
+int32 maximum_dropped_samples
 
 # LabJack Configuration
 bool simulate_labjack

@@ -283,7 +283,7 @@ const emptyConfig: GlobalConfigValues = {
   locale: '',
 }
 
-type TabType = 'eeg' | 'labjack' | 'safety' | 'disk' | 'system'
+type TabType = 'eeg' | 'labjack' | 'timing' | 'safety' | 'system'
 
 const COMMON_LOCALES = [
   { value: 'zh-CN', label: 'Chinese Simplified (简体中文)' },
@@ -462,8 +462,8 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
           <Tab active={activeTab === 'safety'} onClick={() => setActiveTab('safety')} type="button">
             Safety
           </Tab>
-          <Tab active={activeTab === 'disk'} onClick={() => setActiveTab('disk')} type="button">
-            Disk Space
+          <Tab active={activeTab === 'timing'} onClick={() => setActiveTab('timing')} type="button">
+            Timing
           </Tab>
           <Tab active={activeTab === 'system'} onClick={() => setActiveTab('system')} type="button">
             System
@@ -553,23 +553,9 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
               </Section>
             )}
 
-            {activeTab === 'safety' && (
+            {activeTab === 'timing' && (
               <Section>
             
-            <InputGroup>
-              <LabelRow>
-                <Label htmlFor="minimumIntertrialInterval">Minimum Intertrial Interval (seconds):</Label>
-                <InfoTooltip text="Minimum time between consecutive TMS trials (e.g., 2.5, 2.0, or 2)" />
-              </LabelRow>
-              <ValidatedInput
-                value={config.minimumIntertrialInterval}
-                onChange={(val) => updateConfig('minimumIntertrialInterval', val)}
-                formatValue={formatDecimal}
-                min={0}
-                step={0.1}
-              />
-            </InputGroup>
-
             <InputGroup>
               <LabelRow>
                 <Label htmlFor="maximumLoopbackLatency">Maximum Loopback Latency (milliseconds):</Label>
@@ -602,26 +588,20 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
               </Section>
             )}
 
-            {activeTab === 'disk' && (
+            {activeTab === 'safety' && (
               <Section>
             
             <InputGroup>
-              <Label htmlFor="diskWarningThreshold">Warning Threshold (GiB):</Label>
-              <Input
-                id="diskWarningThreshold"
-                type="number"
-                value={config.diskWarningThreshold}
-                onChange={(e) => updateConfig('diskWarningThreshold', parseInt(e.target.value))}
-              />
-            </InputGroup>
-
-            <InputGroup>
-              <Label htmlFor="diskErrorThreshold">Error Threshold (GiB):</Label>
-              <Input
-                id="diskErrorThreshold"
-                type="number"
-                value={config.diskErrorThreshold}
-                onChange={(e) => updateConfig('diskErrorThreshold', parseInt(e.target.value))}
+              <LabelRow>
+                <Label htmlFor="minimumIntertrialInterval">Minimum Intertrial Interval (seconds):</Label>
+                <InfoTooltip text="Minimum time between consecutive TMS trials (e.g., 2.5, 2.0, or 2)" />
+              </LabelRow>
+              <ValidatedInput
+                value={config.minimumIntertrialInterval}
+                onChange={(val) => updateConfig('minimumIntertrialInterval', val)}
+                formatValue={formatDecimal}
+                min={0}
+                step={0.1}
               />
             </InputGroup>
               </Section>
@@ -643,6 +623,26 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                   </option>
                 ))}
               </Select>
+            </InputGroup>
+
+            <InputGroup>
+              <Label htmlFor="diskWarningThreshold">Disk Warning Threshold (GiB):</Label>
+              <Input
+                id="diskWarningThreshold"
+                type="number"
+                value={config.diskWarningThreshold}
+                onChange={(e) => updateConfig('diskWarningThreshold', parseInt(e.target.value))}
+              />
+            </InputGroup>
+
+            <InputGroup>
+              <Label htmlFor="diskErrorThreshold">Disk Error Threshold (GiB):</Label>
+              <Input
+                id="diskErrorThreshold"
+                type="number"
+                value={config.diskErrorThreshold}
+                onChange={(e) => updateConfig('diskErrorThreshold', parseInt(e.target.value))}
+              />
             </InputGroup>
               </Section>
             )}

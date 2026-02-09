@@ -3,7 +3,7 @@ import { Topic, Message } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
 import { useSessionConfig } from './SessionConfigProvider'
-import { FilenameList } from './PipelineConfigProvider'
+import { FilenameList } from './ModuleListProvider'
 
 export enum DataSourceStateValue {
   READY = 0,

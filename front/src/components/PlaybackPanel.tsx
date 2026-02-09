@@ -77,7 +77,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useSessionConfig()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(PlaybackContext)
-  const { activeProject } = useGlobalConfig()
+  const { activeProject, locale } = useGlobalConfig()
   const { exporterState } = useExporter()
 
   const [selectedRecordingInfo, setSelectedRecordingInfo] = useState<RecordingInfo | null>(null)
@@ -234,7 +234,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
           </CompactRow>
           <CompactRow>
             <ConfigLabel>Time:</ConfigLabel>
-            <ConfigValue>{formatDateTime(selectedRecordingInfo.start_time)}</ConfigValue>
+            <ConfigValue>{formatDateTime(selectedRecordingInfo.start_time, locale)}</ConfigValue>
           </CompactRow>
           {selectedRecordingInfo.notes && (
             <CompactRow>

@@ -19,3 +19,6 @@ float64 maximum_timing_error
 # Disk Space Monitoring Configuration
 string disk_warning_threshold
 string disk_error_threshold
+
+# System Configuration
+string locale

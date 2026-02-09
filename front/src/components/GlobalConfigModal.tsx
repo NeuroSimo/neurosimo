@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTimes } from '@fortawesome/free-solid-svg-icons'
+import { faTimes, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -20,10 +20,11 @@ const ModalContent = styled.div`
   background: white;
   border-radius: 8px;
   padding: 20px;
-  max-width: 600px;
+  max-width: 650px;
   width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `
 
@@ -52,29 +53,58 @@ const CloseButton = styled.button`
   }
 `
 
+const TabContainer = styled.div`
+  display: flex;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 20px;
+  gap: 4px;
+`
+
+const Tab = styled.button<{ active: boolean }>`
+  padding: 10px 20px;
+  background: ${props => props.active ? '#007bff' : 'transparent'};
+  color: ${props => props.active ? 'white' : '#555'};
+  border: none;
+  border-bottom: 2px solid ${props => props.active ? '#007bff' : 'transparent'};
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-radius: 4px 4px 0 0;
+
+  &:hover {
+    background: ${props => props.active ? '#0056b3' : '#f0f0f0'};
+  }
+`
+
+const TabContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+`
+
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  height: 100%;
+  gap: 12px;
 `
 
 const Section = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-`
-
-const SectionTitle = styled.h4`
-  margin: 0;
-  color: #555;
-  font-size: 16px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 8px;
+  gap: 16px;
 `
 
 const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
+  gap: 6px;
+`
+
+const LabelRow = styled.div`
+  display: flex;
+  align-items: center;
   gap: 6px;
 `
 
@@ -84,11 +114,51 @@ const Label = styled.label`
   font-size: 13px;
 `
 
-const HelpText = styled.div`
+const InfoIconWrapper = styled.span`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+`
+
+const InfoIcon = styled(FontAwesomeIcon)`
+  color: #666;
+  font-size: 13px;
+  
+  &:hover {
+    color: #007bff;
+  }
+`
+
+const Tooltip = styled.div<{ show: boolean }>`
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #333;
+  color: white;
   font-size: 12px;
-  color: #777;
-  font-style: italic;
-  margin-top: -4px;
+  border-radius: 4px;
+  white-space: normal;
+  max-width: 250px;
+  width: max-content;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: ${props => props.show ? 1 : 0};
+  visibility: ${props => props.show ? 'visible' : 'hidden'};
+  transition: opacity 0.2s, visibility 0.2s;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #333;
+  }
 `
 
 const Input = styled.input`
@@ -180,8 +250,8 @@ interface GlobalConfigValues {
   maximumTimingError: number
   
   // Disk Space Monitoring Configuration
-  diskWarningThreshold: string
-  diskErrorThreshold: string
+  diskWarningThreshold: number
+  diskErrorThreshold: number
 }
 
 const defaultConfig: GlobalConfigValues = {
@@ -201,21 +271,25 @@ const defaultConfig: GlobalConfigValues = {
   maximumTimingError: 0.0,
   
   // Disk Space Monitoring Configuration
-  diskWarningThreshold: '100GiB',
-  diskErrorThreshold: '50GiB',
+  diskWarningThreshold: 100,
+  diskErrorThreshold: 50,
 }
+
+type TabType = 'eeg' | 'labjack' | 'safety' | 'disk'
 
 export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
   isOpen,
   onClose,
 }) => {
   const [config, setConfig] = useState<GlobalConfigValues>(defaultConfig)
+  const [activeTab, setActiveTab] = useState<TabType>('eeg')
 
   // Load config when modal opens (placeholder - will be connected to backend later)
   useEffect(() => {
     if (isOpen) {
       // TODO: Load actual config from backend
       setConfig(defaultConfig)
+      setActiveTab('eeg')
     }
   }, [isOpen])
 
@@ -253,22 +327,51 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
     setConfig(prev => ({ ...prev, [key]: value }))
   }
 
+  const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
+    const [showTooltip, setShowTooltip] = useState(false)
+    
+    return (
+      <InfoIconWrapper
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        <InfoIcon icon={faInfoCircle} />
+        <Tooltip show={showTooltip}>{text}</Tooltip>
+      </InfoIconWrapper>
+    )
+  }
+
   if (!isOpen) return null
 
   return (
     <ModalOverlay onClick={handleClose}>
       <ModalContent onClick={e => e.stopPropagation()}>
         <ModalHeader>
-          <ModalTitle>Global Configuration</ModalTitle>
+          <ModalTitle>Settings</ModalTitle>
           <CloseButton onClick={handleClose}>
             <FontAwesomeIcon icon={faTimes} />
           </CloseButton>
         </ModalHeader>
 
+        <TabContainer>
+          <Tab active={activeTab === 'eeg'} onClick={() => setActiveTab('eeg')} type="button">
+            EEG
+          </Tab>
+          <Tab active={activeTab === 'labjack'} onClick={() => setActiveTab('labjack')} type="button">
+            LabJack
+          </Tab>
+          <Tab active={activeTab === 'safety'} onClick={() => setActiveTab('safety')} type="button">
+            Safety
+          </Tab>
+          <Tab active={activeTab === 'disk'} onClick={() => setActiveTab('disk')} type="button">
+            Disk Space
+          </Tab>
+        </TabContainer>
+
         <Form onSubmit={handleSubmit}>
-          {/* EEG Configuration */}
-          <Section>
-            <SectionTitle>EEG Configuration</SectionTitle>
+          <TabContent>
+            {activeTab === 'eeg' && (
+              <Section>
             
             <InputGroup>
               <Label htmlFor="eegPort">EEG Port:</Label>
@@ -290,46 +393,49 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 <option value="neurone">NeurOne</option>
                 <option value="turbolink">TurboLink</option>
               </Select>
-              <HelpText>Supported values: &apos;neurone&apos;, &apos;turbolink&apos;</HelpText>
             </InputGroup>
 
-            <InputGroup>
-              <Label htmlFor="turbolinkSamplingFrequency">TurboLink Sampling Frequency (Hz):</Label>
-              <Input
-                id="turbolinkSamplingFrequency"
-                type="number"
-                value={config.turbolinkSamplingFrequency}
-                onChange={(e) => updateConfig('turbolinkSamplingFrequency', parseInt(e.target.value))}
-              />
-              <HelpText>Ignored for NeurOne devices (gets automatically from device)</HelpText>
-            </InputGroup>
+            {config.eegDevice === 'turbolink' && (
+              <>
+                <InputGroup>
+                  <Label htmlFor="turbolinkSamplingFrequency">Sampling Rate (Hz):</Label>
+                  <Input
+                    id="turbolinkSamplingFrequency"
+                    type="number"
+                    value={config.turbolinkSamplingFrequency}
+                    onChange={(e) => updateConfig('turbolinkSamplingFrequency', parseInt(e.target.value))}
+                  />
+                </InputGroup>
+
+                <InputGroup>
+                  <Label htmlFor="turbolinkEegChannelCount">Channel Count:</Label>
+                  <Input
+                    id="turbolinkEegChannelCount"
+                    type="number"
+                    value={config.turbolinkEegChannelCount}
+                    onChange={(e) => updateConfig('turbolinkEegChannelCount', parseInt(e.target.value))}
+                  />
+                </InputGroup>
+              </>
+            )}
 
             <InputGroup>
-              <Label htmlFor="turbolinkEegChannelCount">TurboLink EEG Channel Count:</Label>
-              <Input
-                id="turbolinkEegChannelCount"
-                type="number"
-                value={config.turbolinkEegChannelCount}
-                onChange={(e) => updateConfig('turbolinkEegChannelCount', parseInt(e.target.value))}
-              />
-              <HelpText>Ignored for NeurOne devices (gets automatically from device)</HelpText>
-            </InputGroup>
-
-            <InputGroup>
-              <Label htmlFor="maximumDroppedSamples">Maximum Dropped Samples:</Label>
+              <LabelRow>
+                <Label htmlFor="maximumDroppedSamples">Maximum Dropped Samples:</Label>
+                <InfoTooltip text="Maximum consecutive dropped samples tolerated before entering error state" />
+              </LabelRow>
               <Input
                 id="maximumDroppedSamples"
                 type="number"
                 value={config.maximumDroppedSamples}
                 onChange={(e) => updateConfig('maximumDroppedSamples', parseInt(e.target.value))}
               />
-              <HelpText>Maximum consecutive dropped samples tolerated before entering error state</HelpText>
             </InputGroup>
-          </Section>
+              </Section>
+            )}
 
-          {/* LabJack Configuration */}
-          <Section>
-            <SectionTitle>LabJack Configuration</SectionTitle>
+            {activeTab === 'labjack' && (
+              <Section>
             
             <InputGroup>
               <CheckboxWrapper>
@@ -342,14 +448,17 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 <Label htmlFor="simulateLabjack">Simulate LabJack</Label>
               </CheckboxWrapper>
             </InputGroup>
-          </Section>
+              </Section>
+            )}
 
-          {/* Safety Configuration */}
-          <Section>
-            <SectionTitle>Safety Configuration</SectionTitle>
+            {activeTab === 'safety' && (
+              <Section>
             
             <InputGroup>
-              <Label htmlFor="minimumIntertrialInterval">Minimum Intertrial Interval (seconds):</Label>
+              <LabelRow>
+                <Label htmlFor="minimumIntertrialInterval">Minimum Intertrial Interval (seconds):</Label>
+                <InfoTooltip text="Minimum time between consecutive TMS trials (e.g., 2.5, 2.0, or 2)" />
+              </LabelRow>
               <Input
                 id="minimumIntertrialInterval"
                 type="number"
@@ -357,11 +466,13 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 value={config.minimumIntertrialInterval}
                 onChange={(e) => updateConfig('minimumIntertrialInterval', parseFloat(e.target.value))}
               />
-              <HelpText>Minimum time between consecutive TMS trials (e.g., 2.5, 2.0, or 2)</HelpText>
             </InputGroup>
 
             <InputGroup>
-              <Label htmlFor="maximumLoopbackLatency">Maximum Loopback Latency (seconds):</Label>
+              <LabelRow>
+                <Label htmlFor="maximumLoopbackLatency">Maximum Loopback Latency (seconds):</Label>
+                <InfoTooltip text="Exceeding this value prevents stimulation" />
+              </LabelRow>
               <Input
                 id="maximumLoopbackLatency"
                 type="number"
@@ -369,11 +480,13 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 value={config.maximumLoopbackLatency}
                 onChange={(e) => updateConfig('maximumLoopbackLatency', parseFloat(e.target.value))}
               />
-              <HelpText>Exceeding this value prevents stimulation</HelpText>
             </InputGroup>
 
             <InputGroup>
-              <Label htmlFor="maximumTimingError">Maximum Timing Error (seconds):</Label>
+              <LabelRow>
+                <Label htmlFor="maximumTimingError">Maximum Timing Error (seconds):</Label>
+                <InfoTooltip text="Maximum timing error for triggering" />
+              </LabelRow>
               <Input
                 id="maximumTimingError"
                 type="number"
@@ -381,36 +494,35 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 value={config.maximumTimingError}
                 onChange={(e) => updateConfig('maximumTimingError', parseFloat(e.target.value))}
               />
-              <HelpText>Maximum timing error for triggering</HelpText>
             </InputGroup>
-          </Section>
+              </Section>
+            )}
 
-          {/* Disk Space Monitoring Configuration */}
-          <Section>
-            <SectionTitle>Disk Space Monitoring</SectionTitle>
+            {activeTab === 'disk' && (
+              <Section>
             
             <InputGroup>
-              <Label htmlFor="diskWarningThreshold">Warning Threshold:</Label>
+              <Label htmlFor="diskWarningThreshold">Warning Threshold (GiB):</Label>
               <Input
                 id="diskWarningThreshold"
-                type="text"
+                type="number"
                 value={config.diskWarningThreshold}
-                onChange={(e) => updateConfig('diskWarningThreshold', e.target.value)}
+                onChange={(e) => updateConfig('diskWarningThreshold', parseInt(e.target.value))}
               />
-              <HelpText>Example: 100GiB, 50GB</HelpText>
             </InputGroup>
 
             <InputGroup>
-              <Label htmlFor="diskErrorThreshold">Error Threshold:</Label>
+              <Label htmlFor="diskErrorThreshold">Error Threshold (GiB):</Label>
               <Input
                 id="diskErrorThreshold"
-                type="text"
+                type="number"
                 value={config.diskErrorThreshold}
-                onChange={(e) => updateConfig('diskErrorThreshold', e.target.value)}
+                onChange={(e) => updateConfig('diskErrorThreshold', parseInt(e.target.value))}
               />
-              <HelpText>Example: 50GiB, 25GB</HelpText>
             </InputGroup>
-          </Section>
+              </Section>
+            )}
+          </TabContent>
 
           <ButtonGroup>
             <Button type="button" variant="secondary" onClick={handleClose}>

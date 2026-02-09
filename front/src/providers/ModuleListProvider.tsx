@@ -8,7 +8,7 @@ export interface FilenameList extends ROSLIB.Message {
   filenames: string[]
 }
 
-interface PipelineConfigContextType {
+interface ModuleListContextType {
   preprocessorList: string[]
   preprocessorModule: string
   preprocessorEnabled: boolean
@@ -25,7 +25,7 @@ interface PipelineConfigContextType {
   protocolName: string
 }
 
-const defaultPipelineConfigState: PipelineConfigContextType = {
+const defaultModuleListState: ModuleListContextType = {
   preprocessorList: [],
   preprocessorModule: '',
   preprocessorEnabled: false,
@@ -42,13 +42,13 @@ const defaultPipelineConfigState: PipelineConfigContextType = {
   protocolName: '',
 }
 
-export const PipelineConfigContext = React.createContext<PipelineConfigContextType>(defaultPipelineConfigState)
+export const ModuleListContext = React.createContext<ModuleListContextType>(defaultModuleListState)
 
-interface PipelineConfigProviderProps {
+interface ModuleListProviderProps {
   children: ReactNode
 }
 
-export const PipelineConfigProvider: React.FC<PipelineConfigProviderProps> = ({ children }) => {
+export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children }) => {
   const { pipeline } = useSessionConfig()
 
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
@@ -120,7 +120,7 @@ export const PipelineConfigProvider: React.FC<PipelineConfigProviderProps> = ({ 
   }, [])
 
   return (
-    <PipelineConfigContext.Provider
+    <ModuleListContext.Provider
       value={{
         preprocessorList,
         preprocessorModule,
@@ -136,6 +136,6 @@ export const PipelineConfigProvider: React.FC<PipelineConfigProviderProps> = ({ 
       }}
     >
       {children}
-    </PipelineConfigContext.Provider>
+    </ModuleListContext.Provider>
   )
 }

@@ -5,7 +5,7 @@ import { faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
-import { PipelineConfigContext } from 'providers/PipelineConfigProvider'
+import { ModuleListContext } from 'providers/ModuleListProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { CommittableTextInput } from 'components/CommittableTextInput'
 import { CommittableNumericInput } from 'components/CommittableNumericInput'
@@ -49,7 +49,7 @@ const ProtocolSelect = styled(Select)`
 `
 
 export const ExperimentPanel: React.FC = () => {
-  const { protocolName, protocolList } = useContext(PipelineConfigContext)
+  const { protocolName, protocolList } = useContext(ModuleListContext)
   const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject } = useContext(ProjectContext)

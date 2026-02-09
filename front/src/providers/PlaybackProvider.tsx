@@ -2,7 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
-import { FilenameList } from './PipelineConfigProvider'
+import { FilenameList } from './ModuleListProvider'
 
 interface PlaybackContextType {
   recordingsList: string[]

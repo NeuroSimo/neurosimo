@@ -161,7 +161,8 @@ double_t TriggerTimer::estimate_current_sample_time() {
 TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
 
-  double_t trigger_time = request->timed_trigger.time;
+  double_t desired_pulse_time = request->timed_trigger.time;
+  double_t trigger_time = desired_pulse_time - this->trigger_to_pulse_delay;
   double_t estimated_current_time = estimate_current_sample_time();
 
   if (estimated_current_time == 0.0) {
@@ -171,7 +172,8 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
 
   /* Check if a trigger is already scheduled */
   if (active_trigger_timer && !active_trigger_timer->is_canceled()) {
-    RCLCPP_ERROR(logger, "Trigger already scheduled, rejecting new trigger request at time %.4f", trigger_time);
+    RCLCPP_ERROR(logger, "Trigger already scheduled, rejecting new trigger request for pulse time %.4f (trigger time %.4f)", 
+                 desired_pulse_time, trigger_time);
     return SchedulingResult::ERROR;
   }
 
@@ -194,24 +196,24 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
     
     /* Reject if timing error exceeds maximum allowed */
     if (timing_error > this->maximum_timing_error) {
-      RCLCPP_ERROR(logger, "Trigger time %.4f is too late (current estimated: %.4f, error: %.4f ms exceeds maximum %.4f ms), rejecting trigger.",
-                   trigger_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
+      RCLCPP_ERROR(logger, "Trigger time %.4f (pulse time %.4f) is too late (current estimated: %.4f, error: %.4f ms exceeds maximum %.4f ms), rejecting trigger.",
+                   trigger_time, desired_pulse_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
       return SchedulingResult::TOO_LATE;
     }
     
     /* Within tolerance, trigger immediately */
-    RCLCPP_WARN(logger, "Trigger time %.4f is in the past (current estimated: %.4f, error: %.4f ms within maximum %.4f ms), triggering immediately.",
-                trigger_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
+    RCLCPP_WARN(logger, "Trigger time %.4f (pulse time %.4f) is in the past (current estimated: %.4f, error: %.4f ms within maximum %.4f ms), triggering immediately.",
+                trigger_time, desired_pulse_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
     time_until_trigger = 0.0;
   }
 
   // Create a one-shot timer to fire the trigger
   active_trigger_timer = this->create_wall_timer(
     std::chrono::duration<double>(time_until_trigger),
-    [this, request]() {
+    [this, request, desired_pulse_time]() {
       std::lock_guard<std::mutex> lock(handler_mutex);
 
-      double_t trigger_time = request->timed_trigger.time;
+      double_t trigger_time = desired_pulse_time - this->trigger_to_pulse_delay;
       double_t estimated_current_time = estimate_current_sample_time();
       double_t error = estimated_current_time - trigger_time;
 
@@ -222,8 +224,8 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
       uint64_t system_time_hardware_fired = std::chrono::duration_cast<std::chrono::nanoseconds>(
         now.time_since_epoch()).count();
 
-      RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f (estimated current time: %.4f, error: %.4f)",
-                  trigger_time, estimated_current_time, error);
+      RCLCPP_INFO(logger, "Triggering at scheduled time: %.4f for pulse time: %.4f (estimated current time: %.4f, error: %.4f)",
+                  trigger_time, desired_pulse_time, estimated_current_time, error);
 
       if (labjack_manager && labjack_manager->trigger_output(tms_trigger_fio)) {
         status = pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
@@ -238,8 +240,6 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
       decision_trace.status = status;
       decision_trace.system_time_hardware_fired = system_time_hardware_fired;
       decision_trace.latency_corrected_time_at_firing = estimated_current_time;
-      decision_trace.maximum_timing_error = this->maximum_timing_error;
-      decision_trace.maximum_loopback_latency = this->maximum_loopback_latency;
 
       this->decision_trace_publisher->publish(decision_trace);
 
@@ -315,6 +315,7 @@ void TriggerTimer::handle_request_timed_trigger(
   decision_trace.loopback_latency_at_scheduling = this->current_loopback_latency;
   decision_trace.maximum_timing_error = this->maximum_timing_error;
   decision_trace.maximum_loopback_latency = this->maximum_loopback_latency;
+  decision_trace.trigger_to_pulse_delay = this->trigger_to_pulse_delay;
 
   this->decision_trace_publisher->publish(decision_trace);
 
@@ -322,9 +323,10 @@ void TriggerTimer::handle_request_timed_trigger(
   bool success = (result == SchedulingResult::SCHEDULED);
   response->success = success;
   if (success) {
-    RCLCPP_INFO(logger, "Scheduled trigger for time: %.4f (s).", trigger_time);
+    RCLCPP_INFO(logger, "Scheduled trigger for pulse time: %.4f (s), trigger time: %.4f (s).", 
+                request->timed_trigger.time, request->timed_trigger.time - this->trigger_to_pulse_delay);
   } else {
-    RCLCPP_WARN(logger, "Failed to schedule trigger for time: %.4f (s).", trigger_time);
+    RCLCPP_WARN(logger, "Failed to schedule trigger for pulse time: %.4f (s).", request->timed_trigger.time);
   }
 }
 
@@ -370,6 +372,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   /* Set configuration from request */
   this->maximum_timing_error = request->maximum_timing_error;
   this->maximum_loopback_latency = request->maximum_loopback_latency;
+  this->trigger_to_pulse_delay = request->trigger_to_pulse_delay;
   this->simulate_labjack = request->simulate_labjack;
 
   /* Validate the maximum timing error is non-negative */
@@ -378,6 +381,15 @@ void TriggerTimer::handle_initialize_trigger_timer(
     response->success = false;
     this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
                                  "Invalid configuration: maximum timing error must be non-negative");
+    return;
+  }
+
+  /* Validate the trigger to pulse delay is non-negative */
+  if (this->trigger_to_pulse_delay < 0.0) {
+    RCLCPP_ERROR(this->get_logger(), "Trigger to pulse delay must be non-negative");
+    response->success = false;
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                 "Invalid configuration: trigger to pulse delay must be non-negative");
     return;
   }
 
@@ -395,6 +407,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   RCLCPP_INFO(this->get_logger(), "Configuration:");
   RCLCPP_INFO(this->get_logger(), "  Maximum timing error (ms): %.1f", 1000 * this->maximum_timing_error);
   RCLCPP_INFO(this->get_logger(), "  Maximum loopback latency (ms): %.1f", 1000 * this->maximum_loopback_latency);
+  RCLCPP_INFO(this->get_logger(), "  Trigger to pulse delay (ms): %.1f", 1000 * this->trigger_to_pulse_delay);
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 

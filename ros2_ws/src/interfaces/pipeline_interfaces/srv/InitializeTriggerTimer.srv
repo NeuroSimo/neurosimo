@@ -5,6 +5,7 @@ uint8[16] session_id
 # Configuration
 float64 maximum_timing_error
 float64 maximum_loopback_latency
+float64 trigger_to_pulse_delay
 bool simulate_labjack
 ---
 bool success

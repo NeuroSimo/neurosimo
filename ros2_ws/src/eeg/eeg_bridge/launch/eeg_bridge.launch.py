@@ -5,34 +5,12 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    """
+    Launch EEG bridge node.
+    """
     log_arg = DeclareLaunchArgument(
         "log-level",
         description="Logging level",
-    )
-
-    port_arg = DeclareLaunchArgument(
-        "port",
-        description="Port",
-    )
-
-    maximum_dropped_samples_arg = DeclareLaunchArgument(
-        "maximum-dropped-samples",
-        description="The maximum number of dropped samples",
-    )
-
-    eeg_device_arg = DeclareLaunchArgument(
-        "eeg-device",
-        description="EEG device to use: 'neurone' or 'turbolink'",
-    )
-
-    turbolink_sampling_frequency_arg = DeclareLaunchArgument(
-        "turbolink-sampling-frequency",
-        description="Sampling frequency of Turbolink device",
-    )
-
-    turbolink_eeg_channel_count_arg = DeclareLaunchArgument(
-        "turbolink-eeg-channel-count",
-        description="EEG channel count of Turbolink device",
     )
 
     logger = LaunchConfiguration("log-level")
@@ -40,15 +18,6 @@ def generate_launch_description():
             package="eeg_bridge",
             executable="eeg_bridge",
             name="eeg_bridge",
-            parameters=[
-                {
-                    "port": LaunchConfiguration("port"),
-                    "maximum-dropped-samples": LaunchConfiguration("maximum-dropped-samples"),
-                    "eeg-device": LaunchConfiguration("eeg-device"),
-                    "turbolink-sampling-frequency": LaunchConfiguration("turbolink-sampling-frequency"),
-                    "turbolink-eeg-channel-count": LaunchConfiguration("turbolink-eeg-channel-count"),
-                }
-            ],
             output="screen",
             emulate_tty=True,
             arguments=['--ros-args', '--log-level', logger]
@@ -56,10 +25,5 @@ def generate_launch_description():
 
     return LaunchDescription([
         log_arg,
-        port_arg,
-        maximum_dropped_samples_arg,
-        eeg_device_arg,
-        turbolink_sampling_frequency_arg,
-        turbolink_eeg_channel_count_arg,
         node
     ])

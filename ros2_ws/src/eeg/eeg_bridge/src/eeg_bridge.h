@@ -19,6 +19,7 @@
 #include "system_interfaces/msg/component_health.hpp"
 #include "system_interfaces/srv/abort_session.hpp"
 #include "system_interfaces/msg/data_source_state.hpp"
+#include "system_interfaces/msg/global_config.hpp"
 
 #include "std_srvs/srv/trigger.hpp"
 
@@ -96,10 +97,15 @@ private:
       const std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Request> request,
       std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Response> response);
 
+  void handle_global_config(const system_interfaces::msg::GlobalConfig::SharedPtr msg);
+
   /* Configuration */
   uint16_t port = 0;
   uint8_t maximum_dropped_samples = 0;
   EegDevice eeg_device;
+  uint32_t turbolink_sampling_frequency = 0;
+  uint8_t turbolink_eeg_channel_count = 0;
+  std::string eeg_device_type;
 
   std::shared_ptr<UdpSocket> socket_;
   std::shared_ptr<EegAdapter> eeg_adapter;
@@ -125,6 +131,9 @@ private:
 
   /* Service client for session abort */
   rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
+
+  /* Subscribers */
+  rclcpp::Subscription<system_interfaces::msg::GlobalConfig>::SharedPtr global_config_subscription;
 
   /* Data source state */
   system_interfaces::msg::DataSourceState::_state_type data_source_state = system_interfaces::msg::DataSourceState::READY;

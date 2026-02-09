@@ -33,7 +33,7 @@ class GlobalConfiguratorNode(Node):
         self.declare_parameter('eeg_device', global_config['eeg_device'])
         self.declare_parameter('turbolink_sampling_frequency', global_config['turbolink_sampling_frequency'])
         self.declare_parameter('turbolink_eeg_channel_count', global_config['turbolink_eeg_channel_count'])
-        self.declare_parameter('num_of_tolerated_dropped_samples', global_config['num_of_tolerated_dropped_samples'])
+        self.declare_parameter('maximum_dropped_samples', global_config['maximum_dropped_samples'])
         
         # LabJack Configuration
         self.declare_parameter('simulate_labjack', global_config['simulate_labjack'])
@@ -86,7 +86,7 @@ class GlobalConfiguratorNode(Node):
         config.eeg_device = global_config.get('eeg_device', 'neurone')
         config.turbolink_sampling_frequency = global_config.get('turbolink_sampling_frequency', 5000)
         config.turbolink_eeg_channel_count = global_config.get('turbolink_eeg_channel_count', 64)
-        config.num_of_tolerated_dropped_samples = global_config.get('num_of_tolerated_dropped_samples', 2)
+        config.maximum_dropped_samples = global_config.get('maximum_dropped_samples', 2)
         
         # LabJack Configuration
         config.simulate_labjack = global_config.get('simulate_labjack', False)

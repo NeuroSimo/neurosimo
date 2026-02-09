@@ -98,7 +98,7 @@ private:
 
   /* Configuration */
   uint16_t port = 0;
-  uint8_t num_of_tolerated_dropped_samples = 0;
+  uint8_t maximum_dropped_samples = 0;
   EegDevice eeg_device;
 
   std::shared_ptr<UdpSocket> socket_;

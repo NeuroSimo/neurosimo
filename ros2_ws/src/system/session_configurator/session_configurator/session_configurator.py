@@ -7,10 +7,8 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.srv import GetSessionConfig
-from system_interfaces.msg import SessionConfig
+from system_interfaces.msg import SessionConfig, GlobalConfig
 from project_interfaces.msg import FilenameList
-
-from std_msgs.msg import String
 from rcl_interfaces.msg import SetParametersResult
 
 from .session_storage_manager import SessionStorageManager
@@ -71,10 +69,10 @@ class SessionConfiguratorNode(Node):
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
-        self.active_project_subscription = self.create_subscription(
-            String,
-            '/projects/active',
-            self.active_project_callback,
+        self.global_config_subscription = self.create_subscription(
+            GlobalConfig,
+            '/global_configurator/config',
+            self.global_config_callback,
             qos,
             callback_group=self.callback_group
         )
@@ -103,11 +101,15 @@ class SessionConfiguratorNode(Node):
         # Add parameter change callback to save changes to session state
         self.add_on_set_parameters_callback(self.parameter_change_callback)
 
-    def active_project_callback(self, msg):
-        """Handle active project changes from global configurator."""
-        project_name = msg.data
-        self.logger.info(f"Active project changed to: {project_name}")
+    def global_config_callback(self, msg):
+        """Handle global config changes from global configurator."""
+        project_name = msg.active_project
         
+        # Only process if active project has actually changed
+        if project_name == self.active_project:
+            return
+
+        self.logger.info(f"Active project changed to: {project_name}")
         self.active_project = project_name
         
         # Load session config for the new project

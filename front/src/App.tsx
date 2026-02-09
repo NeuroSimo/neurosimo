@@ -10,7 +10,6 @@ import { HealthcheckMessageDisplay } from 'components/HealthcheckMessageDisplay'
 import { HealthDisplay } from 'components/HealthDisplay'
 import { PipelineView } from 'views/PipelineView'
 import { DashboardView } from 'views/DashboardView'
-import { ProjectProvider } from 'providers/ProjectProvider'
 import { DetachedExperimentView } from 'components/DetachedExperimentView'
 
 const App = () => {

@@ -3,7 +3,7 @@ import { ThemeProvider } from 'styled-components'
 import theme from 'styles/theme'
 
 import { SessionConfigProvider } from './SessionConfigProvider'
-import { ProjectProvider } from './ProjectProvider'
+import { GlobalConfigProvider } from './GlobalConfigProvider'
 import { ModuleListProvider } from './ModuleListProvider'
 import { SessionStatisticsProvider } from './SessionStatisticsProvider'
 import { LogProvider } from './LogProvider'
@@ -26,7 +26,7 @@ const Providers: React.FC<Props> = ({ children }) => {
   return (
     <ThemeProvider theme={theme}>
       <SessionConfigProvider>
-        <ProjectProvider>
+        <GlobalConfigProvider>
           <ModuleListProvider>
             <SessionStatisticsProvider>
               <LogProvider>
@@ -52,7 +52,7 @@ const Providers: React.FC<Props> = ({ children }) => {
               </LogProvider>
             </SessionStatisticsProvider>
           </ModuleListProvider>
-        </ProjectProvider>
+        </GlobalConfigProvider>
       </SessionConfigProvider>
     </ThemeProvider>
   )

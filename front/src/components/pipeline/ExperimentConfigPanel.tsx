@@ -13,7 +13,7 @@ import { CreateProjectModal } from 'components/CreateProjectModal'
 import { ProtocolInfoModal } from 'components/ProtocolInfoModal'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { listProjects, setActiveProject } from 'ros/project'
-import { ProjectContext } from 'providers/ProjectProvider'
+import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
 
 const Container = styled(StyledPanel)`
@@ -52,7 +52,7 @@ export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList } = useContext(ModuleListContext)
   const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useSessionConfig()
   const { sessionState } = useSession()
-  const { activeProject } = useContext(ProjectContext)
+  const { activeProject } = useGlobalConfig()
   const [projects, setProjects] = useState<string[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isProtocolInfoModalOpen, setIsProtocolInfoModalOpen] = useState(false)

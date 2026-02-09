@@ -1,12 +1,12 @@
 import React, { useContext } from 'react'
 
-import { useParameters } from 'providers/ParameterProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { PipelineConfigContext } from 'providers/PipelineConfigProvider'
 import { PipelineNode } from './PipelineNode'
 
 export const PreprocessorNode: React.FC = () => {
   const { preprocessorEnabled, preprocessorModule, preprocessorList } = useContext(PipelineConfigContext)
-  const { setPreprocessorEnabled, setPreprocessorModule } = useParameters()
+  const { setPreprocessorEnabled, setPreprocessorModule } = useSessionConfig()
 
   const handleToggle = (next: boolean) => {
     setPreprocessorEnabled(next, () => {

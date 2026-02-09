@@ -5,7 +5,7 @@ import { EegSimulatorPanel } from 'components/EegSimulatorPanel'
 import { PlaybackPanel } from 'components/PlaybackPanel'
 import { EegDevicePanel } from 'components/EegDevicePanel'
 import { EegStreamContext } from 'providers/EegStreamProvider'
-import { useParameters } from 'providers/ParameterProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { StyledPanel, CONFIG_PANEL_WIDTH, SmallerTitle } from 'styles/General'
 
 const DataSourcePanel = styled(StyledPanel)`
@@ -51,7 +51,7 @@ export const DataSourceDisplay: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<'simulator' | 'playback' | 'eeg_device'>('simulator')
   const [previousTab, setPreviousTab] = React.useState<'simulator' | 'playback'>('simulator')
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setDataSource } = useParameters()
+  const { setDataSource } = useSessionConfig()
 
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
 

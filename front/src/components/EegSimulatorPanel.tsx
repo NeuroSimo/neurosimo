@@ -18,7 +18,7 @@ import {
 import { EegSimulatorContext, DataSourceStateValue } from 'providers/EegSimulatorProvider'
 import { ExperimentContext } from 'providers/ExperimentProvider'
 import { EegStreamContext } from 'providers/EegStreamProvider'
-import { useParameters } from 'providers/ParameterProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
 import { HealthcheckContext } from 'providers/HealthProvider'
@@ -53,7 +53,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(ExperimentContext)
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setSimulatorDataset, setSimulatorStartTime } = useParameters()
+  const { setSimulatorDataset, setSimulatorStartTime } = useSessionConfig()
   const { sessionState } = useSession()
 
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)

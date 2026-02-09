@@ -32,7 +32,7 @@ interface SimulatorParameters {
   start_time: number
 }
 
-interface ParameterContextType {
+interface SessionConfigContextType {
   // Structured parameter access
   metadata: MetadataParameters
   pipeline: PipelineParameters
@@ -61,7 +61,7 @@ interface ParameterContextType {
 const asyncNoop = async () => {}
 /* eslint-enable @typescript-eslint/no-empty-function */
 
-const defaultParameterState: ParameterContextType = {
+const defaultSessionConfigState: SessionConfigContextType = {
   metadata: {
     subject_id: '',
     notes: '',
@@ -93,45 +93,45 @@ const defaultParameterState: ParameterContextType = {
   setDataSource: asyncNoop,
 }
 
-export const ParameterContext = createContext<ParameterContextType>(defaultParameterState)
+export const SessionConfigContext = createContext<SessionConfigContextType>(defaultSessionConfigState)
 
-interface ParameterProviderProps {
+interface SessionConfigProviderProps {
   children: ReactNode
 }
 
-export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }) => {
-  const [parameters, setParameters] = useState<Map<string, boolean | number | string>>(new Map())
+export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ children }) => {
+  const [sessionConfig, setSessionConfig] = useState<Map<string, boolean | number | string>>(new Map())
 
   // Structured parameter access
   const metadata: MetadataParameters = {
-    subject_id: (parameters.get('subject_id') as string) || '',
-    notes: (parameters.get('notes') as string) || '',
+    subject_id: (sessionConfig.get('subject_id') as string) || '',
+    notes: (sessionConfig.get('notes') as string) || '',
   }
 
   const pipeline: PipelineParameters = {
     decider: {
-      module: (parameters.get('decider.module') as string) || '',
-      enabled: (parameters.get('decider.enabled') as boolean) || false,
+      module: (sessionConfig.get('decider.module') as string) || '',
+      enabled: (sessionConfig.get('decider.enabled') as boolean) || false,
     },
     preprocessor: {
-      module: (parameters.get('preprocessor.module') as string) || '',
-      enabled: (parameters.get('preprocessor.enabled') as boolean) || false,
+      module: (sessionConfig.get('preprocessor.module') as string) || '',
+      enabled: (sessionConfig.get('preprocessor.enabled') as boolean) || false,
     },
     presenter: {
-      module: (parameters.get('presenter.module') as string) || '',
-      enabled: (parameters.get('presenter.enabled') as boolean) || false,
+      module: (sessionConfig.get('presenter.module') as string) || '',
+      enabled: (sessionConfig.get('presenter.enabled') as boolean) || false,
     },
     experiment: {
-      protocol: (parameters.get('experiment.protocol') as string) || '',
+      protocol: (sessionConfig.get('experiment.protocol') as string) || '',
     },
   }
 
   const simulator: SimulatorParameters = {
-    dataset_filename: (parameters.get('simulator.dataset_filename') as string) || '',
-    start_time: (parameters.get('simulator.start_time') as number) || 0,
+    dataset_filename: (sessionConfig.get('simulator.dataset_filename') as string) || '',
+    start_time: (sessionConfig.get('simulator.start_time') as number) || 0,
   }
 
-  const dataSource = (parameters.get('data_source') as string) || 'simulator'
+  const dataSource = (sessionConfig.get('data_source') as string) || 'simulator'
 
   useEffect(() => {
     /* Subscriber for session config topic (latched). */
@@ -144,24 +144,24 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
 
     sessionConfigSubscriber.subscribe((message: ROSLIB.Message) => {
       const msg = message as any
-      setParameters((prevParams) => {
-        const newParams = new Map(prevParams)
+      setSessionConfig((prevConfig) => {
+        const newConfig = new Map(prevConfig)
         
         // Update all session config parameters
-        newParams.set('subject_id', msg.subject_id)
-        newParams.set('notes', msg.notes)
-        newParams.set('decider.module', msg.decider_module)
-        newParams.set('decider.enabled', msg.decider_enabled)
-        newParams.set('preprocessor.module', msg.preprocessor_module)
-        newParams.set('preprocessor.enabled', msg.preprocessor_enabled)
-        newParams.set('presenter.module', msg.presenter_module)
-        newParams.set('presenter.enabled', msg.presenter_enabled)
-        newParams.set('experiment.protocol', msg.protocol_filename)
-        newParams.set('simulator.dataset_filename', msg.simulator_dataset_filename)
-        newParams.set('simulator.start_time', msg.simulator_start_time)
-        newParams.set('data_source', msg.data_source)
+        newConfig.set('subject_id', msg.subject_id)
+        newConfig.set('notes', msg.notes)
+        newConfig.set('decider.module', msg.decider_module)
+        newConfig.set('decider.enabled', msg.decider_enabled)
+        newConfig.set('preprocessor.module', msg.preprocessor_module)
+        newConfig.set('preprocessor.enabled', msg.preprocessor_enabled)
+        newConfig.set('presenter.module', msg.presenter_module)
+        newConfig.set('presenter.enabled', msg.presenter_enabled)
+        newConfig.set('experiment.protocol', msg.protocol_filename)
+        newConfig.set('simulator.dataset_filename', msg.simulator_dataset_filename)
+        newConfig.set('simulator.start_time', msg.simulator_start_time)
+        newConfig.set('data_source', msg.data_source)
         
-        return newParams
+        return newConfig
       })
     })
 
@@ -232,7 +232,7 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
   }
 
   return (
-    <ParameterContext.Provider
+    <SessionConfigContext.Provider
       value={{
         metadata,
         pipeline,
@@ -255,14 +255,14 @@ export const ParameterProvider: React.FC<ParameterProviderProps> = ({ children }
       }}
     >
       {children}
-    </ParameterContext.Provider>
+    </SessionConfigContext.Provider>
   )
 }
 
-export const useParameters = () => {
-  const context = useContext(ParameterContext)
+export const useSessionConfig = () => {
+  const context = useContext(SessionConfigContext)
   if (!context) {
-    throw new Error('useParameters must be used within a ParameterProvider')
+    throw new Error('useSessionConfig must be used within a SessionConfigProvider')
   }
   return context
 }

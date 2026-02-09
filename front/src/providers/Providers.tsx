@@ -2,7 +2,7 @@ import React from 'react'
 import { ThemeProvider } from 'styled-components'
 import theme from 'styles/theme'
 
-import { ParameterProvider } from './ParameterProvider'
+import { SessionConfigProvider } from './SessionConfigProvider'
 import { ProjectProvider } from './ProjectProvider'
 import { PipelineConfigProvider } from './PipelineConfigProvider'
 import { PipelineProvider } from './PipelineProvider'
@@ -25,7 +25,7 @@ interface Props {
 const Providers: React.FC<Props> = ({ children }) => {
   return (
     <ThemeProvider theme={theme}>
-      <ParameterProvider>
+      <SessionConfigProvider>
         <ProjectProvider>
           <PipelineConfigProvider>
             <PipelineProvider>
@@ -53,7 +53,7 @@ const Providers: React.FC<Props> = ({ children }) => {
             </PipelineProvider>
           </PipelineConfigProvider>
         </ProjectProvider>
-      </ParameterProvider>
+      </SessionConfigProvider>
     </ThemeProvider>
   )
 }

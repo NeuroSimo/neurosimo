@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
 import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
-import { useParameters } from 'providers/ParameterProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { PipelineConfigContext } from 'providers/PipelineConfigProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { CommittableTextInput } from 'components/CommittableTextInput'
@@ -50,7 +50,7 @@ const ProtocolSelect = styled(Select)`
 
 export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList } = useContext(PipelineConfigContext)
-  const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useParameters()
+  const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject } = useContext(ProjectContext)
   const [projects, setProjects] = useState<string[]>([])

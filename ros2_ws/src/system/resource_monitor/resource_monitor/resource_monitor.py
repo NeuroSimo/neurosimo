@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from system_interfaces.msg import DiskStatus, ComponentHealth
+from system_interfaces.msg import DiskStatus, ComponentHealth, GlobalConfig
 from std_msgs.msg import Empty
 from .utils import parse_size_string
 
@@ -20,16 +20,12 @@ class ResourceMonitorNode(Node):
         super().__init__('resource_monitor')
         self.logger = self.get_logger()
 
-        # Declare ROS parameters (no defaults - will fail if not provided)
-        self.declare_parameter('disk.warning_threshold', '')
-        self.declare_parameter('disk.error_threshold', '')
+        self.logger.info('Initializing resource monitor...')
 
-        # Get parameter values and parse them to bytes
-        warning_threshold_str = self.get_parameter('disk.warning_threshold').value
-        error_threshold_str = self.get_parameter('disk.error_threshold').value
-
-        self._warning_threshold_bytes = parse_size_string(warning_threshold_str)
-        self._error_threshold_bytes = parse_size_string(error_threshold_str)
+        # Initialize thresholds (will be set when global config is received)
+        self._warning_threshold_bytes = 0
+        self._error_threshold_bytes = 0
+        self._config_received = False
 
         # Create latched publisher for disk status
         status_qos = QoSProfile(
@@ -63,20 +59,59 @@ class ResourceMonitorNode(Node):
         # Create timer for heartbeat publishing (2 Hz)
         self._heartbeat_timer = self.create_timer(HEARTBEAT_INTERVAL_SEC, self._publish_heartbeat)
 
+        # Create subscribers
+        config_qos = QoSProfile(
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
+        self._global_config_subscription = self.create_subscription(
+            GlobalConfig,
+            '/global_configurator/config',
+            self._handle_global_config,
+            config_qos
+        )
+
         # Publish initial READY state
         self._publish_health_status(ComponentHealth.READY, '')
 
-        # Perform initial check immediately
-        self._check_disk_space()
+    def _handle_global_config(self, msg):
+        """Handle global config updates."""
+        self.logger.info('Received global configuration update')
 
-        self.logger.info(
-            f'Resource Monitor initialized: monitoring {MONITORED_PATH}, '
-            f'warning_threshold="{warning_threshold_str}" ({self._warning_threshold_bytes / (1024**3):.1f} GiB), '
-            f'error_threshold="{error_threshold_str}" ({self._error_threshold_bytes / (1024**3):.1f} GiB)'
-        )
+        # Parse threshold strings to bytes
+        warning_threshold_str = msg.disk_warning_threshold
+        error_threshold_str = msg.disk_error_threshold
+
+        try:
+            self._warning_threshold_bytes = parse_size_string(warning_threshold_str)
+            self._error_threshold_bytes = parse_size_string(error_threshold_str)
+            self._config_received = True
+
+            self.logger.info(
+                f'Resource Monitor configured: monitoring {MONITORED_PATH}, '
+                f'warning_threshold="{warning_threshold_str}" ({self._warning_threshold_bytes / (1024**3):.1f} GiB), '
+                f'error_threshold="{error_threshold_str}" ({self._error_threshold_bytes / (1024**3):.1f} GiB)'
+            )
+
+            # Perform immediate disk check with new thresholds
+            self._check_disk_space()
+
+        except ValueError as e:
+            self.logger.error(f'Failed to parse disk thresholds: {e}')
+            self._publish_health_status(ComponentHealth.ERROR, f'Invalid disk threshold configuration')
 
     def _check_disk_space(self):
         """Check disk space and publish status."""
+        # Don't check if config hasn't been received yet
+        if not self._config_received:
+            # Throttle to once every 5 seconds
+            self.get_logger().info(
+                'Waiting for global configuration before checking disk space...',
+                throttle_duration_sec=5.0
+            )
+            return
+
         usage = shutil.disk_usage(MONITORED_PATH)
         is_ok = usage.free >= self._error_threshold_bytes
 

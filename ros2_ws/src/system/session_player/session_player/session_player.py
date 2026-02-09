@@ -6,7 +6,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
 from project_interfaces.srv import GetRecordingInfo
 from project_interfaces.msg import RecordingInfo
-from std_msgs.msg import String
+from system_interfaces.msg import GlobalConfig
 
 import os
 import json
@@ -30,10 +30,10 @@ class SessionPlayerNode(Node):
             depth=1
         )
 
-        self._active_project_subscriber = self.create_subscription(
-            String,
-            '/projects/active',
-            self._handle_set_active_project,
+        self._global_config_subscriber = self.create_subscription(
+            GlobalConfig,
+            '/global_configurator/config',
+            self._handle_global_config,
             qos_persist_latest,
             callback_group=self.callback_group
         )
@@ -48,9 +48,15 @@ class SessionPlayerNode(Node):
 
         self.logger.info('Session Player initialized')
 
-    def _handle_set_active_project(self, msg):
-        """Handle active project changes."""
-        self._active_project = msg.data
+    def _handle_global_config(self, msg):
+        """Handle global config changes."""
+        project_name = msg.active_project
+        
+        # Only process if active project has actually changed
+        if project_name == self._active_project:
+            return
+        
+        self._active_project = project_name
         self._recordings_directory = f'/app/projects/{self._active_project}/recordings'
         self.logger.info(f'Active project set to: {self._active_project}')
         self.logger.info(f'Recordings directory: {self._recordings_directory}')

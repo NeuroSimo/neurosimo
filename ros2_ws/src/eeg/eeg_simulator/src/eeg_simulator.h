@@ -14,7 +14,6 @@
 #include "eeg_interfaces/srv/start_streaming.hpp"
 #include "eeg_interfaces/srv/stop_streaming.hpp"
 
-#include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 
 #include "project_interfaces/msg/dataset_info.hpp"
@@ -25,6 +24,7 @@
 
 #include "system_interfaces/msg/component_health.hpp"
 #include "system_interfaces/msg/data_source_state.hpp"
+#include "system_interfaces/msg/global_config.hpp"
 #include "system_interfaces/srv/abort_session.hpp"
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
@@ -38,7 +38,7 @@ private:
   void publish_heartbeat();
   void publish_health_status(uint8_t health_level, const std::string& message);
 
-  void handle_set_active_project(const std::shared_ptr<std_msgs::msg::String> msg);
+  void handle_global_config(const std::shared_ptr<system_interfaces::msg::GlobalConfig> msg);
 
   rclcpp_action::GoalResponse handle_initialize_goal(
     const rclcpp_action::GoalUUID & uuid,
@@ -101,13 +101,16 @@ private:
   std::string initialized_dataset_filename;
   double_t initialized_start_time;
 
+  /* Active project state */
+  std::string active_project_name;
+
   rclcpp::CallbackGroup::SharedPtr callback_group;
 
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
 
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
+  rclcpp::Subscription<system_interfaces::msg::GlobalConfig>::SharedPtr global_config_subscriber;
 
   std::unique_ptr<DatasetManager> dataset_manager_;
 

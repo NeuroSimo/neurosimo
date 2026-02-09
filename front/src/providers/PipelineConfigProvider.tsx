@@ -2,7 +2,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
-import { useParameters } from './ParameterProvider'
+import { useSessionConfig } from './SessionConfigProvider'
 
 export interface FilenameList extends ROSLIB.Message {
   filenames: string[]
@@ -49,7 +49,7 @@ interface PipelineConfigProviderProps {
 }
 
 export const PipelineConfigProvider: React.FC<PipelineConfigProviderProps> = ({ children }) => {
-  const { pipeline } = useParameters()
+  const { pipeline } = useSessionConfig()
 
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
   const [deciderList, setDeciderList] = useState<string[]>([])

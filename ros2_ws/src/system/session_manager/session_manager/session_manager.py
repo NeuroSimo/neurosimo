@@ -532,6 +532,9 @@ class SessionManagerNode(Node):
 
         request.preprocessor_enabled = session_config.preprocessor_enabled
 
+        # Safety configuration from global config
+        request.minimum_intertrial_interval = global_config.minimum_intertrial_interval
+
         response = self.call_service(self.decider_init_client, request, '/pipeline/decider/initialize')
 
         if response is None or not response.success:

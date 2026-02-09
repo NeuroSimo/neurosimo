@@ -41,31 +41,7 @@ void crash_handler(int sig) {
 }
 
 EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")) {
-  /* Read ROS parameter: Minimum interval between consecutive pulses (in seconds). */
-  auto minimum_intertrial_interval_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  minimum_intertrial_interval_descriptor.description = "The minimum interval between consecutive pulses (in seconds)";
-  minimum_intertrial_interval_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE;
-  /* XXX: Have to provide 0.0 as a default value because the parameter server does not interpret NULL correctly
-          when the parameter is a double. */
-  this->declare_parameter("minimum-intertrial-interval", 0.0, minimum_intertrial_interval_descriptor);
-  this->get_parameter("minimum-intertrial-interval", this->minimum_intertrial_interval);
-
-  /* Log the configuration. */
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "Configuration:");
-  RCLCPP_INFO(this->get_logger(), "  Minimum pulse interval: %.1f (s)", this->minimum_intertrial_interval);
-
-  /* Validate the minimum pulse interval. */
-  if (this->minimum_intertrial_interval <= 0) {
-    RCLCPP_INFO(this->get_logger(), " ");
-    RCLCPP_ERROR(this->get_logger(), "Invalid minimum pulse interval: %.1f (s)", this->minimum_intertrial_interval);
-    exit(1);
-  }
-
-  if (this->minimum_intertrial_interval < 0.5) {
-    RCLCPP_INFO(this->get_logger(), " ");
-    RCLCPP_WARN(this->get_logger(), "Note: Minimum pulse interval is very low: %.1f (s)", this->minimum_intertrial_interval);
-  }
+  RCLCPP_INFO(this->get_logger(), "Initializing decider...");
 
   /* Publisher for heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
@@ -163,6 +139,20 @@ void EegDecider::handle_initialize_decider(
     return;
   }
 
+  // Set safety configuration from request
+  this->minimum_intertrial_interval = request->minimum_intertrial_interval;
+
+  // Validate the minimum pulse interval
+  if (this->minimum_intertrial_interval <= 0) {
+    RCLCPP_ERROR(this->get_logger(), "Invalid minimum intertrial interval: %.1f (s)", this->minimum_intertrial_interval);
+    response->success = false;
+    return;
+  }
+
+  if (this->minimum_intertrial_interval < 0.5) {
+    RCLCPP_WARN(this->get_logger(), "Note: Minimum intertrial interval is very low: %.1f (s)", this->minimum_intertrial_interval);
+  }
+
   // Set enabled state
   this->is_enabled = request->enabled;
 
@@ -254,6 +244,10 @@ void EegDecider::handle_initialize_decider(
   RCLCPP_INFO(this->get_logger(), "  - Sampling frequency: %s%d%s Hz", bold_on.c_str(), request->stream_info.sampling_frequency, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "  - # of EEG channels: %s%d%s", bold_on.c_str(), request->stream_info.num_eeg_channels, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), "  - # of EMG channels: %s%d%s", bold_on.c_str(), request->stream_info.num_emg_channels, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "Safety configuration:");
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "  - Minimum intertrial interval: %s%.1f%s (s)", bold_on.c_str(), this->minimum_intertrial_interval, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Perform warm-up if requested by the Python module */

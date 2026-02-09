@@ -14,5 +14,8 @@ eeg_interfaces/StreamInfo stream_info
 
 # Metadata
 string subject_id
+
+# Safety configuration
+float64 minimum_intertrial_interval
 ---
 bool success

@@ -6,10 +6,6 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
-from project_interfaces.srv import (
-    ListProjects,
-    SetActiveProject,
-)
 from system_interfaces.srv import GetSessionConfig
 from system_interfaces.msg import SessionConfig
 from project_interfaces.msg import FilenameList
@@ -17,7 +13,7 @@ from project_interfaces.msg import FilenameList
 from std_msgs.msg import String
 from rcl_interfaces.msg import SetParametersResult
 
-from .project_manager import ProjectManager
+from .session_storage_manager import SessionStorageManager
 from .directory_watcher import DirectoryWatcher
 
 
@@ -27,11 +23,14 @@ class SessionConfiguratorNode(Node):
         self.logger = self.get_logger()
         self.callback_group = ReentrantCallbackGroup()
 
-        # Initialize project manager
-        self.project_manager = ProjectManager(self.logger)
+        # Initialize session storage manager
+        self.storage_manager = SessionStorageManager(self.logger)
         
         # Initialize directory watcher
         self.directory_watcher = DirectoryWatcher(self.logger)
+        
+        # Track active project
+        self.active_project = None
 
         # Declare ROS2 parameters
 
@@ -66,16 +65,21 @@ class SessionConfiguratorNode(Node):
         self.declare_parameter('data_source', 'simulator')
 
         # Services
-        self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
-        self.create_service(SetActiveProject, '/projects/active/set', self.set_active_project_callback, callback_group=self.callback_group)
         self.create_service(GetSessionConfig, '/session_configurator/get_config', self.get_session_config_callback, callback_group=self.callback_group)
 
-        # Publishers
+        # Subscribers
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
-        self.active_project_publisher = self.create_publisher(String, "/projects/active", qos, callback_group=self.callback_group)
+        self.active_project_subscription = self.create_subscription(
+            String,
+            '/projects/active',
+            self.active_project_callback,
+            qos,
+            callback_group=self.callback_group
+        )
 
+        # Publishers
         self.decider_list_publisher = self.create_publisher(FilenameList, "/pipeline/decider/list", qos, callback_group=self.callback_group)
         self.preprocessor_list_publisher = self.create_publisher(FilenameList, "/pipeline/preprocessor/list", qos, callback_group=self.callback_group)
         self.presenter_list_publisher = self.create_publisher(FilenameList, "/pipeline/presenter/list", qos, callback_group=self.callback_group)
@@ -93,28 +97,18 @@ class SessionConfiguratorNode(Node):
             ("recordings", [".json"], self.recordings_list_publisher, "recordings"),
         ]
 
-        # Set active project
-        active_project = self.project_manager.get_active_project()
-        self.set_active_project(active_project)
-
         # Add parameter change callback to save changes to session state
         self.add_on_set_parameters_callback(self.parameter_change_callback)
 
-    def set_active_project(self, project_name):
-        if not project_name in self.project_manager.list_projects():
-            self.logger.error(f"Project does not exist: {project_name}")
-            return False
-
-        # Store the active project in the project state if it has changed
-        if project_name != self.project_manager.get_active_project():
-            self.project_manager.save_active_project(project_name)
-
-        # Publish active project
-        msg = String(data=project_name)
-        self.active_project_publisher.publish(msg)
-
-        # Load session state for the project
-        session_state = self.project_manager.get_session_state_for_project(project_name)
+    def active_project_callback(self, msg):
+        """Handle active project changes from global configurator."""
+        project_name = msg.data
+        self.logger.info(f"Active project changed to: {project_name}")
+        
+        self.active_project = project_name
+        
+        # Load session state for the new project
+        session_state = self.storage_manager.get_session_state_for_project(project_name)
 
         # Set ROS2 parameters from the loaded state
         self.set_parameters([
@@ -137,11 +131,9 @@ class SessionConfiguratorNode(Node):
         # Publish the lists of modules for the new project and setup watches
         self.publish_and_watch_directories(project_name)
 
-        return True
-
     def list_files(self, project_name, subdirectory, file_extensions):
         """List all files with specified extensions in the subdirectory of the specified project."""
-        module_dir = os.path.join(self.project_manager.PROJECTS_ROOT, project_name, subdirectory)
+        module_dir = os.path.join(self.storage_manager.PROJECTS_ROOT, project_name, subdirectory)
 
         if not os.path.exists(module_dir):
             self.logger.warning(f"Directory does not exist: {module_dir}")
@@ -186,7 +178,7 @@ class SessionConfiguratorNode(Node):
             self.publish_filename_list(project_name, subdirectory, file_extensions, publisher, component_name)
             
             # Setup watch for the directory
-            directory_path = os.path.join(self.project_manager.PROJECTS_ROOT, project_name, subdirectory)
+            directory_path = os.path.join(self.storage_manager.PROJECTS_ROOT, project_name, subdirectory)
             
             # Create callback for this specific directory
             def create_callback(proj, subdir, exts, pub, comp):
@@ -197,33 +189,12 @@ class SessionConfiguratorNode(Node):
 
     # Service callbacks
 
-    def list_projects_callback(self, request, response):
-        try:
-            response.projects = self.project_manager.list_projects()
-            response.success = True
-            self.logger.info("Projects successfully listed.")
-        except Exception as e:
-            self.logger.error(f"Error listing projects: {e}")
-            response.success = False
-        return response
-
-    def set_active_project_callback(self, request, response):
-        project = request.project
-
-        success = self.set_active_project(project)
-        if not success:
-            response.success = False
-            return response
-
-        response.success = True
-        return response
-
     def get_session_config_callback(self, request, response):
         """Return the current session configuration."""
         # Get current parameter values
         config = SessionConfig()
 
-        config.project_name = self.project_manager.get_active_project()
+        config.project_name = self.active_project if self.active_project else ''
         config.subject_id = self.get_parameter('subject_id').get_parameter_value().string_value
         config.notes = self.get_parameter('notes').get_parameter_value().string_value
 
@@ -244,23 +215,25 @@ class SessionConfiguratorNode(Node):
         response.config = config
         response.success = True
  
-        self.logger.info(f"Returned session config: subject={config.subject_id}, data_source={config.data_source}")
+        self.logger.info(f"Returned session config: project={config.project_name}, subject={config.subject_id}, data_source={config.data_source}")
 
         return response
 
     def parameter_change_callback(self, params):
         """Callback to handle session parameter changes and save them to session state."""
         try:
-            active_project = self.project_manager.get_active_project()
+            if not self.active_project:
+                self.logger.warning("No active project set, cannot save session state")
+                return SetParametersResult(successful=True)
 
-            session_state = self.project_manager.load_session_state(active_project)
+            session_state = self.storage_manager.load_session_state(self.active_project)
 
             for param in params:
                 session_state[param.name] = param.value
 
             # Save the updated session state
-            self.project_manager.save_session_state(active_project, session_state)
-            self.logger.info(f"Updated session state for project '{active_project}' with parameter changes")
+            self.storage_manager.save_session_state(self.active_project, session_state)
+            self.logger.info(f"Updated session state for project '{self.active_project}' with parameter changes")
 
         except Exception as e:
             self.logger.error(f"Error handling parameter changes: {e}")

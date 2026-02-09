@@ -253,6 +253,9 @@ interface GlobalConfigValues {
   // Disk Space Monitoring Configuration
   diskWarningThreshold: number
   diskErrorThreshold: number
+  
+  // System Configuration
+  locale: string
 }
 
 const emptyConfig: GlobalConfigValues = {
@@ -274,9 +277,31 @@ const emptyConfig: GlobalConfigValues = {
   // Disk Space Monitoring Configuration
   diskWarningThreshold: 0,
   diskErrorThreshold: 0,
+  
+  // System Configuration
+  locale: '',
 }
 
-type TabType = 'eeg' | 'labjack' | 'safety' | 'disk'
+type TabType = 'eeg' | 'labjack' | 'safety' | 'disk' | 'system'
+
+const COMMON_LOCALES = [
+  { value: 'zh-CN', label: 'Chinese Simplified (简体中文)' },
+  { value: 'da-DK', label: 'Danish (Dansk)' },
+  { value: 'nl-NL', label: 'Dutch (Nederlands)' },
+  { value: 'en-GB', label: 'English (UK)' },
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'fi-FI', label: 'Finnish (Suomi)' },
+  { value: 'fr-FR', label: 'French (Français)' },
+  { value: 'de-DE', label: 'German (Deutsch)' },
+  { value: 'it-IT', label: 'Italian (Italiano)' },
+  { value: 'ja-JP', label: 'Japanese (日本語)' },
+  { value: 'ko-KR', label: 'Korean (한국어)' },
+  { value: 'nb-NO', label: 'Norwegian (Norsk)' },
+  { value: 'pl-PL', label: 'Polish (Polski)' },
+  { value: 'ru-RU', label: 'Russian (Русский)' },
+  { value: 'es-ES', label: 'Spanish (Español)' },
+  { value: 'sv-SE', label: 'Swedish (Svenska)' },
+]
 
 export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
   isOpen,
@@ -314,6 +339,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
         maximumTimingError: globalConfig.maximumTimingError,
         diskWarningThreshold: parseDiskThreshold(globalConfig.diskWarningThreshold),
         diskErrorThreshold: parseDiskThreshold(globalConfig.diskErrorThreshold),
+        locale: globalConfig.locale,
       }
       setConfig(loadedConfig)
       setInitialConfig(loadedConfig)
@@ -356,6 +382,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
       maximumTimingError: config.maximumTimingError,
       diskWarningThreshold: `${config.diskWarningThreshold}GiB`,
       diskErrorThreshold: `${config.diskErrorThreshold}GiB`,
+      locale: config.locale,
     }, () => {
       console.log('Global config saved successfully')
     })
@@ -429,6 +456,9 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
           </Tab>
           <Tab active={activeTab === 'disk'} onClick={() => setActiveTab('disk')} type="button">
             Disk Space
+          </Tab>
+          <Tab active={activeTab === 'system'} onClick={() => setActiveTab('system')} type="button">
+            System
           </Tab>
         </TabContainer>
 
@@ -583,6 +613,26 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 value={config.diskErrorThreshold}
                 onChange={(e) => updateConfig('diskErrorThreshold', parseInt(e.target.value))}
               />
+            </InputGroup>
+              </Section>
+            )}
+
+            {activeTab === 'system' && (
+              <Section>
+            
+            <InputGroup>
+              <Label htmlFor="locale">Locale (date/time format):</Label>
+              <Select
+                id="locale"
+                value={config.locale}
+                onChange={(e) => updateConfig('locale', e.target.value)}
+              >
+                {COMMON_LOCALES.map((loc) => (
+                  <option key={loc.value} value={loc.value}>
+                    {loc.label}
+                  </option>
+                ))}
+              </Select>
             </InputGroup>
               </Section>
             )}

@@ -46,6 +46,9 @@ class GlobalConfiguratorNode(Node):
         # Disk Space Monitoring Configuration
         self.declare_parameter('disk_warning_threshold', global_config['disk_warning_threshold'])
         self.declare_parameter('disk_error_threshold', global_config['disk_error_threshold'])
+        
+        # System Configuration
+        self.declare_parameter('locale', global_config['locale'])
 
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
@@ -99,6 +102,9 @@ class GlobalConfiguratorNode(Node):
         # Disk Space Monitoring Configuration
         config.disk_warning_threshold = global_config.get('disk_warning_threshold', '100GiB')
         config.disk_error_threshold = global_config.get('disk_error_threshold', '50GiB')
+        
+        # System Configuration
+        config.locale = global_config.get('locale', 'en-US')
         
         self.global_config_publisher.publish(config)
 

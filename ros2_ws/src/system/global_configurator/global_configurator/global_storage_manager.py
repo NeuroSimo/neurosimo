@@ -57,6 +57,8 @@ class GlobalStorageManager:
             # Disk Space Monitoring Configuration
             "disk_warning_threshold": '100GiB',
             "disk_error_threshold": '50GiB',
+            # System Configuration
+            "locale": 'en-US',
         }
         self.save_global_config(config)
         return config
@@ -70,7 +72,8 @@ class GlobalStorageManager:
             "simulate_labjack",
             "minimum_intertrial_interval", "maximum_loopback_latency",
             "maximum_timing_error",
-            "disk_warning_threshold", "disk_error_threshold"
+            "disk_warning_threshold", "disk_error_threshold",
+            "locale"
         ]
         for key in required_keys:
             if key not in config:

@@ -16,6 +16,7 @@ interface GlobalConfigContextType {
   maximumTimingError: number
   diskWarningThreshold: string
   diskErrorThreshold: string
+  locale: string
   setActiveProject: (project: string, callback?: () => void) => Promise<void>
   setGlobalConfig: (config: Partial<Omit<GlobalConfigContextType, 'setActiveProject' | 'setGlobalConfig'>>, callback?: () => void) => Promise<void>
 }
@@ -38,6 +39,7 @@ const defaultGlobalConfigState: GlobalConfigContextType = {
   maximumTimingError: 0,
   diskWarningThreshold: '',
   diskErrorThreshold: '',
+  locale: '',
   setActiveProject: asyncNoop,
   setGlobalConfig: asyncNoop,
 }
@@ -62,6 +64,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     maximumTimingError: number
     diskWarningThreshold: string
     diskErrorThreshold: string
+    locale: string
   }>({
     activeProject: '',
     eegPort: 0,
@@ -75,6 +78,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     maximumTimingError: 0,
     diskWarningThreshold: '',
     diskErrorThreshold: '',
+    locale: '',
   })
 
   useEffect(() => {
@@ -101,6 +105,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         maximumTimingError: msg.maximum_timing_error,
         diskWarningThreshold: msg.disk_warning_threshold,
         diskErrorThreshold: msg.disk_error_threshold,
+        locale: msg.locale,
       })
     })
 
@@ -138,6 +143,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     if (config.maximumTimingError !== undefined) parameters.push({ name: 'maximum_timing_error', value: config.maximumTimingError })
     if (config.diskWarningThreshold !== undefined) parameters.push({ name: 'disk_warning_threshold', value: config.diskWarningThreshold })
     if (config.diskErrorThreshold !== undefined) parameters.push({ name: 'disk_error_threshold', value: config.diskErrorThreshold })
+    if (config.locale !== undefined) parameters.push({ name: 'locale', value: config.locale })
     
     setParametersRos(parameters, callback || noop, 'global_configurator')
   }
@@ -157,6 +163,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         maximumTimingError: globalConfig.maximumTimingError,
         diskWarningThreshold: globalConfig.diskWarningThreshold,
         diskErrorThreshold: globalConfig.diskErrorThreshold,
+        locale: globalConfig.locale,
         setActiveProject,
         setGlobalConfig: setGlobalConfigParams,
       }}

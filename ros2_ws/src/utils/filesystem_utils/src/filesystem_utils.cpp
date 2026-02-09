@@ -45,55 +45,5 @@ bool change_working_directory(const std::string& path, rclcpp::Logger logger) {
   return true;
 }
 
-std::vector<std::string> list_files_with_extensions(
-  const std::string& directory,
-  const std::vector<std::string>& extensions,
-  rclcpp::Logger logger) {
-  
-  std::vector<std::string> files;
-  
-  /* List all files with the given extensions in the directory. */
-  std::error_code ec;
-  try {
-    for (const auto& entry : std::filesystem::directory_iterator(directory, ec)) {
-      if (ec) {
-        RCLCPP_WARN(logger, "Error accessing directory %s: %s", 
-          directory.c_str(), ec.message().c_str());
-        return files;  // Return empty vector
-      }
-      
-      std::error_code entry_ec;
-      if (entry.is_regular_file(entry_ec) && !entry_ec) {
-        std::string file_extension = entry.path().extension().string();
-        
-        /* Check if the file has one of the specified extensions. */
-        for (const auto& ext : extensions) {
-          if (file_extension == ext) {
-            files.push_back(entry.path().stem().string());
-            break;
-          }
-        }
-      }
-    }
-  } catch (const std::filesystem::filesystem_error& e) {
-    RCLCPP_WARN(logger, "Filesystem error while listing files in %s: %s", 
-      directory.c_str(), e.what());
-    return files;  // Return whatever we managed to collect
-  }
-  
-  /* Sort files alphabetically. */
-  std::sort(files.begin(), files.end());
-  
-  return files;
-}
-
-std::vector<std::string> list_files_with_extension(
-  const std::string& directory,
-  const std::string& extension,
-  rclcpp::Logger logger) {
-  
-  return list_files_with_extensions(directory, {extension}, logger);
-}
-
 } // namespace filesystem_utils
 

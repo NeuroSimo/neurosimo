@@ -5,10 +5,6 @@ import styled from 'styled-components'
 import './App.css'
 
 import Providers from './providers/Providers'
-import { EegSimulatorProvider } from './providers/EegSimulatorProvider'
-import { HealthProvider } from './providers/HealthProvider'
-import { EegStreamProvider } from './providers/EegStreamProvider'
-import { StatisticsProvider } from './providers/StatisticsProvider'
 
 import { HealthcheckMessageDisplay } from 'components/HealthcheckMessageDisplay'
 import { HealthDisplay } from 'components/HealthDisplay'

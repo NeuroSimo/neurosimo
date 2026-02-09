@@ -257,7 +257,6 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
-      - SIMULATE_LABJACK
     volumes:
       # XXX: This is a workaround to allow access to LabJack devices over reconnects. The correct
       #   solution would likely involve modifying the LabJack installation scripts to work properly

@@ -557,36 +557,36 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 id="minimumIntertrialInterval"
                 type="number"
                 step="0.1"
-                value={config.minimumIntertrialInterval}
+                value={config.minimumIntertrialInterval.toFixed(1)}
                 onChange={(e) => updateConfig('minimumIntertrialInterval', parseFloat(e.target.value))}
               />
             </InputGroup>
 
             <InputGroup>
               <LabelRow>
-                <Label htmlFor="maximumLoopbackLatency">Maximum Loopback Latency (seconds):</Label>
+                <Label htmlFor="maximumLoopbackLatency">Maximum Loopback Latency (milliseconds):</Label>
                 <InfoTooltip text="Exceeding this value prevents stimulation" />
               </LabelRow>
               <Input
                 id="maximumLoopbackLatency"
                 type="number"
-                step="0.001"
-                value={config.maximumLoopbackLatency}
-                onChange={(e) => updateConfig('maximumLoopbackLatency', parseFloat(e.target.value))}
+                step="0.1"
+                value={(config.maximumLoopbackLatency * 1000).toFixed(1)}
+                onChange={(e) => updateConfig('maximumLoopbackLatency', parseFloat(e.target.value) / 1000)}
               />
             </InputGroup>
 
             <InputGroup>
               <LabelRow>
-                <Label htmlFor="maximumTimingError">Maximum Timing Error (seconds):</Label>
+                <Label htmlFor="maximumTimingError">Maximum Timing Error (milliseconds):</Label>
                 <InfoTooltip text="Maximum timing error for triggering" />
               </LabelRow>
               <Input
                 id="maximumTimingError"
                 type="number"
-                step="0.001"
-                value={config.maximumTimingError}
-                onChange={(e) => updateConfig('maximumTimingError', parseFloat(e.target.value))}
+                step="0.1"
+                value={(config.maximumTimingError * 1000).toFixed(1)}
+                onChange={(e) => updateConfig('maximumTimingError', parseFloat(e.target.value) / 1000)}
               />
             </InputGroup>
               </Section>

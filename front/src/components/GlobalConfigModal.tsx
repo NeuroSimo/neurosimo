@@ -374,9 +374,13 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
   }
 
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
-    // Prevent form submission on Enter key
+    // Unfocus field on Enter key
     if (e.key === 'Enter') {
       e.preventDefault()
+      const target = e.target as HTMLElement
+      if (target && target.blur) {
+        target.blur()
+      }
     }
   }
 

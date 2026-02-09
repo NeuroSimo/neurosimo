@@ -194,7 +194,6 @@ class SessionConfiguratorNode(Node):
         # Get current parameter values
         config = SessionConfig()
 
-        config.project_name = self.active_project if self.active_project else ''
         config.subject_id = self.get_parameter('subject_id').get_parameter_value().string_value
         config.notes = self.get_parameter('notes').get_parameter_value().string_value
 
@@ -215,7 +214,7 @@ class SessionConfiguratorNode(Node):
         response.config = config
         response.success = True
  
-        self.logger.info(f"Returned session config: project={config.project_name}, subject={config.subject_id}, data_source={config.data_source}")
+        self.logger.info(f"Returned session config: subject={config.subject_id}, data_source={config.data_source}")
 
         return response
 

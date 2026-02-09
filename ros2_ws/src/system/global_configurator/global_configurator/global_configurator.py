@@ -9,6 +9,8 @@ from project_interfaces.srv import (
     ListProjects,
     SetActiveProject,
 )
+from system_interfaces.srv import GetGlobalConfig
+from system_interfaces.msg import GlobalConfig
 
 from std_msgs.msg import String
 
@@ -32,6 +34,7 @@ class GlobalConfiguratorNode(Node):
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
         self.create_service(SetActiveProject, '/projects/active/set', self.set_active_project_callback, callback_group=self.callback_group)
+        self.create_service(GetGlobalConfig, '/global_configurator/get_config', self.get_global_config_callback, callback_group=self.callback_group)
 
         # Publishers
         qos = QoSProfile(depth=1,
@@ -83,6 +86,18 @@ class GlobalConfiguratorNode(Node):
             return response
 
         response.success = True
+        return response
+
+    def get_global_config_callback(self, request, response):
+        """Return the current global configuration."""
+        config = GlobalConfig()
+        config.active_project = self.get_parameter('active_project').get_parameter_value().string_value
+
+        response.config = config
+        response.success = True
+        
+        self.logger.info(f"Returned global config: active_project={config.active_project}")
+        
         return response
 
 def main(args=None):

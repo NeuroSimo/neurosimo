@@ -171,15 +171,4 @@ sg docker -c "./scripts/build-neurosimo"
 echo "Installing desktop launcher..."
 ./scripts/install-neurosimo-desktop
 
-echo "Installation complete. Opening .env file for configuration..."
-
-# Check if gedit is available and we're in a graphical environment
-if command -v gedit &> /dev/null && [ -n "$DISPLAY" ]; then
-    echo "Opening .env file in gedit for editing..."
-    echo "Please modify the .env file to your needs, then save and close the editor."
-    gedit .env
-    echo "Configuration complete!"
-else
-    echo "Please modify the .env file to your needs."
-    echo "You can edit it with: gedit .env"
-fi
+echo "Installation complete."

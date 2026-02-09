@@ -14,6 +14,7 @@ interface GlobalConfigContextType {
   minimumIntertrialInterval: number
   maximumLoopbackLatency: number
   maximumTimingError: number
+  triggerToPulseDelay: number
   diskWarningThreshold: string
   diskErrorThreshold: string
   locale: string
@@ -37,6 +38,7 @@ const defaultGlobalConfigState: GlobalConfigContextType = {
   minimumIntertrialInterval: 0,
   maximumLoopbackLatency: 0,
   maximumTimingError: 0,
+  triggerToPulseDelay: 0,
   diskWarningThreshold: '',
   diskErrorThreshold: '',
   locale: '',
@@ -62,6 +64,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     minimumIntertrialInterval: number
     maximumLoopbackLatency: number
     maximumTimingError: number
+    triggerToPulseDelay: number
     diskWarningThreshold: string
     diskErrorThreshold: string
     locale: string
@@ -76,6 +79,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     minimumIntertrialInterval: 0,
     maximumLoopbackLatency: 0,
     maximumTimingError: 0,
+    triggerToPulseDelay: 0,
     diskWarningThreshold: '',
     diskErrorThreshold: '',
     locale: '',
@@ -103,6 +107,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         minimumIntertrialInterval: msg.minimum_intertrial_interval,
         maximumLoopbackLatency: msg.maximum_loopback_latency,
         maximumTimingError: msg.maximum_timing_error,
+        triggerToPulseDelay: msg.trigger_to_pulse_delay,
         diskWarningThreshold: msg.disk_warning_threshold,
         diskErrorThreshold: msg.disk_error_threshold,
         locale: msg.locale,
@@ -141,6 +146,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     if (config.minimumIntertrialInterval !== undefined) parameters.push({ name: 'minimum_intertrial_interval', value: config.minimumIntertrialInterval })
     if (config.maximumLoopbackLatency !== undefined) parameters.push({ name: 'maximum_loopback_latency', value: config.maximumLoopbackLatency })
     if (config.maximumTimingError !== undefined) parameters.push({ name: 'maximum_timing_error', value: config.maximumTimingError })
+    if (config.triggerToPulseDelay !== undefined) parameters.push({ name: 'trigger_to_pulse_delay', value: config.triggerToPulseDelay })
     if (config.diskWarningThreshold !== undefined) parameters.push({ name: 'disk_warning_threshold', value: config.diskWarningThreshold })
     if (config.diskErrorThreshold !== undefined) parameters.push({ name: 'disk_error_threshold', value: config.diskErrorThreshold })
     if (config.locale !== undefined) parameters.push({ name: 'locale', value: config.locale })
@@ -161,6 +167,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         minimumIntertrialInterval: globalConfig.minimumIntertrialInterval,
         maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
         maximumTimingError: globalConfig.maximumTimingError,
+        triggerToPulseDelay: globalConfig.triggerToPulseDelay,
         diskWarningThreshold: globalConfig.diskWarningThreshold,
         diskErrorThreshold: globalConfig.diskErrorThreshold,
         locale: globalConfig.locale,

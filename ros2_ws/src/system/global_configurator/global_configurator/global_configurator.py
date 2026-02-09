@@ -40,8 +40,11 @@ class GlobalConfiguratorNode(Node):
         
         # Safety Configuration
         self.declare_parameter('minimum_intertrial_interval', global_config['minimum_intertrial_interval'])
+
+        # Timing Configuration
         self.declare_parameter('maximum_loopback_latency', global_config['maximum_loopback_latency'])
         self.declare_parameter('maximum_timing_error', global_config['maximum_timing_error'])
+        self.declare_parameter('trigger_to_pulse_delay', global_config['trigger_to_pulse_delay'])
         
         # Disk Space Monitoring Configuration
         self.declare_parameter('disk_warning_threshold', global_config['disk_warning_threshold'])
@@ -96,8 +99,11 @@ class GlobalConfiguratorNode(Node):
         
         # Safety Configuration
         config.minimum_intertrial_interval = global_config.get('minimum_intertrial_interval', 2.0)
+
+        # Timing Configuration
         config.maximum_loopback_latency = global_config.get('maximum_loopback_latency', 0.005)
         config.maximum_timing_error = global_config.get('maximum_timing_error', 0.0)
+        config.trigger_to_pulse_delay = global_config.get('trigger_to_pulse_delay', 0.0)
         
         # Disk Space Monitoring Configuration
         config.disk_warning_threshold = global_config.get('disk_warning_threshold', '100GiB')

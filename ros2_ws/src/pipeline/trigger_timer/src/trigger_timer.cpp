@@ -22,39 +22,7 @@ const char* tms_trigger_fio = "FIO4";
 const char* loopback_trigger_fio = "FIO5";
 
 TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger("trigger_timer")) {
-  /* Read ROS parameter: Maximum timing error */
-  auto maximum_timing_error_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  maximum_timing_error_descriptor.description = "The maximum triggering error (in seconds)";
-  this->declare_parameter("maximum-timing-error", 0.0, maximum_timing_error_descriptor);
-  this->get_parameter("maximum-timing-error", this->maximum_timing_error);
-
-  /* Check that the maximum timing error is non-negative. */
-  if (this->maximum_timing_error < 0.0) {
-    RCLCPP_ERROR(this->get_logger(), "Maximum timing error must be non-negative.");
-    rclcpp::shutdown();
-    return;
-  }
-
-  /* Read ROS parameter: LabJack simulation mode */
-  auto simulate_labjack_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  simulate_labjack_descriptor.description = "Simulate LabJack device when hardware is not available";
-  simulate_labjack_descriptor.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
-  this->declare_parameter("simulate-labjack", false, simulate_labjack_descriptor);
-  this->get_parameter("simulate-labjack", this->simulate_labjack);
-
-  /* Read ROS parameter: maximum loopback latency */
-  auto maximum_loopback_latency_descriptor = rcl_interfaces::msg::ParameterDescriptor{};
-  maximum_loopback_latency_descriptor.description = "The maximum loopback latency (in seconds) before stimulation is prevented";
-  this->declare_parameter("maximum-loopback-latency", 0.005, maximum_loopback_latency_descriptor);
-  this->get_parameter("maximum-loopback-latency", this->maximum_loopback_latency);
-
-  /* Log the configuration. */
-  RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "Configuration:");
-  RCLCPP_INFO(this->get_logger(), "  Maximum timing error (ms): %.1f", 1000 * this->maximum_timing_error);
-  RCLCPP_INFO(this->get_logger(), "  Maximum loopback latency (ms): %.1f", 1000 * this->maximum_loopback_latency);
-  RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
-  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "Initializing trigger timer...");
 
   /* Subscriber for EEG raw data. */
   this->eeg_raw_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
@@ -398,6 +366,37 @@ void TriggerTimer::handle_initialize_trigger_timer(
   RCLCPP_INFO(this->get_logger(), "Initializing trigger timer for session");
 
   reset_state();
+
+  /* Set configuration from request */
+  this->maximum_timing_error = request->maximum_timing_error;
+  this->maximum_loopback_latency = request->maximum_loopback_latency;
+  this->simulate_labjack = request->simulate_labjack;
+
+  /* Validate the maximum timing error is non-negative */
+  if (this->maximum_timing_error < 0.0) {
+    RCLCPP_ERROR(this->get_logger(), "Maximum timing error must be non-negative");
+    response->success = false;
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                 "Invalid configuration: maximum timing error must be non-negative");
+    return;
+  }
+
+  /* Validate the maximum loopback latency */
+  if (this->maximum_loopback_latency <= 0.0) {
+    RCLCPP_ERROR(this->get_logger(), "Maximum loopback latency must be positive");
+    response->success = false;
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+                                 "Invalid configuration: maximum loopback latency must be positive");
+    return;
+  }
+
+  /* Log the configuration */
+  RCLCPP_INFO(this->get_logger(), " ");
+  RCLCPP_INFO(this->get_logger(), "Configuration:");
+  RCLCPP_INFO(this->get_logger(), "  Maximum timing error (ms): %.1f", 1000 * this->maximum_timing_error);
+  RCLCPP_INFO(this->get_logger(), "  Maximum loopback latency (ms): %.1f", 1000 * this->maximum_loopback_latency);
+  RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
+  RCLCPP_INFO(this->get_logger(), " ");
 
   /* Initialize LabJack manager. */
   if (this->simulate_labjack) {

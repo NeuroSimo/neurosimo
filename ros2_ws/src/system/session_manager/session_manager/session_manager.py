@@ -8,7 +8,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from system_interfaces.msg import SessionState
-from system_interfaces.srv import StartRecording, StopRecording, GetSessionConfig, GetGlobalConfig, AbortSession
+from system_interfaces.srv import StartRecording, StopRecording, AbortSession
 from std_srvs.srv import Trigger
 from system_interfaces.msg import SessionConfig, GlobalConfig
 from pipeline_interfaces.srv import (
@@ -126,13 +126,31 @@ class SessionManagerNode(Node):
         self.eeg_device_streaming_stop_client = self.create_client(
             StopStreaming, '/eeg_device/streaming/stop', callback_group=self.callback_group)
 
-        # Create client for getting global config from global configurator
-        self.get_global_config_client = self.create_client(
-            GetGlobalConfig, '/global_configurator/get_config', callback_group=self.callback_group)
+        # Subscribe to config topics
+        config_qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST
+        )
         
-        # Create client for getting session config from session configurator
-        self.get_session_config_client = self.create_client(
-            GetSessionConfig, '/session_configurator/get_config', callback_group=self.callback_group)
+        self.global_config = None
+        self.session_config = None
+        
+        self.global_config_subscription = self.create_subscription(
+            GlobalConfig,
+            '/global_configurator/config',
+            self.global_config_callback,
+            config_qos,
+            callback_group=self.callback_group
+        )
+        
+        self.session_config_subscription = self.create_subscription(
+            SessionConfig,
+            '/session_configurator/config',
+            self.session_config_callback,
+            config_qos,
+            callback_group=self.callback_group
+        )
 
         # Wait for all clients to be available
         action_clients = [
@@ -163,7 +181,6 @@ class SessionManagerNode(Node):
             (self.playback_streaming_stop_client, '/eeg_simulator/streaming/stop'),
             (self.eeg_simulator_streaming_stop_client, '/eeg_simulator/streaming/stop'),
             (self.eeg_device_streaming_stop_client, '/eeg_device/streaming/stop'),
-            (self.get_session_config_client, '/session_configurator/get_config'),
             (self.recording_start_client, '/session_recorder/start'),
             (self.recording_stop_client, '/session_recorder/stop'),
         ]
@@ -189,6 +206,16 @@ class SessionManagerNode(Node):
         msg.state = state
         msg.abort_reason = abort_reason
         self.session_state_publisher.publish(msg)
+    
+    def global_config_callback(self, msg):
+        """Handle global config updates."""
+        self.global_config = msg
+        self.logger.info(f'Received global config: active_project={msg.active_project}')
+    
+    def session_config_callback(self, msg):
+        """Handle session config updates."""
+        self.session_config = msg
+        self.logger.info(f'Received session config: subject={msg.subject_id}, data_source={msg.data_source}')
 
     # Service callbacks
     def start_session_callback(self, request, response):
@@ -361,15 +388,19 @@ class SessionManagerNode(Node):
         try:
             self.publish_session_state(SessionState.INITIALIZING)
 
-            # Fetch global and session parameters
-            global_config = self.get_global_config()
-            if global_config is None:
-                self.logger.error('Failed to get global configuration')
+            # Use cached configs from subscribers
+            if self.global_config is None:
+                self.logger.error('Global configuration not yet received')
                 return
+            global_config = self.global_config
 
-            session_config = self.get_session_config()
-            if session_config is None or not self.validate_session_config(session_config):
-                self.logger.error('Failed to get or validate session parameters')
+            if self.session_config is None:
+                self.logger.error('Session configuration not yet received')
+                return
+            session_config = self.session_config
+            
+            if not self.validate_session_config(session_config):
+                self.logger.error('Failed to validate session parameters')
                 return
 
             # Initialize data stream first to get stream info
@@ -406,34 +437,6 @@ class SessionManagerNode(Node):
             with self._thread_lock:
                 if self._session_thread is current_thread():
                     self._session_thread = None
-
-    def get_global_config(self):
-        """Get global configuration from global configurator."""
-        request = GetGlobalConfig.Request()
-        response = self.call_service(self.get_global_config_client, request, '/global_configurator/get_config')
-
-        if response is None or not response.success:
-            return None
-
-        config = response.config
-        self.logger.info(f'Fetched global config: active_project={config.active_project}')
-
-        return config
-
-    def get_session_config(self):
-        """Get session configuration from session configurator."""
-        request = GetSessionConfig.Request()
-        response = self.call_service(self.get_session_config_client, request, '/session_configurator/get_config')
-
-        if response is None or not response.success:
-            return None
-
-        config = response.config
-        self.logger.info(f'Fetched session config: subject={config.subject_id}, '
-                        f'data_source={config.data_source}, '
-                        f'protocol={config.protocol_filename}')
-
-        return config
 
     def validate_session_config(self, config):
         """Validate session configuration."""

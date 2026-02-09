@@ -6,7 +6,6 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
-from system_interfaces.srv import GetSessionConfig
 from system_interfaces.msg import SessionConfig, GlobalConfig
 from project_interfaces.msg import FilenameList
 from rcl_interfaces.msg import SetParametersResult
@@ -62,8 +61,6 @@ class SessionConfiguratorNode(Node):
         # Data source parameter
         self.declare_parameter('data_source', 'simulator')
 
-        # Services
-        self.create_service(GetSessionConfig, '/session_configurator/get_config', self.get_session_config_callback, callback_group=self.callback_group)
 
         # Subscribers
         qos = QoSProfile(depth=1,
@@ -134,7 +131,7 @@ class SessionConfiguratorNode(Node):
         ])
 
         # Publish session config from the loaded dict (not from ROS params)
-        self.publish_session_config_from_dict(session_config)
+        self.publish_session_config(session_config)
 
         # Publish the lists of modules for the new project and setup watches
         self.publish_and_watch_directories(project_name)
@@ -197,31 +194,8 @@ class SessionConfiguratorNode(Node):
 
     # Service callbacks
 
-    def build_session_config(self):
-        """Build SessionConfig message from current parameters."""
-        config = SessionConfig()
-
-        config.subject_id = self.get_parameter('subject_id').get_parameter_value().string_value
-        config.notes = self.get_parameter('notes').get_parameter_value().string_value
-
-        config.decider_module = self.get_parameter('decider.module').get_parameter_value().string_value
-        config.decider_enabled = self.get_parameter('decider.enabled').get_parameter_value().bool_value
-
-        config.preprocessor_module = self.get_parameter('preprocessor.module').get_parameter_value().string_value
-        config.preprocessor_enabled = self.get_parameter('preprocessor.enabled').get_parameter_value().bool_value
-
-        config.presenter_module = self.get_parameter('presenter.module').get_parameter_value().string_value
-        config.presenter_enabled = self.get_parameter('presenter.enabled').get_parameter_value().bool_value
-
-        config.protocol_filename = self.get_parameter('experiment.protocol').get_parameter_value().string_value
-        config.data_source = self.get_parameter('data_source').get_parameter_value().string_value
-        config.simulator_dataset_filename = self.get_parameter('simulator.dataset_filename').get_parameter_value().string_value
-        config.simulator_start_time = self.get_parameter('simulator.start_time').get_parameter_value().double_value
-
-        return config
-
-    def build_session_config_from_dict(self, session_config: dict):
-        """Build SessionConfig message from session config dict."""
+    def publish_session_config(self, session_config: dict):
+        """Build and publish session config from dict."""
         config = SessionConfig()
         
         config.subject_id = session_config.get('subject_id', '')
@@ -241,22 +215,7 @@ class SessionConfiguratorNode(Node):
         config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
         config.simulator_start_time = session_config.get('simulator.start_time', 0.0)
         
-        return config
-
-    def publish_session_config_from_dict(self, session_config: dict):
-        """Build and publish session config from dict."""
-        config_msg = self.build_session_config_from_dict(session_config)
-        self.session_config_publisher.publish(config_msg)
-
-    def get_session_config_callback(self, request, response):
-        """Return the current session configuration."""
-        config = self.build_session_config()
-        response.config = config
-        response.success = True
- 
-        self.logger.info(f"Returned session config: subject={config.subject_id}, data_source={config.data_source}")
-
-        return response
+        self.session_config_publisher.publish(config)
 
     def parameter_change_callback(self, params):
         """Callback to handle session parameter changes and save them to session config."""
@@ -275,7 +234,7 @@ class SessionConfiguratorNode(Node):
             self.logger.info(f"Updated session config for project '{self.active_project}' with parameter changes")
 
             # Publish the updated session config immediately (from the dict, not from ROS params)
-            self.publish_session_config_from_dict(session_config)
+            self.publish_session_config(session_config)
 
         except Exception as e:
             self.logger.error(f"Error handling parameter changes: {e}")

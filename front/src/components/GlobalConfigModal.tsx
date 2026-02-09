@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
+import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -254,25 +255,25 @@ interface GlobalConfigValues {
   diskErrorThreshold: number
 }
 
-const defaultConfig: GlobalConfigValues = {
+const emptyConfig: GlobalConfigValues = {
   // EEG Configuration
-  eegPort: 50000,
-  eegDevice: 'neurone',
-  turbolinkSamplingFrequency: 5000,
-  turbolinkEegChannelCount: 64,
-  maximumDroppedSamples: 2,
+  eegPort: 0,
+  eegDevice: '',
+  turbolinkSamplingFrequency: 0,
+  turbolinkEegChannelCount: 0,
+  maximumDroppedSamples: 0,
   
   // LabJack Configuration
   simulateLabjack: false,
   
   // Safety Configuration
-  minimumIntertrialInterval: 2.0,
-  maximumLoopbackLatency: 0.005,
-  maximumTimingError: 0.0,
+  minimumIntertrialInterval: 0,
+  maximumLoopbackLatency: 0,
+  maximumTimingError: 0,
   
   // Disk Space Monitoring Configuration
-  diskWarningThreshold: 100,
-  diskErrorThreshold: 50,
+  diskWarningThreshold: 0,
+  diskErrorThreshold: 0,
 }
 
 type TabType = 'eeg' | 'labjack' | 'safety' | 'disk'
@@ -281,17 +282,36 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [config, setConfig] = useState<GlobalConfigValues>(defaultConfig)
+  const globalConfig = useGlobalConfig()
+  const [config, setConfig] = useState<GlobalConfigValues>(emptyConfig)
   const [activeTab, setActiveTab] = useState<TabType>('eeg')
 
-  // Load config when modal opens (placeholder - will be connected to backend later)
+  // Helper to parse disk threshold from string (e.g., "100GiB" -> 100)
+  const parseDiskThreshold = (value: string): number => {
+    if (!value) return 0
+    const match = value.match(/^(\d+)/)
+    return match ? parseInt(match[1]) : 0
+  }
+
+  // Load config when modal opens
   useEffect(() => {
-    if (isOpen) {
-      // TODO: Load actual config from backend
-      setConfig(defaultConfig)
+    if (isOpen && globalConfig.eegDevice) {
+      setConfig({
+        eegPort: globalConfig.eegPort,
+        eegDevice: globalConfig.eegDevice,
+        turbolinkSamplingFrequency: globalConfig.turbolinkSamplingFrequency,
+        turbolinkEegChannelCount: globalConfig.turbolinkEegChannelCount,
+        maximumDroppedSamples: globalConfig.maximumDroppedSamples,
+        simulateLabjack: globalConfig.simulateLabjack,
+        minimumIntertrialInterval: globalConfig.minimumIntertrialInterval,
+        maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
+        maximumTimingError: globalConfig.maximumTimingError,
+        diskWarningThreshold: parseDiskThreshold(globalConfig.diskWarningThreshold),
+        diskErrorThreshold: parseDiskThreshold(globalConfig.diskErrorThreshold),
+      })
       setActiveTab('eeg')
     }
-  }, [isOpen])
+  }, [isOpen, globalConfig])
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -310,8 +330,22 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // TODO: Save config to backend
-    console.log('Saving global config:', config)
+    // Convert disk thresholds back to string format (e.g., 100 -> "100GiB")
+    await globalConfig.setGlobalConfig({
+      eegPort: config.eegPort,
+      eegDevice: config.eegDevice,
+      turbolinkSamplingFrequency: config.turbolinkSamplingFrequency,
+      turbolinkEegChannelCount: config.turbolinkEegChannelCount,
+      maximumDroppedSamples: config.maximumDroppedSamples,
+      simulateLabjack: config.simulateLabjack,
+      minimumIntertrialInterval: config.minimumIntertrialInterval,
+      maximumLoopbackLatency: config.maximumLoopbackLatency,
+      maximumTimingError: config.maximumTimingError,
+      diskWarningThreshold: `${config.diskWarningThreshold}GiB`,
+      diskErrorThreshold: `${config.diskErrorThreshold}GiB`,
+    }, () => {
+      console.log('Global config saved successfully')
+    })
     
     onClose()
   }

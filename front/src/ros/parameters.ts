@@ -9,20 +9,32 @@ interface Parameter {
   value: ParameterValue
 }
 
+// Parameters that should always be sent as DOUBLE type, even if they are whole numbers
+const ALWAYS_DOUBLE_PARAMS = new Set([
+  'minimum_intertrial_interval',
+  'maximum_loopback_latency',
+  'maximum_timing_error',
+  'trigger_to_pulse_delay',
+])
+
 /**
  * Convert a TypeScript value to ROS2 ParameterValue structure
  * @param value The value to convert
+ * @param paramName Optional parameter name to determine type for numbers
  * @returns ROS2 ParameterValue object
  */
-const toParameterValue = (value: ParameterValue): any => {
+const toParameterValue = (value: ParameterValue, paramName?: string): any => {
   if (typeof value === 'boolean') {
     return {
       type: 1, // PARAMETER_BOOL
       bool_value: value
     }
   } else if (typeof value === 'number') {
+    // Check if this parameter should always be a DOUBLE
+    const forceDouble = paramName && ALWAYS_DOUBLE_PARAMS.has(paramName)
+    
     // Check if it's an integer or float
-    if (Number.isInteger(value)) {
+    if (!forceDouble && Number.isInteger(value)) {
       return {
         type: 2, // PARAMETER_INTEGER
         integer_value: value
@@ -98,7 +110,7 @@ export const setParameterRos = (
 ) => {
   const parameter = {
     name: name,
-    value: toParameterValue(value)
+    value: toParameterValue(value, name)
   }
 
   const request = new ROSLIB.ServiceRequest({
@@ -140,7 +152,7 @@ export const setParametersRos = (
 ) => {
   const formattedParameters = parameters.map(param => ({
     name: param.name,
-    value: toParameterValue(param.value)
+    value: toParameterValue(param.value, param.name)
   }))
 
   const request = new ROSLIB.ServiceRequest({

@@ -1,5 +1,4 @@
-# Project and session metadata
-string project_name
+# Session metadata
 string subject_id
 string notes
 

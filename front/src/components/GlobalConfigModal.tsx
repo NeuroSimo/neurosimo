@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
+import { ValidatedInput } from './ValidatedInput'
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -553,12 +554,12 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 <Label htmlFor="minimumIntertrialInterval">Minimum Intertrial Interval (seconds):</Label>
                 <InfoTooltip text="Minimum time between consecutive TMS trials (e.g., 2.5, 2.0, or 2)" />
               </LabelRow>
-              <Input
-                id="minimumIntertrialInterval"
-                type="number"
-                step="0.1"
-                value={config.minimumIntertrialInterval.toFixed(1)}
-                onChange={(e) => updateConfig('minimumIntertrialInterval', parseFloat(e.target.value))}
+              <ValidatedInput
+                value={config.minimumIntertrialInterval}
+                onChange={(val) => updateConfig('minimumIntertrialInterval', val)}
+                formatValue={(val) => val.toFixed(1)}
+                min={0}
+                step={0.1}
               />
             </InputGroup>
 
@@ -567,12 +568,13 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 <Label htmlFor="maximumLoopbackLatency">Maximum Loopback Latency (milliseconds):</Label>
                 <InfoTooltip text="Exceeding this value prevents stimulation" />
               </LabelRow>
-              <Input
-                id="maximumLoopbackLatency"
-                type="number"
-                step="0.1"
-                value={(config.maximumLoopbackLatency * 1000).toFixed(1)}
-                onChange={(e) => updateConfig('maximumLoopbackLatency', parseFloat(e.target.value) / 1000)}
+              <ValidatedInput
+                value={config.maximumLoopbackLatency}
+                onChange={(val) => updateConfig('maximumLoopbackLatency', val)}
+                formatValue={(val) => (val * 1000).toFixed(1)}
+                parseValue={(str) => parseFloat(str) / 1000}
+                min={0}
+                step={0.1}
               />
             </InputGroup>
 
@@ -581,12 +583,13 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 <Label htmlFor="maximumTimingError">Maximum Timing Error (milliseconds):</Label>
                 <InfoTooltip text="Maximum timing error for triggering" />
               </LabelRow>
-              <Input
-                id="maximumTimingError"
-                type="number"
-                step="0.1"
-                value={(config.maximumTimingError * 1000).toFixed(1)}
-                onChange={(e) => updateConfig('maximumTimingError', parseFloat(e.target.value) / 1000)}
+              <ValidatedInput
+                value={config.maximumTimingError}
+                onChange={(val) => updateConfig('maximumTimingError', val)}
+                formatValue={(val) => (val * 1000).toFixed(1)}
+                parseValue={(str) => parseFloat(str) / 1000}
+                min={0}
+                step={0.1}
               />
             </InputGroup>
               </Section>

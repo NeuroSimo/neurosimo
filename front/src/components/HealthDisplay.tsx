@@ -12,7 +12,7 @@ const HealthPanel = styled(StyledPanel)`
   width: 200px;
   height: 25px;
   position: fixed;
-  top: 6px;
+  top: 36px;
   right: 280px;
   display: grid;
   grid-template-columns: 1fr 1fr;

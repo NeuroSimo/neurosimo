@@ -9,7 +9,7 @@ const HealthcheckMessagePanel = styled(StyledPanel)`
   width: 246px;
   height: 28px;
   position: fixed;
-  top: 3px;
+  top: 33px;
   right: 3px;
   z-index: 1000;
 `

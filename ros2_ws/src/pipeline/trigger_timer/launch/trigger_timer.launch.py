@@ -5,6 +5,9 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    """
+    Launch trigger timer node.
+    """
     ld = LaunchDescription()
 
     log_arg = DeclareLaunchArgument(
@@ -13,43 +16,15 @@ def generate_launch_description():
         description="Logging level",
     )
 
-    maximum_timing_error_arg = DeclareLaunchArgument(
-        "maximum-timing-error",
-        description="Maximum timing error (in seconds)",
-    )
-
-    simulate_labjack_arg = DeclareLaunchArgument(
-        "simulate-labjack",
-        description="Simulate LabJack device when hardware is not available",
-    )
-
-    maximum_loopback_latency_arg = DeclareLaunchArgument(
-        "maximum-loopback-latency",
-        description="Maximum loopback latency, above which stimulation is prevented",
-    )
-
     logger = LaunchConfiguration("log-level")
-    maximum_timing_error = LaunchConfiguration("maximum-timing-error")
-    simulate_labjack = LaunchConfiguration("simulate-labjack")
-    maximum_loopback_latency = LaunchConfiguration("maximum-loopback-latency")
 
     node = Node(
         package="trigger_timer",
         executable="trigger_timer",
         name="trigger_timer",
-        parameters=[
-            {
-                "maximum-timing-error": maximum_timing_error,
-                "simulate-labjack": simulate_labjack,
-                "maximum-loopback-latency": maximum_loopback_latency,
-            }
-        ],
         arguments=['--ros-args', '--log-level', logger]
     )
     ld.add_action(node)
     ld.add_action(log_arg)
-    ld.add_action(maximum_timing_error_arg)
-    ld.add_action(simulate_labjack_arg)
-    ld.add_action(maximum_loopback_latency_arg)
 
     return ld

@@ -1,5 +1,10 @@
 # Initialize pipeline component: trigger_timer
 
 uint8[16] session_id
+
+# Configuration
+float64 maximum_timing_error
+float64 maximum_loopback_latency
+bool simulate_labjack
 ---
 bool success

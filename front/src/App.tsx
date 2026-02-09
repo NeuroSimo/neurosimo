@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import React from 'react'
 import styled from 'styled-components'
 
 import './App.css'
 
 import Providers from './providers/Providers'
 
+import { MenuBar } from 'components/MenuBar'
 import { HealthcheckMessageDisplay } from 'components/HealthcheckMessageDisplay'
 import { HealthDisplay } from 'components/HealthDisplay'
 import { PipelineView } from 'views/PipelineView'
@@ -25,15 +25,22 @@ const App = () => {
 
   return (
     <Providers>
-      <HealthDisplay />
-      <HealthcheckMessageDisplay />
-      <Wrapper>
-        <PipelineView />
-        <DashboardView />
-      </Wrapper>
+      <MenuBar />
+      <ContentContainer>
+        <HealthDisplay />
+        <HealthcheckMessageDisplay />
+        <Wrapper>
+          <PipelineView />
+          <DashboardView />
+        </Wrapper>
+      </ContentContainer>
     </Providers>
   )
 }
+
+const ContentContainer = styled.div`
+  margin-top: 30px;
+`
 
 const Wrapper = styled.div`
   padding: 1.23rem 0rem;

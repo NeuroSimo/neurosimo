@@ -73,7 +73,7 @@ export const MenuBar: React.FC = () => {
     setIsFileMenuOpen(!isFileMenuOpen)
   }
 
-  const handleGlobalConfigClick = () => {
+  const handleSettingsClick = () => {
     setIsGlobalConfigModalOpen(true)
     setIsFileMenuOpen(false)
   }
@@ -104,8 +104,8 @@ export const MenuBar: React.FC = () => {
         </MenuButton>
         {isFileMenuOpen && (
           <DropdownMenu onClick={(e) => e.stopPropagation()}>
-            <MenuItem onClick={handleGlobalConfigClick}>
-              Global Configuration...
+            <MenuItem onClick={handleSettingsClick}>
+              Settings...
             </MenuItem>
           </DropdownMenu>
         )}

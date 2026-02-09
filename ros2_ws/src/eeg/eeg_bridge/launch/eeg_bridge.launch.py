@@ -15,9 +15,9 @@ def generate_launch_description():
         description="Port",
     )
 
-    num_of_tolerated_dropped_samples_arg = DeclareLaunchArgument(
-        "num-of-tolerated-dropped-samples",
-        description="The number of tolerated dropped samples",
+    maximum_dropped_samples_arg = DeclareLaunchArgument(
+        "maximum-dropped-samples",
+        description="The maximum number of dropped samples",
     )
 
     eeg_device_arg = DeclareLaunchArgument(
@@ -43,7 +43,7 @@ def generate_launch_description():
             parameters=[
                 {
                     "port": LaunchConfiguration("port"),
-                    "num-of-tolerated-dropped-samples": LaunchConfiguration("num-of-tolerated-dropped-samples"),
+                    "maximum-dropped-samples": LaunchConfiguration("maximum-dropped-samples"),
                     "eeg-device": LaunchConfiguration("eeg-device"),
                     "turbolink-sampling-frequency": LaunchConfiguration("turbolink-sampling-frequency"),
                     "turbolink-eeg-channel-count": LaunchConfiguration("turbolink-eeg-channel-count"),
@@ -57,7 +57,7 @@ def generate_launch_description():
     return LaunchDescription([
         log_arg,
         port_arg,
-        num_of_tolerated_dropped_samples_arg,
+        maximum_dropped_samples_arg,
         eeg_device_arg,
         turbolink_sampling_frequency_arg,
         turbolink_eeg_channel_count_arg,

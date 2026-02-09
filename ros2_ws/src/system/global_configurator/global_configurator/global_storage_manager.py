@@ -47,7 +47,7 @@ class GlobalStorageManager:
             "eeg_device": 'neurone',
             "turbolink_sampling_frequency": 5000,
             "turbolink_eeg_channel_count": 64,
-            "num_of_tolerated_dropped_samples": 2,
+            "maximum_dropped_samples": 2,
             # LabJack Configuration
             "simulate_labjack": False,
             # Safety Configuration
@@ -66,7 +66,7 @@ class GlobalStorageManager:
             "active_project",
             "eeg_port", "eeg_device",
             "turbolink_sampling_frequency", "turbolink_eeg_channel_count",
-            "num_of_tolerated_dropped_samples",
+            "maximum_dropped_samples",
             "simulate_labjack",
             "minimum_intertrial_interval", "maximum_loopback_latency",
             "maximum_timing_error",

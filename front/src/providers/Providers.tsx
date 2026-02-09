@@ -5,7 +5,7 @@ import theme from 'styles/theme'
 import { SessionConfigProvider } from './SessionConfigProvider'
 import { ProjectProvider } from './ProjectProvider'
 import { ModuleListProvider } from './ModuleListProvider'
-import { PipelineProvider } from './PipelineProvider'
+import { SessionStatisticsProvider } from './SessionStatisticsProvider'
 import { LogProvider } from './LogProvider'
 import { ExperimentProvider } from './ExperimentProvider'
 import { EegStreamProvider } from './EegStreamProvider'
@@ -28,7 +28,7 @@ const Providers: React.FC<Props> = ({ children }) => {
       <SessionConfigProvider>
         <ProjectProvider>
           <ModuleListProvider>
-            <PipelineProvider>
+            <SessionStatisticsProvider>
               <LogProvider>
               <ExperimentProvider>
                 <EegStreamProvider>
@@ -50,7 +50,7 @@ const Providers: React.FC<Props> = ({ children }) => {
                 </EegStreamProvider>
                 </ExperimentProvider>
               </LogProvider>
-            </PipelineProvider>
+            </SessionStatisticsProvider>
           </ModuleListProvider>
         </ProjectProvider>
       </SessionConfigProvider>

@@ -52,7 +52,7 @@ interface DecisionTrace extends ROSLIB.Message {
   pulse_confirmed: boolean
 }
 
-interface PipelineContextType {
+interface SessionStatisticsContextType {
   loopbackLatency: LoopbackLatency | null
   decisionTrace: DecisionTrace | null
 
@@ -60,7 +60,7 @@ interface PipelineContextType {
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
 }
 
-const defaultPipelineState: PipelineContextType = {
+const defaultSessionStatisticsState: SessionStatisticsContextType = {
   loopbackLatency: null,
   decisionTrace: null,
 
@@ -72,13 +72,13 @@ const defaultPipelineState: PipelineContextType = {
   },
 }
 
-export const PipelineContext = React.createContext<PipelineContextType>(defaultPipelineState)
+export const SessionStatisticsContext = React.createContext<SessionStatisticsContextType>(defaultSessionStatisticsState)
 
-interface PipelineProviderProps {
+interface SessionStatisticsProviderProps {
   children: ReactNode
 }
 
-export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) => {
+export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps> = ({ children }) => {
   const [loopbackLatency, setLoopbackLatency] = useState<LoopbackLatency | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
   const latencyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -129,7 +129,7 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
   }, [])
 
   return (
-    <PipelineContext.Provider
+    <SessionStatisticsContext.Provider
       value={{
         loopbackLatency,
         decisionTrace,
@@ -138,6 +138,6 @@ export const PipelineProvider: React.FC<PipelineProviderProps> = ({ children }) 
       }}
     >
       {children}
-    </PipelineContext.Provider>
+    </SessionStatisticsContext.Provider>
   )
 }

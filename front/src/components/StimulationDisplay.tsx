@@ -12,7 +12,7 @@ import {
   DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
-import { PipelineContext, getStatusLabel } from 'providers/PipelineProvider'
+import { SessionStatisticsContext, getStatusLabel } from 'providers/SessionStatisticsProvider'
 
 const StimulationPanelTitle = styled.div`
   width: 220px;
@@ -35,7 +35,7 @@ const StimulationPanel = styled(StyledPanel)`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { loopbackLatency, decisionTrace } = useContext(PipelineContext)
+  const { loopbackLatency, decisionTrace } = useContext(SessionStatisticsContext)
 
   // Latency
   const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'

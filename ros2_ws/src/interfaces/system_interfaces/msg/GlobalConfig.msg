@@ -13,8 +13,11 @@ bool simulate_labjack
 
 # Safety Configuration
 float64 minimum_intertrial_interval
+
+# Timing Configuration
 float64 maximum_loopback_latency
 float64 maximum_timing_error
+float64 trigger_to_pulse_delay
 
 # Disk Space Monitoring Configuration
 string disk_warning_threshold

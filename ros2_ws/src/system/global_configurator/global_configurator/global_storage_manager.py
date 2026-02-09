@@ -42,8 +42,48 @@ class GlobalStorageManager:
     def initialize_global_config(self):
         config = {
             "active_project": 'example',
+            # EEG Configuration
+            "eeg_port": 50000,
+            "eeg_device": 'neurone',
+            "turbolink_sampling_frequency": 5000,
+            "turbolink_eeg_channel_count": 64,
+            "num_of_tolerated_dropped_samples": 2,
+            # LabJack Configuration
+            "simulate_labjack": False,
+            # Safety Configuration
+            "minimum_intertrial_interval": 2.0,
+            "maximum_loopback_latency": 0.005,
+            "maximum_timing_error": 0.0,
+            # Disk Space Monitoring Configuration
+            "disk_warning_threshold": '100GiB',
+            "disk_error_threshold": '50GiB',
         }
         self.save_global_config(config)
+        return config
+
+    def validate_global_config(self, config):
+        required_keys = [
+            "active_project",
+            "eeg_port", "eeg_device",
+            "turbolink_sampling_frequency", "turbolink_eeg_channel_count",
+            "num_of_tolerated_dropped_samples",
+            "simulate_labjack",
+            "minimum_intertrial_interval", "maximum_loopback_latency",
+            "maximum_timing_error",
+            "disk_warning_threshold", "disk_error_threshold"
+        ]
+        for key in required_keys:
+            if key not in config:
+                self.logger.error(f"Global config is missing required key: {key}")
+                return False
+        return True
+
+    def get_global_config(self):
+        """Load and validate global config, reinitializing if needed."""
+        config = self.load_global_config()
+        if not self.validate_global_config(config):
+            self.logger.error("Reinitializing global config.")
+            config = self.initialize_global_config()
         return config
 
     # Project selection

@@ -5,10 +5,17 @@ import { ros } from 'ros/ros'
 
 interface GlobalConfigContextType {
   activeProject: string
+  setActiveProject: (project: string, callback?: () => void) => Promise<void>
 }
+
+// ESLint disable for intentionally empty functions used as defaults
+/* eslint-disable @typescript-eslint/no-empty-function */
+const asyncNoop = async () => {}
+/* eslint-enable @typescript-eslint/no-empty-function */
 
 const defaultGlobalConfigState: GlobalConfigContextType = {
   activeProject: '',
+  setActiveProject: asyncNoop,
 }
 
 export const GlobalConfigContext = createContext<GlobalConfigContextType>(defaultGlobalConfigState)
@@ -51,10 +58,19 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     }
   }, [])
 
+  // Convenience setter - use dynamic import to avoid circular dependencies
+  const noop = () => {} // eslint-disable-line @typescript-eslint/no-empty-function
+
+  const setActiveProject = async (project: string, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('active_project', project, callback || noop, 'global_configurator')
+  }
+
   return (
     <GlobalConfigContext.Provider
       value={{
         activeProject,
+        setActiveProject,
       }}
     >
       {children}

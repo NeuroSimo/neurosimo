@@ -5,14 +5,11 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
-from project_interfaces.srv import (
-    ListProjects,
-    SetActiveProject,
-)
+from project_interfaces.srv import ListProjects
 from system_interfaces.srv import GetGlobalConfig
 from system_interfaces.msg import GlobalConfig
 
-from std_msgs.msg import String
+from rcl_interfaces.msg import SetParametersResult
 
 from .global_storage_manager import GlobalStorageManager
 
@@ -33,7 +30,6 @@ class GlobalConfiguratorNode(Node):
 
         # Services
         self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
-        self.create_service(SetActiveProject, '/projects/active/set', self.set_active_project_callback, callback_group=self.callback_group)
         self.create_service(GetGlobalConfig, '/global_configurator/get_config', self.get_global_config_callback, callback_group=self.callback_group)
 
         # Publishers
@@ -42,10 +38,15 @@ class GlobalConfiguratorNode(Node):
                          history=HistoryPolicy.KEEP_LAST)
         self.global_config_publisher = self.create_publisher(GlobalConfig, "/global_configurator/config", qos, callback_group=self.callback_group)
 
-        # Set active project
-        self.set_active_project(active_project)
+        # Add parameter change callback to save changes to global state
+        self.add_on_set_parameters_callback(self.parameter_change_callback)
+
+        # Publish initial global config
+        global_config = {'active_project': active_project}
+        self.publish_global_config_from_dict(global_config)
 
     def set_active_project(self, project_name):
+        """Set the active project and save to storage."""
         if not project_name in self.storage_manager.list_projects():
             self.logger.error(f"Project does not exist: {project_name}")
             return False
@@ -53,14 +54,7 @@ class GlobalConfiguratorNode(Node):
         # Store the active project in the project state if it has changed
         if project_name != self.storage_manager.get_active_project():
             self.storage_manager.save_active_project(project_name)
-
-        # Update ROS parameter
-        self.set_parameters([
-            rclpy.parameter.Parameter('active_project', rclpy.parameter.Parameter.Type.STRING, project_name)
-        ])
-
-        # Publish global config
-        self.publish_global_config()
+            self.logger.info(f"Updated global config with active_project={project_name}")
 
         return True
     
@@ -70,11 +64,22 @@ class GlobalConfiguratorNode(Node):
         config.active_project = self.get_parameter('active_project').get_parameter_value().string_value
         return config
     
+    def build_global_config_from_dict(self, global_config: dict):
+        """Build GlobalConfig message from global config dict."""
+        config = GlobalConfig()
+        config.active_project = global_config.get('active_project', '')
+        return config
+    
     def publish_global_config(self):
         """Build and publish global config."""
         config_msg = self.build_global_config()
         self.global_config_publisher.publish(config_msg)
         self.logger.info(f"Published global config: active_project={config_msg.active_project}")
+    
+    def publish_global_config_from_dict(self, global_config: dict):
+        """Build and publish global config from dict."""
+        config_msg = self.build_global_config_from_dict(global_config)
+        self.global_config_publisher.publish(config_msg)
 
     # Service callbacks
 
@@ -88,17 +93,6 @@ class GlobalConfiguratorNode(Node):
             response.success = False
         return response
 
-    def set_active_project_callback(self, request, response):
-        project = request.project
-
-        success = self.set_active_project(project)
-        if not success:
-            response.success = False
-            return response
-
-        response.success = True
-        return response
-
     def get_global_config_callback(self, request, response):
         """Return the current global configuration."""
         config = GlobalConfig()
@@ -110,6 +104,34 @@ class GlobalConfiguratorNode(Node):
         self.logger.info(f"Returned global config: active_project={config.active_project}")
         
         return response
+    
+    def parameter_change_callback(self, params):
+        """Callback to handle global parameter changes and save them to global state."""
+        try:
+            # Load current global state
+            global_config = {'active_project': self.storage_manager.get_active_project()}
+            
+            for param in params:
+                if param.name == 'active_project':
+                    project_name = param.value
+                    
+                    # Validate and save using set_active_project
+                    success = self.set_active_project(project_name)
+                    if not success:
+                        return SetParametersResult(successful=False, reason=f"Project does not exist: {project_name}")
+                    
+                    # Update the global config dict
+                    global_config[param.name] = param.value
+            
+            # Publish the updated global config immediately (from the dict, not from ROS params)
+            self.publish_global_config_from_dict(global_config)
+
+        except Exception as e:
+            self.logger.error(f"Error handling parameter changes: {e}")
+            return SetParametersResult(successful=False, reason=str(e))
+
+        # Return success to allow parameter changes
+        return SetParametersResult(successful=True)
 
 def main(args=None):
     rclpy.init(args=args)

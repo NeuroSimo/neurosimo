@@ -70,19 +70,32 @@ export const extractParameterValue = (paramValue: {
 }
 
 /* Set parameters service on session_configurator node */
-const setParametersService = new ROSLIB.Service({
+const sessionConfiguratorSetParametersService = new ROSLIB.Service({
   ros: ros,
   name: '/session_configurator/set_parameters',
   serviceType: 'rcl_interfaces/SetParameters',
 })
 
+/* Set parameters service on global_configurator node */
+const globalConfiguratorSetParametersService = new ROSLIB.Service({
+  ros: ros,
+  name: '/global_configurator/set_parameters',
+  serviceType: 'rcl_interfaces/SetParameters',
+})
+
 /**
- * Set a single ROS parameter on the session_configurator node
- * @param name Parameter name (e.g., 'decider.module')
+ * Set a single ROS parameter on a node
+ * @param name Parameter name (e.g., 'decider.module', 'active_project')
  * @param value Parameter value (boolean, number, or string)
  * @param callback Callback function called on success
+ * @param nodeName Node name ('session_configurator' or 'global_configurator'), defaults to 'session_configurator'
  */
-export const setParameterRos = (name: string, value: ParameterValue, callback: () => void) => {
+export const setParameterRos = (
+  name: string, 
+  value: ParameterValue, 
+  callback: () => void,
+  nodeName: 'session_configurator' | 'global_configurator' = 'session_configurator'
+) => {
   const parameter = {
     name: name,
     value: toParameterValue(value)
@@ -92,7 +105,11 @@ export const setParameterRos = (name: string, value: ParameterValue, callback: (
     parameters: [parameter]
   }) as any
 
-  setParametersService.callService(
+  const service = nodeName === 'global_configurator' 
+    ? globalConfiguratorSetParametersService 
+    : sessionConfiguratorSetParametersService
+
+  service.callService(
     request,
     (response: any) => {
       if (!response.results || !response.results[0] || !response.results[0].successful) {
@@ -111,11 +128,16 @@ export const setParameterRos = (name: string, value: ParameterValue, callback: (
 }
 
 /**
- * Set multiple ROS parameters on the session_configurator node
+ * Set multiple ROS parameters on a node
  * @param parameters Array of parameter objects with name and value
  * @param callback Callback function called on success
+ * @param nodeName Node name ('session_configurator' or 'global_configurator'), defaults to 'session_configurator'
  */
-export const setParametersRos = (parameters: Parameter[], callback: () => void) => {
+export const setParametersRos = (
+  parameters: Parameter[], 
+  callback: () => void,
+  nodeName: 'session_configurator' | 'global_configurator' = 'session_configurator'
+) => {
   const formattedParameters = parameters.map(param => ({
     name: param.name,
     value: toParameterValue(param.value)
@@ -125,7 +147,11 @@ export const setParametersRos = (parameters: Parameter[], callback: () => void) 
     parameters: formattedParameters
   }) as any
 
-  setParametersService.callService(
+  const service = nodeName === 'global_configurator' 
+    ? globalConfiguratorSetParametersService 
+    : sessionConfiguratorSetParametersService
+
+  service.callService(
     request,
     (response: any) => {
       const failedParams = response.results.filter((result: any, index: number) => {
@@ -148,24 +174,39 @@ export const setParametersRos = (parameters: Parameter[], callback: () => void) 
 }
 
 /* Get parameters service on session_configurator node */
-const getParametersService = new ROSLIB.Service({
+const sessionConfiguratorGetParametersService = new ROSLIB.Service({
   ros: ros,
   name: '/session_configurator/get_parameters',
   serviceType: 'rcl_interfaces/GetParameters',
 })
 
+/* Get parameters service on global_configurator node */
+const globalConfiguratorGetParametersService = new ROSLIB.Service({
+  ros: ros,
+  name: '/global_configurator/get_parameters',
+  serviceType: 'rcl_interfaces/GetParameters',
+})
+
 /**
- * Get current ROS parameters from the session_configurator node
+ * Get current ROS parameters from a node
  * @param names Array of parameter names to fetch
+ * @param nodeName Node name ('session_configurator' or 'global_configurator'), defaults to 'session_configurator'
  * @returns Promise resolving to parameter values
  */
-export const getParametersRos = (names: string[]): Promise<Map<string, boolean | number | string>> => {
+export const getParametersRos = (
+  names: string[],
+  nodeName: 'session_configurator' | 'global_configurator' = 'session_configurator'
+): Promise<Map<string, boolean | number | string>> => {
   return new Promise((resolve, reject) => {
     const request = new ROSLIB.ServiceRequest({
       names: names
     }) as any
 
-    getParametersService.callService(
+    const service = nodeName === 'global_configurator'
+      ? globalConfiguratorGetParametersService
+      : sessionConfiguratorGetParametersService
+
+    service.callService(
       request,
       (response: any) => {
         const parameterMap = new Map<string, boolean | number | string>()

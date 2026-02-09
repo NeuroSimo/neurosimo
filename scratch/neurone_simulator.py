@@ -50,18 +50,20 @@ DEFAULT_SAMPLING_RATE = 500  # Hz
 DEFAULT_EEG_CHANNELS = 8
 DEFAULT_EMG_CHANNELS = 2
 DEFAULT_TRIGGER_PORT = 60000  # Port for receiving triggers from MockLabJackManager
+DEFAULT_TRIGGER_TO_PULSE_DELAY = 0.0  # Simulated delay from trigger to pulse appearance (seconds)
 DC_MODE_SCALE = 100  # Scaling factor
 
 class NeurOneSimulator:
     def __init__(self, port=DEFAULT_PORT, sampling_rate=DEFAULT_SAMPLING_RATE,
                  eeg_channels=DEFAULT_EEG_CHANNELS, emg_channels=DEFAULT_EMG_CHANNELS,
-                 trigger_port=DEFAULT_TRIGGER_PORT):
+                 trigger_port=DEFAULT_TRIGGER_PORT, trigger_to_pulse_delay=DEFAULT_TRIGGER_TO_PULSE_DELAY):
         self.port = port
         self.sampling_rate = sampling_rate
         self.eeg_channels = eeg_channels
         self.emg_channels = emg_channels
         self.total_channels = eeg_channels + emg_channels + 1  # +1 for trigger channel
         self.trigger_port = trigger_port
+        self.trigger_to_pulse_delay = trigger_to_pulse_delay
 
         # Create UDP socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -81,11 +83,15 @@ class NeurOneSimulator:
 
         self.running = False
         self.sample_index = 0
+        self.simulation_start_time = None
 
         # Trigger flags for the next sample
         self.next_pulse_trigger = False
         self.next_loopback_trigger = False
         self.trigger_lock = threading.Lock()
+        
+        # Queue for pending triggers (list of tuples: (trigger_time, trigger_type))
+        self.pending_triggers = []
 
         # Generate some realistic channel configurations
         self.source_channels = []
@@ -131,13 +137,18 @@ class NeurOneSimulator:
                     break  # Connection closed
 
                 message = data.decode('utf-8').strip()
-                print(f"Received trigger: {message}")
-
-                with self.trigger_lock:
-                    if message == "pulse_trigger":
-                        self.next_pulse_trigger = True
-                    elif message == "loopback_trigger":
-                        self.next_loopback_trigger = True
+                
+                # Schedule trigger to appear (pulse triggers have delay, loopback triggers are immediate)
+                if self.simulation_start_time is not None:
+                    with self.trigger_lock:
+                        if message == "pulse_trigger":
+                            trigger_time = time.time() + self.trigger_to_pulse_delay
+                            self.pending_triggers.append((trigger_time, "pulse"))
+                            print(f"Received pulse trigger, scheduled to appear in {self.trigger_to_pulse_delay*1000:.1f} ms")
+                        elif message == "loopback_trigger":
+                            trigger_time = time.time()  # Immediate, no delay
+                            self.pending_triggers.append((trigger_time, "loopback"))
+                            print(f"Received loopback trigger, appears immediately")
 
         except socket.timeout:
             pass  # Timeout is expected
@@ -237,13 +248,25 @@ class NeurOneSimulator:
         current_time_us = int(time.time() * 1_000_000)
         struct.pack_into('>Q', packet, SamplesPacketFieldIndex.SAMPLE_FIRST_SAMPLE_TIME, current_time_us)
 
-        # Check for trigger flags and include them in the sample data
+        # Check for pending triggers that should appear now
+        current_time = time.time()
+        pulse_trigger = False
+        loopback_trigger = False
+        
         with self.trigger_lock:
-            pulse_trigger = self.next_pulse_trigger
-            loopback_trigger = self.next_loopback_trigger
-            # Reset flags after reading
-            self.next_pulse_trigger = False
-            self.next_loopback_trigger = False
+            # Check pending triggers and activate those whose time has come
+            remaining_triggers = []
+            for trigger_time, trigger_type in self.pending_triggers:
+                if current_time >= trigger_time:
+                    if trigger_type == "pulse":
+                        pulse_trigger = True
+                    elif trigger_type == "loopback":
+                        loopback_trigger = True
+                else:
+                    # Keep triggers that haven't reached their time yet
+                    remaining_triggers.append((trigger_time, trigger_type))
+            
+            self.pending_triggers = remaining_triggers
 
         # Sample data (3 bytes per channel, big-endian)
         for i in range(self.total_channels):
@@ -268,11 +291,13 @@ class NeurOneSimulator:
         """Run the simulator for a specified duration or until interrupted"""
         self.running = True
         self.sample_index = 0
+        self.simulation_start_time = time.time()
 
         print(f"Starting NeurOne simulator on port {self.port}")
         print(f"Sampling rate: {self.sampling_rate} Hz")
         print(f"EEG channels: {self.eeg_channels}, EMG channels: {self.emg_channels}")
         print(f"Trigger server listening on port {self.trigger_port}")
+        print(f"Trigger to pulse delay: {self.trigger_to_pulse_delay*1000:.1f} ms")
 
         # Start trigger handling thread
         trigger_thread = threading.Thread(target=self.handle_trigger_connection)
@@ -338,6 +363,8 @@ def main():
                        help=f'Number of EEG channels (default: {DEFAULT_EEG_CHANNELS})')
     parser.add_argument('--emg-channels', type=int, default=DEFAULT_EMG_CHANNELS,
                        help=f'Number of EMG channels (default: {DEFAULT_EMG_CHANNELS})')
+    parser.add_argument('--trigger-to-pulse-delay', type=float, default=DEFAULT_TRIGGER_TO_PULSE_DELAY,
+                       help=f'Simulated delay from trigger to pulse appearance in seconds (default: {DEFAULT_TRIGGER_TO_PULSE_DELAY})')
     parser.add_argument('--duration', type=float,
                        help='Duration in seconds to run (default: run until interrupted)')
 
@@ -348,7 +375,8 @@ def main():
         sampling_rate=args.sampling_rate,
         eeg_channels=args.eeg_channels,
         emg_channels=args.emg_channels,
-        trigger_port=args.trigger_port
+        trigger_port=args.trigger_port,
+        trigger_to_pulse_delay=args.trigger_to_pulse_delay
     )
 
     def signal_handler(signum, frame):

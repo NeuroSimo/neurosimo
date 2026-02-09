@@ -321,7 +321,7 @@ class SessionManagerNode(Node):
         initialized['stimulation_tracer'] = True
 
         # Initialize trigger timer
-        if not self.initialize_trigger_timer(session_id):
+        if not self.initialize_trigger_timer(session_id, global_config):
             self.logger.error('TriggerTimer initialization failed')
             return initialized
         initialized['trigger_timer'] = True
@@ -596,10 +596,15 @@ class SessionManagerNode(Node):
         self.logger.info('StimulationTracer initialized successfully')
         return True
 
-    def initialize_trigger_timer(self, session_id):
+    def initialize_trigger_timer(self, session_id, global_config):
         """Initialize the trigger timer component."""
         request = InitializeTriggerTimer.Request()
         request.session_id = session_id
+
+        # Configuration from global config
+        request.maximum_timing_error = global_config.maximum_timing_error
+        request.maximum_loopback_latency = global_config.maximum_loopback_latency
+        request.simulate_labjack = global_config.simulate_labjack
 
         response = self.call_service(self.trigger_timer_init_client, request, '/pipeline/trigger_timer/initialize')
 

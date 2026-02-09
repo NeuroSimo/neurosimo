@@ -248,8 +248,11 @@ interface GlobalConfigValues {
   
   // Safety Configuration
   minimumIntertrialInterval: number
+
+  // Timing Configuration
   maximumLoopbackLatency: number
   maximumTimingError: number
+  triggerToPulseDelay: number
   
   // Disk Space Monitoring Configuration
   diskWarningThreshold: number
@@ -272,8 +275,11 @@ const emptyConfig: GlobalConfigValues = {
   
   // Safety Configuration
   minimumIntertrialInterval: 0,
+
+  // Timing Configuration
   maximumLoopbackLatency: 0,
   maximumTimingError: 0,
+  triggerToPulseDelay: 0,
   
   // Disk Space Monitoring Configuration
   diskWarningThreshold: 0,
@@ -338,6 +344,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
         minimumIntertrialInterval: globalConfig.minimumIntertrialInterval,
         maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
         maximumTimingError: globalConfig.maximumTimingError,
+        triggerToPulseDelay: globalConfig.triggerToPulseDelay,
         diskWarningThreshold: parseDiskThreshold(globalConfig.diskWarningThreshold),
         diskErrorThreshold: parseDiskThreshold(globalConfig.diskErrorThreshold),
         locale: globalConfig.locale,
@@ -381,6 +388,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
       minimumIntertrialInterval: config.minimumIntertrialInterval,
       maximumLoopbackLatency: config.maximumLoopbackLatency,
       maximumTimingError: config.maximumTimingError,
+      triggerToPulseDelay: config.triggerToPulseDelay,
       diskWarningThreshold: `${config.diskWarningThreshold}GiB`,
       diskErrorThreshold: `${config.diskErrorThreshold}GiB`,
       locale: config.locale,
@@ -579,6 +587,21 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
               <ValidatedInput
                 value={config.maximumTimingError}
                 onChange={(val) => updateConfig('maximumTimingError', val)}
+                formatValue={(val) => formatDecimal(val * 1000)}
+                parseValue={(str) => parseFloat(str) / 1000}
+                min={0}
+                step={0.1}
+              />
+            </InputGroup>
+
+            <InputGroup>
+              <LabelRow>
+                <Label htmlFor="triggerToPulseDelay">Trigger to Pulse Delay (milliseconds):</Label>
+                <InfoTooltip text="Delay between trigger and pulse" />
+              </LabelRow>
+              <ValidatedInput
+                value={config.triggerToPulseDelay}
+                onChange={(val) => updateConfig('triggerToPulseDelay', val)}
                 formatValue={(val) => formatDecimal(val * 1000)}
                 parseValue={(str) => parseFloat(str) / 1000}
                 min={0}

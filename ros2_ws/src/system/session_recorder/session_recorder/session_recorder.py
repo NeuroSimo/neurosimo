@@ -197,7 +197,10 @@ class SessionRecorderNode(Node):
             'global_config': message_to_ordereddict(request.global_config),
             'session_config': message_to_ordereddict(request.session_config),
             'stream_info': message_to_ordereddict(request.stream_info),
-            'software_provenance': self._get_software_provenance(),
+            'provenance': {
+                'software': self._get_software_provenance(),
+                'fingerprints': {}
+            },
             'start_time': datetime.now().isoformat(),
         }
 
@@ -278,13 +281,17 @@ class SessionRecorderNode(Node):
         # Record end time and fingerprints
         if self._recording_config:
             self._recording_config['end_time'] = datetime.now().isoformat()
+            fingerprints = {}
+
             # Fingerprints from decider, preprocessor, and data source
             if request.decision_fingerprint != 0:
-                self._recording_config['decision_fingerprint'] = request.decision_fingerprint
+                fingerprints['decision'] = int(request.decision_fingerprint)
             if request.preprocessor_fingerprint != 0:
-                self._recording_config['preprocessor_fingerprint'] = request.preprocessor_fingerprint
+                fingerprints['preprocessor'] = int(request.preprocessor_fingerprint)
             if request.data_source_fingerprint != 0:
-                self._recording_config['data_source_fingerprint'] = request.data_source_fingerprint
+                fingerprints['data_source'] = int(request.data_source_fingerprint)
+
+            self._recording_config['provenance']['fingerprints'] = fingerprints
 
         # Stop the recording process gracefully
         bag_path = self._bag_path

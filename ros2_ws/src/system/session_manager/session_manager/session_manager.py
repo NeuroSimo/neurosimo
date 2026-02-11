@@ -17,8 +17,8 @@ from pipeline_interfaces.srv import (
     InitializeStimulationTracer, FinalizeStimulationTracer,
     InitializeTriggerTimer, FinalizeTriggerTimer
 )
-from eeg_interfaces.action import InitializeSimulatorStream, InitializeRecordingStream
-from eeg_interfaces.srv import InitializeEegDeviceStream, StartStreaming, StopStreaming
+from eeg_interfaces.action import InitializeSimulatorStream
+from eeg_interfaces.srv import InitializeEegDeviceStream, InitializeEegReplayStream, StartStreaming, StopStreaming
 from eeg_interfaces.msg import StreamInfo, EegDeviceInfo
 
 from std_msgs.msg import String
@@ -87,8 +87,8 @@ class SessionManagerNode(Node):
             self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
         self.eeg_device_stream_init_client = self.create_client(
             InitializeEegDeviceStream, '/eeg_device/initialize', callback_group=self.callback_group)
-        self.recording_stream_init_client = ActionClient(
-            self, InitializeRecordingStream, '/recording/initialize', callback_group=self.callback_group)
+        self.recording_stream_init_client = self.create_client(
+            InitializeEegReplayStream, '/eeg_replay/initialize', callback_group=self.callback_group)
 
         # Create clients for finalization operations
         self.preprocessor_finalize_client = self.create_client(
@@ -110,8 +110,7 @@ class SessionManagerNode(Node):
 
         # Create clients for streaming start operations
         self.recording_streaming_start_client = self.create_client(
-            # TODO: Replace with recording service once implemented
-            StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
+            StartStreaming, '/eeg_replay/streaming/start', callback_group=self.callback_group)
         self.eeg_simulator_streaming_start_client = self.create_client(
             StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_device_streaming_start_client = self.create_client(
@@ -119,8 +118,7 @@ class SessionManagerNode(Node):
 
         # Create clients for streaming stop operations
         self.recording_streaming_stop_client = self.create_client(
-            # TODO: Replace with recording service once implemented
-            StopStreaming, '/eeg_simulator/streaming/stop', callback_group=self.callback_group)
+            StopStreaming, '/eeg_replay/streaming/stop', callback_group=self.callback_group)
         self.eeg_simulator_streaming_stop_client = self.create_client(
             StopStreaming, '/eeg_simulator/streaming/stop', callback_group=self.callback_group)
         self.eeg_device_streaming_stop_client = self.create_client(
@@ -155,9 +153,6 @@ class SessionManagerNode(Node):
         # Wait for all clients to be available
         action_clients = [
             (self.simulator_stream_init_client, '/eeg_simulator/initialize'),
-# TODO: Check recording stream initialization client once implemented
-#
-#            (self.recording_stream_init_client, '/recording/initialize'),
         ]
         for client, topic in action_clients:
             while not client.wait_for_server(timeout_sec=1.0):
@@ -171,14 +166,15 @@ class SessionManagerNode(Node):
             (self.presenter_init_client, '/pipeline/presenter/initialize'),
             (self.stimulation_tracer_init_client, '/pipeline/stimulation_tracer/initialize'),
             (self.eeg_device_stream_init_client, '/eeg_device/initialize'),
+            (self.recording_stream_init_client, '/eeg_replay/initialize'),
             (self.preprocessor_finalize_client, '/pipeline/preprocessor/finalize'),
             (self.decider_finalize_client, '/pipeline/decider/finalize'),
             (self.presenter_finalize_client, '/pipeline/presenter/finalize'),
             (self.stimulation_tracer_finalize_client, '/pipeline/stimulation_tracer/finalize'),
-            (self.recording_streaming_start_client, '/eeg_simulator/streaming/start'),
+            (self.recording_streaming_start_client, '/eeg_replay/streaming/start'),
             (self.eeg_simulator_streaming_start_client, '/eeg_simulator/streaming/start'),
             (self.eeg_device_streaming_start_client, '/eeg_device/streaming/start'),
-            (self.recording_streaming_stop_client, '/eeg_simulator/streaming/stop'),
+            (self.recording_streaming_stop_client, '/eeg_replay/streaming/stop'),
             (self.eeg_simulator_streaming_stop_client, '/eeg_simulator/streaming/stop'),
             (self.eeg_device_streaming_stop_client, '/eeg_device/streaming/stop'),
             (self.recording_start_client, '/session_recorder/start'),
@@ -517,12 +513,19 @@ class SessionManagerNode(Node):
             stream_info = response.stream_info
 
         elif data_source == 'recording':
-            # Recording initialization is dummy for now
-            self.logger.info('Recording initialization (dummy)')
-            stream_info = StreamInfo()
-            stream_info.sampling_frequency = 0
-            stream_info.num_eeg_channels = 0
-            stream_info.num_emg_channels = 0
+            bag_id = session_config.recording_bag_id
+            play_preprocessed = session_config.preprocessor_enabled
+
+            request = InitializeEegReplayStream.Request()
+            request.session_id = session_id
+            request.project_name = project_name
+            request.bag_id = bag_id
+            request.play_preprocessed = play_preprocessed
+
+            response = self.call_service(self.recording_stream_init_client, request, '/eeg_replay/initialize')
+            if response is None:
+                return None
+            stream_info = response.stream_info
 
         else:
             self.logger.error(f'Unknown data source: {data_source}')
@@ -751,7 +754,7 @@ class SessionManagerNode(Node):
         response = self.call_service(client, request, service_name)
 
         if response is None or not response.success:
-            self.logger.error(f'Data streaming start failed: {response.message}' if response else 'Data streaming start failed')
+            self.logger.error(f'Data streaming start failed')
             return False
 
         self.logger.info('Data streaming started successfully')
@@ -764,7 +767,7 @@ class SessionManagerNode(Node):
         # Choose the appropriate streaming stop service based on data source
         if data_source == 'recording':
             client = self.recording_streaming_stop_client
-            service_name = '/eeg_simulator/streaming/stop'  # TODO: Replace with recording service once implemented
+            service_name = '/eeg_replay/streaming/stop'
         elif data_source == 'simulator':
             client = self.eeg_simulator_streaming_stop_client
             service_name = '/eeg_simulator/streaming/stop'

@@ -19,3 +19,6 @@ string data_source
 # Simulator parameters
 string simulator_dataset_filename
 float64 simulator_start_time
+
+# Recording replay parameters
+string recording_bag_id

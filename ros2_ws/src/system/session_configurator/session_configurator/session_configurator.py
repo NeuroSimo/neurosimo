@@ -215,6 +215,11 @@ class SessionConfiguratorNode(Node):
         config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
         config.simulator_start_time = session_config.get('simulator.start_time', 0.0)
         
+        # Recording parameters
+        bag_filename = session_config.get('recording.bag_filename', '')
+        # Convert filename to bag_id by removing .json extension
+        config.recording_bag_id = bag_filename.rsplit('.json', 1)[0] if bag_filename else ''
+        
         self.session_config_publisher.publish(config)
 
     def parameter_change_callback(self, params):

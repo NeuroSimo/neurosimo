@@ -54,8 +54,7 @@ class SessionConfiguratorNode(Node):
         self.declare_parameter('simulator.dataset_filename', '')
         self.declare_parameter('simulator.start_time', 0.0)
 
-        # Recording parameters
-        self.declare_parameter('recording.bag_filename', '')
+        self.declare_parameter('recording.bag_id', '')
         self.declare_parameter('recording.play_preprocessed', False)
 
         # Data source parameter
@@ -112,7 +111,8 @@ class SessionConfiguratorNode(Node):
         # Load session config for the new project
         session_config = self.storage_manager.get_session_config_for_project(project_name)
 
-        # Set ROS2 parameters from the loaded config
+        bag_id = session_config.get("recording.bag_id", "")
+
         self.set_parameters([
             rclpy.parameter.Parameter('notes', rclpy.parameter.Parameter.Type.STRING, session_config["notes"]),
             rclpy.parameter.Parameter('subject_id', rclpy.parameter.Parameter.Type.STRING, session_config["subject_id"]),
@@ -126,7 +126,7 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
             rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
-            rclpy.parameter.Parameter('recording.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_config["recording.bag_filename"]),
+            rclpy.parameter.Parameter('recording.bag_id', rclpy.parameter.Parameter.Type.STRING, bag_id),
             rclpy.parameter.Parameter('recording.play_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["recording.play_preprocessed"]),
         ])
 
@@ -164,6 +164,10 @@ class SessionConfiguratorNode(Node):
     def publish_filename_list(self, project_name, subdirectory, file_extensions, publisher, component_name):
         """Publish the list of modules for the specified project and component."""
         modules = self.list_files(project_name, subdirectory, file_extensions)
+
+        # For recordings, publish bag_ids (base name without .json) instead of JSON filenames
+        if component_name == "recordings":
+            modules = [m.rsplit(".json", 1)[0] if m.endswith(".json") else m for m in modules]
 
         # Create and publish FilenameList message
         msg = FilenameList()
@@ -215,11 +219,7 @@ class SessionConfiguratorNode(Node):
         config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
         config.simulator_start_time = session_config.get('simulator.start_time', 0.0)
         
-        # Recording parameters
-        bag_filename = session_config.get('recording.bag_filename', '')
-        # Convert filename to bag_id by removing .json extension
-        config.recording_bag_id = bag_filename.rsplit('.json', 1)[0] if bag_filename else ''
-
+        config.recording_bag_id = session_config.get('recording.bag_id', '')
         config.play_preprocessed = session_config.get('recording.play_preprocessed', False)
         
         self.session_config_publisher.publish(config)

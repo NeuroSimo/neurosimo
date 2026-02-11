@@ -7,6 +7,7 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y \
     dos2unix \
+    libxxhash-dev \
     ros-iron-rmw-cyclonedds-cpp && \
     rm -rf /var/lib/apt/lists/*
 

@@ -147,6 +147,9 @@ private:
 
   double_t time_offset = UNSET_TIME;     // in seconds
 
+  /* XXHash state for data fingerprinting */
+  uint64_t session_data_fingerprint = 0;
+
 };
 
 #endif

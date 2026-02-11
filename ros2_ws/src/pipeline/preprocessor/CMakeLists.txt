@@ -19,6 +19,8 @@ find_package(system_interfaces REQUIRED)
 
 find_package(realtime_utils REQUIRED)
 find_package(filesystem_utils REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(XXHASH REQUIRED libxxhash)
 
 find_package(pybind11 QUIET)
 if(NOT pybind11_FOUND)
@@ -71,7 +73,10 @@ target_link_libraries(preprocessor
   preprocessor_core
   realtime_utils::utils
   filesystem_utils::filesystem_utils
+  ${XXHASH_LIBRARIES}
 )
+
+target_include_directories(preprocessor PRIVATE ${XXHASH_INCLUDE_DIRS})
 
 install(TARGETS
   preprocessor

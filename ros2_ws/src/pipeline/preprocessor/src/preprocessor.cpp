@@ -1,6 +1,9 @@
 #include <chrono>
 #include <filesystem>
 
+#define XXH_INLINE_ALL
+#include <xxhash.h>
+
 #include "preprocessor_wrapper.h"
 #include "preprocessor.h"
 
@@ -193,6 +196,10 @@ void EegPreprocessor::handle_finalize_preprocessor(
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
   }
 
+  /* Store the final fingerprint before resetting state */
+  response->data_fingerprint = this->session_data_fingerprint;
+  RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_fingerprint);
+
   response->success = this->reset_state();
 
   if (!response->success) {
@@ -213,6 +220,7 @@ bool EegPreprocessor::reset_state() {
   this->is_enabled = false;
   this->error_occurred = false;
   this->pending_session_start = false;
+  this->session_data_fingerprint = 0;
 
   /* Reset sample buffer. */
   this->sample_buffer.reset(0);
@@ -380,6 +388,20 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   /* Calculate preprocessing duration. */
   auto end_time = std::chrono::high_resolution_clock::now();
   preprocessed_sample.preprocessor_duration = std::chrono::duration<double_t>(end_time - start_time).count();
+
+  /* Update data fingerprint with EEG data */
+  if (!preprocessed_sample.eeg.empty()) {
+    this->session_data_fingerprint = XXH64(preprocessed_sample.eeg.data(),
+                                            preprocessed_sample.eeg.size() * sizeof(double),
+                                            this->session_data_fingerprint);
+  }
+  
+  /* Update data fingerprint with EMG data */
+  if (!preprocessed_sample.emg.empty()) {
+    this->session_data_fingerprint = XXH64(preprocessed_sample.emg.data(),
+                                            preprocessed_sample.emg.size() * sizeof(double),
+                                            this->session_data_fingerprint);
+  }
 
   /* Publish the preprocessed sample. */
   preprocessed_eeg_publisher->publish(preprocessed_sample);

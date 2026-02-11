@@ -114,6 +114,9 @@ private:
   /* Pending session start marker to be carried forward to the next published sample. */
   bool pending_session_start = false;
 
+  /* XXHash state for data fingerprinting */
+  uint64_t session_data_fingerprint = 0;
+
   StreamInfo stream_info;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;

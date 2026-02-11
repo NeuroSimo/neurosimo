@@ -224,10 +224,10 @@ services:
       - '$PROJECTS_ROOT:/app/projects'
     network_mode: host
 
-  session_player:
+  recording_manager:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/session_player/Dockerfile
+      dockerfile: ros2_ws/src/system/recording_manager/Dockerfile
     env_file:
       - .env
     environment:

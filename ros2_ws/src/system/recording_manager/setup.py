@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'session_player'
+package_name = 'recording_manager'
 
 setup(
     name=package_name,
@@ -19,12 +19,12 @@ setup(
     zip_safe=True,
     maintainer='Olli-Pekka Kahilakoski',
     maintainer_email='okahilak@gmail.com',
-    description='Session player',
+    description='Recording manager',
     license='TODO',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'session_player = session_player.session_player:main',
+            'recording_manager = recording_manager.recording_manager:main',
         ],
     },
 )

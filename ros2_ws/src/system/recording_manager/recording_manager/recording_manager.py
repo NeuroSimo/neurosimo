@@ -45,9 +45,9 @@ METADATA_SCHEMA = {
 }
 
 
-class SessionPlayerNode(Node):
+class RecordingManagerNode(Node):
     def __init__(self):
-        super().__init__('session_player')
+        super().__init__('recording_manager')
         self.logger = self.get_logger()
         self.callback_group = MutuallyExclusiveCallbackGroup()
 
@@ -73,12 +73,12 @@ class SessionPlayerNode(Node):
         # Create service for getting recording info
         self._get_recording_info_service = self.create_service(
             GetRecordingInfo,
-            '/session_player/recording/get_info',
+            '/recording_manager/recording/get_info',
             self._handle_get_recording_info,
             callback_group=self.callback_group
         )
 
-        self.logger.info('Session Player initialized')
+        self.logger.info('Recording manager initialized')
 
     def _validate_node(self, obj, schema, require_all_keys: bool) -> bool:
         """Recursively validate a dict against a simple schema dict."""
@@ -225,7 +225,7 @@ class SessionPlayerNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = SessionPlayerNode()
+    node = RecordingManagerNode()
 
     executor = MultiThreadedExecutor()
     executor.add_node(node)

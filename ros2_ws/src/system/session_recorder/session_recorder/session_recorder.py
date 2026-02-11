@@ -192,6 +192,8 @@ class SessionRecorderNode(Node):
         self._current_session_id = bytes(request.session_id)
         session_uuid = uuid.UUID(bytes=self._current_session_id)
 
+        start_time = datetime.now().isoformat()
+
         self._recording_config = {
             'session_id': str(session_uuid),
             'global_config': message_to_ordereddict(request.global_config),
@@ -201,7 +203,10 @@ class SessionRecorderNode(Node):
                 'software': self._get_software_provenance(),
                 'fingerprints': {}
             },
-            'start_time': datetime.now().isoformat(),
+            'timing': {
+                'start_time': start_time,
+                # end_time and duration will be filled in when recording stops
+            },
         }
 
         # Create bag directory
@@ -278,9 +283,17 @@ class SessionRecorderNode(Node):
             response.bag_path = ''
             return response
 
-        # Record end time and fingerprints
+        # Record end time, duration, and fingerprints
         if self._recording_config:
-            self._recording_config['end_time'] = datetime.now().isoformat()
+            end_time = datetime.now().isoformat()
+
+            self._recording_config['timing']['end_time'] = end_time
+
+            # Compute duration
+            start_dt = datetime.fromisoformat(start_time)
+            end_dt = datetime.fromisoformat(end_time)
+            self._recording_config['timing']['duration'] = (end_dt - start_dt).total_seconds()
+
             fingerprints = {}
 
             # Fingerprints from decider, preprocessor, and data source

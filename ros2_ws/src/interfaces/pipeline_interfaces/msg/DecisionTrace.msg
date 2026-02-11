@@ -23,7 +23,7 @@ uint8 STATUS_FIRED=4                      # trigger timer fired hardware trigger
 uint8 STATUS_PULSE_OBSERVED=5             # pulse observed in EEG stream
 uint8 STATUS_MISSED=6                     # expected pulse not observed within window
 uint8 STATUS_LOOPBACK_LATENCY_EXCEEDED=7  # loopback latency exceeds threshold
-uint8 STATUS_TOO_LATE=8                   # trigger time exceeded maximum timing error
+uint8 STATUS_TOO_LATE=8                   # trigger time exceeded maximum timing offset
 uint8 STATUS_ERROR=9                      # error (e.g. LabJack not connected, trigger already scheduled)
 uint8 status
 
@@ -51,14 +51,14 @@ uint64 system_time_decider_finished  # steady clock ns
 # ----------------------------------------------------------------------------
 # TriggerTimer configuration (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
-float64 maximum_timing_error         # in seconds
+float64 maximum_timing_offset         # in seconds
 float64 maximum_loopback_latency     # in seconds
 float64 trigger_to_pulse_delay       # in seconds
 
 # ----------------------------------------------------------------------------
 # TriggerTimer timing (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
-float64 stimulation_horizon          # effective horizon accounting for maximum_timing_error, in seconds
+float64 stimulation_horizon          # effective horizon accounting for maximum_timing_offset, in seconds
 float64 strict_stimulation_horizon   # strict horizon without timing error tolerance, in seconds
 
 uint64 system_time_trigger_timer_received

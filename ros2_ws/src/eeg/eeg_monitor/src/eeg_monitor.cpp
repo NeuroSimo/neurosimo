@@ -11,7 +11,7 @@
 
 using namespace std::chrono_literals;
 
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
+const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
 const std::string EEG_STATISTICS_TOPIC = "/eeg/statistics";
 
@@ -24,7 +24,7 @@ public:
     num_of_raw_eeg_samples = 0;
 
     /* Subscriber for raw EEG. */
-    auto eeg_raw_subscriber_callback = [this](const std::shared_ptr<eeg_interfaces::msg::Sample> msg) -> void {
+    auto eeg_enriched_subscriber_callback = [this](const std::shared_ptr<eeg_interfaces::msg::Sample> msg) -> void {
       /* Update the maximum time between two consecutive samples. */
       auto now = this->now();
 
@@ -40,10 +40,10 @@ public:
       num_of_raw_eeg_samples++;
     };
 
-    eeg_raw_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
-      EEG_RAW_TOPIC,
+    eeg_enriched_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
+      EEG_ENRICHED_TOPIC,
       10,
-      eeg_raw_subscriber_callback);
+      eeg_enriched_subscriber_callback);
 
     /* Subscriber for preprocessed EEG. */
     auto eeg_preprocessed_subscriber_callback = [this](const std::shared_ptr<eeg_interfaces::msg::Sample> msg) -> void {
@@ -142,7 +142,7 @@ public:
 
 
 private:
-  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
+  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_enriched_subscriber;
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_preprocessed_subscriber;
   rclcpp::Publisher<eeg_interfaces::msg::EegStatistics>::SharedPtr eeg_statistics_publisher;
 

@@ -433,7 +433,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   if (!this->is_enabled || !this->is_initialized) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
                          *this->get_clock(),
-                         5000,
+                         500,
                          "Preprocessor not processing samples (is_enabled=%d, is_initialized=%d)",
                          this->is_enabled, this->is_initialized);
     return;

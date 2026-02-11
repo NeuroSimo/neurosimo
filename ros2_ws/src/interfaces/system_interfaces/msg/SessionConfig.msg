@@ -22,3 +22,4 @@ float64 simulator_start_time
 
 # Recording replay parameters
 string recording_bag_id
+bool play_preprocessed

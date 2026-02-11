@@ -74,7 +74,7 @@ const ExportProgress = styled.span`
 
 export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setRecordingBagFilename, setRecordingIsPreprocessed } = useSessionConfig()
+  const { setRecordingBagFilename, setPlayPreprocessed } = useSessionConfig()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(RecordingContext)
   const { activeProject, locale } = useGlobalConfig()
@@ -85,7 +85,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
 
   // For recording tab - these would come from a recording context in the future
   const [recordingBagFilename, setRecordingBagFilenameState] = useState<string>('')
-  const [recordingIsPreprocessed, setRecordingIsPreprocessedState] = useState<boolean>(false)
+  const [playPreprocessed, setPlayPreprocessedState] = useState<boolean>(false)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
@@ -138,10 +138,10 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
     })
   }
 
-  const setRecordingIsPreprocessedHandler = (isPreprocessed: boolean) => {
-    setRecordingIsPreprocessedState(isPreprocessed)
-    setRecordingIsPreprocessed(isPreprocessed, () => {
-      console.log('Recording is preprocessed set to ' + isPreprocessed)
+  const setPlayPreprocessedHandler = (isPreprocessed: boolean) => {
+    setPlayPreprocessedState(isPreprocessed)
+    setPlayPreprocessed(isPreprocessed, () => {
+      console.log('Replay play_preprocessed set to ' + isPreprocessed)
     })
   }
 
@@ -199,17 +199,6 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
           <ConfigValue>No recordings</ConfigValue>
         )}
       </ConfigRow>
-      {/* <CompactRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Preprocessed:</ConfigLabel>
-        <SwitchWrapper>
-          <ToggleSwitch
-            type="flat"
-            checked={recordingIsPreprocessed}
-            onChange={setRecordingIsPreprocessedHandler}
-            disabled={isSessionRunning || isEegStreaming || recordingsList.length === 0}
-          />
-        </SwitchWrapper>
-      </CompactRow> */}
       {selectedRecordingInfo && (
         <>
           <CompactRow>
@@ -285,6 +274,21 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
           <div style={{ height: '8px' }} />
         </>
       )}
+      <CompactRow>
+        <ConfigLabel>Replay:</ConfigLabel>
+      </CompactRow>
+      <CompactRow style={{ justifyContent: 'space-between' }}>
+        <ConfigLabel style={{ paddingLeft: 10 }}>Play preprocessed</ConfigLabel>
+        <SwitchWrapper>
+          <ToggleSwitch
+            type="flat"
+            checked={playPreprocessed}
+            onChange={setPlayPreprocessedHandler}
+            disabled={isSessionRunning || isEegStreaming || recordingsList.length === 0}
+          />
+        </SwitchWrapper>
+      </CompactRow>
+      <div style={{ height: '8px' }} />
       <CompactRow>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
           {isExporting && (

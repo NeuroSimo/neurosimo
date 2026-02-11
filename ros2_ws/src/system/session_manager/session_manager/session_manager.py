@@ -514,7 +514,7 @@ class SessionManagerNode(Node):
 
         elif data_source == 'recording':
             bag_id = session_config.recording_bag_id
-            play_preprocessed = session_config.preprocessor_enabled
+            play_preprocessed = session_config.play_preprocessed
 
             request = InitializeEegReplayStream.Request()
             request.session_id = session_id

@@ -10,7 +10,7 @@ import { StyledPanel, CONFIG_PANEL_WIDTH, SmallerTitle } from 'styles/General'
 
 const DataSourcePanel = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
-  height: 500px;
+  height: 550px;
   position: static;
   display: flex;
   flex-direction: column;

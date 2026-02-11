@@ -107,7 +107,15 @@ export const StimulationDisplay: React.FC = () => {
           <IndentedStateTitle>Requested for</IndentedStateTitle>
           <StateValue>{formattedRequestedStimulationOffset}</StateValue>
         </StateRow>
-        <br />
+        <StateRow>
+          <IndentedStateTitle>Timing offset</IndentedStateTitle>
+          <StateValue>{formattedTimingOffset}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Status</IndentedStateTitle>
+          <StateValue>{formattedStatus}</StateValue>
+        </StateRow>
+        <div style={{ height: '8px' }} />
         <StateRow>
           <IndentedStateTitle>Horizon</IndentedStateTitle>
           <StateValue>{formattedStimulationHorizon}</StateValue>
@@ -115,15 +123,6 @@ export const StimulationDisplay: React.FC = () => {
         <StateRow>
           <DoubleIndentedStateTitle>Strict</DoubleIndentedStateTitle>
           <StateValue>{formattedStrictHorizon}</StateValue>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Timing offset</IndentedStateTitle>
-          <StateValue>{formattedTimingOffset}</StateValue>
-        </StateRow>
-        <br />
-        <StateRow>
-          <IndentedStateTitle>Status</IndentedStateTitle>
-          <StateValue>{formattedStatus}</StateValue>
         </StateRow>
       </StimulationPanel>
     </>

@@ -286,13 +286,14 @@ class SessionRecorderNode(Node):
         # Record end time, duration, and fingerprints
         if self._recording_config:
             end_time = datetime.now().isoformat()
-
             self._recording_config['timing']['end_time'] = end_time
 
-            # Compute duration
-            start_dt = datetime.fromisoformat(start_time)
-            end_dt = datetime.fromisoformat(end_time)
-            self._recording_config['timing']['duration'] = (end_dt - start_dt).total_seconds()
+            # Compute duration based on stored start_time
+            start_time_str = self._recording_config['timing'].get('start_time')
+            if start_time_str:
+                start_dt = datetime.fromisoformat(start_time_str)
+                end_dt = datetime.fromisoformat(end_time)
+                self._recording_config['timing']['duration'] = (end_dt - start_dt).total_seconds()
 
             fingerprints = {}
 

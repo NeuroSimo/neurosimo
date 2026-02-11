@@ -187,14 +187,21 @@ class EegReplayNode(Node):
                 response.success = False
                 return response
 
-            # Determine which topic to play back
-            topic = '/eeg/preprocessed' if self.play_preprocessed else '/eeg/enriched'
+            # Determine which EEG topic to play back
+            eeg_topic = '/eeg/preprocessed' if self.play_preprocessed else '/eeg/enriched'
+
+            # Always also replay experiment UI state for the frontend
+            topics = [
+                eeg_topic,
+                '/pipeline/experiment_state',
+            ]
 
             # Build ros2 bag play command
             cmd = [
                 'ros2', 'bag', 'play',
                 self.bag_filepath,
-                '--topics', topic,
+                '--topics',
+                *topics,
                 '--clock', '200'  # Publish clock at 200 Hz
             ]
 

@@ -43,7 +43,7 @@ class GlobalConfiguratorNode(Node):
 
         # Timing Configuration
         self.declare_parameter('maximum_loopback_latency', global_config['maximum_loopback_latency'])
-        self.declare_parameter('maximum_timing_error', global_config['maximum_timing_error'])
+        self.declare_parameter('maximum_timing_offset', global_config['maximum_timing_offset'])
         self.declare_parameter('trigger_to_pulse_delay', global_config['trigger_to_pulse_delay'])
         
         # Disk Space Monitoring Configuration
@@ -102,7 +102,7 @@ class GlobalConfiguratorNode(Node):
 
         # Timing Configuration
         config.maximum_loopback_latency = global_config.get('maximum_loopback_latency', 0.005)
-        config.maximum_timing_error = global_config.get('maximum_timing_error', 0.0)
+        config.maximum_timing_offset = global_config.get('maximum_timing_offset', 0.0)
         config.trigger_to_pulse_delay = global_config.get('trigger_to_pulse_delay', 0.0)
         
         # Disk Space Monitoring Configuration

@@ -96,7 +96,7 @@ DECISION_TRACE_FIELDS = [
     'system_time_trigger_timer_finished',
     'system_time_hardware_fired',
     'loopback_latency_at_scheduling',
-    'maximum_timing_error',
+    'maximum_timing_offset',
     'maximum_loopback_latency',
     'trigger_to_pulse_delay',
     'latency_corrected_time_at_firing',

@@ -15,12 +15,12 @@ def generate_launch_description():
     logger = LaunchConfiguration("log-level")
 
     node_executables = [
-        "session_player",
+        "recording_manager",
     ]
 
     for node_executable in node_executables:
         node = Node(
-            package="session_player",
+            package="recording_manager",
             executable=node_executable,
             arguments=['--ros-args', '--log-level', logger]
         )

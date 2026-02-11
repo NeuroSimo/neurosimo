@@ -1,0 +1,6 @@
+uint8[16] session_id
+string project_name
+string bag_id
+bool play_preprocessed
+---
+StreamInfo stream_info

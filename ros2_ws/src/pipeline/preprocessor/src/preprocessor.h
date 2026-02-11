@@ -115,7 +115,7 @@ private:
   bool pending_session_start = false;
 
   /* XXHash state for data fingerprinting */
-  uint64_t session_data_fingerprint = 0;
+  uint64_t data_fingerprint = 0;
 
   StreamInfo stream_info;
 

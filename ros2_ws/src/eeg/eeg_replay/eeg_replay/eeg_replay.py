@@ -7,13 +7,14 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 from eeg_interfaces.srv import InitializeEegReplayStream, StartStreaming, StopStreaming
 from eeg_interfaces.msg import StreamInfo
 from system_interfaces.msg import GlobalConfig, DataSourceState
+from system_interfaces.srv import AbortSession
 
 import os
 import json
 import subprocess
 import signal
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 
 
 class EegReplayNode(Node):
@@ -30,6 +31,7 @@ class EegReplayNode(Node):
         self.data_source_fingerprint = 0
         self.bag_process = None
         self.process_lock = Lock()
+        self.stop_requested = False
         
         # QoS profile for latched topics
         qos_persist_latest = QoSProfile(
@@ -43,6 +45,13 @@ class EegReplayNode(Node):
             DataSourceState,
             '/eeg_replay/state',
             qos_persist_latest,
+            callback_group=self.callback_group
+        )
+
+        # Client for aborting session
+        self.abort_session_client = self.create_client(
+            AbortSession,
+            '/session/abort',
             callback_group=self.callback_group
         )
 
@@ -191,12 +200,15 @@ class EegReplayNode(Node):
 
             try:
                 self.logger.info(f'Starting bag playback: {" ".join(cmd)}')
+                self.stop_requested = False
                 self.bag_process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     preexec_fn=os.setsid  # Create new process group for proper cleanup
                 )
+                # Start background monitor thread to detect natural end of bag
+                Thread(target=self._monitor_bag_process, daemon=True).start()
                 self.publish_state(DataSourceState.RUNNING)
                 response.success = True
                 self.logger.info('Bag playback started successfully')
@@ -219,6 +231,8 @@ class EegReplayNode(Node):
                 return response
 
             try:
+                # Mark that this stop was requested explicitly to avoid aborting session
+                self.stop_requested = True
                 # Send SIGTERM to the process group
                 os.killpg(os.getpgid(self.bag_process.pid), signal.SIGTERM)
                 
@@ -241,6 +255,47 @@ class EegReplayNode(Node):
                 response.data_source_fingerprint = 0
 
         return response
+
+    def _monitor_bag_process(self):
+        """Background thread that waits for bag playback to finish and aborts session if it ends naturally."""
+        with self.process_lock:
+            process = self.bag_process
+
+        if process is None:
+            return
+
+        # Wait for the bag process to exit
+        retcode = process.wait()
+
+        with self.process_lock:
+            # If the process handle has changed (e.g. restarted) or was cleared, do nothing
+            if process is not self.bag_process:
+                return
+
+            self.bag_process = None
+
+            # If stop was requested explicitly, just transition to READY without aborting the session
+            if self.stop_requested:
+                self.logger.info(f'Bag playback stopped manually with return code {retcode}')
+                self.publish_state(DataSourceState.READY)
+                return
+
+        # Natural end of bag playback: mark READY and abort session
+        self.logger.info(f'Bag playback finished with return code {retcode}, aborting session')
+        self.publish_state(DataSourceState.READY)
+        self.abort_session()
+
+    def abort_session(self):
+        """Request session abort via AbortSession service."""
+        if not self.abort_session_client.wait_for_service(timeout_sec=1.0):
+            self.logger.error('AbortSession service not available, cannot abort session')
+            return
+
+        request = AbortSession.Request()
+        request.source = 'eeg_replay'
+
+        self.abort_session_client.call_async(request)
+        self.logger.info('Requested session abort: bag playback finished')
 
     def cleanup(self):
         """Cleanup on node shutdown."""

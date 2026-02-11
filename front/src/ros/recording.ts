@@ -32,7 +32,7 @@ export interface RecordingInfo extends ROSLIB.Message {
 /* Get recording info service */
 const getRecordingInfoService = new ROSLIB.Service({
   ros: ros,
-  name: '/session_player/recording/get_info',
+  name: '/recording_manager/recording/get_info',
   serviceType: 'project_interfaces/GetRecordingInfo',
 })
 

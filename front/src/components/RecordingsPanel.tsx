@@ -22,7 +22,7 @@ import { RecordingContext } from 'providers/RecordingProvider'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 import { useExporter, ExporterStateValue } from 'providers/ExporterProvider'
 import { exportSessionRos } from 'ros/session'
-import { getRecordingInfoRos, RecordingInfo } from 'ros/session_player'
+import { getRecordingInfoRos, RecordingInfo } from 'ros/recording'
 import { formatTime, formatDateTime, formatFrequency } from 'utils/utils'
 
 const RecordingContainer = styled(StyledPanel)`

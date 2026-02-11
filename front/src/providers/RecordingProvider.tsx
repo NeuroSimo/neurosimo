@@ -4,28 +4,28 @@ import { Topic } from '@foxglove/roslibjs'
 import { ros } from 'ros/ros'
 import { FilenameList } from './ModuleListProvider'
 
-interface PlaybackContextType {
+interface RecordingContextType {
   recordingsList: string[]
 }
 
-const defaultPlaybackState: PlaybackContextType = {
+const defaultRecordingState: RecordingContextType = {
   recordingsList: [],
 }
 
-export const PlaybackContext = React.createContext<PlaybackContextType>(defaultPlaybackState)
+export const RecordingContext = React.createContext<RecordingContextType>(defaultRecordingState)
 
-interface PlaybackProviderProps {
+interface RecordingProviderProps {
   children: ReactNode
 }
 
-export const PlaybackProvider: React.FC<PlaybackProviderProps> = ({ children }) => {
+export const RecordingProvider: React.FC<RecordingProviderProps> = ({ children }) => {
   const [recordingsList, setRecordingsList] = useState<string[]>([])
 
   useEffect(() => {
     /* Subscriber for recordings list. */
     const recordingsListSubscriber = new Topic<FilenameList>({
       ros: ros,
-      name: '/playback/recordings/list',
+      name: '/recording/recordings/list',
       messageType: 'project_interfaces/FilenameList',
     })
 
@@ -40,12 +40,12 @@ export const PlaybackProvider: React.FC<PlaybackProviderProps> = ({ children }) 
   }, [])
 
   return (
-    <PlaybackContext.Provider
+    <RecordingContext.Provider
       value={{
         recordingsList,
       }}
     >
       {children}
-    </PlaybackContext.Provider>
+    </RecordingContext.Provider>
   )
 }

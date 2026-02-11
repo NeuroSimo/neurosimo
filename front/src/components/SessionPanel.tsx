@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
-import { PlaybackContext } from 'providers/PlaybackProvider'
+import { RecordingContext } from 'providers/RecordingProvider'
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
 import { LogContext } from 'providers/LogProvider'
 
@@ -34,7 +34,7 @@ const getStateDisplayText = (stateValue: SessionStateValue): string => {
 export const SessionPanel: React.FC = () => {
   const { sessionState, startSession, abortSession } = useSession()
   const { dataSource } = useSessionConfig()
-  const { recordingsList } = useContext(PlaybackContext)
+  const { recordingsList } = useContext(RecordingContext)
   const { datasetList } = useContext(EegSimulatorContext)
   const { clearAllLogs } = useContext(LogContext)
   const [displayedState, setDisplayedState] = useState(sessionState.state)
@@ -98,7 +98,7 @@ export const SessionPanel: React.FC = () => {
 
   // Disable button if no data is available for the selected data source
   const isNoDataAvailable = sessionState.state !== SessionStateValue.RUNNING && (
-    (dataSource === 'playback' && recordingsList.length === 0) ||
+    (dataSource === 'recording' && recordingsList.length === 0) ||
     (dataSource === 'simulator' && datasetList.length === 0)
   )
 

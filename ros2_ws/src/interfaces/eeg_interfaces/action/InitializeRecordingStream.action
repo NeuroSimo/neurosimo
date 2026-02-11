@@ -1,5 +1,5 @@
-# Initialize playback action
-# Goal: Playback initialization parameters
+# Initialize recording stream
+# Goal:  initialization parameters
 uint8[16] session_id
 
 string project_name

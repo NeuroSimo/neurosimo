@@ -13,6 +13,38 @@ import json
 from pathlib import Path
 
 
+# Expected structure and types of the recording metadata JSON
+METADATA_SCHEMA = {
+    'session_id': str,
+    'global_config': dict,
+    'session_config': dict,
+    'stream_info': {
+        'num_eeg_channels': int,
+        'num_emg_channels': int,
+        'sampling_frequency': int,
+    },
+    'timing': {
+        'start_time': str,
+        'end_time': str,
+        'duration': float,
+    },
+    'provenance': {
+        'software': {
+            'git_commit': str,
+            'git_state': str,
+            'version': str,
+        },
+        # Fingerprints object may be present with numeric values;
+        # individual keys under it are optional.
+        'fingerprints': {
+            'data_source': int,
+            'preprocessor': int,
+            'decision': int,
+        },
+    },
+}
+
+
 class SessionPlayerNode(Node):
     def __init__(self):
         super().__init__('session_player')
@@ -47,6 +79,36 @@ class SessionPlayerNode(Node):
         )
 
         self.logger.info('Session Player initialized')
+
+    def _validate_node(self, obj, schema, require_all_keys: bool) -> bool:
+        """Recursively validate a dict against a simple schema dict."""
+        if not isinstance(obj, dict):
+            return False
+
+        for key, expected in schema.items():
+            if key not in obj:
+                if require_all_keys:
+                    return False
+                continue
+
+            value = obj[key]
+
+            if isinstance(expected, dict):
+                # Nested dict schema; inner keys are optional by default.
+                if not isinstance(value, dict):
+                    return False
+                if not self._validate_node(value, expected, require_all_keys=False):
+                    return False
+            else:
+                # Leaf type
+                if not isinstance(value, expected):
+                    return False
+
+        return True
+
+    def _validate_metadata(self, metadata):
+        """Validate that the recording metadata matches the expected schema."""
+        return self._validate_node(metadata, METADATA_SCHEMA, require_all_keys=True)
 
     def _handle_global_config(self, msg):
         """Handle global config changes."""
@@ -85,6 +147,12 @@ class SessionPlayerNode(Node):
             with open(json_file_path, 'r') as f:
                 metadata = json.load(f)
 
+            # Validate metadata structure
+            if not self._validate_metadata(metadata):
+                self.logger.error(f'Invalid metadata structure in file: {json_file_path}')
+                response.success = False
+                return response
+
             # Create RecordingInfo message
             recording_info = RecordingInfo()
 
@@ -112,11 +180,11 @@ class SessionPlayerNode(Node):
             recording_info.decider_enabled = session_config.get('decider_enabled', False)
             recording_info.presenter_enabled = session_config.get('presenter_enabled', False)
 
-            # Extract timestamps
+            # Extract timestamps (schema guarantees correct types)
             timing = metadata.get('timing', {})
-            recording_info.start_time = timing.get('start_time')
-            recording_info.end_time = timing.get('end_time')
-            recording_info.duration = timing.get('duration')
+            recording_info.start_time = timing.get('start_time', '')
+            recording_info.end_time = timing.get('end_time', '')
+            recording_info.duration = timing.get('duration', 0.0)
 
             # Extract software provenance and fingerprints
             provenance = metadata.get('provenance', {})
@@ -127,7 +195,7 @@ class SessionPlayerNode(Node):
             recording_info.git_state = software.get('git_state', '')
             recording_info.version = software.get('version', '')
 
-            # Fingerprints
+            # Fingerprints (schema guarantees ints)
             recording_info.data_source_fingerprint = fingerprints.get('data_source', 0)
             recording_info.preprocessor_fingerprint = fingerprints.get('preprocessor', 0)
             recording_info.decision_fingerprint = fingerprints.get('decision', 0)

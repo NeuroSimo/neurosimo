@@ -50,6 +50,11 @@ export const StimulationDisplay: React.FC = () => {
     : '\u2013'
 
   // Pulse
+  const isRequestedAtReference =
+    decisionTrace?.requested_stimulation_time !== undefined &&
+    decisionTrace?.reference_sample_time !== undefined &&
+    Math.abs(decisionTrace.requested_stimulation_time - decisionTrace.reference_sample_time) <= 0.001
+
   const formattedReferenceSampleTime = decisionTrace?.reference_sample_time
     ? decisionTrace.reference_sample_time.toFixed(3).replace(/\.?0+$/, '') + ' s'
     : '\u2013'
@@ -116,14 +121,18 @@ export const StimulationDisplay: React.FC = () => {
           <StateValue>{formattedStatus}</StateValue>
         </StateRow>
         <div style={{ height: '8px' }} />
-        <StateRow>
-          <IndentedStateTitle>Horizon</IndentedStateTitle>
-          <StateValue>{formattedStimulationHorizon}</StateValue>
-        </StateRow>
-        <StateRow>
-          <DoubleIndentedStateTitle>Strict</DoubleIndentedStateTitle>
-          <StateValue>{formattedStrictHorizon}</StateValue>
-        </StateRow>
+        {!isRequestedAtReference && (
+          <>
+            <StateRow>
+              <IndentedStateTitle>Horizon</IndentedStateTitle>
+              <StateValue>{formattedStimulationHorizon}</StateValue>
+            </StateRow>
+            <StateRow>
+              <DoubleIndentedStateTitle>Strict</DoubleIndentedStateTitle>
+              <StateValue>{formattedStrictHorizon}</StateValue>
+            </StateRow>
+          </>
+        )}
       </StimulationPanel>
     </>
   )

@@ -74,7 +74,7 @@ const ExportProgress = styled.span`
 
 export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setRecordingBagFilename, setPlayPreprocessed } = useSessionConfig()
+  const { setBagId, setPlayPreprocessed } = useSessionConfig()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(RecordingContext)
   const { activeProject, locale } = useGlobalConfig()
@@ -84,7 +84,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
 
   // For recording tab - these would come from a recording context in the future
-  const [recordingBagFilename, setRecordingBagFilenameState] = useState<string>('')
+  const [recordingBagId, setBagIdState] = useState<string>('')
   const [playPreprocessed, setPlayPreprocessedState] = useState<boolean>(false)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
@@ -94,47 +94,47 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
 
   // Refetch recording info when export completes
   useEffect(() => {
-    if (exporterState.state === ExporterStateValue.IDLE && recordingBagFilename) {
-      getRecordingInfoRos(recordingBagFilename, (recordingInfo) => {
+    if (exporterState.state === ExporterStateValue.IDLE && recordingBagId) {
+      getRecordingInfoRos(`${recordingBagId}.json`, (recordingInfo) => {
         if (recordingInfo) {
           setSelectedRecordingInfo(recordingInfo)
         }
       })
     }
-  }, [exporterState.state, recordingBagFilename])
+  }, [exporterState.state, recordingBagId])
 
   // Fetch recording info when selected recording changes
   useEffect(() => {
-    if (!recordingBagFilename || recordingBagFilename.trim() === '') {
+    if (!recordingBagId || recordingBagId.trim() === '') {
       setSelectedRecordingInfo(null)
       return
     }
-    getRecordingInfoRos(recordingBagFilename, (recordingInfo) => {
+    getRecordingInfoRos(`${recordingBagId}.json`, (recordingInfo) => {
       if (!recordingInfo) {
-        console.error('Failed to get recording info for:', recordingBagFilename)
+        console.error('Failed to get recording info for:', recordingBagId)
         setSelectedRecordingInfo(null)
         return
       }
       setSelectedRecordingInfo(recordingInfo)
     })
-  }, [recordingBagFilename])
+  }, [recordingBagId])
 
   // Set default recording when recordings become available
   useEffect(() => {
-    if (recordingsList.length > 0 && !recordingBagFilename) {
+    if (recordingsList.length > 0 && !recordingBagId) {
       const defaultRecording = recordingsList[0]
-      setRecordingBagFilenameState(defaultRecording)
-      setRecordingBagFilename(defaultRecording, () => {
-        console.log('Default recording bag filename set to ' + defaultRecording)
+      setBagIdState(defaultRecording)
+      setBagId(defaultRecording, () => {
+        console.log('Default recording bag id set to ' + defaultRecording)
       })
     }
-  }, [recordingsList, recordingBagFilename, setRecordingBagFilename])
+  }, [recordingsList, recordingBagId, setBagId])
 
-  const setRecordingBagFilenameHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const bagFilename = event.target.value
-    setRecordingBagFilenameState(bagFilename)
-    setRecordingBagFilename(bagFilename, () => {
-      console.log('Recording bag filename set to ' + bagFilename)
+  const setBagIdHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const bagId = event.target.value
+    setBagIdState(bagId)
+    setBagId(bagId, () => {
+      console.log('Recording bag id set to ' + bagId)
     })
   }
 
@@ -152,19 +152,16 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
   }
 
   const handleExport = (selectedTypes: ExportDataType[]) => {
-    const recordingToExport = recordingBagFilename || (recordingsList.length > 0 ? recordingsList[0] : '')
+    const recordingToExport = recordingBagId || (recordingsList.length > 0 ? recordingsList[0] : '')
 
     if (!recordingToExport || !activeProject) {
       console.error('No recording available or no active project')
       return
     }
 
-    // Remove .json extension for the backend (expects directory name)
-    const recordingName = recordingToExport.replace(/\.json$/, '')
-
     exportSessionRos(
       activeProject,
-      recordingName,
+      recordingToExport,
       selectedTypes,
       (success, message) => {
         if (!success) {
@@ -188,10 +185,10 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Recorded session:</ConfigLabel>
         {recordingsList.length > 0 ? (
-          <RecordingSelect onChange={setRecordingBagFilenameHandler} value={recordingBagFilename} disabled={isSessionRunning || isEegStreaming}>
-            {recordingsList.map((recordingFilename: typeof recordingsList[number], index: number) => (
-              <option key={index} value={recordingFilename}>
-                {recordingFilename.replace(/\.json$/, '')}
+          <RecordingSelect onChange={setBagIdHandler} value={recordingBagId} disabled={isSessionRunning || isEegStreaming}>
+            {recordingsList.map((recordingId: typeof recordingsList[number], index: number) => (
+              <option key={index} value={recordingId}>
+                {recordingId}
               </option>
             ))}
           </RecordingSelect>
@@ -327,7 +324,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         onExport={handleExport}
-        recordingName={recordingBagFilename ? recordingBagFilename.replace(/\.json$/, '') : (recordingsList.length > 0 ? recordingsList[0].replace(/\.json$/, '') : 'Unknown')}
+        recordingName={recordingBagId || (recordingsList.length > 0 ? recordingsList[0] : 'Unknown')}
         preprocessorEnabled={selectedRecordingInfo?.preprocessor_enabled ?? true}
         deciderEnabled={selectedRecordingInfo?.decider_enabled ?? true}
         presenterEnabled={selectedRecordingInfo?.presenter_enabled ?? true}

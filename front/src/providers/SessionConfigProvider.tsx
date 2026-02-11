@@ -51,7 +51,7 @@ interface SessionConfigContextType {
   setExperimentProtocol: (protocol: string, callback?: () => void) => Promise<void>
   setSimulatorDataset: (filename: string, callback?: () => void) => Promise<void>
   setSimulatorStartTime: (startTime: number, callback?: () => void) => Promise<void>
-  setRecordingBagFilename: (bagFilename: string, callback?: () => void) => Promise<void>
+  setBagId: (bagId: string, callback?: () => void) => Promise<void>
   setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => Promise<void>
   setDataSource: (dataSource: string, callback?: () => void) => Promise<void>
 }
@@ -88,7 +88,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   setExperimentProtocol: asyncNoop,
   setSimulatorDataset: asyncNoop,
   setSimulatorStartTime: asyncNoop,
-  setRecordingBagFilename: asyncNoop,
+  setBagId: asyncNoop,
   setPlayPreprocessed: asyncNoop,
   setDataSource: asyncNoop,
 }
@@ -160,6 +160,8 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         newConfig.set('simulator.dataset_filename', msg.simulator_dataset_filename)
         newConfig.set('simulator.start_time', msg.simulator_start_time)
         newConfig.set('data_source', msg.data_source)
+        newConfig.set('recording.bag_id', msg.recording_bag_id)
+        newConfig.set('recording.play_preprocessed', msg.play_preprocessed)
         
         return newConfig
       })
@@ -218,9 +220,9 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('simulator.start_time', startTime, callback || noop)
   }
-  const setRecordingBagFilename = async (bagFilename: string, callback?: () => void): Promise<void> => {
+  const setBagId = async (bagId: string, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('recording.bag_filename', bagFilename, callback || noop)
+    setParameterRos('recording.bag_id', bagId, callback || noop)
   }
   const setPlayPreprocessed = async (playPreprocessed: boolean, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
@@ -249,7 +251,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         setExperimentProtocol,
         setSimulatorDataset,
         setSimulatorStartTime,
-        setRecordingBagFilename,
+        setBagId,
         setPlayPreprocessed,
         setDataSource,
       }}

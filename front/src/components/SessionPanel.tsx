@@ -88,7 +88,7 @@ export const SessionPanel: React.FC = () => {
       return 'Stopping...'
     }
     if (sessionState.state === SessionStateValue.STOPPED) {
-      return 'Start'
+      return dataSource === 'recording' ? 'Replay' : 'Start'
     }
     if (sessionState.state === SessionStateValue.RUNNING) {
       return 'Stop'

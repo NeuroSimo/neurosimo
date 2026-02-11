@@ -102,7 +102,7 @@ DECISION_TRACE_FIELDS = [
     'latency_corrected_time_at_firing',
     'actual_stimulation_time',
     'actual_stimulation_sample_index',
-    'timing_error',
+    'timing_offset',
     'pulse_confirmed',
     'pulse_confirmation_method',
 ]

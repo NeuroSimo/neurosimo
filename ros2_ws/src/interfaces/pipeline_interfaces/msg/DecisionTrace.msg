@@ -59,7 +59,7 @@ float64 trigger_to_pulse_delay       # in seconds
 # TriggerTimer timing (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
 float64 stimulation_horizon          # effective horizon accounting for maximum_timing_offset, in seconds
-float64 strict_stimulation_horizon   # strict horizon without timing error tolerance, in seconds
+float64 strict_stimulation_horizon   # strict horizon without timing offset tolerance, in seconds
 
 uint64 system_time_trigger_timer_received
 uint64 system_time_trigger_timer_finished
@@ -76,8 +76,8 @@ float64 latency_corrected_time_at_firing
 float64 actual_stimulation_time      # seconds since recording start
 uint64 actual_stimulation_sample_index
 
-# Timing error (actual - scheduled) in seconds
-float64 timing_error
+# Timing offset (actual - scheduled) in seconds
+float64 timing_offset
 
 # ----------------------------------------------------------------------------
 # Pulse confirmation (filled by StimulationTracer)

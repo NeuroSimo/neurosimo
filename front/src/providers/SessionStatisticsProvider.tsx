@@ -48,7 +48,7 @@ interface DecisionTrace extends ROSLIB.Message {
   latency_corrected_time_at_firing: number
   actual_stimulation_time: number
   actual_stimulation_sample_index: number
-  timing_error: number
+  timing_offset: number
   pulse_confirmation_method: number
   pulse_confirmed: boolean
 }

@@ -18,14 +18,14 @@ import {
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
-import { PlaybackContext } from 'providers/PlaybackProvider'
+import { RecordingContext } from 'providers/RecordingProvider'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 import { useExporter, ExporterStateValue } from 'providers/ExporterProvider'
 import { exportSessionRos } from 'ros/session'
 import { getRecordingInfoRos, RecordingInfo } from 'ros/session_player'
 import { formatTime, formatDateTime, formatFrequency } from 'utils/utils'
 
-const PlaybackContainer = styled(StyledPanel)`
+const RecordingContainer = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
   position: static;
   display: flex;
@@ -72,20 +72,20 @@ const ExportProgress = styled.span`
   margin-right: 8px;
 `
 
-export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
+export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useSessionConfig()
+  const { setRecordingBagFilename, setRecordingIsPreprocessed } = useSessionConfig()
   const { sessionState } = useSession()
-  const { recordingsList } = useContext(PlaybackContext)
+  const { recordingsList } = useContext(RecordingContext)
   const { activeProject, locale } = useGlobalConfig()
   const { exporterState } = useExporter()
 
   const [selectedRecordingInfo, setSelectedRecordingInfo] = useState<RecordingInfo | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
 
-  // For playback tab - these would come from a playback context in the future
-  const [playbackBagFilename, setPlaybackBagFilenameState] = useState<string>('')
-  const [playbackIsPreprocessed, setPlaybackIsPreprocessedState] = useState<boolean>(false)
+  // For recording tab - these would come from a recording context in the future
+  const [recordingBagFilename, setRecordingBagFilenameState] = useState<string>('')
+  const [recordingIsPreprocessed, setRecordingIsPreprocessedState] = useState<boolean>(false)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
@@ -94,54 +94,54 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
 
   // Refetch recording info when export completes
   useEffect(() => {
-    if (exporterState.state === ExporterStateValue.IDLE && playbackBagFilename) {
-      getRecordingInfoRos(playbackBagFilename, (recordingInfo) => {
+    if (exporterState.state === ExporterStateValue.IDLE && recordingBagFilename) {
+      getRecordingInfoRos(recordingBagFilename, (recordingInfo) => {
         if (recordingInfo) {
           setSelectedRecordingInfo(recordingInfo)
         }
       })
     }
-  }, [exporterState.state, playbackBagFilename])
+  }, [exporterState.state, recordingBagFilename])
 
   // Fetch recording info when selected recording changes
   useEffect(() => {
-    if (!playbackBagFilename || playbackBagFilename.trim() === '') {
+    if (!recordingBagFilename || recordingBagFilename.trim() === '') {
       setSelectedRecordingInfo(null)
       return
     }
-    getRecordingInfoRos(playbackBagFilename, (recordingInfo) => {
+    getRecordingInfoRos(recordingBagFilename, (recordingInfo) => {
       if (!recordingInfo) {
-        console.error('Failed to get recording info for:', playbackBagFilename)
+        console.error('Failed to get recording info for:', recordingBagFilename)
         setSelectedRecordingInfo(null)
         return
       }
       setSelectedRecordingInfo(recordingInfo)
     })
-  }, [playbackBagFilename])
+  }, [recordingBagFilename])
 
   // Set default recording when recordings become available
   useEffect(() => {
-    if (recordingsList.length > 0 && !playbackBagFilename) {
+    if (recordingsList.length > 0 && !recordingBagFilename) {
       const defaultRecording = recordingsList[0]
-      setPlaybackBagFilenameState(defaultRecording)
-      setPlaybackBagFilename(defaultRecording, () => {
-        console.log('Default playback bag filename set to ' + defaultRecording)
+      setRecordingBagFilenameState(defaultRecording)
+      setRecordingBagFilename(defaultRecording, () => {
+        console.log('Default recording bag filename set to ' + defaultRecording)
       })
     }
-  }, [recordingsList, playbackBagFilename, setPlaybackBagFilename])
+  }, [recordingsList, recordingBagFilename, setRecordingBagFilename])
 
-  const setPlaybackBagFilenameHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const setRecordingBagFilenameHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const bagFilename = event.target.value
-    setPlaybackBagFilenameState(bagFilename)
-    setPlaybackBagFilename(bagFilename, () => {
-      console.log('Playback bag filename set to ' + bagFilename)
+    setRecordingBagFilenameState(bagFilename)
+    setRecordingBagFilename(bagFilename, () => {
+      console.log('Recording bag filename set to ' + bagFilename)
     })
   }
 
-  const setPlaybackIsPreprocessedHandler = (isPreprocessed: boolean) => {
-    setPlaybackIsPreprocessedState(isPreprocessed)
-    setPlaybackIsPreprocessed(isPreprocessed, () => {
-      console.log('Playback is preprocessed set to ' + isPreprocessed)
+  const setRecordingIsPreprocessedHandler = (isPreprocessed: boolean) => {
+    setRecordingIsPreprocessedState(isPreprocessed)
+    setRecordingIsPreprocessed(isPreprocessed, () => {
+      console.log('Recording is preprocessed set to ' + isPreprocessed)
     })
   }
 
@@ -152,7 +152,7 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   }
 
   const handleExport = (selectedTypes: ExportDataType[]) => {
-    const recordingToExport = playbackBagFilename || (recordingsList.length > 0 ? recordingsList[0] : '')
+    const recordingToExport = recordingBagFilename || (recordingsList.length > 0 ? recordingsList[0] : '')
 
     if (!recordingToExport || !activeProject) {
       console.error('No recording available or no active project')
@@ -184,11 +184,11 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
   }
 
   return (
-    <PlaybackContainer isGrayedOut={isGrayedOut}>
+    <RecordingContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Recording:</ConfigLabel>
         {recordingsList.length > 0 ? (
-          <RecordingSelect onChange={setPlaybackBagFilenameHandler} value={playbackBagFilename} disabled={isSessionRunning || isEegStreaming}>
+          <RecordingSelect onChange={setRecordingBagFilenameHandler} value={recordingBagFilename} disabled={isSessionRunning || isEegStreaming}>
             {recordingsList.map((recordingFilename: typeof recordingsList[number], index: number) => (
               <option key={index} value={recordingFilename}>
                 {recordingFilename.replace(/\.json$/, '')}
@@ -204,8 +204,8 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         <SwitchWrapper>
           <ToggleSwitch
             type="flat"
-            checked={playbackIsPreprocessed}
-            onChange={setPlaybackIsPreprocessedHandler}
+            checked={recordingIsPreprocessed}
+            onChange={setRecordingIsPreprocessedHandler}
             disabled={isSessionRunning || isEegStreaming || recordingsList.length === 0}
           />
         </SwitchWrapper>
@@ -323,11 +323,11 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         onExport={handleExport}
-        recordingName={playbackBagFilename ? playbackBagFilename.replace(/\.json$/, '') : (recordingsList.length > 0 ? recordingsList[0].replace(/\.json$/, '') : 'Unknown')}
+        recordingName={recordingBagFilename ? recordingBagFilename.replace(/\.json$/, '') : (recordingsList.length > 0 ? recordingsList[0].replace(/\.json$/, '') : 'Unknown')}
         preprocessorEnabled={selectedRecordingInfo?.preprocessor_enabled ?? true}
         deciderEnabled={selectedRecordingInfo?.decider_enabled ?? true}
         presenterEnabled={selectedRecordingInfo?.presenter_enabled ?? true}
       />
-    </PlaybackContainer>
+    </RecordingContainer>
   )
 }

@@ -17,7 +17,7 @@ from pipeline_interfaces.srv import (
     InitializeStimulationTracer, FinalizeStimulationTracer,
     InitializeTriggerTimer, FinalizeTriggerTimer
 )
-from eeg_interfaces.action import InitializeSimulatorStream, InitializePlaybackStream
+from eeg_interfaces.action import InitializeSimulatorStream, InitializeRecordingStream
 from eeg_interfaces.srv import InitializeEegDeviceStream, StartStreaming, StopStreaming
 from eeg_interfaces.msg import StreamInfo, EegDeviceInfo
 
@@ -87,8 +87,8 @@ class SessionManagerNode(Node):
             self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
         self.eeg_device_stream_init_client = self.create_client(
             InitializeEegDeviceStream, '/eeg_device/initialize', callback_group=self.callback_group)
-        self.playback_stream_init_client = ActionClient(
-            self, InitializePlaybackStream, '/playback/initialize', callback_group=self.callback_group)
+        self.recording_stream_init_client = ActionClient(
+            self, InitializeRecordingStream, '/recording/initialize', callback_group=self.callback_group)
 
         # Create clients for finalization operations
         self.preprocessor_finalize_client = self.create_client(
@@ -109,8 +109,8 @@ class SessionManagerNode(Node):
             StopRecording, '/session_recorder/stop', callback_group=self.callback_group)
 
         # Create clients for streaming start operations
-        self.playback_streaming_start_client = self.create_client(
-            # TODO: Replace with playback service once implemented
+        self.recording_streaming_start_client = self.create_client(
+            # TODO: Replace with recording service once implemented
             StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_simulator_streaming_start_client = self.create_client(
             StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
@@ -118,8 +118,8 @@ class SessionManagerNode(Node):
             StartStreaming, '/eeg_device/streaming/start', callback_group=self.callback_group)
 
         # Create clients for streaming stop operations
-        self.playback_streaming_stop_client = self.create_client(
-            # TODO: Replace with playback service once implemented
+        self.recording_streaming_stop_client = self.create_client(
+            # TODO: Replace with recording service once implemented
             StopStreaming, '/eeg_simulator/streaming/stop', callback_group=self.callback_group)
         self.eeg_simulator_streaming_stop_client = self.create_client(
             StopStreaming, '/eeg_simulator/streaming/stop', callback_group=self.callback_group)
@@ -155,9 +155,9 @@ class SessionManagerNode(Node):
         # Wait for all clients to be available
         action_clients = [
             (self.simulator_stream_init_client, '/eeg_simulator/initialize'),
-# TODO: Check playback stream initialization client once implemented
+# TODO: Check recording stream initialization client once implemented
 #
-#            (self.playback_stream_init_client, '/playback/initialize'),
+#            (self.recording_stream_init_client, '/recording/initialize'),
         ]
         for client, topic in action_clients:
             while not client.wait_for_server(timeout_sec=1.0):
@@ -175,10 +175,10 @@ class SessionManagerNode(Node):
             (self.decider_finalize_client, '/pipeline/decider/finalize'),
             (self.presenter_finalize_client, '/pipeline/presenter/finalize'),
             (self.stimulation_tracer_finalize_client, '/pipeline/stimulation_tracer/finalize'),
-            (self.playback_streaming_start_client, '/eeg_simulator/streaming/start'),
+            (self.recording_streaming_start_client, '/eeg_simulator/streaming/start'),
             (self.eeg_simulator_streaming_start_client, '/eeg_simulator/streaming/start'),
             (self.eeg_device_streaming_start_client, '/eeg_device/streaming/start'),
-            (self.playback_streaming_stop_client, '/eeg_simulator/streaming/stop'),
+            (self.recording_streaming_stop_client, '/eeg_simulator/streaming/stop'),
             (self.eeg_simulator_streaming_stop_client, '/eeg_simulator/streaming/stop'),
             (self.eeg_device_streaming_stop_client, '/eeg_device/streaming/stop'),
             (self.recording_start_client, '/session_recorder/start'),
@@ -478,14 +478,14 @@ class SessionManagerNode(Node):
 
         # Data source validation
         data_source = config.data_source
-        if data_source not in ["simulator", "playback", "eeg_device"]:
-            self.logger.error(f"Invalid data source: {data_source}. Must be 'simulator', 'playback', or 'eeg_device'.")
+        if data_source not in ["simulator", "recording", "eeg_device"]:
+            self.logger.error(f"Invalid data source: {data_source}. Must be 'simulator', 'recording', or 'eeg_device'.")
             return False
 
         return True
 
     def initialize_stream(self, session_id, global_config, session_config):
-        """Initialize the data stream source (simulator, device, or playback)."""
+        """Initialize the data stream source (simulator, device, or recording)."""
         data_source = session_config.data_source
         project_name = global_config.active_project
         self.logger.info(f'Initializing stream source: {data_source}')
@@ -516,9 +516,9 @@ class SessionManagerNode(Node):
                 return None
             stream_info = response.stream_info
 
-        elif data_source == 'playback':
-            # Playback initialization is dummy for now
-            self.logger.info('Playback initialization (dummy)')
+        elif data_source == 'recording':
+            # Recording initialization is dummy for now
+            self.logger.info('Recording initialization (dummy)')
             stream_info = StreamInfo()
             stream_info.sampling_frequency = 0
             stream_info.num_eeg_channels = 0
@@ -732,9 +732,9 @@ class SessionManagerNode(Node):
         data_source = session_config.data_source
 
         # Choose the appropriate streaming service based on data source
-        if data_source == 'playback':
-            client = self.playback_streaming_start_client
-            service_name = '/playback/streaming/start'
+        if data_source == 'recording':
+            client = self.recording_streaming_start_client
+            service_name = '/recording/streaming/start'
         elif data_source == 'simulator':
             client = self.eeg_simulator_streaming_start_client
             service_name = '/eeg_simulator/streaming/start'
@@ -762,9 +762,9 @@ class SessionManagerNode(Node):
         data_source = session_config.data_source
 
         # Choose the appropriate streaming stop service based on data source
-        if data_source == 'playback':
-            client = self.playback_streaming_stop_client
-            service_name = '/eeg_simulator/streaming/stop'  # TODO: Replace with playback service once implemented
+        if data_source == 'recording':
+            client = self.recording_streaming_stop_client
+            service_name = '/eeg_simulator/streaming/stop'  # TODO: Replace with recording service once implemented
         elif data_source == 'simulator':
             client = self.eeg_simulator_streaming_stop_client
             service_name = '/eeg_simulator/streaming/stop'

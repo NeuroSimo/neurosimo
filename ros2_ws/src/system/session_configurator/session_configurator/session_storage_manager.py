@@ -52,7 +52,7 @@ class SessionStorageManager:
             "simulator.dataset_filename": 'random_data_1_khz.json',
             "simulator.start_time": 0.0,
             "experiment.protocol": 'example.yaml',
-            "recording.bag_filename": '',
+            "recording.bag_id": '',
             "recording.play_preprocessed": False,
             "data_source": 'simulator',
         }
@@ -67,7 +67,8 @@ class SessionStorageManager:
             "presenter.module", "presenter.enabled",
             "simulator.dataset_filename", "simulator.start_time",
             "experiment.protocol",
-            "recording.bag_filename", "recording.play_preprocessed",
+            "recording.bag_id",
+            "recording.play_preprocessed",
             "data_source"
         ]
         for key in required_keys:

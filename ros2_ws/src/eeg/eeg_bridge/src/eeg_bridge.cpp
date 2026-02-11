@@ -6,6 +6,9 @@
 #include <string>
 #include <unistd.h>
 
+#define XXH_INLINE_ALL
+#include <xxhash.h>
+
 #include "realtime_utils/utils.h"
 
 #include "eeg_bridge.h"
@@ -237,6 +240,7 @@ bool EegBridge::reset_state() {
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   this->is_session_start = false;
   this->last_sample_time = std::chrono::steady_clock::now();
+  this->session_data_fingerprint = 0;
 
   this->data_source_state = system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
@@ -272,8 +276,13 @@ void EegBridge::handle_stop_streaming(
     RCLCPP_ERROR(this->get_logger(), "Not streaming, cannot stop streaming.");
 
     response->success = false;
+    response->data_fingerprint = 0;
     return;
   }
+
+  /* Store the final fingerprint before resetting state */
+  response->data_fingerprint = this->session_data_fingerprint;
+  RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_fingerprint);
 
   this->reset_state();
 
@@ -391,6 +400,20 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
     now.time_since_epoch()).count();
 
   sample.system_time_data_source_published = system_time_data_source_published;
+
+  /* Update data fingerprint with EEG data */
+  if (!sample.eeg.empty()) {
+    this->session_data_fingerprint = XXH64(sample.eeg.data(), 
+                                            sample.eeg.size() * sizeof(double),
+                                            this->session_data_fingerprint);
+  }
+  
+  /* Update data fingerprint with EMG data */
+  if (!sample.emg.empty()) {
+    this->session_data_fingerprint = XXH64(sample.emg.data(),
+                                            sample.emg.size() * sizeof(double),
+                                            this->session_data_fingerprint);
+  }
 
   this->eeg_sample_publisher->publish(sample);
 

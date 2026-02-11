@@ -8,6 +8,9 @@
 #include <string>
 #include <filesystem>
 
+#define XXH_INLINE_ALL
+#include <xxhash.h>
+
 #include "realtime_utils/utils.h"
 
 #include <nlohmann/json.hpp>
@@ -23,8 +26,6 @@ const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const milliseconds STREAMING_INTERVAL = 1ms;
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
-
-
 /* TODO: Simulating the EEG device to the level of sending UDP packets not implemented on the C++
      side yet. For a previous Python reference implementation, see commit c0afb515b. */
 EegSimulator::EegSimulator() : Node("eeg_simulator") {
@@ -263,6 +264,7 @@ void EegSimulator::handle_start_streaming(
   this->session_start_time = this->get_clock()->now().seconds();
   this->session_sample_index = 0;
   this->is_session_start = true;
+  this->session_data_fingerprint = 0;
   this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
   
   /* Create the streaming timer to drive sample publication. */
@@ -285,10 +287,15 @@ void EegSimulator::handle_stop_streaming(
     RCLCPP_ERROR(this->get_logger(), "Not streaming, cannot stop streaming.");
 
     response->success = false;
+    response->data_fingerprint = 0;
     return;
   }
 
   stop_streaming_timer();
+
+  /* Store the final fingerprint before resetting state */
+  response->data_fingerprint = this->session_data_fingerprint;
+  RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_fingerprint);
 
   this->data_source_state = system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
@@ -382,6 +389,20 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
     now.time_since_epoch()).count();
 
   msg.system_time_data_source_published = system_time_data_source_published;
+
+  /* Update data fingerprint with EEG data */
+  if (!msg.eeg.empty()) {
+    this->session_data_fingerprint = XXH64(msg.eeg.data(),
+                                            msg.eeg.size() * sizeof(double),
+                                            this->session_data_fingerprint);
+  }
+  
+  /* Update data fingerprint with EMG data */
+  if (!msg.emg.empty()) {
+    this->session_data_fingerprint = XXH64(msg.emg.data(),
+                                            msg.emg.size() * sizeof(double),
+                                            this->session_data_fingerprint);
+  }
 
   eeg_publisher->publish(msg);
 

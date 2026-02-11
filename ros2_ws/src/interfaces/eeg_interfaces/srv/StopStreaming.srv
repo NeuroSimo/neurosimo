@@ -1,3 +1,4 @@
 uint8[16] session_id
 ---
 bool success
+uint64 data_fingerprint

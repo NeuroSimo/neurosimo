@@ -22,6 +22,9 @@ export interface RecordingInfo extends ROSLIB.Message {
   git_commit: string
   git_state: string
   version: string
+  data_source_fingerprint: number
+  preprocessor_fingerprint: number
+  decision_fingerprint: number
   exported: boolean
   export_directory: string
 }

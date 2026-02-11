@@ -72,6 +72,14 @@ const ExportProgress = styled.span`
   margin-right: 8px;
 `
 
+const FingerprintLabel = styled(ConfigLabel)`
+  font-size: 12px;
+`
+
+const FingerprintValue = styled(ConfigValue)`
+  font-size: 12px;
+`
+
 export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegDeviceInfo } = useContext(EegStreamContext)
   const { setPlaybackBagFilename, setPlaybackIsPreprocessed } = useSessionConfig()
@@ -256,6 +264,22 @@ export const PlaybackPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut 
           <CompactRow>
             <ConfigLabel>Presenter:</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.presenter_enabled ? selectedRecordingInfo.presenter_module : '\u2013'}</ConfigValue>
+          </CompactRow>
+          <div style={{ height: '8px' }} />
+          <CompactRow>
+            <ConfigLabel>Fingerprints:</ConfigLabel>
+          </CompactRow>
+          <CompactRow>
+            <FingerprintLabel style={{ paddingLeft: 10 }}>Data source</FingerprintLabel>
+            <FingerprintValue>{selectedRecordingInfo.data_source_fingerprint || '\u2013'}</FingerprintValue>
+          </CompactRow>
+          <CompactRow>
+            <FingerprintLabel style={{ paddingLeft: 10 }}>Preprocessor</FingerprintLabel>
+            <FingerprintValue>{selectedRecordingInfo.preprocessor_fingerprint || '\u2013'}</FingerprintValue>
+          </CompactRow>
+          <CompactRow>
+            <FingerprintLabel style={{ paddingLeft: 10 }}>Decision</FingerprintLabel>
+            <FingerprintValue>{selectedRecordingInfo.decision_fingerprint || '\u2013'}</FingerprintValue>
           </CompactRow>
           <div style={{ height: '8px' }} />
         </>

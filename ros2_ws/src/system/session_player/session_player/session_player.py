@@ -118,13 +118,19 @@ class SessionPlayerNode(Node):
             recording_info.end_time = timing.get('end_time')
             recording_info.duration = timing.get('duration')
 
-            # Extract software provenance
-            provenance = metadata.get('provenance')
+            # Extract software provenance and fingerprints
+            provenance = metadata.get('provenance', {})
             software = provenance.get('software', {})
+            fingerprints = provenance.get('fingerprints', {})
 
             recording_info.git_commit = software.get('git_commit', '')
             recording_info.git_state = software.get('git_state', '')
             recording_info.version = software.get('version', '')
+
+            # Fingerprints
+            recording_info.data_source_fingerprint = fingerprints.get('data_source', 0)
+            recording_info.preprocessor_fingerprint = fingerprints.get('preprocessor', 0)
+            recording_info.decision_fingerprint = fingerprints.get('decision', 0)
 
             # Check if session has been exported
             # Export folder is named [recording_name]_export next to the recording directory

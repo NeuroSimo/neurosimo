@@ -30,6 +30,11 @@ string git_commit
 string git_state
 string version
 
+# Fingerprints
+uint64 data_source_fingerprint
+uint64 preprocessor_fingerprint
+uint64 decision_fingerprint
+
 # Export status
 bool exported
 string export_directory

@@ -240,7 +240,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     if (trace.timing_offset != 0.0) final_trace.timing_offset = trace.timing_offset;
   }
 
-  bool is_simulated_data_source = this->data_source == "simulator" || this->data_source == "playback";
+  bool is_simulated_data_source = this->data_source == "simulator" || this->data_source == "recording";
 
   /* If the data source is simulated, the pulse is confirmed via trigger timer fire. */
   if (is_simulated_data_source && final_trace.status == pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
@@ -274,8 +274,8 @@ bool StimulationTracer::is_terminal_status(uint8_t status) {
     return true;
   }
 
-  /* For playback and simulator data sources, STATUS_FIRED is also sufficient to finalize. */
-  if ((this->data_source == "playback" || this->data_source == "simulator") &&
+  /* For recording and simulator data sources, STATUS_FIRED is also sufficient to finalize. */
+  if ((this->data_source == "recording" || this->data_source == "simulator") &&
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
     return true;
   }

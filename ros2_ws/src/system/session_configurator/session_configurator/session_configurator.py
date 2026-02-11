@@ -54,9 +54,9 @@ class SessionConfiguratorNode(Node):
         self.declare_parameter('simulator.dataset_filename', '')
         self.declare_parameter('simulator.start_time', 0.0)
 
-        # Playback parameters
-        self.declare_parameter('playback.bag_filename', '')
-        self.declare_parameter('playback.is_preprocessed', False)
+        # Recording parameters
+        self.declare_parameter('recording.bag_filename', '')
+        self.declare_parameter('recording.is_preprocessed', False)
 
         # Data source parameter
         self.declare_parameter('data_source', 'simulator')
@@ -80,7 +80,7 @@ class SessionConfiguratorNode(Node):
         self.presenter_list_publisher = self.create_publisher(FilenameList, "/pipeline/presenter/list", qos, callback_group=self.callback_group)
         self.protocol_list_publisher = self.create_publisher(FilenameList, "/experiment/protocol/list", qos, callback_group=self.callback_group)
         self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos, callback_group=self.callback_group)
-        self.recordings_list_publisher = self.create_publisher(FilenameList, "/playback/recordings/list", qos, callback_group=self.callback_group)
+        self.recordings_list_publisher = self.create_publisher(FilenameList, "/recording/recordings/list", qos, callback_group=self.callback_group)
         
         # Session config publisher
         self.session_config_publisher = self.create_publisher(SessionConfig, "/session_configurator/config", qos, callback_group=self.callback_group)
@@ -126,8 +126,8 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
             rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
-            rclpy.parameter.Parameter('playback.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_config["playback.bag_filename"]),
-            rclpy.parameter.Parameter('playback.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["playback.is_preprocessed"]),
+            rclpy.parameter.Parameter('recording.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_config["recording.bag_filename"]),
+            rclpy.parameter.Parameter('recording.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["recording.is_preprocessed"]),
         ])
 
         # Publish session config from the loaded dict (not from ROS params)

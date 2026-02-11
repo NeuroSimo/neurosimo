@@ -2,7 +2,7 @@ import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { EegSimulatorPanel } from 'components/EegSimulatorPanel'
-import { PlaybackPanel } from 'components/PlaybackPanel'
+import { RecordingsPanel } from 'components/RecordingsPanel'
 import { EegDevicePanel } from 'components/EegDevicePanel'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
@@ -48,8 +48,8 @@ const StatusMessage = styled.div`
 `
 
 export const DataSourceDisplay: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState<'simulator' | 'playback' | 'eeg_device'>('simulator')
-  const [previousTab, setPreviousTab] = React.useState<'simulator' | 'playback'>('simulator')
+  const [activeTab, setActiveTab] = React.useState<'simulator' | 'recording' | 'eeg_device'>('simulator')
+  const [previousTab, setPreviousTab] = React.useState<'simulator' | 'recording'>('simulator')
   const { eegDeviceInfo } = useContext(EegStreamContext)
   const { setDataSource } = useSessionConfig()
 
@@ -58,7 +58,7 @@ export const DataSourceDisplay: React.FC = () => {
   React.useEffect(() => {
     if (isEegStreaming) {
       // Remember the current tab before switching to EEG Device
-      setPreviousTab(activeTab as 'simulator' | 'playback')
+      setPreviousTab(activeTab as 'simulator' | 'recording')
       setActiveTab('eeg_device')
     } else {
       // Restore the previous tab when streaming stops
@@ -79,8 +79,8 @@ export const DataSourceDisplay: React.FC = () => {
         <Tab active={activeTab === 'simulator'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('simulator')}>
           Simulator
         </Tab>
-        <Tab active={activeTab === 'playback'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('playback')}>
-          Playback
+        <Tab active={activeTab === 'recording'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('recording')}>
+          Recordings
         </Tab>
         <Tab active={activeTab === 'eeg_device'} disabled={!isEegStreaming} onClick={() => isEegStreaming && setActiveTab('eeg_device')}>
           EEG Device
@@ -88,7 +88,7 @@ export const DataSourceDisplay: React.FC = () => {
       </TabContainer>
 
       {activeTab === 'simulator' && <EegSimulatorPanel isGrayedOut={false} />}
-      {activeTab === 'playback' && <PlaybackPanel isGrayedOut={false} />}
+      {activeTab === 'recording' && <RecordingsPanel isGrayedOut={false} />}
       {activeTab === 'eeg_device' && <EegDevicePanel />}
 
       {isEegStreaming && activeTab === 'eeg_device' && (

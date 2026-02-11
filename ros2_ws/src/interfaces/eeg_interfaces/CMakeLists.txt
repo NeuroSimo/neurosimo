@@ -31,7 +31,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/EegStatistics.msg"
 
   "action/InitializeSimulatorStream.action"
-  "action/InitializePlaybackStream.action"
+  "action/InitializeRecordingStream.action"
 
   "srv/InitializeEegDeviceStream.srv"
   "srv/StartStreaming.srv"

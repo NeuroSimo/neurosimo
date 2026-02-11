@@ -87,7 +87,7 @@ private:
   bool is_session_start = false;
 
   /* XXHash state for data fingerprinting */
-  uint64_t data_fingerprint = 0;
+  uint64_t data_source_fingerprint = 0;
 
   std::vector<std::vector<double_t>> dataset_buffer;
   size_t current_sample_index = 0;

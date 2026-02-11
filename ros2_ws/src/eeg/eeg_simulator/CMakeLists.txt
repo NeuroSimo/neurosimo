@@ -18,6 +18,8 @@ find_package(eeg_interfaces REQUIRED)
 find_package(project_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(XXHASH REQUIRED libxxhash)
 
 add_executable(
         eeg_simulator
@@ -33,7 +35,10 @@ target_include_directories(eeg_simulator
 
 target_link_libraries(eeg_simulator
   realtime_utils::utils
+  ${XXHASH_LIBRARIES}
 )
+
+target_include_directories(eeg_simulator PRIVATE ${XXHASH_INCLUDE_DIRS})
 
 ament_target_dependencies(
   eeg_simulator

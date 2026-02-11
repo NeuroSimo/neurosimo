@@ -8,6 +8,9 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     # The container needs to be privileged to set real-time priority.
     privileged: true
     network_mode: host
@@ -21,6 +24,9 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     privileged: true
     network_mode: host
 
@@ -33,9 +39,11 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
-    privileged: true
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
+    privileged: true
     network_mode: host
 
   eeg_replay:
@@ -49,6 +57,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   experiment_coordinator:
@@ -62,6 +72,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   # Non-GPU version of decider
@@ -77,6 +89,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     privileged: true
     network_mode: host
     profiles:
@@ -96,6 +110,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     privileged: true
     network_mode: host
     deploy:
@@ -119,6 +135,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   project_manager:
@@ -132,6 +150,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   preprocessor:
@@ -145,6 +165,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     # The container needs to be privileged to set real-time priority.
     privileged: true
     network_mode: host
@@ -159,6 +181,8 @@ services:
       - '$PROJECTS_ROOT:/app/projects'
       # Mount PulseAudio configuration
       - '~/.config/pulse:/root/.config/pulse'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     environment:
       # Needed for X11 forwarding.
       - DISPLAY
@@ -184,6 +208,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   session_configurator:
@@ -197,6 +223,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
   
   session_exporter:
@@ -210,6 +238,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   session_manager:
@@ -235,6 +265,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   recording_manager:
@@ -248,6 +280,8 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   stimulation_tracer:
@@ -259,6 +293,9 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
   trigger_timer:
@@ -271,6 +308,8 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
     volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
       # XXX: This is a workaround to allow access to LabJack devices over reconnects. The correct
       #   solution would likely involve modifying the LabJack installation scripts to work properly
       #   within a Docker container. This workaround increases security risks by exposing all host
@@ -294,4 +333,7 @@ services:
       - ROSBRIDGE_PORT=9090
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
     network_mode: host

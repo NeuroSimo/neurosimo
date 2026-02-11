@@ -148,6 +148,7 @@ private:
   /* Session and decision tracking */
   std::array<uint8_t, 16> session_id = {};
   uint64_t decision_id = 0;
+  uint64_t decision_fingerprint = 0;
 
   double_t next_periodic_processing_time = UNSET_TIME;
 

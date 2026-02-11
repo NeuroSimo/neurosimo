@@ -50,7 +50,7 @@ export const StimulationDisplay: React.FC = () => {
     : '\u2013'
 
   // Pulse
-  const isRequestedAtReference =
+  const isReactiveMode =
     decisionTrace?.requested_stimulation_time !== undefined &&
     decisionTrace?.reference_sample_time !== undefined &&
     Math.abs(decisionTrace.requested_stimulation_time - decisionTrace.reference_sample_time) <= 0.001
@@ -58,22 +58,26 @@ export const StimulationDisplay: React.FC = () => {
   const formattedReferenceSampleTime = decisionTrace?.reference_sample_time
     ? decisionTrace.reference_sample_time.toFixed(3).replace(/\.?0+$/, '') + ' s'
     : '\u2013'
-  const formattedRequestedStimulationOffset = 
+  const formattedRequestedStimulationOffset =
     decisionTrace?.requested_stimulation_time !== undefined && decisionTrace?.reference_sample_time !== undefined
     ? '+' + ((decisionTrace.requested_stimulation_time - decisionTrace.reference_sample_time) * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedStimulationHorizon = decisionTrace?.stimulation_horizon !== undefined
-    ? '>' + (decisionTrace.stimulation_horizon * 1000).toFixed(1) + ' ms'
-    : '\u2013'
+  const stimulationHorizonMs =
+    decisionTrace?.stimulation_horizon !== undefined ? decisionTrace.stimulation_horizon * 1000 : undefined
+  const formattedStimulationHorizon =
+    stimulationHorizonMs !== undefined ? '>' + stimulationHorizonMs.toFixed(1) + ' ms' : '\u2013'
   const formattedStrictHorizon = decisionTrace?.strict_stimulation_horizon !== undefined
     ? '>' + (decisionTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const formattedTimingOffset = decisionTrace?.timing_offset !== undefined && decisionTrace.timing_offset !== 0
     ? (decisionTrace.timing_offset * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedStatus = decisionTrace?.status !== undefined
-    ? getStatusLabel(decisionTrace.status)
-    : '\u2013'
+  const baseStatus = decisionTrace?.status !== undefined ? getStatusLabel(decisionTrace.status) : '\u2013'
+  const reactiveTooLateStatus =
+    isReactiveMode && decisionTrace?.status === 8 && stimulationHorizonMs !== undefined
+      ? `Too late (+${stimulationHorizonMs.toFixed(1)} ms)`
+      : null
+  const formattedStatus = reactiveTooLateStatus ?? baseStatus
 
   return (
     <>
@@ -121,7 +125,7 @@ export const StimulationDisplay: React.FC = () => {
           <StateValue>{formattedStatus}</StateValue>
         </StateRow>
         <div style={{ height: '8px' }} />
-        {!isRequestedAtReference && (
+        {!isReactiveMode && (
           <>
             <StateRow>
               <IndentedStateTitle>Horizon</IndentedStateTitle>

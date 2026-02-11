@@ -275,9 +275,16 @@ class SessionRecorderNode(Node):
             response.bag_path = ''
             return response
 
-        # Record end time
+        # Record end time and fingerprints
         if self._recording_config:
             self._recording_config['end_time'] = datetime.now().isoformat()
+            # Fingerprints from decider, preprocessor, and data source
+            if request.decision_fingerprint != 0:
+                self._recording_config['decision_fingerprint'] = request.decision_fingerprint
+            if request.preprocessor_fingerprint != 0:
+                self._recording_config['preprocessor_fingerprint'] = request.preprocessor_fingerprint
+            if request.data_source_fingerprint != 0:
+                self._recording_config['data_source_fingerprint'] = request.data_source_fingerprint
 
         # Stop the recording process gracefully
         bag_path = self._bag_path

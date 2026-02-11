@@ -197,8 +197,8 @@ void EegPreprocessor::handle_finalize_preprocessor(
   }
 
   /* Store the final fingerprint before resetting state */
-  response->data_fingerprint = this->data_fingerprint;
-  RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_fingerprint);
+  response->preprocessor_fingerprint = this->preprocessor_fingerprint;
+  RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->preprocessor_fingerprint);
 
   response->success = this->reset_state();
 
@@ -220,7 +220,7 @@ bool EegPreprocessor::reset_state() {
   this->is_enabled = false;
   this->error_occurred = false;
   this->pending_session_start = false;
-  this->data_fingerprint = 0;
+  this->preprocessor_fingerprint = 0;
 
   /* Reset sample buffer. */
   this->sample_buffer.reset(0);
@@ -391,16 +391,16 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
 
   /* Update data fingerprint with EEG data */
   if (!preprocessed_sample.eeg.empty()) {
-    this->data_fingerprint = XXH64(preprocessed_sample.eeg.data(),
+    this->preprocessor_fingerprint = XXH64(preprocessed_sample.eeg.data(),
                                             preprocessed_sample.eeg.size() * sizeof(double),
-                                            this->data_fingerprint);
+                                            this->preprocessor_fingerprint);
   }
   
   /* Update data fingerprint with EMG data */
   if (!preprocessed_sample.emg.empty()) {
-    this->data_fingerprint = XXH64(preprocessed_sample.emg.data(),
+    this->preprocessor_fingerprint = XXH64(preprocessed_sample.emg.data(),
                                             preprocessed_sample.emg.size() * sizeof(double),
-                                            this->data_fingerprint);
+                                            this->preprocessor_fingerprint);
   }
 
   /* Publish the preprocessed sample. */

@@ -113,23 +113,18 @@ class SessionPlayerNode(Node):
             recording_info.presenter_enabled = session_config.get('presenter_enabled', False)
 
             # Extract timestamps
-            recording_info.start_time = metadata.get('start_time', '')
-            recording_info.end_time = metadata.get('end_time', '')
-
-            # Calculate duration if both timestamps are available
-            if recording_info.start_time and recording_info.end_time:
-                from datetime import datetime
-                start = datetime.fromisoformat(recording_info.start_time)
-                end = datetime.fromisoformat(recording_info.end_time)
-                recording_info.duration = (end - start).total_seconds()
-            else:
-                recording_info.duration = 0.0
+            timing = metadata.get('timing', {})
+            recording_info.start_time = timing.get('start_time')
+            recording_info.end_time = timing.get('end_time')
+            recording_info.duration = timing.get('duration')
 
             # Extract software provenance
-            provenance = metadata.get('software_provenance', {})
-            recording_info.git_commit = provenance.get('git_commit', '')
-            recording_info.git_state = provenance.get('git_state', '')
-            recording_info.version = provenance.get('version', '')
+            provenance = metadata.get('provenance')
+            software = provenance.get('software', {})
+
+            recording_info.git_commit = software.get('git_commit', '')
+            recording_info.git_state = software.get('git_state', '')
+            recording_info.version = software.get('version', '')
 
             # Check if session has been exported
             # Export folder is named [recording_name]_export next to the recording directory

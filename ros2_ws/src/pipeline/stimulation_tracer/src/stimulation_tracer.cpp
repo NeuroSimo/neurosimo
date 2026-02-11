@@ -149,12 +149,12 @@ void StimulationTracer::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::
   observation_trace.actual_stimulation_time = actual_stimulation_time;
   observation_trace.actual_stimulation_sample_index = actual_stimulation_sample_index;
 
-  /* Calculate timing error: actual - scheduled. */
-  observation_trace.timing_error = actual_stimulation_time - matching_trace->requested_stimulation_time;
+  /* Calculate timing offset: actual - scheduled. */
+  observation_trace.timing_offset = actual_stimulation_time - matching_trace->requested_stimulation_time;
 
   RCLCPP_INFO(this->get_logger(), 
-              "Matched pulse to decision_id=%lu, timing_error=%.4f ms",
-              matching_trace->decision_id, observation_trace.timing_error * 1000.0);
+              "Matched pulse to decision_id=%lu, timing_offset=%.4f ms",
+              matching_trace->decision_id, observation_trace.timing_offset * 1000.0);
 
   /* Publish observation trace. */
   this->decision_trace_publisher->publish(observation_trace);
@@ -237,7 +237,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     /* Observed pulse fields */
     if (trace.actual_stimulation_time != 0.0) final_trace.actual_stimulation_time = trace.actual_stimulation_time;
     if (trace.actual_stimulation_sample_index != 0) final_trace.actual_stimulation_sample_index = trace.actual_stimulation_sample_index;
-    if (trace.timing_error != 0.0) final_trace.timing_error = trace.timing_error;
+    if (trace.timing_offset != 0.0) final_trace.timing_offset = trace.timing_offset;
   }
 
   bool is_simulated_data_source = this->data_source == "simulator" || this->data_source == "playback";

@@ -192,18 +192,18 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
 
   /* Check if trigger time is in the past */
   if (time_until_trigger < 0.0) {
-    double_t timing_error = -time_until_trigger;
+    double_t timing_offset = -time_until_trigger;
     
-    /* Reject if timing error exceeds maximum allowed */
-    if (timing_error > this->maximum_timing_offset) {
+    /* Reject if timing offset exceeds maximum allowed */
+    if (timing_offset > this->maximum_timing_offset) {
       RCLCPP_ERROR(logger, "Trigger time %.4f (pulse time %.4f) is too late (current estimated: %.4f, error: %.4f ms exceeds maximum %.4f ms), rejecting trigger.",
-                   trigger_time, desired_pulse_time, estimated_current_time, timing_error * 1000, this->maximum_timing_offset * 1000);
+                   trigger_time, desired_pulse_time, estimated_current_time, timing_offset * 1000, this->maximum_timing_offset * 1000);
       return SchedulingResult::TOO_LATE;
     }
     
     /* Within tolerance, trigger immediately */
     RCLCPP_WARN(logger, "Trigger time %.4f (pulse time %.4f) is in the past (current estimated: %.4f, error: %.4f ms within maximum %.4f ms), triggering immediately.",
-                trigger_time, desired_pulse_time, estimated_current_time, timing_error * 1000, this->maximum_timing_offset * 1000);
+                trigger_time, desired_pulse_time, estimated_current_time, timing_offset * 1000, this->maximum_timing_offset * 1000);
     time_until_trigger = 0.0;
   }
 

@@ -63,8 +63,8 @@ export const StimulationDisplay: React.FC = () => {
   const formattedStrictHorizon = decisionTrace?.strict_stimulation_horizon !== undefined
     ? '>' + (decisionTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedTimingError = decisionTrace?.timing_error !== undefined && decisionTrace.timing_error !== 0
-    ? (decisionTrace.timing_error * 1000).toFixed(1) + ' ms'
+  const formattedTimingOffset = decisionTrace?.timing_offset !== undefined && decisionTrace.timing_offset !== 0
+    ? (decisionTrace.timing_offset * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const formattedStatus = decisionTrace?.status !== undefined
     ? getStatusLabel(decisionTrace.status)
@@ -117,8 +117,8 @@ export const StimulationDisplay: React.FC = () => {
           <StateValue>{formattedStrictHorizon}</StateValue>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Timing error</IndentedStateTitle>
-          <StateValue>{formattedTimingError}</StateValue>
+          <IndentedStateTitle>Timing offset</IndentedStateTitle>
+          <StateValue>{formattedTimingOffset}</StateValue>
         </StateRow>
         <br />
         <StateRow>

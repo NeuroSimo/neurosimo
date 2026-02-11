@@ -230,7 +230,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
     if (trace.system_time_hardware_fired != 0) final_trace.system_time_hardware_fired = trace.system_time_hardware_fired;
     if (trace.loopback_latency_at_scheduling != 0.0) final_trace.loopback_latency_at_scheduling = trace.loopback_latency_at_scheduling;
     if (trace.latency_corrected_time_at_firing != 0.0) final_trace.latency_corrected_time_at_firing = trace.latency_corrected_time_at_firing;
-    if (trace.maximum_timing_error != 0.0) final_trace.maximum_timing_error = trace.maximum_timing_error;
+    if (trace.maximum_timing_offset != 0.0) final_trace.maximum_timing_offset = trace.maximum_timing_offset;
     if (trace.maximum_loopback_latency != 0.0) final_trace.maximum_loopback_latency = trace.maximum_loopback_latency;
     if (trace.trigger_to_pulse_delay != 0.0) final_trace.trigger_to_pulse_delay = trace.trigger_to_pulse_delay;
 

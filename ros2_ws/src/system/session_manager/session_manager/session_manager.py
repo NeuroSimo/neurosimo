@@ -602,7 +602,7 @@ class SessionManagerNode(Node):
         request.session_id = session_id
 
         # Configuration from global config
-        request.maximum_timing_error = global_config.maximum_timing_error
+        request.maximum_timing_offset = global_config.maximum_timing_offset
         request.maximum_loopback_latency = global_config.maximum_loopback_latency
         request.trigger_to_pulse_delay = global_config.trigger_to_pulse_delay
         request.simulate_labjack = global_config.simulate_labjack

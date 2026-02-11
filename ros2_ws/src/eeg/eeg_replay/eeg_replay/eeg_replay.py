@@ -32,6 +32,7 @@ class EegReplayNode(Node):
         self.bag_process = None
         self.process_lock = Lock()
         self.stop_requested = False
+        self.is_streaming = False
         
         # QoS profile for latched topics
         qos_persist_latest = QoSProfile(
@@ -204,25 +205,20 @@ class EegReplayNode(Node):
                 *topics,
                 '--clock', '200'  # Publish clock at 200 Hz
             ]
-
-            try:
-                self.logger.info(f'Starting bag playback: {" ".join(cmd)}')
-                self.stop_requested = False
-                self.bag_process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    preexec_fn=os.setsid  # Create new process group for proper cleanup
-                )
-                # Start background monitor thread to detect natural end of bag
-                Thread(target=self._monitor_bag_process, daemon=True).start()
-                self.publish_state(DataSourceState.RUNNING)
-                response.success = True
-                self.logger.info('Bag playback started successfully')
-            except Exception as e:
-                self.logger.error(f'Failed to start bag playback: {e}')
-                self.bag_process = None
-                response.success = False
+            self.logger.info(f'Starting bag playback: {" ".join(cmd)}')
+            self.stop_requested = False
+            self.bag_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                preexec_fn=os.setsid  # Create new process group for proper cleanup
+            )
+            # Start background monitor thread to detect natural end of bag
+            Thread(target=self._monitor_bag_process, daemon=True).start()
+            self.publish_state(DataSourceState.RUNNING)
+            self.is_streaming = True
+            response.success = True
+            self.logger.info('Bag playback started successfully')
 
         return response
 
@@ -231,18 +227,19 @@ class EegReplayNode(Node):
         self.logger.info('Received stop streaming request')
 
         with self.process_lock:
-            if self.bag_process is None:
-                self.logger.warning('No bag playback running')
+            if not self.is_streaming:
+                self.logger.warning('Not streaming, cannot stop')
                 response.success = False
-                response.data_source_fingerprint = 0
                 return response
 
-            try:
-                # Mark that this stop was requested explicitly to avoid aborting session
-                self.stop_requested = True
+            # Mark that this stop was requested explicitly to avoid aborting session
+            self.stop_requested = True
+            self.is_streaming = False
+
+            # If the process is still running, terminate it
+            if self.bag_process is not None:
                 # Send SIGTERM to the process group
                 os.killpg(os.getpgid(self.bag_process.pid), signal.SIGTERM)
-                
                 # Wait for process to terminate (with timeout)
                 try:
                     self.bag_process.wait(timeout=5.0)
@@ -252,14 +249,13 @@ class EegReplayNode(Node):
                     self.bag_process.wait()
 
                 self.bag_process = None
-                self.publish_state(DataSourceState.READY)
-                response.success = True
-                response.data_source_fingerprint = self.data_source_fingerprint
-                self.logger.info(f'Bag playback stopped successfully (fingerprint: 0x{self.data_source_fingerprint:016x})')
-            except Exception as e:
-                self.logger.error(f'Failed to stop bag playback: {e}')
-                response.success = False
-                response.data_source_fingerprint = 0
+
+            self.publish_state(DataSourceState.READY)
+
+            response.success = True
+            response.data_source_fingerprint = self.data_source_fingerprint
+
+            self.logger.info(f'Bag playback stopped successfully (fingerprint: 0x{self.data_source_fingerprint:016x})')
 
         return response
 
@@ -284,12 +280,10 @@ class EegReplayNode(Node):
             # If stop was requested explicitly, just transition to READY without aborting the session
             if self.stop_requested:
                 self.logger.info(f'Bag playback stopped manually with return code {retcode}')
-                self.publish_state(DataSourceState.READY)
                 return
 
         # Natural end of bag playback: mark READY and abort session
         self.logger.info(f'Bag playback finished with return code {retcode}, aborting session')
-        self.publish_state(DataSourceState.READY)
         self.abort_session()
 
     def abort_session(self):

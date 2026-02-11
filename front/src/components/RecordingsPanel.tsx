@@ -186,7 +186,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
   return (
     <RecordingContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Recording:</ConfigLabel>
+        <ConfigLabel>Recorded session:</ConfigLabel>
         {recordingsList.length > 0 ? (
           <RecordingSelect onChange={setRecordingBagFilenameHandler} value={recordingBagFilename} disabled={isSessionRunning || isEegStreaming}>
             {recordingsList.map((recordingFilename: typeof recordingsList[number], index: number) => (

@@ -56,7 +56,7 @@ class SessionConfiguratorNode(Node):
 
         # Recording parameters
         self.declare_parameter('recording.bag_filename', '')
-        self.declare_parameter('recording.is_preprocessed', False)
+        self.declare_parameter('recording.play_preprocessed', False)
 
         # Data source parameter
         self.declare_parameter('data_source', 'simulator')
@@ -127,7 +127,7 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
             rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
             rclpy.parameter.Parameter('recording.bag_filename', rclpy.parameter.Parameter.Type.STRING, session_config["recording.bag_filename"]),
-            rclpy.parameter.Parameter('recording.is_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["recording.is_preprocessed"]),
+            rclpy.parameter.Parameter('recording.play_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["recording.play_preprocessed"]),
         ])
 
         # Publish session config from the loaded dict (not from ROS params)
@@ -219,6 +219,8 @@ class SessionConfiguratorNode(Node):
         bag_filename = session_config.get('recording.bag_filename', '')
         # Convert filename to bag_id by removing .json extension
         config.recording_bag_id = bag_filename.rsplit('.json', 1)[0] if bag_filename else ''
+
+        config.play_preprocessed = session_config.get('recording.play_preprocessed', False)
         
         self.session_config_publisher.publish(config)
 

@@ -52,7 +52,7 @@ interface SessionConfigContextType {
   setSimulatorDataset: (filename: string, callback?: () => void) => Promise<void>
   setSimulatorStartTime: (startTime: number, callback?: () => void) => Promise<void>
   setRecordingBagFilename: (bagFilename: string, callback?: () => void) => Promise<void>
-  setRecordingIsPreprocessed: (isPreprocessed: boolean, callback?: () => void) => Promise<void>
+  setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => Promise<void>
   setDataSource: (dataSource: string, callback?: () => void) => Promise<void>
 }
 
@@ -89,7 +89,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   setSimulatorDataset: asyncNoop,
   setSimulatorStartTime: asyncNoop,
   setRecordingBagFilename: asyncNoop,
-  setRecordingIsPreprocessed: asyncNoop,
+  setPlayPreprocessed: asyncNoop,
   setDataSource: asyncNoop,
 }
 
@@ -222,9 +222,9 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('recording.bag_filename', bagFilename, callback || noop)
   }
-  const setRecordingIsPreprocessed = async (isPreprocessed: boolean, callback?: () => void): Promise<void> => {
+  const setPlayPreprocessed = async (playPreprocessed: boolean, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('recording.is_preprocessed', isPreprocessed, callback || noop)
+    setParameterRos('recording.play_preprocessed', playPreprocessed, callback || noop)
   }
   const setDataSource = async (dataSource: string, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
@@ -250,7 +250,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         setSimulatorDataset,
         setSimulatorStartTime,
         setRecordingBagFilename,
-        setRecordingIsPreprocessed,
+        setPlayPreprocessed,
         setDataSource,
       }}
     >

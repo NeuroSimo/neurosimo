@@ -2,6 +2,10 @@
 #include <filesystem>
 #include <signal.h>
 #include <execinfo.h>
+#include <limits>
+
+#define XXH_INLINE_ALL
+#include <xxhash.h>
 
 #include "decider_wrapper.h"
 #include "decider.h"
@@ -286,6 +290,10 @@ void EegDecider::handle_finalize_decider(
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
   }
 
+  /* Store the final fingerprint before resetting state */
+  response->decision_fingerprint = this->decision_fingerprint;
+  RCLCPP_INFO(this->get_logger(), "Session decision fingerprint: 0x%016lx", response->decision_fingerprint);
+
   response->success = this->reset_state();
 
   if (!response->success) {
@@ -305,6 +313,7 @@ bool EegDecider::reset_state() {
   // Reset session and decision tracking
   this->session_id = {};
   this->decision_id = 0;
+  this->decision_fingerprint = 0;
 
   this->is_initialized = false;
   this->is_enabled = false;
@@ -531,6 +540,20 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   /* Check if the decision is positive. */
   bool stimulate = (timed_trigger != nullptr);
+
+  /* Update decision fingerprint with evaluation info. */
+  this->decision_fingerprint = XXH64(
+    &sample_time,
+    sizeof(sample_time),
+    this->decision_fingerprint);
+
+  double_t trigger_time = timed_trigger
+    ? timed_trigger->time
+    : std::numeric_limits<double_t>::quiet_NaN();
+  this->decision_fingerprint = XXH64(
+    &trigger_time,
+    sizeof(trigger_time),
+    this->decision_fingerprint);
 
   /* Calculate the total latency of the decider. */
   auto end_time = std::chrono::high_resolution_clock::now();

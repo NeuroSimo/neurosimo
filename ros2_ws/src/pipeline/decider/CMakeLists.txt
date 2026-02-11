@@ -20,6 +20,8 @@ find_package(project_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
 find_package(filesystem_utils REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(XXHASH REQUIRED libxxhash)
 
 add_executable(
         decider
@@ -37,7 +39,10 @@ target_include_directories(decider
 target_link_libraries(decider
   realtime_utils::utils
   filesystem_utils::filesystem_utils
+  ${XXHASH_LIBRARIES}
 )
+
+target_include_directories(decider PRIVATE ${XXHASH_INCLUDE_DIRS})
 
 ament_target_dependencies(
   decider

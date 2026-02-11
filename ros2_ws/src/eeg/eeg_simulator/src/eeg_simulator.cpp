@@ -448,10 +448,6 @@ bool EegSimulator::publish_until(double_t until_time) {
       RCLCPP_INFO(this->get_logger(), "Reached end of dataset. Marking session end.");
 
       stop_streaming_timer();
-
-      this->data_source_state = system_interfaces::msg::DataSourceState::READY;
-      publish_data_source_state();
-
       abort_session();
 
       return true;

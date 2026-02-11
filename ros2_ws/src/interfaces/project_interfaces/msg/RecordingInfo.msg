@@ -6,9 +6,6 @@ uint8 num_eeg_channels
 uint8 num_emg_channels
 uint16 sampling_frequency
 
-# Recording duration in seconds
-float64 duration
-
 # Pipeline configuration
 bool preprocessor_enabled
 string preprocessor_module
@@ -23,9 +20,10 @@ string subject_id
 string protocol_name
 string notes
 
-# Timestamps
+# Timing
 string start_time
 string end_time
+float64 duration
 
 # Software provenance
 string git_commit

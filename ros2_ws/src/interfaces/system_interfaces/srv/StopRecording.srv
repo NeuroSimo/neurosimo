@@ -1,6 +1,9 @@
 # Stop recording and finalize the bag
 
 uint8[16] session_id
+uint64 data_source_fingerprint
+uint64 preprocessor_fingerprint
+uint64 decision_fingerprint
 ---
 bool success
 string bag_path

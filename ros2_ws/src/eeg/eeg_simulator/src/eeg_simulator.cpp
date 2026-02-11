@@ -264,7 +264,7 @@ void EegSimulator::handle_start_streaming(
   this->session_start_time = this->get_clock()->now().seconds();
   this->session_sample_index = 0;
   this->is_session_start = true;
-  this->data_fingerprint = 0;
+  this->data_source_fingerprint = 0;
   this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
   
   /* Create the streaming timer to drive sample publication. */
@@ -287,15 +287,15 @@ void EegSimulator::handle_stop_streaming(
     RCLCPP_ERROR(this->get_logger(), "Not streaming, cannot stop streaming.");
 
     response->success = false;
-    response->data_fingerprint = 0;
+    response->data_source_fingerprint = 0;
     return;
   }
 
   stop_streaming_timer();
 
   /* Store the final fingerprint before resetting state */
-  response->data_fingerprint = this->data_fingerprint;
-  RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_fingerprint);
+  response->data_source_fingerprint = this->data_source_fingerprint;
+  RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_source_fingerprint);
 
   this->data_source_state = system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
@@ -392,16 +392,16 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
 
   /* Update data fingerprint with EEG data */
   if (!msg.eeg.empty()) {
-    this->data_fingerprint = XXH64(msg.eeg.data(),
+    this->data_source_fingerprint = XXH64(msg.eeg.data(),
                                             msg.eeg.size() * sizeof(double),
-                                            this->data_fingerprint);
+                                            this->data_source_fingerprint);
   }
   
   /* Update data fingerprint with EMG data */
   if (!msg.emg.empty()) {
-    this->data_fingerprint = XXH64(msg.emg.data(),
+    this->data_source_fingerprint = XXH64(msg.emg.data(),
                                             msg.emg.size() * sizeof(double),
-                                            this->data_fingerprint);
+                                            this->data_source_fingerprint);
   }
 
   eeg_publisher->publish(msg);

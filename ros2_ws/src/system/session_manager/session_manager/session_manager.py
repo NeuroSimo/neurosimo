@@ -341,18 +341,19 @@ class SessionManagerNode(Node):
         return initialized
 
     def finalize_session(self, session_id, global_config, session_config, initialized):
-        """Finalize session components in reverse order."""
-        # Stop streaming if it was started
+        """Finalize session components in reverse order and collect fingerprints."""
+        # Initialize fingerprints
+        decision_fingerprint = None
+        preprocessor_fingerprint = None
+        data_source_fingerprint = None
+
+        # Stop streaming if it was started (collect data source fingerprint)
         if initialized['streaming']:
-            if not self.stop_data_streaming(session_config, session_id):
+            success, data_source_fingerprint = self.stop_data_streaming(session_config, session_id)
+            if not success:
                 self.logger.error('Data streaming stop failed')
 
-        # Stop recording if it was started
-        if initialized['recording']:
-            if not self.stop_recording(session_id):
-                self.logger.error('Recording stop failed')
-
-        # Finalize components in reverse initialization order
+        # Finalize components in reverse initialization order, collecting fingerprints where available
         if initialized['trigger_timer']:
             if not self.finalize_trigger_timer(session_id):
                 self.logger.error('TriggerTimer finalization failed')
@@ -362,11 +363,13 @@ class SessionManagerNode(Node):
                 self.logger.error('StimulationTracer finalization failed')
 
         if initialized['preprocessor']:
-            if not self.finalize_preprocessor(session_id):
+            success, preprocessor_fingerprint = self.finalize_preprocessor(session_id)
+            if not success:
                 self.logger.error('Preprocessor finalization failed')
 
         if initialized['decider']:
-            if not self.finalize_decider(session_id):
+            success, decision_fingerprint = self.finalize_decider(session_id)
+            if not success:
                 self.logger.error('Decider finalization failed')
 
         if initialized['presenter']:
@@ -376,6 +379,16 @@ class SessionManagerNode(Node):
         if initialized['protocol']:
             if not self.finalize_protocol(session_id):
                 self.logger.error('Protocol finalization failed')
+
+        # Stop recording if it was started (after we have collected fingerprints)
+        if initialized['recording']:
+            if not self.stop_recording(
+                session_id,
+                decision_fingerprint=decision_fingerprint,
+                preprocessor_fingerprint=preprocessor_fingerprint,
+                data_source_fingerprint=data_source_fingerprint,
+            ):
+                self.logger.error('Recording stop failed')
 
     def run_session(self):
         """Run a complete session lifecycle."""
@@ -647,30 +660,32 @@ class SessionManagerNode(Node):
         return True
 
     def finalize_decider(self, session_id):
-        """Finalize the decider component."""
+        """Finalize the decider component and return its fingerprint."""
         request = FinalizeDecider.Request()
         request.session_id = session_id
         response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
 
         if response is None or not response.success:
             self.logger.error('Decider finalization failed')
-            return False
+            return False, 0
 
-        self.logger.info('Decider finalized successfully')
-        return True
+        decision_fingerprint = getattr(response, 'decision_fingerprint', 0)
+        self.logger.info(f'Decider finalized successfully')
+        return True, decision_fingerprint
 
     def finalize_preprocessor(self, session_id):
-        """Finalize the preprocessor component."""
+        """Finalize the preprocessor component and return its fingerprint."""
         request = FinalizePreprocessor.Request()
         request.session_id = session_id
         response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
 
         if response is None or not response.success:
             self.logger.error('Preprocessor finalization failed')
-            return False
+            return False, 0
 
-        self.logger.info('Preprocessor finalized successfully')
-        return True
+        preprocessor_fingerprint = getattr(response, 'preprocessor_fingerprint', 0)
+        self.logger.info(f'Preprocessor finalized successfully')
+        return True, preprocessor_fingerprint
 
     def finalize_stimulation_tracer(self, session_id):
         """Finalize the stimulation tracer component."""
@@ -743,7 +758,7 @@ class SessionManagerNode(Node):
         return True
 
     def stop_data_streaming(self, session_config, session_id):
-        """Stop the data streaming service."""
+        """Stop the data streaming service and return its fingerprint."""
         data_source = session_config.data_source
 
         # Choose the appropriate streaming stop service based on data source
@@ -758,7 +773,7 @@ class SessionManagerNode(Node):
             service_name = '/eeg_device/streaming/stop'
         else:
             self.logger.error(f'Unknown data source for stopping: {data_source}')
-            return False
+            return False, 0
 
         # Call the stop streaming service
         request = StopStreaming.Request()
@@ -766,10 +781,11 @@ class SessionManagerNode(Node):
         response = self.call_service(client, request, service_name)
 
         if response is None or not response.success:
-            return False
+            return False, 0
 
-        self.logger.info('Data streaming stopped successfully')
-        return True
+        data_source_fingerprint = getattr(response, 'data_source_fingerprint', 0)
+        self.logger.info(f'Data streaming stopped successfully')
+        return True, data_source_fingerprint
 
     # Recording functions
     def start_recording(self, session_id, global_config, session_config, stream_info):
@@ -789,17 +805,21 @@ class SessionManagerNode(Node):
         self.logger.info('Recording started successfully')
         return True
 
-    def stop_recording(self, session_id):
+    def stop_recording(self, session_id, decision_fingerprint, preprocessor_fingerprint, data_source_fingerprint):
         """Stop session recording."""
         request = StopRecording.Request()
         request.session_id = session_id
+        # Encode unset fingerprints as 0
+        request.decision_fingerprint = decision_fingerprint if decision_fingerprint is not None else 0
+        request.preprocessor_fingerprint = preprocessor_fingerprint if preprocessor_fingerprint is not None else 0
+        request.data_source_fingerprint = data_source_fingerprint if data_source_fingerprint is not None else 0
 
         response = self.call_service(self.recording_stop_client, request, '/session_recorder/stop')
 
         if response is None or not response.success:
             return False
 
-        self.logger.info('Recording stopped successfully')
+        self.logger.info(f'Recording stopped successfully')
         return True
 
     def call_action(self, client, goal, action_name, timeout_sec=30.0):

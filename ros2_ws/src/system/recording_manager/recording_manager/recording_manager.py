@@ -159,6 +159,15 @@ class RecordingManagerNode(Node):
             # Set basic info
             recording_info.json_filename = request.filename
 
+            # Extract session config fields
+            session_config = metadata.get('session_config', {})
+            recording_info.protocol_filename = session_config.get('protocol_filename', '')
+            recording_info.data_source = session_config.get('data_source', '')
+            recording_info.simulator_dataset_filename = session_config.get('simulator_dataset_filename', '')
+            recording_info.simulator_start_time = session_config.get('simulator_start_time', 0.0)
+            recording_info.replay_bag_id = session_config.get('replay_bag_id', '')
+            recording_info.replay_play_preprocessed = session_config.get('replay_play_preprocessed', False)
+
             # Extract stream info
             stream_info = metadata.get('stream_info', {})
             recording_info.num_eeg_channels = stream_info.get('num_eeg_channels', 0)

@@ -24,6 +24,7 @@ import { useExporter, ExporterStateValue } from 'providers/ExporterProvider'
 import { exportSessionRos } from 'ros/session'
 import { getRecordingInfoRos, RecordingInfo } from 'ros/recording'
 import { formatTime, formatDateTime, formatFrequency } from 'utils/utils'
+import { DataSourceContext } from './DataSourceDisplay'
 
 const RecordingContainer = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH - 30}px;
@@ -72,13 +73,34 @@ const ExportProgress = styled.span`
   margin-right: 8px;
 `
 
+const DataSourceContainer = styled.div`
+  display: flex;
+  align-items: center;
+  position: relative;
+`
+
+const DataSourceLinkIcon = styled.span`
+  cursor: pointer;
+  color: #007bff;
+  font-size: 14px;
+  position: absolute;
+  left: 118px;
+  display: inline-block;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #0056b3;
+  }
+`
+
 export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setBagId, setPlayPreprocessed } = useSessionConfig()
+  const { setBagId, setPlayPreprocessed, setSimulatorDataset } = useSessionConfig()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(RecordingContext)
   const { activeProject, locale } = useGlobalConfig()
   const { exporterState } = useExporter()
+  const dataSourceContext = useContext(DataSourceContext)
 
   const [selectedRecordingInfo, setSelectedRecordingInfo] = useState<RecordingInfo | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
@@ -171,6 +193,27 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
     )
   }
 
+  const handleSimulatorLink = () => {
+    if (dataSourceContext && selectedRecordingInfo?.simulator_dataset_filename) {
+      // Switch to simulator tab
+      dataSourceContext.setActiveTab('simulator')
+      // Select the dataset from the recording
+      setSimulatorDataset(selectedRecordingInfo.simulator_dataset_filename, () => {
+        console.log('Switched to simulator and selected dataset:', selectedRecordingInfo.simulator_dataset_filename)
+      })
+    }
+  }
+
+  const handleRecordingLink = () => {
+    if (selectedRecordingInfo?.replay_bag_id) {
+      // Change the current recording to the replay_bag_id
+      setBagIdState(selectedRecordingInfo.replay_bag_id)
+      setBagId(selectedRecordingInfo.replay_bag_id, () => {
+        console.log('Changed recording to replay bag:', selectedRecordingInfo.replay_bag_id)
+      })
+    }
+  }
+
   const formatFingerprintHex = (value?: number | null): string => {
     if (!value) {
       return ''
@@ -226,6 +269,28 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
           <CompactRow>
             <ConfigLabel>Subject ID:</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.subject_id}</ConfigValue>
+          </CompactRow>
+          <CompactRow>
+            <ConfigLabel>Data Source:</ConfigLabel>
+            <DataSourceContainer>
+              {selectedRecordingInfo.data_source === 'simulator' && selectedRecordingInfo.simulator_dataset_filename ? (
+                <>
+                  <DataSourceLinkIcon onClick={handleSimulatorLink} title="Move to simulator">
+                    &#128279;
+                  </DataSourceLinkIcon>
+                  <ConfigValue>Simulator</ConfigValue>
+                </>
+              ) : selectedRecordingInfo.data_source === 'recording' && selectedRecordingInfo.replay_bag_id ? (
+                <>
+                  <DataSourceLinkIcon onClick={handleRecordingLink} title="Move to recording">
+                    &#128279;
+                  </DataSourceLinkIcon>
+                  <ConfigValue>Recording</ConfigValue>
+                </>
+              ) : selectedRecordingInfo.data_source === 'eeg_device' ? (
+                <ConfigValue>EEG Device</ConfigValue>
+              ) : null}
+            </DataSourceContainer>
           </CompactRow>
           <CompactRow>
             <ConfigLabel>Time:</ConfigLabel>

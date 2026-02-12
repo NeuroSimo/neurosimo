@@ -17,6 +17,12 @@ export interface RecordingInfo extends ROSLIB.Message {
   subject_id: string
   protocol_name: string
   notes: string
+  protocol_filename: string
+  data_source: string
+  simulator_dataset_filename: string
+  simulator_start_time: number
+  replay_bag_id: string
+  replay_play_preprocessed: boolean
   start_time: string
   end_time: string
   git_commit: string

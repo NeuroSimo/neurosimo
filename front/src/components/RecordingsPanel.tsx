@@ -318,7 +318,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
   return (
     <RecordingContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Recorded session:</ConfigLabel>
+        <ConfigLabel>Recorded session</ConfigLabel>
         {recordingsList.length > 0 ? (
           <RecordingSelect onChange={setBagIdHandler} value={recordingBagId} disabled={isSessionRunning || isEegStreaming}>
             {recordingsList.map((recordingId: typeof recordingsList[number], index: number) => (
@@ -334,18 +334,18 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
       {selectedRecordingInfo && (
         <>
           <CompactRow>
-            <ConfigLabel>Duration:</ConfigLabel>
+            <ConfigLabel>Duration</ConfigLabel>
             <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
           </CompactRow>
 
           <div style={{ height: '8px' }} />
 
           <CompactRow>
-            <ConfigLabel>Sampling rate:</ConfigLabel>
+            <ConfigLabel>Sampling rate</ConfigLabel>
             <ConfigValue>{formatFrequency(selectedRecordingInfo.sampling_frequency)}</ConfigValue>
           </CompactRow>
           <CompactRow>
-            <ConfigLabel>Channels:</ConfigLabel>
+            <ConfigLabel>Channels</ConfigLabel>
           </CompactRow>
           <CompactRow>
             <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
@@ -359,11 +359,11 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
           <div style={{ height: '8px' }} />
 
           <CompactRow>
-            <ConfigLabel>Subject ID:</ConfigLabel>
+            <ConfigLabel>Subject ID</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.subject_id}</ConfigValue>
           </CompactRow>
           <CompactRow>
-            <ConfigLabel>Data Source:</ConfigLabel>
+            <ConfigLabel>Data Source</ConfigLabel>
             <DataSourceContainer>
               {selectedRecordingInfo.data_source === 'simulator' && selectedRecordingInfo.simulator_dataset_filename ? (
                 <>
@@ -385,12 +385,12 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             </DataSourceContainer>
           </CompactRow>
           <CompactRow>
-            <ConfigLabel>Time:</ConfigLabel>
+            <ConfigLabel>Time</ConfigLabel>
             <ConfigValue>{formatDateTime(selectedRecordingInfo.start_time, locale)}</ConfigValue>
           </CompactRow>
           {selectedRecordingInfo.notes && (
             <CompactRow>
-              <ConfigLabel>Notes:</ConfigLabel>
+              <ConfigLabel>Notes</ConfigLabel>
               <NotesValue>{selectedRecordingInfo.notes}</NotesValue>
             </CompactRow>
           )}
@@ -398,20 +398,20 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
           <div style={{ height: '8px' }} />
 
           <CompactRow>
-            <ConfigLabel>Preprocessor:</ConfigLabel>
+            <ConfigLabel>Preprocessor</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.preprocessor_enabled ? selectedRecordingInfo.preprocessor_module : '\u2013'}</ConfigValue>
           </CompactRow>
           <CompactRow>
-            <ConfigLabel>Decider:</ConfigLabel>
+            <ConfigLabel>Decider</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.decider_enabled ? selectedRecordingInfo.decider_module : '\u2013'}</ConfigValue>
           </CompactRow>
           <CompactRow>
-            <ConfigLabel>Presenter:</ConfigLabel>
+            <ConfigLabel>Presenter</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.presenter_enabled ? selectedRecordingInfo.presenter_module : '\u2013'}</ConfigValue>
           </CompactRow>
           <div style={{ height: '8px' }} />
           <CompactRow>
-            <ConfigLabel>Fingerprints:</ConfigLabel>
+            <ConfigLabel>Fingerprints</ConfigLabel>
           </CompactRow>
           <CompactRow>
             <ConfigLabel style={{ paddingLeft: 10 }}>Data source</ConfigLabel>
@@ -429,7 +429,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
         </>
       )}
       <CompactRow>
-        <ConfigLabel>Replay:</ConfigLabel>
+        <ConfigLabel>Replay</ConfigLabel>
       </CompactRow>
       <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel style={{ paddingLeft: 10 }}>Play preprocessed</ConfigLabel>

@@ -60,13 +60,22 @@ export const ValidatedInput: React.FC<ValidatedInputProps> = ({
   }
 
   const handleBlur = () => {
-    if (!isValueValid(localValue)) {
+    const parsedValue = parse(localValue)
+    if (isNaN(parsedValue)) {
       setLocalValue(format(value))
-    } else {
-      const parsedValue = parse(localValue)
-      onChange(parsedValue)
-      setLocalValue(format(parsedValue))
+      return
     }
+
+    // Clip the value to min/max bounds
+    let clippedValue = parsedValue
+    if (min !== undefined && parsedValue < min) {
+      clippedValue = min
+    } else if (max !== undefined && parsedValue > max) {
+      clippedValue = max
+    }
+
+    onChange(clippedValue)
+    setLocalValue(format(clippedValue))
   }
 
   useEffect(() => {

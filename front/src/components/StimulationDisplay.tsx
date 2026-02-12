@@ -13,6 +13,7 @@ import {
 } from 'styles/General'
 
 import { SessionStatisticsContext, getStatusLabel } from 'providers/SessionStatisticsProvider'
+import { useSession, SessionStateValue } from 'providers/SessionProvider'
 
 const StimulationPanelTitle = styled.div`
   width: 220px;
@@ -36,25 +37,45 @@ const StimulationPanel = styled(StyledPanel)`
 
 export const StimulationDisplay: React.FC = () => {
   const { loopbackLatency, decisionTrace } = useContext(SessionStatisticsContext)
+  const { sessionState } = useSession()
   const [positiveDecisionTrace, setPositiveDecisionTrace] = useState<any>(null)
+  const [latestDecisionTrace, setLatestDecisionTrace] = useState<any>(null)
+  const [previousSessionState, setPreviousSessionState] = useState<SessionStateValue>(SessionStateValue.STOPPED)
 
-  // Track the latest decision trace (not "Decided no")
+  // Reset traces when session starts
   useEffect(() => {
-    if (decisionTrace && decisionTrace.status !== 1) {
-      setPositiveDecisionTrace(decisionTrace)
+    if (previousSessionState === SessionStateValue.STOPPED &&
+        (sessionState.state === SessionStateValue.INITIALIZING || sessionState.state === SessionStateValue.RUNNING)) {
+      setPositiveDecisionTrace(null) // Reset for new session
+      setLatestDecisionTrace(null) // Reset latest decision trace
+    }
+    setPreviousSessionState(sessionState.state)
+  }, [sessionState.state, previousSessionState])
+
+  // Update latest decision trace from context
+  useEffect(() => {
+    if (decisionTrace) {
+      setLatestDecisionTrace(decisionTrace)
     }
   }, [decisionTrace])
 
+  // Track the latest decision trace (not "Decided no")
+  useEffect(() => {
+    if (latestDecisionTrace && latestDecisionTrace.status !== 1) {
+      setPositiveDecisionTrace(latestDecisionTrace)
+    }
+  }, [latestDecisionTrace])
+
   // Latency
   const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
-  const formattedDecisionPathLatency = decisionTrace?.decision_path_latency
-    ? (decisionTrace.decision_path_latency * 1000).toFixed(1) + ' ms'
+  const formattedDecisionPathLatency = latestDecisionTrace?.decision_path_latency
+    ? (latestDecisionTrace.decision_path_latency * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedPreprocessorDuration = decisionTrace?.preprocessor_duration
-    ? (decisionTrace.preprocessor_duration * 1000).toFixed(1) + ' ms'
+  const formattedPreprocessorDuration = latestDecisionTrace?.preprocessor_duration
+    ? (latestDecisionTrace.preprocessor_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedDeciderDuration = decisionTrace?.decider_duration
-    ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
+  const formattedDeciderDuration = latestDecisionTrace?.decider_duration
+    ? (latestDecisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
   // Pulse

@@ -321,26 +321,11 @@ class SessionExporterNode(Node):
     def _get_bag_duration(self, bag_path):
         """Get bag duration from session metadata JSON file."""
         json_path = Path(bag_path).parent / f'{Path(bag_path).name}.json'
-        
-        if not json_path.exists():
-            self.logger.warn(f'Metadata file not found: {json_path}')
-            return None
-        
-        try:
-            with open(json_path, 'r') as f:
-                metadata = json.load(f)
-            
-            if 'start_time' not in metadata or 'end_time' not in metadata:
-                return None
-            
-            start = datetime.fromisoformat(metadata['start_time'])
-            end = datetime.fromisoformat(metadata['end_time'])
-            duration = (end - start).total_seconds()
-            
-            return duration
-        except Exception as e:
-            self.logger.warn(f'Failed to parse metadata: {e}')
-            return None
+
+        with open(json_path, 'r') as f:
+            metadata = json.load(f)
+
+        return metadata['timing']['duration']
 
     def _export_topics_single_pass(self, bag_path, recording_name, topics_to_export, export_dir):
         """Export multiple topics in a single pass through the bag."""

@@ -8,9 +8,15 @@ import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { StyledPanel, CONFIG_PANEL_WIDTH, SmallerTitle } from 'styles/General'
 
+// Context for sharing tab switching functionality
+export const DataSourceContext = React.createContext<{
+  setActiveTab: (tab: 'simulator' | 'recording' | 'eeg_device') => void
+  activeTab: 'simulator' | 'recording' | 'eeg_device'
+} | null>(null)
+
 const DataSourcePanel = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
-  height: 550px;
+  height: 565px;
   position: static;
   display: flex;
   flex-direction: column;
@@ -73,29 +79,31 @@ export const DataSourceDisplay: React.FC = () => {
   }, [activeTab])
 
   return (
-    <DataSourcePanel>
-      <SmallerTitle>Data Source</SmallerTitle>
-      <TabContainer>
-        <Tab active={activeTab === 'simulator'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('simulator')}>
-          Simulator
-        </Tab>
-        <Tab active={activeTab === 'recording'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('recording')}>
-          Recordings
-        </Tab>
-        <Tab active={activeTab === 'eeg_device'} disabled={!isEegStreaming} onClick={() => isEegStreaming && setActiveTab('eeg_device')}>
-          EEG Device
-        </Tab>
-      </TabContainer>
+    <DataSourceContext.Provider value={{ setActiveTab, activeTab }}>
+      <DataSourcePanel>
+        <SmallerTitle>Data Source</SmallerTitle>
+        <TabContainer>
+          <Tab active={activeTab === 'simulator'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('simulator')}>
+            Simulator
+          </Tab>
+          <Tab active={activeTab === 'recording'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('recording')}>
+            Recordings
+          </Tab>
+          <Tab active={activeTab === 'eeg_device'} disabled={!isEegStreaming} onClick={() => isEegStreaming && setActiveTab('eeg_device')}>
+            EEG Device
+          </Tab>
+        </TabContainer>
 
-      {activeTab === 'simulator' && <EegSimulatorPanel isGrayedOut={false} />}
-      {activeTab === 'recording' && <RecordingsPanel isGrayedOut={false} />}
-      {activeTab === 'eeg_device' && <EegDevicePanel />}
+        {activeTab === 'simulator' && <EegSimulatorPanel isGrayedOut={false} />}
+        {activeTab === 'recording' && <RecordingsPanel isGrayedOut={false} />}
+        {activeTab === 'eeg_device' && <EegDevicePanel />}
 
-      {isEegStreaming && activeTab === 'eeg_device' && (
-        <StatusMessage>
-          Live EEG stream detected.
-        </StatusMessage>
-      )}
-    </DataSourcePanel>
+        {isEegStreaming && activeTab === 'eeg_device' && (
+          <StatusMessage>
+            Live EEG stream detected.
+          </StatusMessage>
+        )}
+      </DataSourcePanel>
+    </DataSourceContext.Provider>
   )
 }

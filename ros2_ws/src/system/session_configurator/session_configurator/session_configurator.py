@@ -54,8 +54,8 @@ class SessionConfiguratorNode(Node):
         self.declare_parameter('simulator.dataset_filename', '')
         self.declare_parameter('simulator.start_time', 0.0)
 
-        self.declare_parameter('recording.bag_id', '')
-        self.declare_parameter('recording.play_preprocessed', False)
+        self.declare_parameter('replay.bag_id', '')
+        self.declare_parameter('replay.play_preprocessed', False)
 
         # Data source parameter
         self.declare_parameter('data_source', 'simulator')
@@ -111,8 +111,6 @@ class SessionConfiguratorNode(Node):
         # Load session config for the new project
         session_config = self.storage_manager.get_session_config_for_project(project_name)
 
-        bag_id = session_config.get("recording.bag_id", "")
-
         self.set_parameters([
             rclpy.parameter.Parameter('notes', rclpy.parameter.Parameter.Type.STRING, session_config["notes"]),
             rclpy.parameter.Parameter('subject_id', rclpy.parameter.Parameter.Type.STRING, session_config["subject_id"]),
@@ -126,8 +124,8 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
             rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
-            rclpy.parameter.Parameter('recording.bag_id', rclpy.parameter.Parameter.Type.STRING, bag_id),
-            rclpy.parameter.Parameter('recording.play_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["recording.play_preprocessed"]),
+            rclpy.parameter.Parameter('replay.bag_id', rclpy.parameter.Parameter.Type.STRING, session_config["replay.bag_id"]),
+            rclpy.parameter.Parameter('replay.play_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["replay.play_preprocessed"]),
         ])
 
         # Publish session config from the loaded dict (not from ROS params)
@@ -219,8 +217,8 @@ class SessionConfiguratorNode(Node):
         config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
         config.simulator_start_time = session_config.get('simulator.start_time', 0.0)
         
-        config.recording_bag_id = session_config.get('recording.bag_id', '')
-        config.play_preprocessed = session_config.get('recording.play_preprocessed', False)
+        config.replay_bag_id = session_config.get('replay.bag_id', '')
+        config.replay_play_preprocessed = session_config.get('replay.play_preprocessed', False)
         
         self.session_config_publisher.publish(config)
 

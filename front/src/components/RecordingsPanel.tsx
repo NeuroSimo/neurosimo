@@ -438,12 +438,10 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             <ConfigLabel>Time</ConfigLabel>
             <ConfigValue>{formatDateTime(selectedRecordingInfo.start_time, locale)}</ConfigValue>
           </CompactRow>
-          {selectedRecordingInfo.notes && (
-            <CompactRow>
-              <ConfigLabel>Notes</ConfigLabel>
-              <NotesValue>{selectedRecordingInfo.notes}</NotesValue>
-            </CompactRow>
-          )}
+          <CompactRow>
+            <ConfigLabel>Notes</ConfigLabel>
+            <NotesValue>{selectedRecordingInfo.notes || '\u2013'}</NotesValue>
+          </CompactRow>
 
           <div style={{ height: '8px' }} />
 
@@ -506,25 +504,27 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
           >
             {isExporting ? 'Exporting...' : 'Export'}
           </ExportButton>
-          <FolderTerminalButtons
-            folderName={selectedRecordingInfo?.export_directory || ''}
-            disabled={!selectedRecordingInfo?.exported}
-            folderTitle={
-              !selectedRecordingInfo?.exported
-                ? "No export available"
-                : isElectron
-                ? "Open export folder"
-                : "Only available in Electron"
-            }
-            terminalTitle={
-              !selectedRecordingInfo?.exported
-                ? "No export available"
-                : isElectron
-                ? "Open terminal in export folder"
-                : "Only available in Electron"
-            }
-            size={26}
-          />
+          <div style={{ justifySelf: 'center' }}>
+            <FolderTerminalButtons
+              folderName={selectedRecordingInfo?.export_directory || ''}
+              disabled={!selectedRecordingInfo?.exported}
+              folderTitle={
+                !selectedRecordingInfo?.exported
+                  ? "No export available"
+                  : isElectron
+                  ? "Open export folder"
+                  : "Only available in Electron"
+              }
+              terminalTitle={
+                !selectedRecordingInfo?.exported
+                  ? "No export available"
+                  : isElectron
+                  ? "Open terminal in export folder"
+                  : "Only available in Electron"
+              }
+              size={26}
+            />
+          </div>
           <ApplyConfigButton
             disabled={!selectedRecordingInfo || isSessionRunning || isEegStreaming}
             onClick={handleApplyConfig}

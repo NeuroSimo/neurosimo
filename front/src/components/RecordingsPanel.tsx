@@ -1,8 +1,11 @@
 import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { ExportModal, ExportDataType } from 'components/ExportModal'
+import { RecordingInfoModal } from 'components/RecordingInfoModal'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 
 import {
@@ -37,6 +40,19 @@ const RecordingContainer = styled(StyledPanel)`
 const RecordingSelect = styled(Select)`
   margin-left: 6px;
   width: 180px;
+`
+
+const InfoIcon = styled.span`
+  cursor: pointer;
+  color: #007bff;
+  font-size: 16px;
+  margin-right: 6px;
+  display: inline-block;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #0056b3;
+  }
 `
 
 const SwitchWrapper = styled.span`
@@ -161,6 +177,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
 
   const [selectedRecordingInfo, setSelectedRecordingInfo] = useState<RecordingInfo | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
 
   // For recording tab - these would come from a recording context in the future
   const [recordingBagId, setBagIdState] = useState<string>('')
@@ -370,13 +387,18 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Recorded session</ConfigLabel>
         {recordingsList.length > 0 ? (
-          <RecordingSelect onChange={setBagIdHandler} value={recordingBagId} disabled={isSessionRunning || isEegStreaming}>
-            {recordingsList.map((recordingId: typeof recordingsList[number], index: number) => (
-              <option key={index} value={recordingId}>
-                {recordingId}
-              </option>
-            ))}
-          </RecordingSelect>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <InfoIcon onClick={() => setIsInfoModalOpen(true)} title="View recording details">
+              <FontAwesomeIcon icon={faInfoCircle} />
+            </InfoIcon>
+            <RecordingSelect onChange={setBagIdHandler} value={recordingBagId} disabled={isSessionRunning || isEegStreaming}>
+              {recordingsList.map((recordingId: typeof recordingsList[number], index: number) => (
+                <option key={index} value={recordingId}>
+                  {recordingId}
+                </option>
+              ))}
+            </RecordingSelect>
+          </div>
         ) : (
           <ConfigValue>No recordings</ConfigValue>
         )}
@@ -547,6 +569,12 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
         preprocessorEnabled={selectedRecordingInfo?.preprocessor_enabled ?? true}
         deciderEnabled={selectedRecordingInfo?.decider_enabled ?? true}
         presenterEnabled={selectedRecordingInfo?.presenter_enabled ?? true}
+      />
+      <RecordingInfoModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        recordingInfo={selectedRecordingInfo}
+        recordingName={recordingBagId || 'Unknown'}
       />
     </RecordingContainer>
   )

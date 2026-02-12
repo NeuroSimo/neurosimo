@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
-import { StyledPanel, SmallerTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
+import { ConfigPanel, ConfigTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { ModuleListContext } from 'providers/ModuleListProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
@@ -16,7 +16,7 @@ import { listProjects } from 'ros/project'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
 
-const Container = styled(StyledPanel)`
+const Container = styled(ConfigPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
   position: relative;
   margin-top: 0;
@@ -126,7 +126,7 @@ export const ExperimentPanel: React.FC = () => {
 
   return (
     <Container>
-      <SmallerTitle>Experiment</SmallerTitle>
+      <ConfigTitle>Experiment</ConfigTitle>
       <ConfigRow>
         <ConfigLabel>Project:</ConfigLabel>
         <IconButtonWrapper>

@@ -28,20 +28,24 @@ const ExperimentStateTitle = styled.div`
   font-weight: bold;
 `
 
-const IconButton = styled.button<{ disabled: boolean }>`
+const InfoIcon = styled.button<{ disabled: boolean }>`
   background: none;
-  border: 0.5px solid #666666;
-  border-radius: 3px;
-  width: 18px;
-  height: 18px;
+  border: none;
+  width: 22px;
+  height: 22px;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666666;
+  color: #007bff;
+  font-size: 14px;
   opacity: ${props => props.disabled ? 0.5 : 1};
-  font-size: 10px;
-  margin-left: 188px;
+  margin-left: 194px;
+  transition: color 0.2s;
+
+  &:hover {
+    color: ${props => props.disabled ? '#007bff' : '#0056b3'};
+  }
 `
 
 const Panel = styled(StyledPanel)`
@@ -94,13 +98,13 @@ export const ExperimentStatePanel: React.FC = () => {
     <>
       <ExperimentStateTitle>
         <span>Experiment</span>
-        <IconButton
+        <InfoIcon
           onClick={handleDetachExperiment}
           disabled={!isElectron}
           title={isElectron ? "Open detached experiment view" : "Only available in Electron"}
         >
           <FontAwesomeIcon icon={faWindowRestore} />
-        </IconButton>
+        </InfoIcon>
       </ExperimentStateTitle>
       <Panel>
         <ConfigRow>

@@ -11,6 +11,7 @@ import { HealthDisplay } from 'components/HealthDisplay'
 import { PipelineView } from 'views/PipelineView'
 import { DashboardView } from 'views/DashboardView'
 import { DetachedExperimentView } from 'components/DetachedExperimentView'
+import { RosConnectionOverlay } from 'components/RosConnectionOverlay'
 
 const App = () => {
   const isDetached = new URLSearchParams(window.location.search).get('detached') === 'true'
@@ -19,6 +20,7 @@ const App = () => {
     return (
       <Providers>
         <DetachedExperimentView />
+        <RosConnectionOverlay />
       </Providers>
     )
   }
@@ -34,6 +36,7 @@ const App = () => {
           <DashboardView />
         </Wrapper>
       </ContentContainer>
+      <RosConnectionOverlay />
     </Providers>
   )
 }

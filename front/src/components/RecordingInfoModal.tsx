@@ -143,9 +143,6 @@ export const RecordingInfoModal: React.FC<RecordingInfoModalProps> = ({
           <InfoLabel>Project Name</InfoLabel>
           <InfoValue>{recordingInfo.project_name || 'Not specified'}</InfoValue>
 
-          <InfoLabel>Protocol Name</InfoLabel>
-          <InfoValue>{recordingInfo.protocol_name || 'Not specified'}</InfoValue>
-
           <InfoLabel>Protocol Filename</InfoLabel>
           <InfoValue>{recordingInfo.protocol_filename || 'Not specified'}</InfoValue>
         </InfoGrid>

@@ -180,7 +180,6 @@ class RecordingManagerNode(Node):
             # Extract session config fields
             session_config = metadata.get('session_config', {})
             recording_info.subject_id = session_config.get('subject_id', '')
-            recording_info.protocol_name = session_config.get('protocol_name', '')
             recording_info.notes = session_config.get('notes', '')
             recording_info.protocol_filename = session_config.get('protocol_filename', '')
             recording_info.data_source = session_config.get('data_source', '')

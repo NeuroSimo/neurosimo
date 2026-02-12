@@ -20,6 +20,6 @@ string data_source
 string simulator_dataset_filename
 float64 simulator_start_time
 
-# Recording replay parameters
-string recording_bag_id
-bool play_preprocessed
+# Replay parameters
+string replay_bag_id
+bool replay_play_preprocessed

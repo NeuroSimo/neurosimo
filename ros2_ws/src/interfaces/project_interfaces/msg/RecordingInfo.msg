@@ -19,6 +19,12 @@ string project_name
 string subject_id
 string protocol_name
 string notes
+string protocol_filename
+string data_source
+string simulator_dataset_filename
+float64 simulator_start_time
+string replay_bag_id
+bool replay_play_preprocessed
 
 # Timing
 string start_time

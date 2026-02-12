@@ -2,6 +2,7 @@ import React from 'react'
 import { ThemeProvider } from 'styled-components'
 import theme from 'styles/theme'
 
+import { RosConnectionProvider } from './RosConnectionProvider'
 import { SessionConfigProvider } from './SessionConfigProvider'
 import { GlobalConfigProvider } from './GlobalConfigProvider'
 import { ModuleListProvider } from './ModuleListProvider'
@@ -25,35 +26,37 @@ interface Props {
 const Providers: React.FC<Props> = ({ children }) => {
   return (
     <ThemeProvider theme={theme}>
-      <SessionConfigProvider>
-        <GlobalConfigProvider>
-          <ModuleListProvider>
-            <SessionStatisticsProvider>
-              <LogProvider>
-              <ExperimentProvider>
-                <EegStreamProvider>
-              <EegStatisticsProvider>
-                <EegSimulatorProvider>
-                  <EegBridgeProvider>
-                    <SessionProvider>
-                      <HealthProvider>
-                        <DiskStatusProvider>
-                          <ExporterProvider>
-                            <RecordingProvider>{children}</RecordingProvider>
-                          </ExporterProvider>
-                        </DiskStatusProvider>
-                      </HealthProvider>
-                    </SessionProvider>
-                  </EegBridgeProvider>
-                </EegSimulatorProvider>
-              </EegStatisticsProvider>
-                </EegStreamProvider>
-                </ExperimentProvider>
-              </LogProvider>
-            </SessionStatisticsProvider>
-          </ModuleListProvider>
-        </GlobalConfigProvider>
-      </SessionConfigProvider>
+      <RosConnectionProvider>
+        <SessionConfigProvider>
+          <GlobalConfigProvider>
+            <ModuleListProvider>
+              <SessionStatisticsProvider>
+                <LogProvider>
+                <ExperimentProvider>
+                  <EegStreamProvider>
+                <EegStatisticsProvider>
+                  <EegSimulatorProvider>
+                    <EegBridgeProvider>
+                      <SessionProvider>
+                        <HealthProvider>
+                          <DiskStatusProvider>
+                            <ExporterProvider>
+                              <RecordingProvider>{children}</RecordingProvider>
+                            </ExporterProvider>
+                          </DiskStatusProvider>
+                        </HealthProvider>
+                      </SessionProvider>
+                    </EegBridgeProvider>
+                  </EegSimulatorProvider>
+                </EegStatisticsProvider>
+                  </EegStreamProvider>
+                  </ExperimentProvider>
+                </LogProvider>
+              </SessionStatisticsProvider>
+            </ModuleListProvider>
+          </GlobalConfigProvider>
+        </SessionConfigProvider>
+      </RosConnectionProvider>
     </ThemeProvider>
   )
 }

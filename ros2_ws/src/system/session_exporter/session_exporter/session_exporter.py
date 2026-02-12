@@ -6,6 +6,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
 from system_interfaces.srv import ExportSession, CancelExport
 from system_interfaces.msg import ExportDataType, ExporterState
+from pipeline_interfaces.msg import LogMessage
 
 import os
 import csv
@@ -129,10 +130,17 @@ DECISION_TRACE_PULSE_CONFIRMATION_MAP = {
 # Log export fields
 LOG_FIELDS = [
     'sample_time',
-    'is_initialization',
+    'phase',
     'level',
     'message',
 ]
+
+# Phase mapping for human-readable export (see pipeline_interfaces/msg/LogMessage.msg)
+PHASE_MAP = {
+    LogMessage.PHASE_RUNTIME: 'runtime',
+    LogMessage.PHASE_INITIALIZATION: 'initialization',
+    LogMessage.PHASE_FINALIZATION: 'finalization'
+}
 
 # Sensory stimulus export fields (base fields, parameters added dynamically)
 SENSORY_STIMULUS_FIELDS = [
@@ -538,7 +546,14 @@ class SessionExporterNode(Node):
         """Write log messages to CSV."""
         # LogMessages contains a list of LogMessage
         for log_msg in msg.messages:
-            row_data = {field: getattr(log_msg, field) for field in LOG_FIELDS}
+            row_data = {}
+            for field in LOG_FIELDS:
+                if field == 'phase':
+                    # Convert phase to human-readable string
+                    phase_value = getattr(log_msg, field)
+                    row_data[field] = PHASE_MAP.get(phase_value, f'unknown_{phase_value}')
+                else:
+                    row_data[field] = getattr(log_msg, field)
             writer_info['writer'].writerow(row_data)
 
     def _create_sensory_stimulus_writer(self, output_file):

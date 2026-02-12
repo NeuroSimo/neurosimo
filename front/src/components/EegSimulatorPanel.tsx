@@ -77,6 +77,46 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     })
   }, [dataset])
 
+  // Handle arrow key navigation for dataset selection
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle arrow keys when not typing in inputs and not disabled
+      if (isSessionRunning || isEegStreaming) return
+
+      // Skip if user is typing in an input field
+      const target = event.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      const currentIndex = datasetList.indexOf(dataset)
+      if (currentIndex === -1) return
+
+      if (event.key === 'ArrowUp' && currentIndex > 0) {
+        event.preventDefault()
+        // Blur any currently focused element to prevent focus outline
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+        const newIndex = currentIndex - 1
+        setSimulatorDataset(datasetList[newIndex], () => {
+          console.log('Dataset changed to ' + datasetList[newIndex] + ' via arrow key')
+        })
+      } else if (event.key === 'ArrowDown' && currentIndex < datasetList.length - 1) {
+        event.preventDefault()
+        // Blur any currently focused element to prevent focus outline
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+        const newIndex = currentIndex + 1
+        setSimulatorDataset(datasetList[newIndex], () => {
+          console.log('Dataset changed to ' + datasetList[newIndex] + ' via arrow key')
+        })
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [dataset, datasetList, isSessionRunning, isEegStreaming, setSimulatorDataset])
+
   const setDataset = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newDataset = event.target.value
 

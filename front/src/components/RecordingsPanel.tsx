@@ -229,6 +229,48 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
     }
   }, [recordingsList, recordingBagId, setBagId])
 
+  // Handle arrow key navigation for recording selection
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle arrow keys when not typing in inputs and not disabled
+      if (isSessionRunning || isEegStreaming || recordingsList.length === 0) return
+
+      // Skip if user is typing in an input field
+      const target = event.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      const currentIndex = recordingsList.indexOf(recordingBagId)
+      if (currentIndex === -1) return
+
+      if (event.key === 'ArrowUp' && currentIndex > 0) {
+        event.preventDefault()
+        // Blur any currently focused element to prevent focus outline
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+        const newBagId = recordingsList[currentIndex - 1]
+        setBagIdState(newBagId)
+        setBagId(newBagId, () => {
+          console.log('Recording changed to ' + newBagId + ' via arrow key')
+        })
+      } else if (event.key === 'ArrowDown' && currentIndex < recordingsList.length - 1) {
+        event.preventDefault()
+        // Blur any currently focused element to prevent focus outline
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+        const newBagId = recordingsList[currentIndex + 1]
+        setBagIdState(newBagId)
+        setBagId(newBagId, () => {
+          console.log('Recording changed to ' + newBagId + ' via arrow key')
+        })
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [recordingBagId, recordingsList, isSessionRunning, isEegStreaming, setBagId, setBagIdState])
+
   const setBagIdHandler = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const bagId = event.target.value
     setBagIdState(bagId)

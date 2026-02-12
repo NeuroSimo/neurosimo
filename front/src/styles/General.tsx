@@ -23,7 +23,7 @@ export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 220
 export const DASHBOARD_PANEL_HEIGHT = 300
 
 export const StyledPanel = styled.div<{ isGrayedOut?: boolean }>`
-  padding: 14px 0px 23px 21px;
+  padding: 8px 0px 12px 21px;
   border-radius: 3px;
   background-color: #f7f7f7;
   box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);/
@@ -168,7 +168,7 @@ export const NotesValue = styled.div`
 export const SmallerTitle = styled.h2`
   font-size: 12px;
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   margin-right: 18px;
   font-weight: bold;
 `

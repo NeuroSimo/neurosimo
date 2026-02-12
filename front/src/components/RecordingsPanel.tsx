@@ -22,7 +22,7 @@ import { RecordingContext } from 'providers/RecordingProvider'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 import { useExporter, ExporterStateValue } from 'providers/ExporterProvider'
 import { exportSessionRos } from 'ros/session'
-import { getRecordingInfoRos, RecordingInfo } from 'ros/recording'
+import { getRecordingInfoRos, deleteRecordingRos, RecordingInfo } from 'ros/recording'
 import { formatTime, formatDateTime, formatFrequency } from 'utils/utils'
 import { DataSourceContext } from './DataSourceDisplay'
 
@@ -64,6 +64,23 @@ const ExportButton = styled.button<{ disabled: boolean }>`
 
   &:hover {
     background-color: ${props => props.disabled ? '#cccccc' : '#0056b3'};
+  }
+`
+
+const DeleteButton = styled.button<{ disabled: boolean }>`
+  background-color: ${props => props.disabled ? '#cccccc' : '#dc3545'};
+  color: ${props => props.disabled ? '#666666' : 'white'};
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  font-size: 14px;
+  font-weight: 500;
+  margin-right: 8px;
+  min-width: 115px;
+
+  &:hover {
+    background-color: ${props => props.disabled ? '#cccccc' : '#c82333'};
   }
 `
 
@@ -110,12 +127,15 @@ const DataSourceLinkIcon = styled.span`
   }
 `
 
-const ButtonContainer = styled.div`
+const ButtonGrid = styled.div`
   margin-left: auto;
   margin-right: 8px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
   gap: 8px;
   align-items: center;
+  justify-items: end;
 `
 
 export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
@@ -228,6 +248,36 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
         }
       }
     )
+  }
+
+  const handleDelete = () => {
+    if (!recordingBagId) {
+      console.error('No recording selected')
+      return
+    }
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the recording "${recordingBagId}"? This action cannot be undone.`
+    )
+
+    if (!confirmDelete) {
+      return
+    }
+
+    deleteRecordingRos(recordingBagId, (success) => {
+      if (success) {
+        console.log('Recording deleted successfully')
+        // Clear the current selection
+        setSelectedRecordingInfo(null)
+        setBagIdState('')
+        setBagId('', () => {
+          console.log('Recording selection cleared after deletion')
+        })
+        // The recordings list should be updated automatically by the context
+      } else {
+        console.error('Failed to delete recording')
+      }
+    })
   }
 
   const handleApplyConfig = async () => {
@@ -444,18 +494,12 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
       </CompactRow>
       <div style={{ height: '8px' }} />
       <CompactRow>
-        <ButtonContainer>
+        <ButtonGrid>
           {isExporting && (
-            <ExportProgress>
+            <ExportProgress style={{ gridColumn: '1 / -1' }}>
               {Math.round(exporterState.progress * 100)}%
             </ExportProgress>
           )}
-          <ApplyConfigButton
-            disabled={!selectedRecordingInfo || isSessionRunning || isEegStreaming}
-            onClick={handleApplyConfig}
-          >
-            Apply config
-          </ApplyConfigButton>
           <ExportButton
             disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming || isExporting}
             onClick={handleExportClick}
@@ -481,7 +525,19 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             }
             size={26}
           />
-        </ButtonContainer>
+          <ApplyConfigButton
+            disabled={!selectedRecordingInfo || isSessionRunning || isEegStreaming}
+            onClick={handleApplyConfig}
+          >
+            Apply config
+          </ApplyConfigButton>
+          <DeleteButton
+            disabled={!recordingBagId || isSessionRunning || isEegStreaming}
+            onClick={handleDelete}
+          >
+            Delete
+          </DeleteButton>
+        </ButtonGrid>
       </CompactRow>
       <ExportModal
         isOpen={isExportModalOpen}

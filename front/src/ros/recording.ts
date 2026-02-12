@@ -67,3 +67,36 @@ export const getRecordingInfoRos = (
     }
   )
 }
+
+/* Delete recording service */
+const deleteRecordingService = new ROSLIB.Service({
+  ros: ros,
+  name: '/recording_manager/recording/delete',
+  serviceType: 'project_interfaces/DeleteRecording',
+})
+
+export const deleteRecordingRos = (
+  bagId: string,
+  callback: (success: boolean) => void
+) => {
+  const request = new ROSLIB.ServiceRequest({
+    bag_id: bagId
+  }) as any
+
+  deleteRecordingService.callService(
+    request,
+    (response: { success: boolean }) => {
+      if (!response.success) {
+        console.log('ERROR: Failed to delete recording: success field was false.')
+        callback(false)
+      } else {
+        callback(true)
+      }
+    },
+    (error) => {
+      console.log('ERROR: Failed to delete recording, error:')
+      console.log(error)
+      callback(false)
+    }
+  )
+}

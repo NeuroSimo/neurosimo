@@ -4,7 +4,7 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from project_interfaces.srv import GetRecordingInfo
+from project_interfaces.srv import GetRecordingInfo, DeleteRecording
 from project_interfaces.msg import RecordingInfo
 from system_interfaces.msg import GlobalConfig
 
@@ -75,6 +75,14 @@ class RecordingManagerNode(Node):
             GetRecordingInfo,
             '/recording_manager/recording/get_info',
             self._handle_get_recording_info,
+            callback_group=self.callback_group
+        )
+
+        # Create service for deleting recording
+        self._delete_recording_service = self.create_service(
+            DeleteRecording,
+            '/recording_manager/recording/delete',
+            self._handle_delete_recording,
             callback_group=self.callback_group
         )
 
@@ -227,6 +235,56 @@ class RecordingManagerNode(Node):
             response.success = False
         except Exception as e:
             self.logger.error(f'Error reading recording info: {e}')
+            response.success = False
+
+        return response
+
+    def _handle_delete_recording(self, request, response):
+        """Handle delete recording service calls."""
+        self.logger.info(f'Received delete recording request for: {request.bag_id}')
+
+        # Check if recordings directory is set
+        if not self._recordings_directory:
+            self.logger.error('Recordings directory not set. Make sure a project is active.')
+            response.success = False
+            return response
+
+        # Build path to the metadata JSON file
+        json_filename = f"{request.bag_id}.json"
+        json_file_path = os.path.join(self._recordings_directory, json_filename)
+
+        # Check if file exists
+        if not os.path.exists(json_file_path):
+            self.logger.error(f'Recording metadata file not found: {json_file_path}')
+            response.success = False
+            return response
+
+        try:
+            # Delete the JSON metadata file
+            os.remove(json_file_path)
+            self.logger.info(f'Deleted recording metadata file: {json_file_path}')
+
+            # Also try to delete the associated recording directory if it exists
+            recording_dir_path = os.path.join(self._recordings_directory, request.bag_id)
+
+            if os.path.exists(recording_dir_path) and os.path.isdir(recording_dir_path):
+                import shutil
+                shutil.rmtree(recording_dir_path)
+                self.logger.info(f'Deleted recording directory: {recording_dir_path}')
+
+            # Also try to delete the export folder if it exists
+            export_folder_name = f"{request.bag_id}_export"
+            export_folder_path = os.path.join(self._recordings_directory, export_folder_name)
+
+            if os.path.exists(export_folder_path) and os.path.isdir(export_folder_path):
+                shutil.rmtree(export_folder_path)
+                self.logger.info(f'Deleted recording export folder: {export_folder_path}')
+
+            response.success = True
+            self.logger.info(f'Successfully deleted recording: {request.bag_id}')
+
+        except Exception as e:
+            self.logger.error(f'Error deleting recording: {e}')
             response.success = False
 
         return response

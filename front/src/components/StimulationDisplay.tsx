@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
 
 import {
@@ -36,6 +36,14 @@ const StimulationPanel = styled(StyledPanel)`
 
 export const StimulationDisplay: React.FC = () => {
   const { loopbackLatency, decisionTrace } = useContext(SessionStatisticsContext)
+  const [positiveDecisionTrace, setPositiveDecisionTrace] = useState<any>(null)
+
+  // Track the latest decision trace (not "Decided no")
+  useEffect(() => {
+    if (decisionTrace && decisionTrace.status !== 1) {
+      setPositiveDecisionTrace(decisionTrace)
+    }
+  }, [decisionTrace])
 
   // Latency
   const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
@@ -51,30 +59,30 @@ export const StimulationDisplay: React.FC = () => {
 
   // Pulse
   const isReactiveMode =
-    decisionTrace?.requested_stimulation_time !== undefined &&
-    decisionTrace?.reference_sample_time !== undefined &&
-    Math.abs(decisionTrace.requested_stimulation_time - decisionTrace.reference_sample_time) <= 0.001
+    positiveDecisionTrace?.requested_stimulation_time !== undefined &&
+    positiveDecisionTrace?.reference_sample_time !== undefined &&
+    Math.abs(positiveDecisionTrace.requested_stimulation_time - positiveDecisionTrace.reference_sample_time) <= 0.001
 
-  const formattedReferenceSampleTime = decisionTrace?.reference_sample_time
-    ? decisionTrace.reference_sample_time.toFixed(3).replace(/\.?0+$/, '') + ' s'
+  const formattedReferenceSampleTime = positiveDecisionTrace?.reference_sample_time
+    ? positiveDecisionTrace.reference_sample_time.toFixed(3).replace(/\.?0+$/, '') + ' s'
     : '\u2013'
   const formattedRequestedStimulationOffset =
-    decisionTrace?.requested_stimulation_time !== undefined && decisionTrace?.reference_sample_time !== undefined
-    ? '+' + ((decisionTrace.requested_stimulation_time - decisionTrace.reference_sample_time) * 1000).toFixed(1) + ' ms'
+    positiveDecisionTrace?.requested_stimulation_time !== undefined && positiveDecisionTrace?.reference_sample_time !== undefined
+    ? '+' + ((positiveDecisionTrace.requested_stimulation_time - positiveDecisionTrace.reference_sample_time) * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const stimulationHorizonMs =
-    decisionTrace?.stimulation_horizon !== undefined ? decisionTrace.stimulation_horizon * 1000 : undefined
+    positiveDecisionTrace?.stimulation_horizon !== undefined ? positiveDecisionTrace.stimulation_horizon * 1000 : undefined
   const formattedStimulationHorizon =
     stimulationHorizonMs !== undefined ? '>' + stimulationHorizonMs.toFixed(1) + ' ms' : '\u2013'
-  const formattedStrictHorizon = decisionTrace?.strict_stimulation_horizon !== undefined
-    ? '>' + (decisionTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
+  const formattedStrictHorizon = positiveDecisionTrace?.strict_stimulation_horizon !== undefined
+    ? '>' + (positiveDecisionTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedTimingOffset = decisionTrace?.timing_offset !== undefined && decisionTrace.timing_offset !== 0
-    ? (decisionTrace.timing_offset * 1000).toFixed(1) + ' ms'
+  const formattedTimingOffset = positiveDecisionTrace?.timing_offset !== undefined && positiveDecisionTrace.timing_offset !== 0
+    ? (positiveDecisionTrace.timing_offset * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const baseStatus = decisionTrace?.status !== undefined ? getStatusLabel(decisionTrace.status) : '\u2013'
+  const baseStatus = positiveDecisionTrace?.status !== undefined ? getStatusLabel(positiveDecisionTrace.status) : '\u2013'
   const reactiveTooLateStatus =
-    isReactiveMode && decisionTrace?.status === 8 && stimulationHorizonMs !== undefined
+    isReactiveMode && positiveDecisionTrace?.status === 8 && stimulationHorizonMs !== undefined
       ? `Too late (+${stimulationHorizonMs.toFixed(1)} ms)`
       : null
   const formattedStatus = reactiveTooLateStatus ?? baseStatus

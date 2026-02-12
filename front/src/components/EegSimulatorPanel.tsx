@@ -195,6 +195,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
             max={selectedDatasetInfo?.duration || 0}
             onChange={setStartTime}
             disabled={isSessionRunning || isEegStreaming}
+            width="60px"
           />
         </div>
       </CompactRow>

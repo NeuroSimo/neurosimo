@@ -52,11 +52,11 @@ export const EegDevicePanel: React.FC = () => {
   return (
     <EegDeviceContainer>
       <ConfigRow>
-        <ConfigLabel>Sampling rate:</ConfigLabel>
+        <ConfigLabel>Sampling rate</ConfigLabel>
         <ConfigValue>{samplingFrequency}</ConfigValue>
       </ConfigRow>
       <CompactRow>
-        <ConfigLabel>Channels:</ConfigLabel>
+        <ConfigLabel>Channels</ConfigLabel>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
@@ -67,7 +67,7 @@ export const EegDevicePanel: React.FC = () => {
         <ConfigValue>{numEmgChannels > 0 ? numEmgChannels : '\u2013'}</ConfigValue>
       </CompactRow>
       <CompactRow>
-        <ConfigLabel>Status:</ConfigLabel>
+        <ConfigLabel>Status</ConfigLabel>
         <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
     </EegDeviceContainer>

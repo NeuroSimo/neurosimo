@@ -107,7 +107,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   return (
     <SimulatorPanel isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Dataset:</ConfigLabel>
+        <ConfigLabel>Dataset</ConfigLabel>
         <DatasetSelect onChange={setDataset} value={dataset} disabled={isSessionRunning || isEegStreaming}>
           {datasetList.map((datasetFilename: typeof datasetList[number], index: number) => (
             <option key={index} value={datasetFilename}>
@@ -117,7 +117,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         </DatasetSelect>
       </ConfigRow>
       <CompactRow>
-        <ConfigLabel>Duration:</ConfigLabel>
+        <ConfigLabel>Duration</ConfigLabel>
         <ConfigValue>
           {selectedDatasetInfo?.loop
             ? 'Continuous'
@@ -128,11 +128,11 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       <div style={{ height: '8px' }} />
 
       <CompactRow>
-        <ConfigLabel>Sampling rate:</ConfigLabel>
+        <ConfigLabel>Sampling rate</ConfigLabel>
         <ConfigValue>{formatFrequency(selectedDatasetInfo?.sampling_frequency)}</ConfigValue>
       </CompactRow>
       <CompactRow>
-        <ConfigLabel>Channels:</ConfigLabel>
+        <ConfigLabel>Channels</ConfigLabel>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
@@ -159,7 +159,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         </div>
       </CompactRow>
       <CompactRow>
-        <ConfigLabel>Status:</ConfigLabel>
+        <ConfigLabel>Status</ConfigLabel>
         <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
       <div style={{ height: '8px' }} />

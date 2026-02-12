@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faInfoCircle } from '@fortawesome/free-solid-svg-icons'
+import { faInfoCircle, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons'
 
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { ExportModal, ExportDataType } from 'components/ExportModal'
@@ -129,7 +129,9 @@ const DataSourceContainer = styled.div`
   position: relative;
 `
 
-const DataSourceLinkIcon = styled.span`
+const DataSourceLinkIcon = styled.button`
+  background: none;
+  border: none;
   cursor: pointer;
   color: #007bff;
   font-size: 14px;
@@ -137,6 +139,7 @@ const DataSourceLinkIcon = styled.span`
   left: 118px;
   display: inline-block;
   transition: color 0.2s;
+  padding: 0;
 
   &:hover {
     color: #0056b3;
@@ -385,7 +388,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
   return (
     <RecordingContainer isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
-        <ConfigLabel>Recorded session</ConfigLabel>
+        <ConfigLabel>Session</ConfigLabel>
         {recordingsList.length > 0 ? (
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <InfoIcon onClick={() => setIsInfoModalOpen(true)} title="View recording details">
@@ -440,14 +443,14 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
               {selectedRecordingInfo.data_source === 'simulator' && selectedRecordingInfo.simulator_dataset_filename ? (
                 <>
                   <DataSourceLinkIcon onClick={handleSimulatorLink} title="Move to simulator">
-                    &#128279;
+                    <FontAwesomeIcon icon={faExternalLinkAlt} />
                   </DataSourceLinkIcon>
                   <ConfigValue>Simulator</ConfigValue>
                 </>
               ) : selectedRecordingInfo.data_source === 'recording' && selectedRecordingInfo.replay_bag_id ? (
                 <>
                   <DataSourceLinkIcon onClick={handleRecordingLink} title="Move to recording">
-                    &#128279;
+                    <FontAwesomeIcon icon={faExternalLinkAlt} />
                   </DataSourceLinkIcon>
                   <ConfigValue>Recording</ConfigValue>
                 </>

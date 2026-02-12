@@ -16,7 +16,7 @@ export const DataSourceContext = React.createContext<{
 
 const DataSourcePanel = styled(StyledPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
-  height: 565px;
+  height: 620px;
   position: static;
   display: flex;
   flex-direction: column;

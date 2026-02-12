@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
-const StyledInput = styled.input<{ valid?: boolean }>`
+const StyledInput = styled.input<{ valid?: boolean; width?: string }>`
   padding: 8px 12px;
   border: 1px solid ${(props) => (props.valid ? '#ddd' : 'red')};
   border-radius: 4px;
   font-size: 14px;
   background-color: white;
   color: black;
+  width: ${(props) => props.width || 'auto'};
   
   &:focus {
     outline: none;
@@ -26,6 +27,7 @@ interface ValidatedInputProps {
   max?: number
   step?: number
   disabled?: boolean
+  width?: string
 }
 
 export const ValidatedInput: React.FC<ValidatedInputProps> = ({
@@ -36,6 +38,7 @@ export const ValidatedInput: React.FC<ValidatedInputProps> = ({
   type = 'number',
   min,
   max,
+  width,
   ...props
 }) => {
   const defaultFormat = (val: number) => val.toString()
@@ -76,6 +79,7 @@ export const ValidatedInput: React.FC<ValidatedInputProps> = ({
       {...props}
       value={localValue}
       valid={isValueValid(localValue)}
+      width={width}
       onChange={(e) => handleChange(e.target.value)}
       onBlur={handleBlur}
     />

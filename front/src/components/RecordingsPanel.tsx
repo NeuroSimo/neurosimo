@@ -103,7 +103,10 @@ const DeleteButton = styled.button<{ disabled: boolean }>`
 const ExportProgress = styled.span`
   font-size: 12px;
   color: #666;
-  margin-right: 8px;
+  position: absolute;
+  left: -30px;
+  top: 20%;
+  transform: translateY(-50%);
 `
 
 const ApplyConfigButton = styled.button<{ disabled: boolean }>`
@@ -155,6 +158,7 @@ const ButtonGrid = styled.div`
   gap: 8px;
   align-items: center;
   justify-items: end;
+  position: relative;
 `
 
 export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
@@ -561,7 +565,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
       <CompactRow>
         <ButtonGrid>
           {isExporting && (
-            <ExportProgress style={{ gridColumn: '1 / -1' }}>
+            <ExportProgress>
               {Math.round(exporterState.progress * 100)}%
             </ExportProgress>
           )}

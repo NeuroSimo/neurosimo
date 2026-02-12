@@ -6,7 +6,7 @@ import { RecordingsPanel } from 'components/RecordingsPanel'
 import { EegDevicePanel } from 'components/EegDevicePanel'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
-import { StyledPanel, CONFIG_PANEL_WIDTH, SmallerTitle } from 'styles/General'
+import { ConfigPanel, CONFIG_PANEL_WIDTH, ConfigTitle } from 'styles/General'
 
 // Context for sharing tab switching functionality
 export const DataSourceContext = React.createContext<{
@@ -14,7 +14,7 @@ export const DataSourceContext = React.createContext<{
   activeTab: 'simulator' | 'recording' | 'eeg_device'
 } | null>(null)
 
-const DataSourcePanel = styled(StyledPanel)`
+const DataSourcePanel = styled(ConfigPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
   height: 620px;
   position: static;
@@ -81,7 +81,7 @@ export const DataSourceDisplay: React.FC = () => {
   return (
     <DataSourceContext.Provider value={{ setActiveTab, activeTab }}>
       <DataSourcePanel>
-        <SmallerTitle>Data Source</SmallerTitle>
+        <ConfigTitle>Data Source</ConfigTitle>
         <TabContainer>
           <Tab active={activeTab === 'simulator'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('simulator')}>
             Simulator

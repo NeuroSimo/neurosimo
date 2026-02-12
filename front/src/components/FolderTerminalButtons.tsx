@@ -9,22 +9,23 @@ const ButtonGroup = styled.div`
   gap: 5px;
 `
 
-const IconButton = styled.button<{ disabled: boolean; $size?: number }>`
+const InfoIcon = styled.button<{ disabled: boolean; $size?: number }>`
   background: none;
-  border: 0.5px solid #666666;
-  border-radius: 3px;
+  border: none;
   width: ${props => props.$size || 22}px;
   height: ${props => props.$size || 22}px;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666666;
+  color: #007bff;
+  font-size: 16px;
   opacity: ${props => props.disabled ? 0.5 : 1};
   margin-left: 0px;
+  transition: color 0.2s;
 
   &:hover {
-    background-color: ${props => props.disabled ? 'transparent' : '#f0f0f0'};
+    color: ${props => props.disabled ? '#007bff' : '#0056b3'};
   }
 `
 
@@ -67,22 +68,22 @@ export const FolderTerminalButtons: React.FC<FolderTerminalButtonsProps> = ({
 
   return (
     <ButtonGroup>
-      <IconButton
+      <InfoIcon
         onClick={handleOpenFolder}
         disabled={isDisabled}
         title={folderTitle || defaultFolderTitle}
         $size={size}
       >
         <FontAwesomeIcon icon={faFolderOpen} />
-      </IconButton>
-      <IconButton
+      </InfoIcon>
+      <InfoIcon
         onClick={handleOpenTerminal}
         disabled={isDisabled}
         title={terminalTitle || defaultTerminalTitle}
         $size={size}
       >
         <FontAwesomeIcon icon={faTerminal} />
-      </IconButton>
+      </InfoIcon>
     </ButtonGroup>
   )
 }

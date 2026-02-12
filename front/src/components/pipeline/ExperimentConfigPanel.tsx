@@ -44,6 +44,19 @@ const IconButton = styled.button<{ disabled: boolean }>`
   opacity: ${props => props.disabled ? 0.5 : 1};
 `
 
+const InfoIcon = styled.span<{ disabled: boolean }>`
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  color: #007bff;
+  font-size: 16px;
+  display: inline-block;
+  transition: color 0.2s;
+  opacity: ${props => props.disabled ? 0.5 : 1};
+
+  &:hover {
+    color: ${props => props.disabled ? '#007bff' : '#0056b3'};
+  }
+`
+
 const ProtocolSelect = styled(Select)`
   max-width: 150px;
 `
@@ -117,13 +130,13 @@ export const ExperimentPanel: React.FC = () => {
       <ConfigRow>
         <ConfigLabel>Project:</ConfigLabel>
         <IconButtonWrapper>
-          <IconButton
+          <InfoIcon
             onClick={() => setIsCreateModalOpen(true)}
             disabled={isSessionRunning}
             title="Create new project"
           >
             <FontAwesomeIcon icon={faPlus} />
-          </IconButton>
+          </InfoIcon>
           <Select onChange={handleProjectChange} value={activeProject} disabled={isSessionRunning}>
             {projects.map((project, index) => (
               <option key={index} value={project}>
@@ -160,13 +173,13 @@ export const ExperimentPanel: React.FC = () => {
         <ConfigLabel>Protocol:</ConfigLabel>
         <IconButtonWrapper>
           <FolderTerminalButtons folderName="protocols" />
-          <IconButton
+          <InfoIcon
             onClick={handleProtocolInfo}
             disabled={!protocolName || protocolName.trim() === '' || !activeProject}
             title="Show protocol info"
           >
             <FontAwesomeIcon icon={faInfoCircle} />
-          </IconButton>
+          </InfoIcon>
           <ProtocolSelect onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
             {protocolList.map((protocol, index) => (
               <option key={index} value={protocol}>

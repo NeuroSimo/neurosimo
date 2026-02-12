@@ -17,7 +17,6 @@ string presenter_module
 # Session configuration
 string project_name
 string subject_id
-string protocol_name
 string notes
 string protocol_filename
 string data_source

@@ -73,6 +73,23 @@ const ExportProgress = styled.span`
   margin-right: 8px;
 `
 
+const ApplyConfigButton = styled.button<{ disabled: boolean }>`
+  background-color: ${props => props.disabled ? '#cccccc' : '#28a745'};
+  color: ${props => props.disabled ? '#666666' : 'white'};
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  font-size: 14px;
+  font-weight: 500;
+  margin-right: 8px;
+  min-width: 115px;
+
+  &:hover {
+    background-color: ${props => props.disabled ? '#cccccc' : '#218838'};
+  }
+`
+
 const DataSourceContainer = styled.div`
   display: flex;
   align-items: center;
@@ -93,9 +110,29 @@ const DataSourceLinkIcon = styled.span`
   }
 `
 
+const ButtonContainer = styled.div`
+  margin-left: auto;
+  margin-right: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+`
+
 export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setBagId, setPlayPreprocessed, setSimulatorDataset } = useSessionConfig()
+  const {
+    setBagId,
+    setPlayPreprocessed,
+    setSimulatorDataset,
+    setSubjectId,
+    setNotes,
+    setPreprocessorEnabled,
+    setPreprocessorModule,
+    setDeciderEnabled,
+    setDeciderModule,
+    setPresenterEnabled,
+    setPresenterModule
+  } = useSessionConfig()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(RecordingContext)
   const { activeProject, locale } = useGlobalConfig()
@@ -191,6 +228,61 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
         }
       }
     )
+  }
+
+  const handleApplyConfig = async () => {
+    if (!selectedRecordingInfo) {
+      console.error('No recording selected')
+      return
+    }
+
+    try {
+      // Apply subject ID and notes
+      await setSubjectId(selectedRecordingInfo.subject_id, () => {
+        console.log('Subject ID applied from recording:', selectedRecordingInfo.subject_id)
+      })
+
+      await setNotes(selectedRecordingInfo.notes, () => {
+        console.log('Notes applied from recording:', selectedRecordingInfo.notes)
+      })
+
+      // Apply preprocessor settings
+      await setPreprocessorEnabled(selectedRecordingInfo.preprocessor_enabled, () => {
+        console.log('Preprocessor enabled applied from recording:', selectedRecordingInfo.preprocessor_enabled)
+      })
+
+      if (selectedRecordingInfo.preprocessor_enabled && selectedRecordingInfo.preprocessor_module) {
+        await setPreprocessorModule(selectedRecordingInfo.preprocessor_module, () => {
+          console.log('Preprocessor module applied from recording:', selectedRecordingInfo.preprocessor_module)
+        })
+      }
+
+      // Apply decider settings
+      await setDeciderEnabled(selectedRecordingInfo.decider_enabled, () => {
+        console.log('Decider enabled applied from recording:', selectedRecordingInfo.decider_enabled)
+      })
+
+      if (selectedRecordingInfo.decider_enabled && selectedRecordingInfo.decider_module) {
+        await setDeciderModule(selectedRecordingInfo.decider_module, () => {
+          console.log('Decider module applied from recording:', selectedRecordingInfo.decider_module)
+        })
+      }
+
+      // Apply presenter settings
+      await setPresenterEnabled(selectedRecordingInfo.presenter_enabled, () => {
+        console.log('Presenter enabled applied from recording:', selectedRecordingInfo.presenter_enabled)
+      })
+
+      if (selectedRecordingInfo.presenter_enabled && selectedRecordingInfo.presenter_module) {
+        await setPresenterModule(selectedRecordingInfo.presenter_module, () => {
+          console.log('Presenter module applied from recording:', selectedRecordingInfo.presenter_module)
+        })
+      }
+
+      console.log('Configuration applied from recording successfully')
+    } catch (error) {
+      console.error('Failed to apply configuration from recording:', error)
+    }
   }
 
   const handleSimulatorLink = () => {
@@ -352,12 +444,18 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
       </CompactRow>
       <div style={{ height: '8px' }} />
       <CompactRow>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <ButtonContainer>
           {isExporting && (
             <ExportProgress>
               {Math.round(exporterState.progress * 100)}%
             </ExportProgress>
           )}
+          <ApplyConfigButton
+            disabled={!selectedRecordingInfo || isSessionRunning || isEegStreaming}
+            onClick={handleApplyConfig}
+          >
+            Apply config
+          </ApplyConfigButton>
           <ExportButton
             disabled={recordingsList.length === 0 || isSessionRunning || isEegStreaming || isExporting}
             onClick={handleExportClick}
@@ -383,7 +481,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             }
             size={26}
           />
-        </div>
+        </ButtonContainer>
       </CompactRow>
       <ExportModal
         isOpen={isExportModalOpen}

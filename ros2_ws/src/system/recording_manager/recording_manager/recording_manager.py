@@ -167,14 +167,9 @@ class RecordingManagerNode(Node):
             # Set basic info
             recording_info.json_filename = request.filename
 
-            # Extract session config fields
-            session_config = metadata.get('session_config', {})
-            recording_info.protocol_filename = session_config.get('protocol_filename', '')
-            recording_info.data_source = session_config.get('data_source', '')
-            recording_info.simulator_dataset_filename = session_config.get('simulator_dataset_filename', '')
-            recording_info.simulator_start_time = session_config.get('simulator_start_time', 0.0)
-            recording_info.replay_bag_id = session_config.get('replay_bag_id', '')
-            recording_info.replay_play_preprocessed = session_config.get('replay_play_preprocessed', False)
+            # Extract global config fields
+            global_config = metadata.get('global_config', {})
+            recording_info.project_name = global_config.get('active_project', '')
 
             # Extract stream info
             stream_info = metadata.get('stream_info', {})
@@ -182,12 +177,17 @@ class RecordingManagerNode(Node):
             recording_info.num_emg_channels = stream_info.get('num_emg_channels', 0)
             recording_info.sampling_frequency = stream_info.get('sampling_frequency', 0)
 
-            # Extract session config
+            # Extract session config fields
             session_config = metadata.get('session_config', {})
-            recording_info.project_name = session_config.get('project_name', '')
             recording_info.subject_id = session_config.get('subject_id', '')
             recording_info.protocol_name = session_config.get('protocol_name', '')
             recording_info.notes = session_config.get('notes', '')
+            recording_info.protocol_filename = session_config.get('protocol_filename', '')
+            recording_info.data_source = session_config.get('data_source', '')
+            recording_info.simulator_dataset_filename = session_config.get('simulator_dataset_filename', '')
+            recording_info.simulator_start_time = session_config.get('simulator_start_time', 0.0)
+            recording_info.replay_bag_id = session_config.get('replay_bag_id', '')
+            recording_info.replay_play_preprocessed = session_config.get('replay_play_preprocessed', False)
 
             # Extract pipeline component config from session_config
             recording_info.preprocessor_module = session_config.get('preprocessor_module', '')

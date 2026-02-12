@@ -19,7 +19,7 @@ import { pauseExperimentRos, resumeExperimentRos } from 'ros/experiment'
 const ExperimentStateTitle = styled.div`
   width: 255px;
   position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP - 5}px;
   right: 505px;
   z-index: 1001;
   display: flex;

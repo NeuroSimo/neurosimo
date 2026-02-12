@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react'
 import styled from 'styled-components'
 
-import { StyledPanel, SmallerTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
+import { ConfigPanel, ConfigTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { RecordingContext } from 'providers/RecordingProvider'
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
 import { LogContext } from 'providers/LogProvider'
 
-const Container = styled(StyledPanel)`
+const Container = styled(ConfigPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
   position: relative;
   margin-top: 0;
@@ -109,7 +109,7 @@ export const SessionPanel: React.FC = () => {
   const ButtonComponent = sessionState.state === SessionStateValue.RUNNING ? StyledRedButton : StyledButton
   return (
     <Container>
-      <SmallerTitle>Session</SmallerTitle>
+      <ConfigTitle>Session</ConfigTitle>
       <StateRow>
         <StateTitle>Control:</StateTitle>
         <ButtonComponent

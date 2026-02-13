@@ -116,23 +116,33 @@ bool PreprocessorWrapper::initialize_module(
     return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
   };
 
-  /* Extract the sample_window from preprocessor_instance (now in seconds). */
+  /* Extract the configuration from preprocessor_instance. */
   double window_earliest_seconds = 0.0;
   double window_latest_seconds = 0.0;
-  if (py::hasattr(*preprocessor_instance, "sample_window")) {
-    py::list sample_window = preprocessor_instance->attr("sample_window").cast<py::list>();
-    if (sample_window.size() == 2) {
-      window_earliest_seconds = sample_window[0].cast<double>();
-      window_latest_seconds = sample_window[1].cast<double>();
+  if (py::hasattr(*preprocessor_instance, "get_configuration")) {
+    py::dict config = preprocessor_instance->attr("get_configuration")().cast<py::dict>();
 
-      this->look_back_samples = to_look_back_samples(window_earliest_seconds);
-      this->look_ahead_samples = to_look_ahead_samples(window_latest_seconds);
-      this->buffer_size = this->look_back_samples + this->look_ahead_samples + 1;
+    /* Extract sample_window. */
+    if (config.contains("sample_window")) {
+      py::list sample_window = config["sample_window"].cast<py::list>();
+      if (sample_window.size() == 2) {
+        window_earliest_seconds = sample_window[0].cast<double>();
+        window_latest_seconds = sample_window[1].cast<double>();
+
+        this->look_back_samples = to_look_back_samples(window_earliest_seconds);
+        this->look_ahead_samples = to_look_ahead_samples(window_latest_seconds);
+        this->buffer_size = this->look_back_samples + this->look_ahead_samples + 1;
+      } else {
+        RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
+        return false;
+      }
     } else {
-      RCLCPP_WARN(*logger_ptr, "sample_window class attribute is of incorrect length (should be two elements).");
+      RCLCPP_ERROR(*logger_ptr, "'sample_window' key not found in configuration dictionary.");
+      return false;
     }
   } else {
-    RCLCPP_WARN(*logger_ptr, "sample_window class attribute not defined by the preprocessor.");
+    RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Preprocessor instance.");
+    return false;
   }
 
   /* Initialize numpy arrays. */

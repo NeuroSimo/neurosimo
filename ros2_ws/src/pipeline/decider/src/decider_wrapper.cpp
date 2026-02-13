@@ -110,9 +110,7 @@ bool DeciderWrapper::initialize_module(
     const size_t emg_size,
     const uint16_t sampling_frequency,
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    std::priority_queue<std::pair<double, std::string>,
-                       std::vector<std::pair<double, std::string>>,
-                       std::greater<std::pair<double, std::string>>>& event_queue) {
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue) {
 
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
@@ -203,12 +201,6 @@ bool DeciderWrapper::initialize_module(
     return false;
   }
 
-  /* Check that the Python module has a process_eeg_trigger method (mandatory). */
-  if (!py::hasattr(*decider_instance, "process_eeg_trigger")) {
-    RCLCPP_ERROR(*logger_ptr, "Decider module must implement 'process_eeg_trigger' method.");
-    return false;
-  }
-
   /* Extract the configuration from decider_instance. */
   if (py::hasattr(*decider_instance, "get_configuration")) {
     py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
@@ -226,11 +218,11 @@ bool DeciderWrapper::initialize_module(
     };
 
     /* Validate that only allowed keys are present */
-    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "event_processors"};
+    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_processor", "event_processor"};
     for (const auto& item : config) {
       std::string key = py::str(item.first).cast<std::string>();
       if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', and 'event_processors' are allowed.", key.c_str());
+        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.", key.c_str());
         return false;
       }
     }
@@ -250,10 +242,6 @@ bool DeciderWrapper::initialize_module(
         /* Store window in seconds for later logging. */
         default_window_earliest_seconds = earliest_seconds;
         default_window_latest_seconds = latest_seconds;
-
-        /* Store original seconds for logging. */
-        this->max_look_back_samples = this->look_back_samples;
-        this->max_look_ahead_samples = this->look_ahead_samples;
 
         RCLCPP_DEBUG(*logger_ptr,
           "Configured default sample window: [%.6f s, %.6f s] -> look_back=%d samples, look_ahead=%d samples",
@@ -340,12 +328,8 @@ bool DeciderWrapper::initialize_module(
     if (config.contains("predefined_events")) {
       py::list events = config["predefined_events"].cast<py::list>();
       for (const auto& event : events) {
-        py::dict event_dict = event.cast<py::dict>();
-
-        std::string event_type = event_dict["type"].cast<std::string>();
-        double event_time = event_dict["time"].cast<double>();
-
-        event_queue.push(std::make_pair(event_time, event_type));
+        double event_time = event.cast<double>();
+        event_queue.push(event_time);
       }
     }
 
@@ -365,132 +349,161 @@ bool DeciderWrapper::initialize_module(
       this->pulse_lockout_duration = 0.0;
     }
 
-    /* Initialize max window to default window */
-    this->max_look_back_samples = this->look_back_samples;
-    this->max_look_ahead_samples = this->look_ahead_samples;
-
-    /* Extract event_processors. */
-    if (config.contains("event_processors")) {
-      if (!py::isinstance<py::dict>(config["event_processors"])) {
-        RCLCPP_ERROR(*logger_ptr, "event_processors must be a dictionary.");
-        return false;
-      }
-
-      py::dict processors = config["event_processors"].cast<py::dict>();
-      this->event_processors.clear();
-      this->event_sample_windows.clear();
+    /* Extract pulse_processor (optional). */
+    if (config.contains("pulse_processor")) {
+      py::object value = config["pulse_processor"].cast<py::object>();
       
-      for (const auto& item : processors) {
-        std::string event_type = py::str(item.first).cast<std::string>();
-        py::object value = item.second.cast<py::object>();
+      /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
+      if (py::isinstance<py::dict>(value)) {
+        py::dict processor_config = value.cast<py::dict>();
         
-        py::object processor;
-        
-        /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
-        if (py::isinstance<py::dict>(value)) {
-          py::dict processor_config = value.cast<py::dict>();
-          
-          /* Extract processor */
-          if (!processor_config.contains("processor")) {
-            RCLCPP_ERROR(*logger_ptr, "Event processor config for '%s' must contain 'processor' key.", event_type.c_str());
-            return false;
-          }
-          processor = processor_config["processor"].cast<py::object>();
-          
-          /* Extract optional sample_window */
-          if (processor_config.contains("sample_window")) {
-            py::list sample_window = processor_config["sample_window"].cast<py::list>();
-            if (sample_window.size() != 2) {
-              RCLCPP_ERROR(*logger_ptr, "sample_window for event '%s' must have 2 elements.", event_type.c_str());
-              return false;
-            }
-            double earliest_seconds = sample_window[0].cast<double>();
-            double latest_seconds = sample_window[1].cast<double>();
-            int earliest_samples = -to_look_back_samples(earliest_seconds);  // negative or zero
-            int latest_samples = to_look_ahead_samples(latest_seconds);       // positive or zero
-            
-            /* Update maximum envelope to cover this window */
-            int event_look_back = -earliest_samples;
-            int event_look_ahead = latest_samples;
-            this->max_look_back_samples = std::max(this->max_look_back_samples, event_look_back);
-            this->max_look_ahead_samples = std::max(this->max_look_ahead_samples, event_look_ahead);
-            
-            this->event_sample_windows[event_type] = std::make_pair(earliest_samples, latest_samples);
-            event_window_seconds[event_type] = std::make_pair(earliest_seconds, latest_seconds);
-            RCLCPP_DEBUG(*logger_ptr,
-              "Registered custom sample window [%.6f s, %.6f s] -> [%d, %d] samples for event: %s",
-              earliest_seconds,
-              latest_seconds,
-              earliest_samples,
-              latest_samples,
-              event_type.c_str());
-          }
-        } else {
-          /* Simple format: value is the processor directly */
-          processor = value;
-        }
-        
-        /* Verify that the processor is callable */
-        if (!py::hasattr(processor, "__call__")) {
-          RCLCPP_ERROR(*logger_ptr, "Event processor for '%s' is not callable.", event_type.c_str());
+        /* Extract processor */
+        if (!processor_config.contains("processor")) {
+          RCLCPP_ERROR(*logger_ptr, "pulse_processor config must contain 'processor' key.");
           return false;
         }
+        this->pulse_processor = processor_config["processor"].cast<py::object>();
         
-        this->event_processors[event_type] = processor;
-        RCLCPP_DEBUG(*logger_ptr, "Registered event processor for: %s", event_type.c_str());
+        /* Extract optional sample_window */
+        if (processor_config.contains("sample_window")) {
+          py::list sample_window = processor_config["sample_window"].cast<py::list>();
+          if (sample_window.size() != 2) {
+            RCLCPP_ERROR(*logger_ptr, "sample_window for pulse_processor must have 2 elements.");
+            return false;
+          }
+          double earliest_seconds = sample_window[0].cast<double>();
+          double latest_seconds = sample_window[1].cast<double>();
+          int pulse_look_back = to_look_back_samples(earliest_seconds);
+          int pulse_look_ahead = to_look_ahead_samples(latest_seconds);
+          
+          this->pulse_look_back_samples = pulse_look_back;
+          this->pulse_look_ahead_samples = pulse_look_ahead;
+          this->has_custom_pulse_window = true;
+          
+          RCLCPP_DEBUG(*logger_ptr,
+            "Registered custom sample window [%.6f s, %.6f s] for pulse_processor",
+            earliest_seconds, latest_seconds);
+        }
+      } else {
+        /* Simple format: value is the processor directly */
+        this->pulse_processor = value;
       }
-    } else {
-      RCLCPP_ERROR(*logger_ptr, "'event_processors' key not found in configuration dictionary.");
-      return false;
+      
+      if (!py::hasattr(this->pulse_processor, "__call__")) {
+        RCLCPP_ERROR(*logger_ptr, "pulse_processor is not callable.");
+        return false;
+      }
+      RCLCPP_DEBUG(*logger_ptr, "Registered pulse processor");
+    }
+
+    /* Extract event_processor (optional). */
+    if (config.contains("event_processor")) {
+      py::object value = config["event_processor"].cast<py::object>();
+      
+      /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
+      if (py::isinstance<py::dict>(value)) {
+        py::dict processor_config = value.cast<py::dict>();
+        
+        /* Extract processor */
+        if (!processor_config.contains("processor")) {
+          RCLCPP_ERROR(*logger_ptr, "event_processor config must contain 'processor' key.");
+          return false;
+        }
+        this->event_processor = processor_config["processor"].cast<py::object>();
+        
+        /* Extract optional sample_window */
+        if (processor_config.contains("sample_window")) {
+          py::list sample_window = processor_config["sample_window"].cast<py::list>();
+          if (sample_window.size() != 2) {
+            RCLCPP_ERROR(*logger_ptr, "sample_window for event_processor must have 2 elements.");
+            return false;
+          }
+          double earliest_seconds = sample_window[0].cast<double>();
+          double latest_seconds = sample_window[1].cast<double>();
+          int event_look_back = to_look_back_samples(earliest_seconds);
+          int event_look_ahead = to_look_ahead_samples(latest_seconds);
+          
+          this->event_look_back_samples = event_look_back;
+          this->event_look_ahead_samples = event_look_ahead;
+          this->has_custom_event_window = true;
+          
+          RCLCPP_DEBUG(*logger_ptr,
+            "Registered custom sample window [%.6f s, %.6f s] for event_processor",
+            earliest_seconds, latest_seconds);
+        }
+      } else {
+        /* Simple format: value is the processor directly */
+        this->event_processor = value;
+      }
+      
+      if (!py::hasattr(this->event_processor, "__call__")) {
+        RCLCPP_ERROR(*logger_ptr, "event_processor is not callable.");
+        return false;
+      }
+      RCLCPP_DEBUG(*logger_ptr, "Registered event processor");
     }
   } else {
     RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Decider instance.");
     return false;
   }
 
-  /* Calculate the maximum buffer size needed to cover all windows.
-     The ring buffer will be sized to this maximum envelope. */
-  size_t max_buffer_size = this->max_look_back_samples + this->max_look_ahead_samples + 1;
-  this->buffer_size = max_buffer_size;
+  /* Calculate maximum buffer size needed to cover all windows. */
+  int max_look_back = this->look_back_samples;
+  int max_look_ahead = this->look_ahead_samples;
   
-  RCLCPP_DEBUG(*logger_ptr, "Maximum envelope: [%d, %d], buffer size: %zu", 
-               -this->max_look_back_samples, this->max_look_ahead_samples, max_buffer_size);
+  if (this->has_custom_pulse_window) {
+    max_look_back = std::max(max_look_back, this->pulse_look_back_samples);
+    max_look_ahead = std::max(max_look_ahead, this->pulse_look_ahead_samples);
+  }
+  
+  if (this->has_custom_event_window) {
+    max_look_back = std::max(max_look_back, this->event_look_back_samples);
+    max_look_ahead = std::max(max_look_ahead, this->event_look_ahead_samples);
+  }
+  
+  this->buffer_size = max_look_back + max_look_ahead + 1;
+  
+  RCLCPP_DEBUG(*logger_ptr, "Maximum envelope: look_back=%d, look_ahead=%d, buffer size: %zu", 
+               max_look_back, max_look_ahead, this->buffer_size);
 
   this->eeg_size = eeg_size;
   this->emg_size = emg_size;
 
-  /* Initialize numpy arrays for default sample window. */
-  py_time_offsets = std::make_unique<py::array_t<double>>(buffer_size);
+  /* Initialize numpy arrays for default window. */
+  py_time_offsets = std::make_unique<py::array_t<double>>(this->look_back_samples + this->look_ahead_samples + 1);
 
-  std::vector<size_t> eeg_shape = {buffer_size, eeg_size};
+  std::vector<size_t> eeg_shape = {this->look_back_samples + this->look_ahead_samples + 1, eeg_size};
   py_eeg = std::make_unique<py::array_t<double>>(eeg_shape);
 
-  std::vector<size_t> emg_shape = {buffer_size, emg_size};
+  std::vector<size_t> emg_shape = {this->look_back_samples + this->look_ahead_samples + 1, emg_size};
   py_emg = std::make_unique<py::array_t<double>>(emg_shape);
-
-  /* Initialize numpy arrays for custom event windows. */
-  for (const auto& [event_type, window] : event_sample_windows) {
-    int earliest = window.first;
-    int latest = window.second;
-    int event_look_back = -earliest;
-    int event_look_ahead = latest;
-    size_t event_buffer_size = event_look_back + event_look_ahead + 1;
-    int event_reference_index = event_look_back;
-
-    EventArrays arrays;
-    arrays.time_offsets = std::make_unique<py::array_t<double>>(event_buffer_size);
-
+  
+  /* Initialize numpy arrays for pulse processor if it has a custom window. */
+  if (this->has_custom_pulse_window) {
+    size_t pulse_buffer_size = this->pulse_look_back_samples + this->pulse_look_ahead_samples + 1;
+    pulse_time_offsets = std::make_unique<py::array_t<double>>(pulse_buffer_size);
+    
+    std::vector<size_t> pulse_eeg_shape = {pulse_buffer_size, eeg_size};
+    pulse_eeg = std::make_unique<py::array_t<double>>(pulse_eeg_shape);
+    
+    std::vector<size_t> pulse_emg_shape = {pulse_buffer_size, emg_size};
+    pulse_emg = std::make_unique<py::array_t<double>>(pulse_emg_shape);
+    
+    RCLCPP_DEBUG(*logger_ptr, "Preallocated arrays for pulse_processor with buffer size %zu", pulse_buffer_size);
+  }
+  
+  /* Initialize numpy arrays for event processor if it has a custom window. */
+  if (this->has_custom_event_window) {
+    size_t event_buffer_size = this->event_look_back_samples + this->event_look_ahead_samples + 1;
+    event_time_offsets = std::make_unique<py::array_t<double>>(event_buffer_size);
+    
     std::vector<size_t> event_eeg_shape = {event_buffer_size, eeg_size};
-    arrays.eeg = std::make_unique<py::array_t<double>>(event_eeg_shape);
+    event_eeg = std::make_unique<py::array_t<double>>(event_eeg_shape);
     
     std::vector<size_t> event_emg_shape = {event_buffer_size, emg_size};
-    arrays.emg = std::make_unique<py::array_t<double>>(event_emg_shape);
+    event_emg = std::make_unique<py::array_t<double>>(event_emg_shape);
     
-    arrays.buffer_size = event_buffer_size;
-    arrays.reference_index = event_reference_index;
-
-    event_arrays[event_type] = std::move(arrays);
-    RCLCPP_DEBUG(*logger_ptr, "Preallocated arrays for event '%s' with buffer size %zu", event_type.c_str(), event_buffer_size);
+    RCLCPP_DEBUG(*logger_ptr, "Preallocated arrays for event_processor with buffer size %zu", event_buffer_size);
   }
 
   /* Log the configuration. */
@@ -502,19 +515,18 @@ bool DeciderWrapper::initialize_module(
               default_window_latest_seconds,
               bold_off.c_str());
   
-  /* Log custom event windows if any */
-  if (!event_window_seconds.empty()) {
-    RCLCPP_INFO(*logger_ptr, "  - Event-specific windows:");
-    for (const auto& [event_type, window_seconds] : event_window_seconds) {
-      double earliest_seconds = window_seconds.first;
-      double latest_seconds = window_seconds.second;
-      RCLCPP_INFO(*logger_ptr, "      '%s': %s[%.3f s, %.3f s]%s",
-                  event_type.c_str(),
-                  bold_on.c_str(),
-                  earliest_seconds,
-                  latest_seconds,
-                  bold_off.c_str());
-    }
+  if (this->has_custom_pulse_window) {
+    double pulse_earliest = -this->pulse_look_back_samples / static_cast<double>(this->sampling_frequency);
+    double pulse_latest = this->pulse_look_ahead_samples / static_cast<double>(this->sampling_frequency);
+    RCLCPP_INFO(*logger_ptr, "  - Pulse processor window: %s[%.3f s, %.3f s]%s",
+                bold_on.c_str(), pulse_earliest, pulse_latest, bold_off.c_str());
+  }
+  
+  if (this->has_custom_event_window) {
+    double event_earliest = -this->event_look_back_samples / static_cast<double>(this->sampling_frequency);
+    double event_latest = this->event_look_ahead_samples / static_cast<double>(this->sampling_frequency);
+    RCLCPP_INFO(*logger_ptr, "  - Event processor window: %s[%.3f s, %.3f s]%s",
+                bold_on.c_str(), event_earliest, event_latest, bold_off.c_str());
   }
   
   if (!this->periodic_processing_enabled) {
@@ -537,8 +549,14 @@ bool DeciderWrapper::reset_module_state() {
   py_time_offsets.reset();
   py_eeg.reset();
   py_emg.reset();
-
-  event_arrays.clear();
+  
+  pulse_time_offsets.reset();
+  pulse_eeg.reset();
+  pulse_emg.reset();
+  
+  event_time_offsets.reset();
+  event_eeg.reset();
+  event_emg.reset();
 
   return true;
 }
@@ -658,7 +676,14 @@ DeciderWrapper::~DeciderWrapper() {
   py_time_offsets.reset();
   py_eeg.reset();
   py_emg.reset();
-  event_arrays.clear();
+  
+  pulse_time_offsets.reset();
+  pulse_eeg.reset();
+  pulse_emg.reset();
+  
+  event_time_offsets.reset();
+  event_eeg.reset();
+  event_emg.reset();
 
   if (log_server) log_server->stop();
 }
@@ -698,15 +723,17 @@ int DeciderWrapper::get_look_ahead_samples() const {
   return this->look_ahead_samples;
 }
 
-int DeciderWrapper::get_look_ahead_samples_for_event(const std::string& event_type) const {
-  /* Check if this event has a custom sample window. */
-  auto window_it = event_sample_windows.find(event_type);
-  if (window_it != event_sample_windows.end()) {
-    /* Event has custom window - return its look-ahead. */
-    int latest = window_it->second.second;
-    return latest;
+int DeciderWrapper::get_look_ahead_samples_for_pulse() const {
+  if (this->has_custom_pulse_window) {
+    return this->pulse_look_ahead_samples;
   }
-  /* Event uses default window. */
+  return this->look_ahead_samples;
+}
+
+int DeciderWrapper::get_look_ahead_samples_for_event() const {
+  if (this->has_custom_event_window) {
+    return this->event_look_ahead_samples;
+  }
   return this->look_ahead_samples;
 }
 
@@ -842,34 +869,36 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     double_t reference_time,
     bool pulse_trigger,
     bool has_event,
-    std::string event_type,
-    std::priority_queue<std::pair<double, std::string>,
-                       std::vector<std::pair<double, std::string>>,
-                       std::greater<std::pair<double, std::string>>>& event_queue,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target) {
 
   bool success = true;
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
   std::string coil_target;
 
-  /* Determine which arrays to use. Default to standard arrays. */
+  /* Determine which arrays to use and their parameters. */
   py::array_t<double>* time_offsets_to_use = py_time_offsets.get();
   py::array_t<double>* eeg_to_use = py_eeg.get();
   py::array_t<double>* emg_to_use = py_emg.get();
   int reference_index = this->look_back_samples;
   size_t num_samples = this->look_back_samples + this->look_ahead_samples + 1;
-
-  /* Override with event-specific arrays if this event has a custom window. */
-  if (has_event) {
-    auto arrays_it = event_arrays.find(event_type);
-    if (arrays_it != event_arrays.end()) {
-      EventArrays& arrays = arrays_it->second;
-      time_offsets_to_use = arrays.time_offsets.get();
-      eeg_to_use = arrays.eeg.get();
-      emg_to_use = arrays.emg.get();
-      reference_index = arrays.reference_index;
-      num_samples = arrays.buffer_size;
-    }
+  
+  /* Override with pulse-specific arrays if this is a pulse and it has a custom window. */
+  if (pulse_trigger && this->has_custom_pulse_window) {
+    time_offsets_to_use = pulse_time_offsets.get();
+    eeg_to_use = pulse_eeg.get();
+    emg_to_use = pulse_emg.get();
+    reference_index = this->pulse_look_back_samples;
+    num_samples = this->pulse_look_back_samples + this->pulse_look_ahead_samples + 1;
+  }
+  
+  /* Override with event-specific arrays if this is an event and it has a custom window. */
+  if (has_event && this->has_custom_event_window) {
+    time_offsets_to_use = event_time_offsets.get();
+    eeg_to_use = event_eeg.get();
+    emg_to_use = event_emg.get();
+    reference_index = this->event_look_back_samples;
+    num_samples = this->event_look_back_samples + this->event_look_ahead_samples + 1;
   }
   
   /* Always extract the most recent num_samples from the ring buffer.
@@ -881,31 +910,23 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   fill_arrays_from_buffer(buffer, reference_time, *time_offsets_to_use,
                           *eeg_to_use, *emg_to_use, start_offset, num_samples);
 
-  /* Call the appropriate Python function using the selected arrays. */
+  /* Call the appropriate Python function. */
   py::object py_result;
   try {
     if (pulse_trigger) {
-      /* Call process_eeg_trigger. */
-      py_result = decider_instance->attr("process_eeg_trigger")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
-    } else if (has_event) {
-      /* Call event processor for this event type. */
-      auto processor_it = event_processors.find(event_type);
-      if (processor_it == event_processors.end()) {
-        std::string error_msg = std::string("No event processor registered for event type: ") + event_type;
-        RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-        
-        // Add error to log buffer so it can be published to UI
-        {
-          std::lock_guard<std::mutex> lock(log_buffer_mutex);
-          log_buffer.push_back({error_msg, LogLevel::ERROR});
-        }
-        
-        success = false;
-        return {success, timed_trigger, coil_target};
+      /* Call pulse processor if registered. */
+      if (!pulse_processor.is_none()) {
+        py_result = pulse_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
+      } else {
+        py_result = py::none();
       }
-      
-      /* Call the event processor (arrays already selected and filled). */
-      py_result = processor_it->second(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
+    } else if (has_event) {
+      /* Call event processor if registered. */
+      if (!event_processor.is_none()) {
+        py_result = event_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
+      } else {
+        py_result = py::none();
+      }
     } else {
       /* Call standard process_periodic method (for periodic processing). */
       py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
@@ -997,12 +1018,8 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
 
     py::list events = dict_result["events"].cast<py::list>();
     for (const auto& event : events) {
-      py::dict event_dict = event.cast<py::dict>();
-
-      std::string event_type = event_dict["type"].cast<std::string>();
-      double event_time = event_dict["time"].cast<double>();
-
-      event_queue.push(std::make_pair(event_time, event_type));
+      double event_time = event.cast<double>();
+      event_queue.push(event_time);
     }
   }
 

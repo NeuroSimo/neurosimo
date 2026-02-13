@@ -25,9 +25,7 @@ class Decider:
             'periodic_processing_interval': 2.0,  # Process every 2 seconds
             
             # Event system
-            'event_processors': {
-                'pulse': self.process_pulse,
-            },
+            'pulse_processor': self.process_pulse,
             
             # Predefined sensory stimuli (sent at session start)
             'predefined_sensory_stimuli': [
@@ -103,14 +101,6 @@ class Decider:
 
         return None
 
-    def process_eeg_trigger(
-            self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
-        """Process EEG trigger from the EEG device."""
-        print(f"EEG trigger received at time {reference_time}.")
-        # This example doesn't process EEG triggers, just log them
-        return None
-
     def process_pulse(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
@@ -130,4 +120,3 @@ class Decider:
                 }
             ]
         }
-

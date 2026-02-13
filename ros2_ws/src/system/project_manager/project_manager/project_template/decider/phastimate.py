@@ -15,7 +15,7 @@ https://github.com/bnplab/phastimate
 This version is based on MATLAB adaptation of Phastimate by Joonas Laurinoja at Aalto University.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 import numpy as np
 from scipy.signal import filtfilt, hilbert
 from spectrum import aryule
@@ -100,7 +100,7 @@ class Decider:
 
         print("Phastimate decider initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")
 
-    def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
+    def get_configuration(self) -> dict[str, Any]:
         """
         Return the configuration for the processing interval and sample window.
         
@@ -125,7 +125,7 @@ class Decider:
 
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
         """
         Process the EEG data to estimate phase and schedule a trigger periodically.
         
@@ -158,7 +158,7 @@ class Decider:
         
         return trigger_timing
 
-    def _extract_c3_referenced_data(self, eeg_buffer: np.ndarray) -> Optional[np.ndarray]:
+    def _extract_c3_referenced_data(self, eeg_buffer: np.ndarray) -> np.ndarray | None:
         """
         Extract C3 channel data with common average reference.
         
@@ -192,7 +192,7 @@ class Decider:
         # Downsample the data
         return demeaned_data[::self.downsample_ratio]
 
-    def _estimate_phases(self, data: np.ndarray) -> Optional[np.ndarray]:
+    def _estimate_phases(self, data: np.ndarray) -> np.ndarray | None:
         """
         Estimate future phases using the Phastimate algorithm.
         
@@ -213,7 +213,7 @@ class Decider:
         
         return estimated_phases
 
-    def _find_optimal_trigger_timing(self, estimated_phases: np.ndarray, reference_time: float) -> Optional[Dict[str, Any]]:
+    def _find_optimal_trigger_timing(self, estimated_phases: np.ndarray, reference_time: float) -> dict[str, Any] | None:
         """
         Find optimal trigger timing based on estimated phases.
         
@@ -251,10 +251,10 @@ class Decider:
 
         return {'timed_trigger': execution_time}
 
-    def phastimate(self, data: np.ndarray, filter_b: np.ndarray, filter_a: List[float], 
+    def phastimate(self, data: np.ndarray, filter_b: np.ndarray, filter_a: list[float], 
                    edge_samples: int, ar_order: int, hilbert_window_size: int,
-                   offset_correction: int = 0, iterations: Optional[int] = None, 
-                   ar_method: str = 'aryule') -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+                   offset_correction: int = 0, iterations: int | None = None, 
+                   ar_method: str = 'aryule') -> tuple[np.ndarray | None, np.ndarray | None]:
         """
         Estimate the phase of the EEG signal using autoregressive modeling and Hilbert transform.
         
@@ -308,7 +308,7 @@ class Decider:
         # Extract phase and amplitude using Hilbert transform
         return self._extract_phase_amplitude(predicted_data, hilbert_window_size)
 
-    def _fit_ar_model(self, data: np.ndarray, ar_order: int, ar_method: str) -> Optional[np.ndarray]:
+    def _fit_ar_model(self, data: np.ndarray, ar_order: int, ar_method: str) -> np.ndarray | None:
         """
         Fit autoregressive model to the data.
         
@@ -335,7 +335,7 @@ class Decider:
         else:
             raise ValueError(f'Unknown AR method: {ar_method}')
 
-    def _forward_predict(self, data: np.ndarray, ar_coefficients: np.ndarray, iterations: int) -> np.ndarray:
+    def _forward_predict(self, data: np.ndarray, ar_coefficients: np.ndarray, iterations: int) -> np.ndarray | None:
         """
         Perform forward prediction using AR model.
         
@@ -361,7 +361,7 @@ class Decider:
 
         return predicted_data
 
-    def _extract_phase_amplitude(self, data: np.ndarray, window_size: int) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+    def _extract_phase_amplitude(self, data: np.ndarray, window_size: int) -> tuple[np.ndarray | None, np.ndarray | None]:
         """
         Extract phase and amplitude using Hilbert transform.
         
@@ -388,7 +388,7 @@ class Decider:
 
     def process_eeg_trigger(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
         """Process EEG trigger from the EEG device."""
         print(f'EEG trigger received at time {reference_time:.4f}')
         # Phastimate doesn't process EEG triggers, just log them
@@ -396,7 +396,7 @@ class Decider:
 
     def process_pulse(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
         """Process pulse event."""
         print(f'Pulse event received at time {reference_time:.4f}')
         # Add your pulse event handling logic here

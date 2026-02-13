@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+
 import multiprocessing
 import time
 
@@ -20,7 +21,7 @@ class Decider:
 
         print("Decider initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")
 
-    def get_configuration(self) -> Dict[str, Union[int, bool, List]]:
+    def get_configuration(self) -> dict[str, Any]:
         """Return configuration dictionary for the pipeline."""
         return {
             # Data configuration
@@ -39,7 +40,7 @@ class Decider:
 
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
         """Process EEG/EMG buffer periodically."""
 
         # Trigger TMS device after 5ms delay
@@ -53,7 +54,7 @@ class Decider:
 
     def process_eeg_trigger(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
         """Process EEG trigger from the EEG device."""
         print(f"EEG trigger received at time {reference_time}.")
         # This example doesn't process EEG triggers, just log them
@@ -61,7 +62,7 @@ class Decider:
 
     def process_pulse(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> Optional[Dict[str, Any]]:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
         """Process pulse event."""
         print(f"Pulse event received at time {reference_time}.")
         # Add your pulse event handling logic here

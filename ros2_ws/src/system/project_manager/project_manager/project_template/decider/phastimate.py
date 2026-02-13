@@ -235,14 +235,15 @@ class Decider:
 
         # Check if phase difference is within tolerance
         if np.abs(min_phase_difference) > self.phase_tolerance:
-            print(f'Not triggering: phase difference {min_phase_difference:.3f} radians exceeds tolerance')
+            print(f'[{reference_time:.1f}s] Not triggering: Δφ = {min_phase_difference:.1f} rad')
             return None
 
         # Calculate trigger execution time
         time_offset_seconds = (optimal_sample_index * self.downsample_ratio) / self.sampling_frequency
         execution_time = reference_time + time_offset_seconds
+        time_offset_ms = time_offset_seconds * 1000
 
-        print(f'Triggering at time {execution_time:.3f} s based on phase estimate at time {reference_time:.1f} s')
+        print(f'[{reference_time:.1f}s] Triggering at +{time_offset_ms:.0f}ms')
 
         return {'timed_trigger': execution_time}
 

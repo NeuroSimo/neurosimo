@@ -116,11 +116,6 @@ class Decider:
             'periodic_processing_enabled': True,
             'periodic_processing_interval': 0.1,  # Process every 0.1 seconds
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
-            
-            # Event system
-            'event_processors': {
-                'pulse': self.process_pulse,
-            },
         }
 
     def process_periodic(
@@ -385,19 +380,3 @@ class Decider:
         amplitudes = np.abs(analytic_signal)
 
         return phases, amplitudes
-
-    def process_eeg_trigger(
-            self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
-        """Process EEG trigger from the EEG device."""
-        print(f'EEG trigger received at time {reference_time:.4f}')
-        # Phastimate doesn't process EEG triggers, just log them
-        return None
-
-    def process_pulse(
-            self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
-        """Process pulse event."""
-        print(f'Pulse event received at time {reference_time:.4f}')
-        # Add your pulse event handling logic here
-        return None

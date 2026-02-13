@@ -33,9 +33,19 @@ class Decider:
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
 
             # Event system
-            'event_processors': {
-                'pulse': self.process_pulse,
-            },
+            # Simple format: just the processor function (uses default sample_window)
+            'pulse_processor': self.process_pulse,
+            'event_processor': self.process_event,
+            
+            # Alternative format with custom sample windows:
+            # 'pulse_processor': {
+            #     'processor': self.process_pulse,
+            #     'sample_window': [-2.0, 0.5]  # Custom window for pulse events
+            # },
+            # 'event_processor': {
+            #     'processor': self.process_event,
+            #     'sample_window': [-1.5, 0.3]  # Custom window for other events
+            # },
         }
 
     def process_periodic(
@@ -52,12 +62,12 @@ class Decider:
             'timed_trigger': trigger_time,
         }
 
-    def process_eeg_trigger(
+    def process_event(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
-        """Process EEG trigger from the EEG device."""
-        print(f"EEG trigger received at time {reference_time}.")
-        # This example doesn't process EEG triggers, just log them
+        """Process event."""
+        print(f"Event received at time {reference_time}.")
+        # This example doesn't process events, just log them
         return None
 
     def process_pulse(

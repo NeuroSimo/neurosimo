@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 from psychopy import visual, core
 import numpy as np
 
@@ -12,7 +12,7 @@ class Presenter:
     def __del__(self) -> None:
         self.win.close()
 
-    def get_configuration(self) -> Dict[str, Any]:
+    def get_configuration(self) -> dict[str, Any]:
         """Return configuration dictionary for the presenter."""
         return {
             'stimulus_processors': {
@@ -21,7 +21,7 @@ class Presenter:
             }
         }
 
-    def process_visual_cue(self, parameters: Dict[str, Any]) -> bool:
+    def process_visual_cue(self, parameters: dict[str, Any]) -> bool:
         """Process a visual cue stimulus."""
         print(f"Processing visual_cue")
         print(f"Parameters: {parameters}")
@@ -48,7 +48,7 @@ class Presenter:
         
         return True
 
-    def process_text_message(self, parameters: Dict[str, Any]) -> bool:
+    def process_text_message(self, parameters: dict[str, Any]) -> bool:
         """Process a text message stimulus."""
         print(f"Processing text_message")
         print(f"Parameters: {parameters}")

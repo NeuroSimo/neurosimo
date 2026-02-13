@@ -402,19 +402,16 @@ void EegDecider::publish_python_logs(uint8_t phase, double sample_time) {
   this->python_log_publisher->publish(batch_msg);
 }
 
-std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t current_time) {
+std::tuple<bool, double> EegDecider::consume_next_event(double_t current_time) {
   if (this->event_queue.empty()) {
-    return std::make_tuple(false, 0.0, "");
+    return std::make_tuple(false, 0.0);
   }
 
   double_t event_time;
-  std::string event_type;
 
   /* Pop events until the event time is within the tolerance. */
   while (!this->event_queue.empty()) {
-    auto event = this->event_queue.top();
-    event_time = event.first;
-    event_type = event.second;
+    event_time = this->event_queue.top();
 
     if (event_time - this->TOLERANCE_S >= current_time - 1.0 / this->stream_info.sampling_frequency) {
       break;
@@ -424,14 +421,14 @@ std::tuple<bool, double, std::string> EegDecider::consume_next_event(double_t cu
 
   /* Check if we popped all events */
   if (this->event_queue.empty()) {
-    return std::make_tuple(false, 0.0, "");
+    return std::make_tuple(false, 0.0);
   }
 
   /* If the event time is too far in the future, return false. */
   if (event_time > current_time + this->TOLERANCE_S) {
-    return std::make_tuple(false, 0.0, "");
+    return std::make_tuple(false, 0.0);
   }
-  return std::make_tuple(true, event_time, event_type);
+  return std::make_tuple(true, event_time);
 }
 
 void EegDecider::pop_event() {
@@ -502,7 +499,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     sample_time,
     request.triggering_sample->pulse_trigger,
     request.has_event,
-    request.event_type,
     this->event_queue,
     this->is_coil_at_target);
 
@@ -628,20 +624,18 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   this->pulse_lockout_end_time = timed_trigger->time + this->decider_wrapper->get_pulse_lockout_duration();
 }
 
-void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, bool has_event, const std::string& event_type) {
+void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, bool has_event) {
   /* Create a deferred processing request. */
   DeferredProcessingRequest request;
   request.triggering_sample = msg;
   request.has_event = has_event;
-  request.event_type = event_type;
 
-  /* Calculate the number of look-ahead samples needed.
-     The look-ahead depends on what's being processed:
-       - Events with custom sample windows: use event-specific look-ahead
-       - EEG triggers and periodic processing: use default look-ahead */
+  /* Calculate the number of look-ahead samples needed based on the processing type. */
   int look_ahead_samples;
-  if (has_event) {
-    look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_event(event_type);
+  if (msg->pulse_trigger) {
+    look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_pulse();
+  } else if (has_event) {
+    look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_event();
   } else {
     look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
   }
@@ -734,9 +728,9 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   process_ready_deferred_requests(sample_time);
 
   /* Check if any decider-defined events occur at the current sample. */
-  auto [has_event, event_time, event_type] = consume_next_event(sample_time);
+  auto [has_event, event_time] = consume_next_event(sample_time);
   if (has_event) {
-    RCLCPP_INFO(this->get_logger(), "Received decider-defined event at time %.4f (s), event type: %s", sample_time, event_type.c_str());
+    RCLCPP_INFO(this->get_logger(), "Received decider-defined event at time %.4f (s)", sample_time);
   }
 
   /* Check if we're in the pulse lockout period. */
@@ -758,7 +752,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   }
 
   /* Enqueue a deferred processing request. */
-  enqueue_deferred_request(msg, sample_time, has_event, event_type);
+  enqueue_deferred_request(msg, sample_time, has_event);
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);

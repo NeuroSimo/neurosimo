@@ -60,9 +60,6 @@ struct DeferredProcessingRequest {
   /* Whether this has an event. */
   bool has_event;
   
-  /* Event type if has_event is true. */
-  std::string event_type;
-  
   /* Comparison operator for priority queue (min-heap by scheduled_time). */
   bool operator>(const DeferredProcessingRequest& other) const {
     return scheduled_time > other.scheduled_time;
@@ -106,11 +103,11 @@ private:
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
-  std::tuple<bool, double, std::string> consume_next_event(double_t current_time);
+  std::tuple<bool, double> consume_next_event(double_t current_time);
   void pop_event();
 
   bool is_sample_window_valid() const;
-  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, bool has_event, const std::string& event_type);
+  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, bool has_event);
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 
@@ -178,9 +175,7 @@ private:
   double_t minimum_intertrial_interval;
 
   /* Event queue for storing events from the Python module. */
-  std::priority_queue<std::pair<double, std::string>,
-                      std::vector<std::pair<double, std::string>>,
-                      std::greater<std::pair<double, std::string>>> event_queue;
+  std::priority_queue<double, std::vector<double>, std::greater<double>> event_queue;
 
   /* Deferred processing queue for handling look-ahead samples. */
   std::priority_queue<DeferredProcessingRequest,

@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Any
 import numpy as np
 
 
@@ -12,16 +12,20 @@ class Preprocessor:
         # Track pulse artifacts
         self.ongoing_pulse_artifact = False
         self.samples_after_pulse = 0
-        
-        # Configure sample window for buffering
-        self.sample_window = [-0.005, 0.0]  # 5 ms look-back, 0 ms look-ahead
 
         print("Preprocessor initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")
+
+    def get_configuration(self) -> dict[str, Any]:
+        """Return configuration dictionary for the pipeline."""
+        return {
+            # Data configuration
+            'sample_window': [-0.005, 0.0],  # 5 ms look-back, 0 ms look-ahead
+        }
 
     def process(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray,
-            pulse_given: bool) -> Dict[str, Union[np.ndarray, bool]]:
+            pulse_given: bool) -> dict[str, Any]:
         """Process incoming EEG/EMG samples and return preprocessed data."""
         
         # Handle pulse artifact detection

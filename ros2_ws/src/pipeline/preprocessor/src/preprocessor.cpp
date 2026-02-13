@@ -221,6 +221,7 @@ bool EegPreprocessor::reset_state() {
   this->error_occurred = false;
   this->pending_session_start = false;
   this->preprocessor_fingerprint = 0;
+  this->last_sample_index = -1;
 
   /* Reset sample buffer. */
   this->sample_buffer.reset(0);
@@ -457,6 +458,20 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
                          sample_time);
     return;
   }
+
+  /* Validate sample_index continuity. */
+  if (this->last_sample_index != -1) {
+    int64_t expected_index = this->last_sample_index + 1;
+    if (msg->sample_index != expected_index) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Sample index discontinuity detected: expected %ld, got %ld at time %.3f (s).",
+                   expected_index, msg->sample_index, sample_time);
+      this->error_occurred = true;
+      this->abort_session("Sample index discontinuity in preprocessor");
+      return;
+    }
+  }
+  this->last_sample_index = msg->sample_index;
 
   if (msg->pulse_trigger) {
     RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.1f (s).", sample_time);

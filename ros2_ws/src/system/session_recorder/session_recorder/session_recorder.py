@@ -76,6 +76,7 @@ class SessionRecorderNode(Node):
         self._recording_config = None
         self._process = None
         self._monitor_timer = None
+        self._qos_override_path = None
 
         # Disk status tracking
         self._disk_space_ok = False
@@ -217,11 +218,35 @@ class SessionRecorderNode(Node):
         os.makedirs(project_bags_dir, exist_ok=True)
         self._bag_path = os.path.join(project_bags_dir, bag_name)
 
+        # Create QoS override file for high-frequency EEG topics
+        self._qos_override_path = f'/tmp/qos_override_{session_uuid}.yaml'
+        qos_config = """# QoS overrides for high-frequency EEG topics (up to 5 kHz)
+/eeg/raw:
+  history: keep_last
+  depth: 65535
+  reliability: reliable
+  durability: volatile
+/eeg/enriched:
+  history: keep_last
+  depth: 65535
+  reliability: reliable
+  durability: volatile
+/eeg/preprocessed:
+  history: keep_last
+  depth: 65535
+  reliability: reliable
+  durability: volatile
+"""
+        with open(self._qos_override_path, 'w') as f:
+            f.write(qos_config)
+        self.logger.info(f'Created QoS override file: {self._qos_override_path}')
+
         # Build ros2 bag record command
         cmd = [
             'ros2', 'bag', 'record',
             '--output', self._bag_path,
             '--storage', 'mcap',
+            '--qos-profile-overrides-path', self._qos_override_path,
         ]
 
         # Add topics
@@ -404,11 +429,20 @@ class SessionRecorderNode(Node):
             self._monitor_timer.cancel()
             self._monitor_timer = None
 
+        # Clean up QoS override file
+        if self._qos_override_path and os.path.exists(self._qos_override_path):
+            try:
+                os.remove(self._qos_override_path)
+                self.logger.info(f'Removed QoS override file: {self._qos_override_path}')
+            except Exception as e:
+                self.logger.warn(f'Failed to remove QoS override file: {e}')
+
         self._process = None
         self._is_recording = False
         self._current_session_id = None
         self._bag_path = None
         self._recording_config = None
+        self._qos_override_path = None
 
 
 def main(args=None):

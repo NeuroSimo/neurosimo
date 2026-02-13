@@ -117,6 +117,9 @@ private:
   /* XXHash state for data fingerprinting */
   uint64_t preprocessor_fingerprint = 0;
 
+  /* Track last sample index to validate continuity */
+  int64_t last_sample_index = -1;
+
   StreamInfo stream_info;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;

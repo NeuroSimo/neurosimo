@@ -89,7 +89,7 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     std::chrono::duration<double>(HEARTBEAT_INTERVAL_SEC),
     std::bind(&EegPresenter::_publish_heartbeat, this));
 
-  /* Publish initial READY state */
+  /* Publish initial health status. */
   this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 
   /* Initialize variables. */

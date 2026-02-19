@@ -83,6 +83,9 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegPreprocessor::publish_heartbeat, this));
+
+  /* Publish initial health status. */
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 void EegPreprocessor::handle_initialize_preprocessor(

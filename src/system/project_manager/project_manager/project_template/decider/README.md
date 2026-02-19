@@ -26,11 +26,12 @@ To add more libraries, modify `src/pipeline/decider/Dockerfile` and run `build-n
 
 ## Class Methods
 
-### `__init__(num_eeg_channels, num_emg_channels, sampling_frequency)`
+### `__init__(subject_id, num_eeg_channels, num_emg_channels, sampling_frequency)`
 
 Initializes the decider with device configuration parameters automatically provided by the pipeline.
 
 **Parameters:**
+- `subject_id` (str): Subject identifier
 - `num_eeg_channels` (int): Number of EEG channels
 - `num_emg_channels` (int): Number of EMG channels  
 - `sampling_frequency` (int): Sampling frequency in Hz
@@ -47,8 +48,6 @@ Whether periodic processing is enabled. When `False`, the `process_periodic()` m
 **Examples:**
 - `True`: Enable periodic processing
 - `False`: Disable periodic processing (event-driven only)
-
-**Note:** EEG triggers always call `process_eeg_trigger()` regardless of this setting.
 
 #### `periodic_processing_interval` (float, optional when disabled)
 How frequently the `process_periodic()` method is called, in seconds. Required when `periodic_processing_enabled` is `True`, optional (defaults to `0.0`) when `False`.
@@ -92,49 +91,34 @@ Duration in seconds during which periodic processing is disabled after a pulse i
 - `0.0`: No lockout (periodic processing continues immediately)
 
 #### `predefined_events` (list, optional)
-List of event dictionaries for scheduled processing triggers. Can be omitted if no predefined events are needed.
+List of event times (in seconds) for scheduled processing triggers. Can be omitted if no predefined events are needed.
 
-**Event dictionary structure:**
-- `type` (str): Event type identifier (e.g., "pulse", "baseline_start")
-- `time` (float): Event time in seconds relative to session start
+**Format:**
+- Simple list of floats representing event times relative to session start
+- When an event time is reached, the `event_processor` (if configured) is called
 
 **Example:**
 ```python
-'predefined_events': [
-    {'type': 'pulse', 'time': 10.0},
-    {'type': 'baseline_start', 'time': 5.0},
-]
+'predefined_events': [5.0, 10.0, 15.0]  # Events at 5s, 10s, and 15s
 ```
 
-#### `event_processors` (dict)
-Dictionary mapping event types to processor methods. Each event type must have a corresponding processor.
+#### `pulse_processor` (callable or dict, optional)
+Processor method called when a pulse event occurs. Can be omitted if pulse events are not needed.
 
 **Simple format:**
 ```python
-'event_processors': {
-    'pulse': self.process_pulse,
-    'baseline_start': self.process_baseline_start,
-}
+'pulse_processor': self.process_pulse,
 ```
 
 **Advanced format with custom sample window:**
 ```python
-'event_processors': {
-    'pulse': {
-        'processor': self.process_pulse,
-        'sample_window': [-0.500, 0.100],  # Custom window just for pulse events (seconds)
-    },
-    'baseline_start': self.process_baseline_start,  # Uses default window
+'pulse_processor': {
+    'processor': self.process_pulse,
+    'sample_window': [-0.500, 0.100],  # Custom window just for pulse events (seconds)
 }
 ```
 
-When an event occurs, its corresponding processor method is called instead of the regular `process_periodic()` method.
-
-**Custom sample windows:**
-- By default, event processors use the same `sample_window` as periodic processing
-- You can optionally specify a different window for specific events
-- Custom windows can be smaller or larger, overlapping or non-overlapping
-- The system automatically manages buffer sizing to accommodate all windows
+When a pulse event occurs, the pulse processor is called instead of the regular `process_periodic()` method.
 
 **Example processor method:**
 ```python
@@ -144,6 +128,41 @@ def process_pulse(
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process pulse-specific logic
+    return None
+```
+
+#### `event_processor` (callable or dict, optional)
+Processor method called when a general event occurs (from `predefined_events`). Can be omitted if events are not needed.
+
+**Simple format:**
+```python
+'event_processor': self.process_event,
+```
+
+**Advanced format with custom sample window:**
+```python
+'event_processor': {
+    'processor': self.process_event,
+    'sample_window': [-1.5, 0.3],  # Custom window for events (seconds)
+}
+```
+
+When an event occurs, the event processor is called instead of the regular `process_periodic()` method.
+
+**Custom sample windows:**
+- By default, processors use the same `sample_window` as periodic processing
+- You can optionally specify a different window for pulse or event processors
+- Custom windows can be smaller or larger, overlapping or non-overlapping
+- The system automatically manages buffer sizing to accommodate all windows
+
+**Example processor method:**
+```python
+def process_event(
+        self, reference_time, reference_index, time_offsets, 
+        eeg_buffer, emg_buffer, is_coil_at_target):
+    """Process general events."""
+    print(f"Event at {reference_time}")
+    # Process event-specific logic
     return None
 ```
 
@@ -230,38 +249,9 @@ return {
 }
 ```
 
-### `process_eeg_trigger(...)`
-
-**Mandatory method** called when an EEG trigger is received from the EEG device.
-
-**Parameters:**
-Same as `process_periodic()` method:
-- `reference_time` (float)
-- `reference_index` (int)
-- `time_offsets` (numpy.ndarray)
-- `eeg_buffer` (numpy.ndarray)
-- `emg_buffer` (numpy.ndarray)
-- `is_coil_at_target` (bool)
-
-**Return Value:**
-Same format as `process_periodic()` method.
-
-**Example:**
-```python
-def process_eeg_trigger(
-        self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target):
-    """Process EEG trigger from the EEG device."""
-    print(f"EEG trigger received at {reference_time}")
-    # Return None if you don't care about EEG triggers
-    return None
-```
-
-**Note:** EEG triggers are not available with simulated data. Use events for similar functionality.
-
 ### Event Processor Methods
 
-Event processor methods are called when events occur (defined in `event_processors` configuration). Each processor has the same signature as `process_eeg_trigger()`.
+Event processor methods (`process_pulse` and `process_event`) are called when events occur (configured via `pulse_processor` and `event_processor`). Each processor has the same signature as `process_periodic()`.
 
 **Example:**
 ```python
@@ -272,30 +262,38 @@ def process_pulse(
     print(f"Pulse event at {reference_time}")
     # Process event-specific logic
     return {'sensory_stimuli': [...]}  # Or None
+
+def process_event(
+        self, reference_time, reference_index, time_offsets,
+        eeg_buffer, emg_buffer, is_coil_at_target):
+    """Process general events."""
+    print(f"Event at {reference_time}")
+    # Process event-specific logic
+    return None
 ```
 
-**Processor naming:** Processor method names should follow the pattern `process_<event_type>()` for consistency - they are explicitly mapped in `event_processors` configuration.
+**Processor naming:** Processor method names are arbitrary - they are explicitly mapped in the configuration via `pulse_processor` and `event_processor` keys.
 
 ## Processing Precedence
 
 When multiple processing triggers occur at the same sample, only one Python method is called, following this precedence order:
 
-1. **EEG Triggers** (from hardware): `process_eeg_trigger()` is always called
-2. **Events** (predefined or dynamic): Corresponding event processor (e.g., `process_pulse()`) is called
+1. **Pulse Events**: `pulse_processor` (if configured) is called
+2. **General Events**: `event_processor` (if configured) is called
 3. **Periodic Processing**: `process_periodic()` is called at regular intervals
 
 **Notes:**
 - When an event occurs at the same time as periodic processing, the event processor takes precedence and the `process_periodic()` method is **not** called for that sample
 - However, the periodic processing timer continues to advance normally, so the next periodic processing will still occur at the expected time
-- Events and EEG triggers are processed even during pulse lockout periods; only periodic processing is suppressed during lockout
+- Events are processed even during pulse lockout periods; only periodic processing is suppressed during lockout
 
 **Example Timeline:**
 ```
 With periodic_processing_interval=3.0 and first_periodic_processing_at=1.0:
 - 1.0s: Periodic processing scheduled, process_periodic() called
-- 2.0s: Event "pulse" occurs, process_pulse() called (not process_periodic())
+- 2.0s: Pulse event occurs, process_pulse() called (not process_periodic())
 - 4.0s: Periodic processing scheduled, process_periodic() called
-- 5.0s: Event "pulse" occurs, process_pulse() called (not process_periodic())
+- 5.0s: General event occurs, process_event() called (not process_periodic())
 - 7.0s: Periodic processing scheduled, process_periodic() called
 ```
 
@@ -310,7 +308,6 @@ def get_configuration(self):
         'sample_window': [-0.100, 0.0],  # Last 100 ms
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
-        'event_processors': {},
         'pulse_lockout_duration': 0.0,
     }
 ```
@@ -321,12 +318,8 @@ def get_configuration(self):
     return {
         'sample_window': [-0.500, 0.0],
         'periodic_processing_enabled': False,  # No periodic processing
-        'predefined_events': [
-            {'type': 'trial_start', 'time': 10.0}
-        ],
-        'event_processors': {
-            'trial_start': self.handle_trial_start,
-        },
+        'predefined_events': [10.0],  # Event at 10 seconds
+        'event_processor': self.handle_trial_start,
     }
 ```
 
@@ -337,7 +330,6 @@ def get_configuration(self):
         'sample_window': [-1.000, 0.0],  # Last second
         'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.1,  # 10 times per second
-        'event_processors': {},
         'pulse_lockout_duration': 2.0,
     }
 ```
@@ -357,7 +349,7 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
         'time': 0.5,
         'type': 'text_message',
         'parameters': {
-            'text': 'Session Starting...',
+            'text': 'Session starting...',
             'duration': 2.0
         }
     },
@@ -366,10 +358,10 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
         'type': 'visual_cue',
         'parameters': {
             'color': 'green',
-            'size': 100,
+            'size': 0.3,
             'duration': 1.0,
             'position_x': 0,
-            'position_y': 200
+            'position_y': 0
         }
     }
 ]
@@ -409,7 +401,7 @@ To prevent first-call performance delays, decider modules can request automatic 
 Set this attribute in your decider's `__init__` method to specify the number of warm-up rounds:
 
 ```python
-def __init__(self, num_eeg_channels, num_emg_channels, sampling_frequency):
+def __init__(self, subject_id, num_eeg_channels, num_emg_channels, sampling_frequency):
     # ... other initialization code ...
     
     # Configure warm-up (recommended: 2-3 rounds)

@@ -6,9 +6,12 @@ The Presenter module handles real-time presentation of sensory stimuli (visual, 
 
 ## Class Methods
 
-### `__init__()`
+### `__init__(subject_id)`
 
 Initializes the presenter and sets up display/audio hardware.
+
+**Parameters:**
+- `subject_id` (str): Subject identifier
 
 **Common initialization tasks:**
 - Create display window
@@ -20,24 +23,44 @@ Initializes the presenter and sets up display/audio hardware.
 
 Cleanup method called when presenter is destroyed. Should properly close hardware connections and windows.
 
-### `process(stimulus_type, parameters)`
+### `get_configuration()`
 
-Main method called by the pipeline when a sensory stimulus needs to be presented.
+Called by the pipeline during initialization. Must return a dictionary with configuration parameters.
+
+**Return dictionary keys:**
+
+#### `stimulus_processors` (dict)
+Dictionary mapping stimulus types to processor methods. Each stimulus type must have a corresponding processor.
+
+**Format:**
+```python
+'stimulus_processors': {
+    'visual_cue': self.process_visual_cue,
+    'text_message': self.process_text_message,
+}
+```
+
+When a stimulus of a given type is received, its corresponding processor method is called.
+
+### Stimulus Processor Methods
+
+Stimulus processor methods are called when stimuli of their registered type are received. Each processor takes a parameters dictionary and returns a boolean.
+
+**Method signature:**
+```python
+def process_<stimulus_type>(self, parameters: dict[str, Any]) -> bool:
+    """Process a stimulus of this type."""
+    # Extract parameters
+    param1 = parameters.get('param1', default_value)
+    # ... process stimulus ...
+    return True  # or False on error
+```
 
 **Parameters:**
-
-#### `stimulus_type` (str)
-The type of stimulus, as specified in the decider's sensory stimulus definition. Examples:
-- `'visual_cue'`
-- `'auditory_tone'`  
-- `'text_message'`
-- `'tactile_buzz'`
-
-#### `parameters` (dict)
-Dictionary containing stimulus-specific parameters. All values from the decider are automatically parsed:
-- Numeric values become `int` or `float` when possible
-- Other values remain as strings
-- All keys from the original stimulus definition are preserved
+- `parameters` (dict): Dictionary containing stimulus-specific parameters. All values from the decider are automatically parsed:
+  - Numeric values become `int` or `float` when possible
+  - Other values remain as strings
+  - All keys from the original stimulus definition are preserved
 
 **Return Value:**
 - `True`: Stimulus was successfully processed and presented
@@ -45,7 +68,9 @@ Dictionary containing stimulus-specific parameters. All values from the decider 
 
 ## Integration with Decider
 
-### Static Stimuli (Pre-scheduled)
+Stimuli are sent from the decider module (either predefined or dynamically generated). The presenter receives them and routes them to the appropriate processor based on the `stimulus_type`.
+
+### Predefined Stimuli
 
 Defined in the decider's `get_configuration()` method:
 
@@ -53,13 +78,13 @@ Defined in the decider's `get_configuration()` method:
 def get_configuration(self):
     return {
         # ... other config ...
-        'sensory_stimuli': [
+        'predefined_sensory_stimuli': [
             {
                 'time': 5.0,  # 5 seconds after session start
                 'type': 'visual_cue',
                 'parameters': {
                     'color': 'red',
-                    'size': 100,
+                    'size': 0.3,
                     'duration': 0.5,
                     'position_x': 0,
                     'position_y': 0
@@ -69,23 +94,23 @@ def get_configuration(self):
     }
 ```
 
-### Dynamic Stimuli (Real-time)
+### Dynamic Stimuli
 
-Generated in the decider's `process()` method based on EEG/EMG analysis:
+Generated in the decider's `process_periodic()` or event processor methods:
 
 ```python
-def process(self, current_time, ...):
+def process_periodic(self, reference_time, ...):
     # Analyze EEG data...
     
     return {
         'sensory_stimuli': [
             {
-                'time': current_time + 1.0,  # 1 second from now
-                'type': 'feedback_tone',
+                'time': reference_time + 1.0,  # 1 second from now
+                'type': 'visual_cue',
                 'parameters': {
-                    'frequency': calculated_frequency,
-                    'duration': 0.2,
-                    'volume': 0.7
+                    'color': 'blue',
+                    'size': 0.2,
+                    'duration': 0.2
                 }
             }
         ]
@@ -96,11 +121,12 @@ def process(self, current_time, ...):
 
 1. **Pre-load resources** (images, sounds) during initialization
 2. **Reuse stimulus objects** when possible rather than creating new ones
-3. **Always return boolean status** from `process()` method
-4. **Validate stimulus parameters** before rendering
+3. **Always return boolean status** from processor methods
+4. **Validate stimulus parameters** before rendering using `.get()` with defaults
 5. **Log stimulus timing** for later analysis
 6. **Initialize hardware connections** in `__init__()`
 7. **Clean up resources** properly in `__del__()`
+8. **Register all stimulus types** you plan to use in `stimulus_processors` configuration
 
 ## Example Use Cases
 

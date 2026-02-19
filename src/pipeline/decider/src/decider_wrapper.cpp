@@ -542,6 +542,11 @@ bool DeciderWrapper::initialize_module(
   return true;
 }
 
+void DeciderWrapper::destroy_instance() {
+  /* Setting to nullptr decrements the Python refcount; in CPython this triggers __del__ synchronously. */
+  decider_instance = nullptr;
+}
+
 bool DeciderWrapper::reset_module_state() {
   decider_instance = nullptr;
   decider_module = nullptr;

@@ -190,7 +190,12 @@ void EegPreprocessor::handle_finalize_preprocessor(
   [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
 
-  /* Drain and publish any remaining logs. */
+  /* Destroy the Python instance first so its __del__ runs before log draining. */
+  if (this->preprocessor_wrapper) {
+    this->preprocessor_wrapper->destroy_instance();
+  }
+
+  /* Drain and publish any remaining logs (including output from __del__). */
   if (this->preprocessor_wrapper) {
     this->preprocessor_wrapper->drain_logs();
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);

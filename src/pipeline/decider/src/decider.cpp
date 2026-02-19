@@ -127,9 +127,13 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/pipeline/decider/finalize",
     std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2));
 
+  /* Create heartbeat timer. */
   this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegDecider::publish_heartbeat, this));
+  
+  /* Publish initial health status. */
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 void EegDecider::handle_initialize_decider(

@@ -85,7 +85,7 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500), [this] { publish_heartbeat(); });
 
-  /* Publish initial state */
+  /* Publish initial state and health status. */
   publish_data_source_state();
   publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }

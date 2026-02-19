@@ -21,6 +21,10 @@ ExecStart=/usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profil
 ExecStart=/usr/bin/docker compose -f {{ repo_root }}/docker-compose.yml --profile non-gpu logs -f --tail=200
 {% endif %}
 
+# Terminate immediately on stop since logs command doesn't handle SIGTERM gracefully
+TimeoutStopSec=2
+KillMode=mixed
+
 Restart=always
 RestartSec=2
 

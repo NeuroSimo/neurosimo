@@ -12,32 +12,38 @@ To add more libraries, modify `src/pipeline/preprocessor/Dockerfile` and run `bu
 
 ## Class Methods
 
-### `__init__(num_eeg_channels, num_emg_channels, sampling_frequency)`
+### `__init__(subject_id, num_eeg_channels, num_emg_channels, sampling_frequency)`
 
 Initializes the preprocessor with device configuration parameters automatically provided by the pipeline.
 
 **Parameters:**
+- `subject_id` (str): Subject identifier
 - `num_eeg_channels` (int): Number of EEG channels
 - `num_emg_channels` (int): Number of EMG channels
 - `sampling_frequency` (int): Sampling frequency in Hz
 
-### `process(timestamps, eeg_samples, emg_samples, current_sample_index, pulse_given)`
+### `process(reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given)`
 
 Main processing method called for each new EEG/EMG sample.
 
 **Parameters:**
 
-#### `timestamps` (numpy.ndarray)
-Timestamps for samples in the current buffer. Shape: `(buffer_size,)` where `buffer_size` is determined by the `sample_window` configuration.
+#### `reference_time` (float)
+Reference time point in seconds. Other times in the buffer are relative to this.
 
-#### `eeg_samples` (numpy.ndarray)
-EEG sample buffer containing recent samples. Shape: `(buffer_size, num_eeg_channels)`
+#### `reference_index` (int)
+Index in the buffer where `time_offsets[reference_index] == 0`. Points to the current sample being processed.
 
-#### `emg_samples` (numpy.ndarray)
-EMG sample buffer containing recent samples. Shape: `(buffer_size, num_emg_channels)`
+#### `time_offsets` (numpy.ndarray)
+Time offsets relative to `reference_time`. Shape: `(num_samples,)` where `num_samples` matches the sample window size.
+- Absolute time for sample i is: `reference_time + time_offsets[i]`
+- For `sample_window = [-1.0, 0]`, offsets range from -1.0 to 0.0 seconds
 
-#### `current_sample_index` (int)
-Index of the current sample being processed within the buffer. Points to the "now" sample that needs preprocessing.
+#### `eeg_buffer` (numpy.ndarray)
+EEG sample buffer containing recent samples. Shape: `(num_samples, num_eeg_channels)`
+
+#### `emg_buffer` (numpy.ndarray)
+EMG sample buffer containing recent samples. Shape: `(num_samples, num_emg_channels)`
 
 #### `pulse_given` (bool)
 Whether a TMS pulse was delivered on this sample. Used for artifact detection and removal.
@@ -63,20 +69,21 @@ The decider receives this validity information and can choose to skip processing
 
 ## Sample Window Configuration
 
-The `sample_window` attribute defines the buffer size available for preprocessing:
+The `sample_window` configuration defines the buffer size available for preprocessing:
 
-- **Format**: `[earliest_sample, latest_sample]` relative to current sample
-- **Current sample**: Always at index 0
-- **Buffer access**: Use `current_sample_index` to access the current sample in the arrays
+- **Format**: `[earliest_seconds, latest_seconds]` relative to current sample, expressed in **seconds**
+- **Current sample**: Always at `reference_index` where `time_offsets[reference_index] == 0`
+- **Values**: Converted to samples using the provided sampling frequency
 
 **Examples:**
-- `[-5, 5]`: Access 5 samples before and after current (11 total, with 5-sample delay)
-- `[-10, 0]`: Access 10 previous samples plus current (11 total, no delay)
-- `[0, 0]`: Access only current sample (1 total, no delay)
+- `[-0.005, 0.0]`: Keep last 5 ms + current sample
+- `[-1.0, 0.0]`: Keep last second (at any sampling rate)
+- `[0.0, 0.0]`: Keep only current sample
+- `[-0.005, 0.005]`: Look 5 ms back and 5 ms ahead (introduces 5 ms delay)
 
 **Delay implications:**
-- Positive latest_sample values introduce processing delay
-- `[-5, 5]` means 5-sample delay for causal processing
+- Positive latest_seconds values introduce processing delay
+- `[-0.005, 0.005]` means 5 ms delay for causal processing
 - Choose based on your filtering requirements vs. acceptable latency
 
 ## Common Preprocessing Tasks
@@ -86,7 +93,13 @@ The `sample_window` attribute defines the buffer size available for preprocessin
 # Detect TMS pulse artifacts
 if pulse_given:
     self.ongoing_pulse_artifact = True
-    self.artifact_samples_remaining = int(0.2 * self.sampling_frequency)  # 200ms
+    self.samples_after_pulse = 0
+
+# Mark samples invalid for 1000 samples after pulse (artifact duration)
+if self.ongoing_pulse_artifact:
+    self.samples_after_pulse += 1
+    if self.samples_after_pulse == 1000:
+        self.ongoing_pulse_artifact = False
 ```
 
 ### Filtering
@@ -95,27 +108,27 @@ if pulse_given:
 from scipy import signal
 if hasattr(self, 'filter_zi'):
     eeg_filtered, self.filter_zi = signal.lfilter(
-        self.b, self.a, [eeg_samples[current_sample_index, :]], 
+        self.b, self.a, [eeg_buffer[reference_index, :]], 
         zi=self.filter_zi
     )
 else:
     # Initialize filter state on first sample
     self.b, self.a = signal.butter(4, 1.0/(self.sampling_frequency/2), 'high')
-    self.filter_zi = signal.lfilter_zi(self.b, self.a) * eeg_samples[current_sample_index, :]
+    self.filter_zi = signal.lfilter_zi(self.b, self.a) * eeg_buffer[reference_index, :]
 ```
 
 ### Amplitude-Based Artifact Rejection
 ```python
 # Reject samples exceeding amplitude thresholds
 amplitude_threshold = 100  # microvolts
-current_eeg = eeg_samples[current_sample_index, :]
+current_eeg = eeg_buffer[reference_index, :]
 valid = not np.any(np.abs(current_eeg) > amplitude_threshold)
 ```
 
 ### Movement Artifact Detection
 ```python
 # Use EMG channels to detect movement artifacts
-emg_power = np.mean(np.square(emg_samples[current_sample_index, :]))
+emg_power = np.mean(np.square(emg_buffer[reference_index, :]))
 movement_threshold = 50  # adjust based on your setup
 movement_detected = emg_power > movement_threshold
 valid = not movement_detected
@@ -125,18 +138,18 @@ valid = not movement_detected
 
 ### Pass-Through Preprocessor
 ```python
-def process(self, timestamps, eeg_samples, emg_samples, current_sample_index, pulse_given):
+def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given):
     # No actual preprocessing, just pass through
     return {
-        'eeg_sample': eeg_samples[current_sample_index, :],
-        'emg_sample': emg_samples[current_sample_index, :], 
+        'eeg_sample': eeg_buffer[reference_index, :],
+        'emg_sample': emg_buffer[reference_index, :], 
         'valid': True
     }
 ```
 
 ### Simple Artifact Rejection
 ```python
-def process(self, timestamps, eeg_samples, emg_samples, current_sample_index, pulse_given):
+def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given):
     # Mark samples invalid for 1 second after pulse
     if pulse_given:
         self.samples_since_pulse = 0
@@ -145,17 +158,17 @@ def process(self, timestamps, eeg_samples, emg_samples, current_sample_index, pu
     self.samples_since_pulse += 1
     
     return {
-        'eeg_sample': eeg_samples[current_sample_index, :],
-        'emg_sample': emg_samples[current_sample_index, :],
+        'eeg_sample': eeg_buffer[reference_index, :],
+        'emg_sample': emg_buffer[reference_index, :],
         'valid': valid
     }
 ```
 
 ### Real-Time Filtering
 ```python
-def process(self, timestamps, eeg_samples, emg_samples, current_sample_index, pulse_given):
+def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given):
     # Apply bandpass filter (1-30 Hz)
-    current_eeg = eeg_samples[current_sample_index, :]
+    current_eeg = eeg_buffer[reference_index, :]
     
     if not hasattr(self, 'eeg_filtered_prev'):
         self.eeg_filtered_prev = current_eeg
@@ -168,7 +181,7 @@ def process(self, timestamps, eeg_samples, emg_samples, current_sample_index, pu
     
     return {
         'eeg_sample': filtered_eeg,
-        'emg_sample': emg_samples[current_sample_index, :],
+        'emg_sample': emg_buffer[reference_index, :],
         'valid': True
     }
 ```

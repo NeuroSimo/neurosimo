@@ -58,10 +58,12 @@ The protocol loader will validate:
 - All stage names are unique
 - All `wait_until` anchors reference valid stage names
 - All stages have at least 1 trial
-- All durations and offsets are positive
+- All durations are positive (> 0)
+- All offsets are non-negative (>= 0)
 - Each rest has either `duration` or `wait_until`, but not both
 
-## Example
+## Examples
 
-See `example.yaml` for a complete example protocol.
+- `example.yaml`: Simple protocol with a single stage
+- `example_stages.yaml`: Complete protocol demonstrating stages, duration-based rest, and wait-until-based rest
 

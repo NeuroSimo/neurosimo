@@ -145,7 +145,8 @@ private:
   double periodic_processing_interval = 0.0;
   double first_periodic_processing_at = 0.0;
   double pulse_lockout_duration = 0.0;
-  
+  uint16_t warm_up_rounds = 0;
+
   /* Custom window parameters for pulse processor */
   bool has_custom_pulse_window = false;
   int pulse_look_back_samples = 0;

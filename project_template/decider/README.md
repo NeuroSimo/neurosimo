@@ -217,6 +217,9 @@ EMG sample data. Shape: `(num_samples, num_emg_channels)`
 #### `is_coil_at_target` (bool)
 Whether the coil is currently positioned at the target location (for neuronavigation systems).
 
+#### `is_warm_up` (bool)
+`True` when this call is a warm-up round with dummy data. Skip internal state updates in this case; return values are ignored.
+
 **Return Value:**
 
 The `process_periodic()` method can return a dictionary with the following optional keys:
@@ -251,7 +254,7 @@ return {
 
 ### Event Processor Methods
 
-Event processor methods (`process_pulse` and `process_event`) are called when events occur (configured via `pulse_processor` and `event_processor`). Each processor has the same signature as `process_periodic()`.
+Event processor methods (`process_pulse` and `process_event`) are called when events occur (configured via `pulse_processor` and `event_processor`). Each has the same signature as `process_periodic()` except without `is_warm_up` (they are never called during warm-up).
 
 **Example:**
 ```python
@@ -370,8 +373,8 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 **Dynamic stimuli in process_periodic method:**
 ```python
 def process_periodic(
-        self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target):
+        self, reference_time, reference_index, time_offsets,
+        eeg_buffer, emg_buffer, is_coil_at_target, is_warm_up):
     # Generate stimuli based on current time or data
     return {
         'sensory_stimuli': [
@@ -427,21 +430,18 @@ def get_configuration(self) -> dict[str, Any]:
 - Particularly beneficial for modules using scipy, sklearn, or other heavy libraries
 
 **Important for stateful deciders:**
-If your decider maintains internal state that depends on real EEG/EMG data patterns (e.g., running averages, learned parameters, adaptive thresholds), you should skip state updates during warm-up rounds. Warm-up calls can be identified by checking if `reference_time == 0.0`:
+If your decider maintains internal state that depends on real EEG/EMG data patterns (e.g., running averages, learned parameters, adaptive thresholds), you should skip state updates during warm-up rounds. `process_periodic` receives an explicit `is_warm_up` argument for this:
 
 ```python
 def process_periodic(
-        self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target):
-    
-    # Skip state updates during warm-up (dummy data)
-    is_warmup = (reference_time == 0.0)
+        self, reference_time, reference_index, time_offsets,
+        eeg_buffer, emg_buffer, is_coil_at_target, is_warm_up):
     
     # Your processing logic here...
     processed_data = self.analyze_eeg(eeg_buffer)
     
-    # Only update internal state with real data
-    if not is_warmup:
+    # Only update internal state with real data (skip during warm-up)
+    if not is_warm_up:
         self.update_internal_state(processed_data)
     
     # Return decisions (warm-up returns are ignored by the system)
@@ -451,5 +451,5 @@ def process_periodic(
 ## Best Practices
 
 1. **Configure warm-up** with `'warm_up_rounds': 2` in `get_configuration()` for consistent performance
-2. **Skip state updates during warm-up** by checking `reference_time == 0.0` for stateful deciders
+2. **Skip state updates during warm-up** using the `is_warm_up` argument in `process_periodic`
 3. **Use multiprocessing pool** for computationally intensive tasks to avoid blocking the pipeline

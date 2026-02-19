@@ -263,14 +263,14 @@
 
           # ROS2 middleware configuration
           export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-          export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/ros2_ws/config/cyclonedds.xml
+          export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/config/cyclonedds.xml
 
           # Source ROS2 base installation
           source /opt/ros/{{ ros_distro }}/setup.bash
 
           # Source NeuroSimo workspace if it exists
-          if [ -f {{ repo_root }}/ros2_ws/install/setup.bash ]; then
-              source {{ repo_root }}/ros2_ws/install/setup.bash
+          if [ -f {{ repo_root }}/install/setup.bash ]; then
+              source {{ repo_root }}/install/setup.bash
           fi
 
           # Source .env file if it exists

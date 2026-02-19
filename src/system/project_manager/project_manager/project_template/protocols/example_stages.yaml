@@ -20,7 +20,7 @@ stages:
       wait_until:
         anchor: "intervention"
         offset: 30.0  # 30 seconds after intervention started
-      notes: "Wait until 10 minutes after intervention start"
+      notes: "Wait until 30 seconds after intervention start"
   
   - stage:
       name: "post_test"

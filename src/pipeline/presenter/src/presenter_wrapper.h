@@ -51,6 +51,9 @@ public:
   /* Drain any pending log messages. Call at session end. */
   void drain_logs();
 
+  /* Destroy the Python presenter instance, triggering __del__. */
+  void destroy_instance();
+
 private:
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */
   static rclcpp::Logger* logger_ptr;

@@ -398,18 +398,19 @@ To prevent first-call performance delays, decider modules can request automatic 
 
 #### `warm_up_rounds` (int)
 
-Set this attribute in your decider's `__init__` method to specify the number of warm-up rounds:
+Return this key from `get_configuration()` to specify the number of warm-up rounds:
 
 ```python
-def __init__(self, subject_id, num_eeg_channels, num_emg_channels, sampling_frequency):
-    # ... other initialization code ...
-    
-    # Configure warm-up (recommended: 2-3 rounds)
-    self.warm_up_rounds = 2
+def get_configuration(self) -> dict[str, Any]:
+    return {
+        'sample_window': [-1.0, 0.0],
+        'warm_up_rounds': 2,  # Recommended: 2-3 rounds
+        # ... other configuration ...
+    }
 ```
 
 **How it works:**
-- The C++ wrapper automatically detects this attribute during module initialization
+- The C++ wrapper reads this value from `get_configuration()` during module initialization
 - It calls your `process_periodic()` method the specified number of times with realistic dummy data
 - Each round uses fresh random data (seeded for reproducibility) to avoid state-dependent issues
 - This triggers JIT compilation, library loading, and other one-time initialization costs
@@ -449,6 +450,6 @@ def process_periodic(
 
 ## Best Practices
 
-1. **Configure warm-up** with `self.warm_up_rounds = 2` for consistent performance
+1. **Configure warm-up** with `'warm_up_rounds': 2` in `get_configuration()` for consistent performance
 2. **Skip state updates during warm-up** by checking `reference_time == 0.0` for stateful deciders
 3. **Use multiprocessing pool** for computationally intensive tasks to avoid blocking the pipeline

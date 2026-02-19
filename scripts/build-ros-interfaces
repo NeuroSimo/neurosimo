@@ -9,7 +9,6 @@ if ! command -v ros2 &> /dev/null; then
 fi
 
 cd $NEUROSIMO_ROOT
-cd ros2_ws
 
 # Build packages in src/interfaces directory
 colcon build --base-paths src/interfaces

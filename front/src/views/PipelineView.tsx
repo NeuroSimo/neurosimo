@@ -13,12 +13,13 @@ export const PipelineView = () => {
         <>
           <ExperimentPanel />
           <DataSourceDisplay />
-          <SessionPanel />
         </>
       }
       pipeline={
         <>
           <PipelineDiagram />
+          <div style={{ marginTop: '225px' }} />
+          <SessionPanel />
         </>
       }
       setupTitle="Configuration"

@@ -118,10 +118,11 @@ class Decider:
 
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray,
+            is_coil_at_target: bool, is_warm_up: bool) -> dict[str, Any] | None:
         """
         Process the EEG data to estimate phase and schedule a trigger periodically.
-        
+
         Args:
             reference_time: Reference time point for the sample window (typically current sample time)
             time_offsets: Array of time offsets relative to reference_time
@@ -129,7 +130,8 @@ class Decider:
             emg_buffer: EMG data buffer (unused)
             reference_index: Index in the buffer corresponding to reference_time (where time_offsets[i] == 0)
             is_coil_at_target: Whether the coil is currently at the target position
-            
+            is_warm_up: True when this call is a warm-up round with dummy data; skip state updates if needed.
+
         Returns:
             Dictionary with 'timed_trigger' key and execution time, or None if no trigger scheduled
         """

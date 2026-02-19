@@ -640,7 +640,8 @@ bool DeciderWrapper::warm_up() {
         *py_time_offsets,
         *py_eeg,
         *py_emg,
-        dummy_is_coil_at_target
+        dummy_is_coil_at_target,
+        true  /* is_warm_up */
       );
       
       auto end_time = std::chrono::high_resolution_clock::now();
@@ -944,7 +945,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
       }
     } else {
       /* Call standard process_periodic method (for periodic processing). */
-      py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
+      py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target, false);
     }
 
   } catch(const py::error_already_set& e) {

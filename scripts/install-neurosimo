@@ -16,9 +16,9 @@ echo ""
 
 # Clean up previous installation artifacts if NEUROSIMO_ROOT is defined
 if [ -n "$NEUROSIMO_ROOT" ]; then
-    rm -rf "$NEUROSIMO_ROOT/ros2_ws/build"
-    rm -rf "$NEUROSIMO_ROOT/ros2_ws/install"
-    rm -rf "$NEUROSIMO_ROOT/ros2_ws/log"
+    rm -rf "$NEUROSIMO_ROOT/build"
+    rm -rf "$NEUROSIMO_ROOT/install"
+    rm -rf "$NEUROSIMO_ROOT/log"
 fi
 
 # Run the Docker installation playbook

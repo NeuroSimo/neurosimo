@@ -2,7 +2,7 @@ services:
   eeg_bridge:
     build:
       context: .
-      dockerfile: ros2_ws/src/eeg/eeg_bridge/Dockerfile
+      dockerfile: src/eeg/eeg_bridge/Dockerfile
     env_file:
       - .env
     environment:
@@ -18,7 +18,7 @@ services:
   eeg_monitor:
     build:
       context: .
-      dockerfile: ros2_ws/src/eeg/eeg_monitor/Dockerfile
+      dockerfile: src/eeg/eeg_monitor/Dockerfile
     env_file:
       - .env
     environment:
@@ -33,7 +33,7 @@ services:
   eeg_simulator:
     build:
       context: .
-      dockerfile: ros2_ws/src/eeg/eeg_simulator/Dockerfile
+      dockerfile: src/eeg/eeg_simulator/Dockerfile
     env_file:
       - .env
     environment:
@@ -49,7 +49,7 @@ services:
   eeg_replay:
     build:
       context: .
-      dockerfile: ros2_ws/src/eeg/eeg_replay/Dockerfile
+      dockerfile: src/eeg/eeg_replay/Dockerfile
     env_file:
       - .env
     environment:
@@ -64,7 +64,7 @@ services:
   experiment_coordinator:
     build:
       context: .
-      dockerfile: ros2_ws/src/pipeline/experiment_coordinator/Dockerfile
+      dockerfile: src/pipeline/experiment_coordinator/Dockerfile
     env_file:
       - .env
     environment:
@@ -80,7 +80,7 @@ services:
   decider_non_gpu:
     build:
       context: .
-      dockerfile: ros2_ws/src/pipeline/decider/Dockerfile
+      dockerfile: src/pipeline/decider/Dockerfile
     env_file:
       - .env
     environment:
@@ -100,7 +100,7 @@ services:
   decider:
     build:
       context: .
-      dockerfile: ros2_ws/src/pipeline/decider/Dockerfile
+      dockerfile: src/pipeline/decider/Dockerfile
     env_file:
       - .env
     environment:
@@ -127,7 +127,7 @@ services:
   global_configurator:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/global_configurator/Dockerfile
+      dockerfile: src/system/global_configurator/Dockerfile
     env_file:
       - .env
     environment:
@@ -142,7 +142,7 @@ services:
   project_manager:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/project_manager/Dockerfile
+      dockerfile: src/system/project_manager/Dockerfile
     env_file:
       - .env
     environment:
@@ -157,7 +157,7 @@ services:
   preprocessor:
     build:
       context: .
-      dockerfile: ros2_ws/src/pipeline/preprocessor/Dockerfile
+      dockerfile: src/pipeline/preprocessor/Dockerfile
     env_file:
       - .env
     environment:
@@ -174,7 +174,7 @@ services:
   presenter:
     build:
       context: .
-      dockerfile: ros2_ws/src/pipeline/presenter/Dockerfile
+      dockerfile: src/pipeline/presenter/Dockerfile
     env_file:
       - .env
     volumes:
@@ -200,7 +200,7 @@ services:
   resource_monitor:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/resource_monitor/Dockerfile
+      dockerfile: src/system/resource_monitor/Dockerfile
     env_file:
       - .env
     environment:
@@ -215,7 +215,7 @@ services:
   session_configurator:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/session_configurator/Dockerfile
+      dockerfile: src/system/session_configurator/Dockerfile
     env_file:
       - .env
     environment:
@@ -230,7 +230,7 @@ services:
   session_exporter:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/session_exporter/Dockerfile
+      dockerfile: src/system/session_exporter/Dockerfile
     env_file:
       - .env
     environment:
@@ -245,7 +245,7 @@ services:
   session_manager:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/session_manager/Dockerfile
+      dockerfile: src/system/session_manager/Dockerfile
     env_file:
       - .env
     environment:
@@ -256,7 +256,7 @@ services:
   session_recorder:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/session_recorder/Dockerfile
+      dockerfile: src/system/session_recorder/Dockerfile
     env_file:
       - .env
       - .git_provenance.env
@@ -272,7 +272,7 @@ services:
   recording_manager:
     build:
       context: .
-      dockerfile: ros2_ws/src/system/recording_manager/Dockerfile
+      dockerfile: src/system/recording_manager/Dockerfile
     env_file:
       - .env
     environment:
@@ -287,7 +287,7 @@ services:
   stimulation_tracer:
     build:
       context: .
-      dockerfile: ros2_ws/src/pipeline/stimulation_tracer/Dockerfile
+      dockerfile: src/pipeline/stimulation_tracer/Dockerfile
     env_file:
       - .env
     environment:
@@ -301,7 +301,7 @@ services:
   trigger_timer:
     build:
       context: .
-      dockerfile: ros2_ws/src/pipeline/trigger_timer/Dockerfile
+      dockerfile: src/pipeline/trigger_timer/Dockerfile
     env_file:
       - .env
     environment:
@@ -324,9 +324,9 @@ services:
   rosbridge:
     build:
       context: .
-      dockerfile: ros2_ws/src/utils/rosbridge/Dockerfile
+      dockerfile: src/utils/rosbridge/Dockerfile
       args:
-        INTERFACES_PATH: ros2_ws/src/interfaces
+        INTERFACES_PATH: src/interfaces
     env_file:
       - .env
     environment:

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
@@ -21,6 +21,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, 'favicon.ico'),
+    autoHideMenuBar: true,
     show: false, // Don't show until ready-to-show
   });
 
@@ -132,7 +133,10 @@ ipcMain.handle('toggle-detached-experiment-window', async () => {
 });
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
+  createWindow();
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {

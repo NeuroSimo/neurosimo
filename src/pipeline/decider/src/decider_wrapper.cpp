@@ -218,11 +218,11 @@ bool DeciderWrapper::initialize_module(
     };
 
     /* Validate that only allowed keys are present */
-    std::vector<std::string> allowed_keys = {"sample_window", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_processor", "event_processor"};
+    std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_processor", "event_processor"};
     for (const auto& item : config) {
       std::string key = py::str(item.first).cast<std::string>();
       if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.", key.c_str());
+        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.", key.c_str());
         return false;
       }
     }
@@ -331,6 +331,22 @@ bool DeciderWrapper::initialize_module(
         double event_time = event.cast<double>();
         event_queue.push(event_time);
       }
+    }
+
+    /* Extract warm_up_rounds (optional, defaults to 0). */
+    if (config.contains("warm_up_rounds")) {
+      try {
+        this->warm_up_rounds = config["warm_up_rounds"].cast<int>();
+        if (this->warm_up_rounds < 0) {
+          RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be non-negative.");
+          return false;
+        }
+      } catch (const py::cast_error& e) {
+        RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be an integer: %s", e.what());
+        return false;
+      }
+    } else {
+      this->warm_up_rounds = 0;
     }
 
     /* Extract pulse_lockout_duration (optional, defaults to 0.0). */
@@ -572,16 +588,10 @@ bool DeciderWrapper::warm_up() {
     return false;
   }
 
-  // Check if the Python module has a warm_up_rounds attribute
-  int warm_up_rounds = 0;
-  if (py::hasattr(*decider_instance, "warm_up_rounds")) {
-    warm_up_rounds = decider_instance->attr("warm_up_rounds").cast<int>();
-  }
-
   log_section_header("Warm-up");
 
-  if (warm_up_rounds <= 0) {
-    RCLCPP_INFO(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", warm_up_rounds);
+  if (this->warm_up_rounds == 0) {
+    RCLCPP_INFO(*logger_ptr, "Warm-up disabled (warm_up_rounds = %d)", this->warm_up_rounds);
     RCLCPP_INFO(*logger_ptr, " ");
     log_section_header("Operation");
 
@@ -589,7 +599,7 @@ bool DeciderWrapper::warm_up() {
     return true;
   }
 
-  RCLCPP_INFO(*logger_ptr, "Starting %d warm-up rounds...", warm_up_rounds);
+  RCLCPP_INFO(*logger_ptr, "Starting %d warm-up rounds...", this->warm_up_rounds);
 
   // Initialize RNG with constant seed for reproducible warm-up data
   std::srand(12345);
@@ -605,7 +615,7 @@ bool DeciderWrapper::warm_up() {
   bool dummy_is_coil_at_target = true;
 
   // Perform warm-up rounds with fresh random data for each round
-  for (int round = 0; round < warm_up_rounds; round++) {
+  for (int round = 0; round < this->warm_up_rounds; round++) {
     // Generate fresh random data for this round
     for (size_t i = 0; i < buffer_size; i++) {
       time_offsets_ptr[i] = -static_cast<double>(buffer_size - 1 - i) / sampling_frequency;
@@ -637,11 +647,11 @@ bool DeciderWrapper::warm_up() {
       auto duration = std::chrono::duration<double, std::milli>(end_time - start_time).count();
       
       RCLCPP_INFO(*logger_ptr, "  Round %d/%d: %.2f ms", 
-                    round + 1, warm_up_rounds, duration);
+                    round + 1, this->warm_up_rounds, duration);
       
     } catch (const py::error_already_set& e) {
       std::string error_msg = std::string("Python error: ") + e.what();
-      RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, warm_up_rounds, error_msg.c_str());
+      RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
       
       // Add error to log buffer so it can be published to UI
       {
@@ -652,7 +662,7 @@ bool DeciderWrapper::warm_up() {
       return false;
     } catch (const std::exception& e) {
       std::string error_msg = std::string("C++ error: ") + e.what();
-      RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, warm_up_rounds, error_msg.c_str());
+      RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
       
       // Add error to log buffer so it can be published to UI
       {
@@ -665,7 +675,7 @@ bool DeciderWrapper::warm_up() {
   }
 
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", warm_up_rounds);
+  RCLCPP_INFO(*logger_ptr, "Warm-up completed successfully (%d rounds)", this->warm_up_rounds);
   RCLCPP_INFO(*logger_ptr, " ");
   
   // Drain IPC buffer and clear any logs accumulated during warm-up to prevent them from being published

@@ -95,9 +95,6 @@ class Decider:
         # Maximum number of future samples to consider for trigger scheduling
         self.max_future_samples = int(self.edge_samples / 2)
 
-        # Number of warm-up rounds to prevent first-call delays (see README.md for details)
-        self.warm_up_rounds = 2
-
         print("Phastimate decider initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")
 
     def get_configuration(self) -> dict[str, Any]:
@@ -111,7 +108,8 @@ class Decider:
             # Data configuration
             # Use seconds; convert buffer length in samples to seconds for clarity
             'sample_window': [-(self.buffer_size_samples - 1) / self.sampling_frequency, 0.0],
-            
+            'warm_up_rounds': 2,
+
             # Periodic processing
             'periodic_processing_enabled': True,
             'periodic_processing_interval': 0.1,  # Process every 0.1 seconds

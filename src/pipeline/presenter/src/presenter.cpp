@@ -178,7 +178,12 @@ void EegPresenter::handle_finalize_presenter(
 
   RCLCPP_INFO(this->get_logger(), "Received finalize request");
 
-  /* Drain and publish any remaining logs. */
+  /* Destroy the Python instance first so its __del__ runs before log draining. */
+  if (this->presenter_wrapper) {
+    this->presenter_wrapper->destroy_instance();
+  }
+
+  /* Drain and publish any remaining logs (including output from __del__). */
   if (this->presenter_wrapper) {
     this->presenter_wrapper->drain_logs();
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);

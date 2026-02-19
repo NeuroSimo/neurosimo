@@ -95,6 +95,10 @@ public:
 
   /* Drain any pending log messages. Call at session end. */
   void drain_logs();
+
+  /* Destroy the Python decider instance, triggering __del__. */
+  void destroy_instance();
+
   void log_section_header(const std::string& title);
 
 private:

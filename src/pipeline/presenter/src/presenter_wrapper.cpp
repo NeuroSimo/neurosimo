@@ -148,6 +148,11 @@ bool PresenterWrapper::initialize_module(
   return true;
 }
 
+void PresenterWrapper::destroy_instance() {
+  /* Setting to nullptr decrements the Python refcount; in CPython this triggers __del__ synchronously. */
+  presenter_instance = nullptr;
+}
+
 bool PresenterWrapper::reset_module_state() {
   presenter_module = nullptr;
   presenter_instance = nullptr;

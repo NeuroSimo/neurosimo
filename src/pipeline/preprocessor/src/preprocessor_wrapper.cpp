@@ -170,6 +170,11 @@ bool PreprocessorWrapper::initialize_module(
   return true;
 }
 
+void PreprocessorWrapper::destroy_instance() {
+  /* Setting to nullptr decrements the Python refcount; in CPython this triggers __del__ synchronously. */
+  preprocessor_instance = nullptr;
+}
+
 bool PreprocessorWrapper::reset_module_state() {
   preprocessor_module = nullptr;
   preprocessor_instance = nullptr;

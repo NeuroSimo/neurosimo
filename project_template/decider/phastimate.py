@@ -82,9 +82,6 @@ class Decider:
         self.periodic_processing_interval = DEFAULT_PROCESSING_INTERVAL_SECONDS
         self.buffer_size_seconds = DEFAULT_BUFFER_SIZE_SECONDS
 
-        # Convert timing parameters to samples
-        self.buffer_size_samples = int(self.buffer_size_seconds * sampling_frequency)
-
         # Filter coefficients
         self.bandpass_filter_coefficients = BANDPASS_FILTER_COEFFICIENTS
 
@@ -106,8 +103,7 @@ class Decider:
         """
         return {
             # Data configuration
-            # Use seconds; convert buffer length in samples to seconds for clarity
-            'sample_window': [-(self.buffer_size_samples - 1) / self.sampling_frequency, 0.0],
+            'sample_window': [self.buffer_size_seconds, 0.0],
             'warm_up_rounds': 2,
 
             # Periodic processing

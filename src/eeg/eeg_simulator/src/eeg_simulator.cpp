@@ -105,6 +105,9 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   /* Initialize client for aborting session */
   this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
 
+  /* Publish initial health status. */
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+
   /* Publish initial streamer state. */
   publish_data_source_state();
 }

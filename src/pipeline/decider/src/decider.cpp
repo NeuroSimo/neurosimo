@@ -47,6 +47,10 @@ void crash_handler(int sig) {
 EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")) {
   RCLCPP_INFO(this->get_logger(), "Initializing decider...");
 
+  /* Create callback groups for separating data-plane and control-plane operations */
+  this->data_plane_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  this->control_plane_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
   /* Publisher for heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
@@ -62,10 +66,13 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/decider/health", qos_persist_latest);
 
   /* Subscriber for is coil at target. */
+  rclcpp::SubscriptionOptions subscription_options;
+  subscription_options.callback_group = this->control_plane_callback_group;
   this->is_coil_at_target_subscriber = create_subscription<std_msgs::msg::Bool>(
     IS_COIL_AT_TARGET_TOPIC,
     qos_persist_latest,
-    std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
+    std::bind(&EegDecider::handle_is_coil_at_target, this, _1),
+    subscription_options);
 
   /* Publisher for decision trace. */
   this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
@@ -99,14 +106,16 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     qos_keep_all_logs);
 
   /* Service client for timed trigger. */
-  this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>("/pipeline/timed_trigger");
+  this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>(
+    "/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()), this->data_plane_callback_group);
 
   while (!timed_trigger_client->wait_for_service(2s)) {
     RCLCPP_INFO(get_logger(), "Service /pipeline/timed_trigger not available, waiting...");
   }
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>(
+    "/session/abort", rclcpp::QoS(rclcpp::ServicesQoS()), this->data_plane_callback_group);
 
   while (!abort_session_client->wait_for_service(2s)) {
     RCLCPP_INFO(get_logger(), "Service /session/abort not available, waiting...");
@@ -120,22 +129,28 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   /* Initialize service server for component initialization */
   this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializeDecider>(
     "/pipeline/decider/initialize",
-    std::bind(&EegDecider::handle_initialize_decider, this, std::placeholders::_1, std::placeholders::_2));
+    std::bind(&EegDecider::handle_initialize_decider, this, std::placeholders::_1, std::placeholders::_2),
+    rclcpp::QoS(rclcpp::ServicesQoS()),
+    this->data_plane_callback_group);
 
   /* Finalize service server */
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizeDecider>(
     "/pipeline/decider/finalize",
-    std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2));
+    std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2),
+    rclcpp::QoS(rclcpp::ServicesQoS()),
+    this->data_plane_callback_group);
 
   /* Create heartbeat timer. */
   this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
-    std::bind(&EegDecider::publish_heartbeat, this));
+    std::bind(&EegDecider::publish_heartbeat, this),
+    this->control_plane_callback_group);
 
   /* Create log timer that runs every 100ms to check for missed logs. */
   this->log_timer = this->create_wall_timer(
     std::chrono::milliseconds(100),
-    std::bind(&EegDecider::check_and_publish_logs, this));
+    std::bind(&EegDecider::check_and_publish_logs, this),
+    this->control_plane_callback_group);
 
   /* Publish initial health status. */
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
@@ -218,11 +233,14 @@ void EegDecider::handle_initialize_decider(
   this->eeg_subscriber.reset();
 
   std::string topic = request->preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
+  rclcpp::SubscriptionOptions eeg_subscription_options;
+  eeg_subscription_options.callback_group = this->data_plane_callback_group;
   this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
     topic,
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
     EEG_QUEUE_LENGTH,
-    std::bind(&EegDecider::process_sample, this, _1));
+    std::bind(&EegDecider::process_sample, this, _1),
+    eeg_subscription_options);
   
   // Print section header
   log_section_header("Loading decider: " + module_name);
@@ -803,7 +821,9 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 }
 
 void EegDecider::spin() {
-  rclcpp::spin(this->shared_from_this());
+  auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+  executor->add_node(this->shared_from_this());
+  executor->spin();
 }
 
 

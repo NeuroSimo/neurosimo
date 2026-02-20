@@ -152,6 +152,7 @@ void EegPresenter::handle_initialize_presenter(
     request->subject_id);
 
   // Publish initialization logs from Python constructor
+  this->presenter_wrapper->drain_logs();
   publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
   if (!success) {
@@ -178,12 +179,18 @@ void EegPresenter::handle_finalize_presenter(
 
   RCLCPP_INFO(this->get_logger(), "Received finalize request");
 
+  /* Publish logs from the previous sample at the beginning of the finalization. */
+  if (!std::isnan(this->previous_sample_time)) {
+    this->presenter_wrapper->drain_logs();
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+  }
+
   /* Destroy the Python instance first so its __del__ runs before log draining. */
   if (this->presenter_wrapper) {
     this->presenter_wrapper->destroy_instance();
   }
 
-  /* Drain and publish any remaining logs (including output from __del__). */
+  /* Drain and publish output from __del__. */
   if (this->presenter_wrapper) {
     this->presenter_wrapper->drain_logs();
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
@@ -203,6 +210,7 @@ void EegPresenter::handle_finalize_presenter(
   this->is_initialized = false;
   this->is_enabled = false;
   this->error_occurred = false;
+  this->previous_sample_time = std::numeric_limits<double_t>::quiet_NaN();
   this->initialized_project_name = UNSET_STRING;
   this->initialized_module_filename = UNSET_STRING;
   this->initialized_working_directory = "";
@@ -264,6 +272,14 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
     return;
   }
 
+  /* Publish logs from the previous sample at the beginning of this sample */
+  if (!std::isnan(this->previous_sample_time)) {
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+  }
+
+  /* Update previous sample time for next iteration's log publishing */
+  this->previous_sample_time = msg->time;
+
   // Return early if no stimuli are queued
   if (this->sensory_stimuli.empty()) {
     return;
@@ -273,7 +289,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   double_t stimulus_time = stimulus->time;
 
   // If the stimulus time is in the future, return early
-  if (msg->time <= stimulus_time) {
+  if (stimulus_time >= msg->time) {
     return;
   }
 
@@ -294,9 +310,6 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   // Process the stimulus using the presenter wrapper
   bool success = this->presenter_wrapper->process(*stimulus);
-
-  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, stimulus_time);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Error presenting stimulus");

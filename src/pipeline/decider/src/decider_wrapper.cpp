@@ -27,6 +27,10 @@ DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
   /* Initialize the Python interpreter. */
   interpreter = std::make_unique<py::scoped_interpreter>();
   setup_custom_print();
+
+  /* After interpreter init + setup_custom_print(), release the GIL
+     so executor threads can acquire it in their callbacks. */
+  main_thread_state = PyEval_SaveThread();
 }
 
 void DeciderWrapper::setup_custom_print() {
@@ -111,6 +115,8 @@ bool DeciderWrapper::initialize_module(
     const uint16_t sampling_frequency,
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue) {
+
+  py::gil_scoped_acquire gil;
 
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
@@ -559,11 +565,15 @@ bool DeciderWrapper::initialize_module(
 }
 
 void DeciderWrapper::destroy_instance() {
+  py::gil_scoped_acquire gil;
+
   /* Setting to nullptr decrements the Python refcount; in CPython this triggers __del__ synchronously. */
   decider_instance = nullptr;
 }
 
 bool DeciderWrapper::reset_module_state() {
+  py::gil_scoped_acquire gil;
+
   decider_instance = nullptr;
   decider_module = nullptr;
 
@@ -583,6 +593,8 @@ bool DeciderWrapper::reset_module_state() {
 }
 
 bool DeciderWrapper::warm_up() {
+  py::gil_scoped_acquire gil;
+
   if (!decider_instance) {
     RCLCPP_WARN(*logger_ptr, "Cannot warm up: decider instance not available");
     return false;
@@ -689,6 +701,12 @@ bool DeciderWrapper::warm_up() {
 }
 
 DeciderWrapper::~DeciderWrapper() {
+  /* Restore the main thread state before destroying the interpreter */
+  if (main_thread_state) {
+    PyEval_RestoreThread(main_thread_state);
+    main_thread_state = nullptr;
+  }
+
   py_time_offsets.reset();
   py_eeg.reset();
   py_emg.reset();
@@ -887,6 +905,8 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     bool has_event,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target) {
+
+  py::gil_scoped_acquire gil;
 
   bool success = true;
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;

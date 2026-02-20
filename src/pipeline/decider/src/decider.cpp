@@ -131,7 +131,12 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegDecider::publish_heartbeat, this));
-  
+
+  /* Create log timer that runs every 100ms to check for missed logs. */
+  this->log_timer = this->create_wall_timer(
+    std::chrono::milliseconds(100),
+    std::bind(&EegDecider::check_and_publish_logs, this));
+
   /* Publish initial health status. */
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
@@ -337,6 +342,7 @@ bool EegDecider::reset_state() {
   this->is_initialized = false;
   this->is_enabled = false;
   this->error_occurred = false;
+  this->logs_checked_since_last_timer = false;
   this->previous_stimulation_time = UNSET_TIME;
   this->previous_sample_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
@@ -374,6 +380,16 @@ bool EegDecider::reset_state() {
 void EegDecider::publish_heartbeat() {
   auto heartbeat = std_msgs::msg::Empty();
   this->heartbeat_publisher->publish(heartbeat);
+}
+
+void EegDecider::check_and_publish_logs() {
+  /* Publish any pending Python logs if handle_sample hasn't checked them since the last timer call. */
+  if (!this->logs_checked_since_last_timer) {
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME_BLOCKED, this->previous_sample_time);
+  }
+
+  /* Reset the flag for the next timer interval. */
+  this->logs_checked_since_last_timer = false;
 }
 
 void EegDecider::publish_health_status(uint8_t health_level, const std::string& message) {
@@ -715,6 +731,9 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   /* Publish logs from the previous sample at the beginning of this sample */
   if (!std::isnan(this->previous_sample_time)) {
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+
+    /* Mark that logs have been checked in this sample processing cycle. */
+    this->logs_checked_since_last_timer = true;
   }
 
   /* Update previous sample time for next iteration's log publishing */

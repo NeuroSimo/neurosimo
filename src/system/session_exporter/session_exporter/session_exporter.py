@@ -137,9 +137,10 @@ LOG_FIELDS = [
 
 # Phase mapping for human-readable export (see pipeline_interfaces/msg/LogMessage.msg)
 PHASE_MAP = {
-    LogMessage.PHASE_RUNTIME: 'runtime',
     LogMessage.PHASE_INITIALIZATION: 'initialization',
-    LogMessage.PHASE_FINALIZATION: 'finalization'
+    LogMessage.PHASE_RUNTIME: 'runtime',
+    LogMessage.PHASE_RUNTIME_BLOCKED: 'runtime_blocked',
+    LogMessage.PHASE_FINALIZATION: 'finalization',
 }
 
 # Sensory stimulus export fields (base fields, parameters added dynamically)

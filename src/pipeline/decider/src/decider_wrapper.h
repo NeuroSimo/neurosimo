@@ -117,6 +117,9 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
 
+  /* Main thread state for GIL management */
+  PyThreadState* main_thread_state = nullptr;
+
   /* Processor functions */
   py::object pulse_processor;
   py::object event_processor;

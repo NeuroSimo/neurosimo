@@ -117,24 +117,27 @@ const LogEntry = styled.div`
 
 const Timestamp = styled.span<{ $phase: number; $level: number }>`
   color: ${props => {
-    if (props.$phase === 1) return '#000'  // INITIALIZATION - black
-    if (props.$phase === 2) return '#000'  // FINALIZATION - black
+    if (props.$phase === 0) return '#000'  // INITIALIZATION - black
+    if (props.$phase === 3) return '#000'  // FINALIZATION - black
+    if (props.$phase === 2) return '#fff'  // RUNTIME_BLOCKED - white
     if (props.$level === 2) return '#fff'  // ERROR - white
     return '#555'  // INFO/WARNING - dark gray
   }};
   font-weight: bold;
   text-align: right;
   background-color: ${props => {
-    if (props.$phase === 1) return '#d46c0b'  // INITIALIZATION - orange
-    if (props.$phase === 2) return '#6c757d'  // FINALIZATION - gray
+    if (props.$phase === 0) return '#d46c0b'  // INITIALIZATION - orange
+    if (props.$phase === 3) return '#6c757d'  // FINALIZATION - gray
+    if (props.$phase === 2) return '#e74c3c'  // RUNTIME_BLOCKED - red-orange
     if (props.$level === 2) return '#dc3545'  // ERROR - red
     if (props.$level === 1) return '#ffc107'  // WARNING - yellow
     return '#e8e8e8'  // INFO - light gray
   }};
   padding: 2px 3px;
   border-right: 2px solid ${props => {
-    if (props.$phase === 1) return '#b85a09'  // INITIALIZATION - darker orange
-    if (props.$phase === 2) return '#545b62'  // FINALIZATION - darker gray
+    if (props.$phase === 0) return '#b85a09'  // INITIALIZATION - darker orange
+    if (props.$phase === 3) return '#545b62'  // FINALIZATION - darker gray
+    if (props.$phase === 2) return '#c0392b'  // RUNTIME_BLOCKED - darker red-orange
     if (props.$level === 2) return '#c82333'  // ERROR - darker red
     if (props.$level === 1) return '#e0a800'  // WARNING - darker yellow
     return '#ccc'  // INFO - gray

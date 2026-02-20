@@ -96,6 +96,9 @@ private:
   /* State variables */
   bool error_occurred = false;
 
+  /* Used for publishing logs from the previous sample at the beginning of the current sample. */
+  double_t previous_sample_time = std::numeric_limits<double_t>::quiet_NaN();
+
   std::priority_queue<
     std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>,
     std::vector<std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>>, StimulusCompare> sensory_stimuli;

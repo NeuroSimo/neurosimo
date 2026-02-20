@@ -153,6 +153,9 @@ private:
      interval is respected. */
   double_t previous_stimulation_time = UNSET_TIME;
 
+  /* Used for publishing logs from the previous sample at the beginning of the current sample. */
+  double_t previous_sample_time = UNSET_TIME;
+
   /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
   double_t pulse_lockout_end_time = UNSET_TIME;
 

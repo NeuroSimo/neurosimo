@@ -765,7 +765,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
-}
+  }
 
 void EegDecider::spin() {
   rclcpp::spin(this->shared_from_this());

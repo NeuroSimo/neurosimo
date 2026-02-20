@@ -150,7 +150,7 @@ services:
       - ROS_DOMAIN_ID
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
-      - './project_template:/app/project_template'
+      - './bundled_projects:/app/bundled_projects'
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
     network_mode: host

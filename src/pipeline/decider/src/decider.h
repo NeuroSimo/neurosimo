@@ -76,7 +76,9 @@ public:
   void spin();
 
 private:
-  rclcpp::CallbackGroup::SharedPtr callback_group;
+  /* Callback groups for separating data-plane and control-plane operations */
+  rclcpp::CallbackGroup::SharedPtr data_plane_callback_group;
+  rclcpp::CallbackGroup::SharedPtr control_plane_callback_group;
 
   bool reset_state();
 

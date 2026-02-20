@@ -235,6 +235,7 @@ void EegDecider::handle_initialize_decider(
     this->event_queue);
 
   // Publish initialization logs from Python constructor
+  this->decider_wrapper->drain_logs();
   publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
   if (!success) {
@@ -262,7 +263,10 @@ void EegDecider::handle_initialize_decider(
   bool was_warmup_successful = this->decider_wrapper->warm_up();
   if (!was_warmup_successful) {
     RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);  // Publish error logs from failed warm-up
+
+    this->decider_wrapper->drain_logs();
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
+
     response->success = false;
     return;
   }
@@ -288,12 +292,18 @@ void EegDecider::handle_finalize_decider(
   [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response) {
 
+  /* Publish logs from the previous sample at the beginning of the finalization. */
+  if (!std::isnan(this->previous_sample_time)) {
+    this->decider_wrapper->drain_logs();
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+  }
+
   /* Destroy the Python instance first so its __del__ runs before log draining. */
   if (this->decider_wrapper) {
     this->decider_wrapper->destroy_instance();
   }
 
-  /* Drain and publish any remaining logs (including output from __del__). */
+  /* Drain and publish output from __del__. */
   if (this->decider_wrapper) {
     this->decider_wrapper->drain_logs();
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
@@ -328,6 +338,7 @@ bool EegDecider::reset_state() {
   this->is_enabled = false;
   this->error_occurred = false;
   this->previous_stimulation_time = UNSET_TIME;
+  this->previous_sample_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
   this->next_periodic_processing_time = UNSET_TIME;
 
@@ -510,9 +521,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     request.has_event,
     this->event_queue,
     this->is_coil_at_target);
-
-  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, sample_time);
 
   /* Log and return early if the Python call failed. */
   if (!success) {
@@ -704,6 +712,14 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   }
   double_t sample_time = msg->time;
 
+  /* Publish logs from the previous sample at the beginning of this sample */
+  if (!std::isnan(this->previous_sample_time)) {
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+  }
+
+  /* Update previous sample time for next iteration's log publishing */
+  this->previous_sample_time = sample_time;
+
   /* Check that no error has occurred. */
   if (this->error_occurred) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
@@ -765,7 +781,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
-  }
+}
 
 void EegDecider::spin() {
   rclcpp::spin(this->shared_from_this());

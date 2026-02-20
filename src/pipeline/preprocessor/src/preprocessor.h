@@ -120,6 +120,9 @@ private:
   /* Track last sample index to validate continuity */
   int64_t last_sample_index = -1;
 
+  /* Used for publishing logs from the previous sample at the beginning of the current sample. */
+  double_t previous_sample_time = UNSET_TIME;
+
   StreamInfo stream_info;
 
   RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;

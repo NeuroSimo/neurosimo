@@ -161,6 +161,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
     request->stream_info.sampling_frequency);
 
   // Publish initialization logs from Python constructor
+  this->preprocessor_wrapper->drain_logs();
   publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
   if (!success) {
@@ -193,12 +194,18 @@ void EegPreprocessor::handle_finalize_preprocessor(
   [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
 
+  /* Publish logs from the previous sample at the beginning of the finalization. */
+  if (!std::isnan(this->previous_sample_time)) {
+    this->preprocessor_wrapper->drain_logs();
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+  }
+
   /* Destroy the Python instance first so its __del__ runs before log draining. */
   if (this->preprocessor_wrapper) {
     this->preprocessor_wrapper->destroy_instance();
   }
 
-  /* Drain and publish any remaining logs (including output from __del__). */
+  /* Drain and publish output from __del__. */
   if (this->preprocessor_wrapper) {
     this->preprocessor_wrapper->drain_logs();
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
@@ -230,6 +237,7 @@ bool EegPreprocessor::reset_state() {
   this->pending_session_start = false;
   this->preprocessor_fingerprint = 0;
   this->last_sample_index = -1;
+  this->previous_sample_time = UNSET_TIME;
 
   /* Reset sample buffer. */
   this->sample_buffer.reset(0);
@@ -359,9 +367,6 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     sample_time,
     triggering_sample->pulse_trigger);
 
-  /* Publish buffered Python logs after process() completes to avoid interfering with timing */
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, sample_time);
-
   if (!success) {
     RCLCPP_ERROR(this->get_logger(),
                  "Python call failed, not processing EEG sample at time %.3f (s).",
@@ -451,6 +456,14 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   auto start_time = std::chrono::high_resolution_clock::now();
 
   double_t sample_time = msg->time;
+
+  /* Publish logs from the previous sample at the beginning of this sample */
+  if (!std::isnan(this->previous_sample_time)) {
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+  }
+
+  /* Update previous sample time for next iteration's log publishing */
+  this->previous_sample_time = sample_time;
 
   /* Handle session start marker by marking that we need to carry it over to the next published sample. */
   if (msg->is_session_start) {

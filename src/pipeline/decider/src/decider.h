@@ -81,6 +81,7 @@ private:
   bool reset_state();
 
   void publish_heartbeat();
+  void check_and_publish_logs();
   void publish_health_status(uint8_t health_level, const std::string& message);
 
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
@@ -170,6 +171,10 @@ private:
 
   /* State variables */
   bool error_occurred = false;
+
+  /* Log timer state */
+  bool logs_checked_since_last_timer = false;
+  rclcpp::TimerBase::SharedPtr log_timer;
 
   /* Neuronavigation */
   bool is_coil_at_target = false;

@@ -50,7 +50,7 @@ class ProjectManagerNode(Node):
         self.logger.info(f'Created project directory: {project_dir}')
 
         # Copy project template to the new project directory
-        template_dir = '/app/project_template'
+        template_dir = '/app/bundled_projects/template'
         for item in os.listdir(template_dir):
             source = os.path.join(template_dir, item)
             destination = os.path.join(project_dir, item)

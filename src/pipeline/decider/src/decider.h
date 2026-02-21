@@ -53,13 +53,13 @@ using StreamInfo = eeg_interfaces::msg::StreamInfo;
 struct DeferredProcessingRequest {
   /* The time when processing should actually occur (after look-ahead samples have arrived). */
   double_t scheduled_time;
-  
+
   /* The sample that triggered the processing request. */
   std::shared_ptr<eeg_interfaces::msg::Sample> triggering_sample;
 
-  /* Whether this has an event. */
-  bool has_event;
-  
+  /* The type of processing to perform. */
+  ProcessingType processing_type;
+
   /* Comparison operator for priority queue (min-heap by scheduled_time). */
   bool operator>(const DeferredProcessingRequest& other) const {
     return scheduled_time > other.scheduled_time;
@@ -111,7 +111,7 @@ private:
   void pop_event();
 
   bool is_sample_window_valid() const;
-  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, bool has_event);
+  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingType processing_type);
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 

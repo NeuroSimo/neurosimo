@@ -901,8 +901,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
-    bool pulse_trigger,
-    bool has_event,
+    ProcessingType processing_type,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target) {
 
@@ -918,18 +917,18 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   py::array_t<double>* emg_to_use = py_emg.get();
   int reference_index = this->look_back_samples;
   size_t num_samples = this->look_back_samples + this->look_ahead_samples + 1;
-  
+
   /* Override with pulse-specific arrays if this is a pulse and it has a custom window. */
-  if (pulse_trigger && this->has_custom_pulse_window) {
+  if (processing_type == ProcessingType::Pulse && this->has_custom_pulse_window) {
     time_offsets_to_use = pulse_time_offsets.get();
     eeg_to_use = pulse_eeg.get();
     emg_to_use = pulse_emg.get();
     reference_index = this->pulse_look_back_samples;
     num_samples = this->pulse_look_back_samples + this->pulse_look_ahead_samples + 1;
   }
-  
+
   /* Override with event-specific arrays if this is an event and it has a custom window. */
-  if (has_event && this->has_custom_event_window) {
+  if (processing_type == ProcessingType::Event && this->has_custom_event_window) {
     time_offsets_to_use = event_time_offsets.get();
     eeg_to_use = event_eeg.get();
     emg_to_use = event_emg.get();
@@ -949,14 +948,14 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   /* Call the appropriate Python function. */
   py::object py_result;
   try {
-    if (pulse_trigger) {
+    if (processing_type == ProcessingType::Pulse) {
       /* Call pulse processor if registered. */
       if (!pulse_processor.is_none()) {
         py_result = pulse_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
       } else {
         py_result = py::none();
       }
-    } else if (has_event) {
+    } else if (processing_type == ProcessingType::Event) {
       /* Call event processor if registered. */
       if (!event_processor.is_none()) {
         py_result = event_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);

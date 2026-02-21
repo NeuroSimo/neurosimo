@@ -417,6 +417,11 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
                                             this->preprocessor_fingerprint);
   }
 
+  /* Add system timestamp for when preprocessor published this sample. */
+  preprocessed_sample.system_time_preprocessor_published =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+
   /* Publish the preprocessed sample. */
   preprocessed_eeg_publisher->publish(preprocessed_sample);
 }

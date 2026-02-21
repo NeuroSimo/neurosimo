@@ -31,6 +31,12 @@ namespace py = pybind11;
 const std::string bold_on = "\033[1m";
 const std::string bold_off = "\033[0m";
 
+enum class ProcessingType {
+  Pulse,
+  Event,
+  Periodic
+};
+
 enum class LogLevel : uint8_t {
   INFO = 0,
   WARNING = 1,
@@ -71,8 +77,7 @@ public:
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
-    bool pulse_trigger,
-    bool has_event,
+    ProcessingType processing_type,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target);
 

@@ -900,7 +900,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
-    ProcessingType processing_type,
+    ProcessingReason processing_reason,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target) {
 
@@ -917,7 +917,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   size_t num_samples = this->look_back_samples + this->look_ahead_samples + 1;
 
   /* Override with pulse-specific arrays if this is a pulse and it has a custom window. */
-  if (processing_type == ProcessingType::Pulse && this->has_custom_pulse_window) {
+  if (processing_reason == ProcessingReason::Pulse && this->has_custom_pulse_window) {
     time_offsets_to_use = pulse_time_offsets.get();
     eeg_to_use = pulse_eeg.get();
     emg_to_use = pulse_emg.get();
@@ -926,7 +926,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   }
 
   /* Override with event-specific arrays if this is an event and it has a custom window. */
-  if (processing_type == ProcessingType::Event && this->has_custom_event_window) {
+  if (processing_reason == ProcessingReason::Event && this->has_custom_event_window) {
     time_offsets_to_use = event_time_offsets.get();
     eeg_to_use = event_eeg.get();
     emg_to_use = event_emg.get();
@@ -946,8 +946,8 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   /* Call the appropriate Python function. */
   py::object py_result;
   try {
-    switch (processing_type) {
-      case ProcessingType::Pulse:
+    switch (processing_reason) {
+      case ProcessingReason::Pulse:
         /* Call pulse processor if registered. */
         if (pulse_processor.is_none()) {
           py_result = py::none();
@@ -955,7 +955,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
         }
         py_result = pulse_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
         break;
-      case ProcessingType::Event:
+      case ProcessingReason::Event:
         /* Call event processor if registered. */
         if (event_processor.is_none()) {
           py_result = py::none();
@@ -963,12 +963,12 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
         }
         py_result = event_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
         break;
-      case ProcessingType::Periodic:
+      case ProcessingReason::Periodic:
         /* Call standard process_periodic method (for periodic processing). */
         py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target, false);
         break;
       default:
-        RCLCPP_ERROR(*logger_ptr, "Invalid processing type: %d", static_cast<int>(processing_type));
+        RCLCPP_ERROR(*logger_ptr, "Invalid processing type: %d", static_cast<int>(processing_reason));
         py_result = py::none();
         break;
     }
@@ -1027,6 +1027,10 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   }
 
   if (dict_result.contains("timed_trigger")) {
+    if (processing_reason == ProcessingReason::Pulse || processing_reason == ProcessingReason::Event) {
+      RCLCPP_ERROR(*logger_ptr, "Timed trigger requests are not allowed for pulse or event processing.");
+      return {false, timed_trigger, coil_target};
+    }
     timed_trigger = std::make_shared<pipeline_interfaces::msg::TimedTrigger>();
     timed_trigger->time = dict_result["timed_trigger"].cast<double_t>();
   }

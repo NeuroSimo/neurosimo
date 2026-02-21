@@ -105,6 +105,7 @@ private:
     std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response);
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
+  void detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
   std::tuple<bool, double> consume_next_event(double_t current_time);
   void pop_event();
@@ -158,6 +159,9 @@ private:
 
   /* Used for publishing logs from the previous sample at the beginning of the current sample. */
   double_t previous_sample_time = UNSET_TIME;
+
+  /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
+  int64_t previous_sample_index = -1;
 
   /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
   double_t pulse_lockout_end_time = UNSET_TIME;

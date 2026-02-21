@@ -12,7 +12,7 @@
 
 #include "eeg_interfaces/msg/sample.hpp"
 
-#include "pipeline_interfaces/msg/loopback_latency.hpp"
+#include "pipeline_interfaces/msg/latency.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 
 #include "pipeline_interfaces/msg/timed_trigger.hpp"
@@ -34,7 +34,7 @@ private:
   rclcpp::Service<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
   rclcpp::Service<pipeline_interfaces::srv::InitializeTriggerTimer>::SharedPtr initialize_service;
   rclcpp::Service<pipeline_interfaces::srv::FinalizeTriggerTimer>::SharedPtr finalize_service;
-  rclcpp::Publisher<pipeline_interfaces::msg::LoopbackLatency>::SharedPtr loopback_latency_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr loopback_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;

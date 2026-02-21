@@ -277,19 +277,6 @@ def process_event(
 
 **Processor naming:** Processor method names are arbitrary - they are explicitly mapped in the configuration via `pulse_processor` and `event_processor` keys.
 
-## Processing Precedence
-
-When multiple processing triggers occur at the same sample, only one Python method is called, following this precedence order:
-
-1. **Pulse Events**: `pulse_processor` (if configured) is called
-2. **General Events**: `event_processor` (if configured) is called
-3. **Periodic Processing**: `process_periodic()` is called at regular intervals
-
-**Notes:**
-- When an event occurs at the same time as periodic processing, the event processor takes precedence and the `process_periodic()` method is **not** called for that sample
-- However, the periodic processing timer continues to advance normally, so the next periodic processing will still occur at the expected time
-- Events are processed even during pulse lockout periods; only periodic processing is suppressed during lockout
-
 **Example Timeline:**
 ```
 With periodic_processing_interval=3.0 and first_periodic_processing_at=1.0:

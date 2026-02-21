@@ -236,7 +236,7 @@ bool EegPreprocessor::reset_state() {
   this->error_occurred = false;
   this->pending_session_start = false;
   this->preprocessor_fingerprint = 0;
-  this->last_sample_index = -1;
+  this->previous_sample_index = -1;
   this->previous_sample_time = UNSET_TIME;
 
   /* Reset sample buffer. */
@@ -481,23 +481,24 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
   }
 
   /* Validate sample_index continuity. */
-  if (this->last_sample_index != -1) {
-    int64_t expected_index = this->last_sample_index + 1;
-    if (msg->sample_index != expected_index) {
-      RCLCPP_ERROR(this->get_logger(),
-                   "Sample index discontinuity detected: expected %ld, got %ld at time %.3f (s).",
-                   expected_index, msg->sample_index, sample_time);
-      this->error_occurred = true;
-      this->abort_session("Sample index discontinuity in preprocessor");
-      return;
-    }
+  if (this->previous_sample_index != -1 && msg->sample_index > this->previous_sample_index + 1) {
+    RCLCPP_ERROR(this->get_logger(),
+                  "Sample index discontinuity detected: expected %ld, got %ld at time %.3f (s).",
+                  this->previous_sample_index + 1, msg->sample_index, sample_time);
+    this->error_occurred = true;
+    this->abort_session("Preprocessor sample gap detected");
+    return;
   }
-  this->last_sample_index = msg->sample_index;
 
+  /* Update previous sample index for next iteration. */
+  this->previous_sample_index = msg->sample_index;
+
+  /* Publish a log message if a pulse was delivered. */
   if (msg->pulse_trigger) {
     RCLCPP_INFO(this->get_logger(), "Pulse delivered at: %.1f (s).", sample_time);
   }
 
+  /* Append the sample to the buffer. */
   this->sample_buffer.append(msg);
 
   /* For every sample, create and enqueue a deferred processing request. */

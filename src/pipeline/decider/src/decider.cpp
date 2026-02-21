@@ -184,6 +184,9 @@ void EegDecider::handle_initialize_decider(
   // Set enabled state
   this->is_enabled = request->enabled;
 
+  // Store preprocessor enabled state for backpressure detection
+  this->preprocessor_enabled = request->preprocessor_enabled;
+
   // If not enabled, just mark as disabled and return early
   if (!request->enabled) {
     this->is_enabled = false;
@@ -471,7 +474,7 @@ std::tuple<bool, double> EegDecider::consume_next_event(double_t current_time) {
   while (!this->event_queue.empty()) {
     event_time = this->event_queue.top();
 
-    if (event_time - this->TOLERANCE_S >= current_time - 1.0 / this->stream_info.sampling_frequency) {
+    if (event_time - this->TOLERANCE >= current_time - 1.0 / this->stream_info.sampling_frequency) {
       break;
     }
     this->event_queue.pop();
@@ -483,7 +486,7 @@ std::tuple<bool, double> EegDecider::consume_next_event(double_t current_time) {
   }
 
   /* If the event time is too far in the future, return false. */
-  if (event_time > current_time + this->TOLERANCE_S) {
+  if (event_time > current_time + this->TOLERANCE) {
     return std::make_tuple(false, 0.0);
   }
   return std::make_tuple(true, event_time);
@@ -501,7 +504,7 @@ void EegDecider::process_ready_deferred_requests(double_t current_sample_time) {
     const auto& next_request = this->deferred_processing_queue.top();
 
     /* Check if our current sample time is within the tolerance of the processing time of the next request. */
-    if (current_sample_time >= next_request.scheduled_time - this->TOLERANCE_S) {
+    if (current_sample_time >= next_request.scheduled_time - this->TOLERANCE) {
       /* Process this deferred request. */
       process_deferred_request(next_request, current_sample_time);
       this->deferred_processing_queue.pop();
@@ -795,7 +798,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     }
 
     // Check if it's time to trigger periodic processing.
-    if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE_S) {
+    if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
       /* Move to next processing time and mark that periodic processing should occur. */
       this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
       periodic_processing_triggered = true;
@@ -808,8 +811,11 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     in_lockout_period = true;
   }
 
-  /* Check if periodic processing should trigger. */
-  if (periodic_processing_triggered && !in_lockout_period) {
+  /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
+  bool backpressure_detected = detect_backpressure(msg);
+
+  /* Check if periodic processing should trigger (skip if backpressure detected). */
+  if (periodic_processing_triggered && !in_lockout_period && !backpressure_detected) {
     enqueue_deferred_request(msg, sample_time, ProcessingType::Periodic);
   }
 
@@ -827,6 +833,30 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
+}
+
+bool EegDecider::detect_backpressure(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
+  uint64_t upstream_timestamp_ns = this->preprocessor_enabled ?
+    msg->system_time_preprocessor_published :
+    msg->system_time_experiment_coordinator_published;
+
+  if (upstream_timestamp_ns > 0) {
+    auto current_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    double_t latency = (current_time_ns - upstream_timestamp_ns) / 1e9;  // Convert to seconds
+
+    if (latency > BACKPRESSURE_CUTOFF) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(),
+                          *this->get_clock(),
+                          1000,  // Throttle to once per second
+                          "Backpressure detected: %.3f s latency (cutoff: %.3f s), skipping periodic processing",
+                          latency, BACKPRESSURE_CUTOFF);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void EegDecider::detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {

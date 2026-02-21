@@ -38,3 +38,5 @@ float64 preprocessor_duration  # Time spent in preprocessing (seconds)
 # Metadata
 # ============================================================================
 uint64 system_time_data_source_published
+uint64 system_time_experiment_coordinator_published
+uint64 system_time_preprocessor_published

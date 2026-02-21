@@ -118,7 +118,7 @@ private:
   uint64_t preprocessor_fingerprint = 0;
 
   /* Track last sample index to validate continuity */
-  int64_t last_sample_index = -1;
+  int64_t previous_sample_index = -1;
 
   /* Used for publishing logs from the previous sample at the beginning of the current sample. */
   double_t previous_sample_time = UNSET_TIME;

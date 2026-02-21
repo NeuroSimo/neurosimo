@@ -212,6 +212,9 @@ void EegDecider::handle_initialize_decider(
   // Store stream info
   this->stream_info = request->stream_info;
 
+  // Initialize sample index tracking for gap detection
+  this->previous_sample_index = -1;
+
   // Store session ID and reset decision ID
   this->session_id = request->session_id;
   this->decision_id = 0;
@@ -365,6 +368,7 @@ bool EegDecider::reset_state() {
   this->previous_sample_time = UNSET_TIME;
   this->pulse_lockout_end_time = UNSET_TIME;
   this->next_periodic_processing_time = UNSET_TIME;
+  this->previous_sample_index = -1;
 
   /* Clear the event queue. */
   {
@@ -767,6 +771,9 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
     return;
   }
 
+  /* Check for sample index discontinuity and handle gaps. */
+  detect_and_handle_sample_gap(msg);
+
   /* Append the sample to the buffer. */
   this->sample_buffer.append(msg);
 
@@ -818,6 +825,28 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
+}
+
+void EegDecider::detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+  /* Check for sample index discontinuity (gap detection). */
+  if (this->previous_sample_index != -1 && msg->sample_index > this->previous_sample_index + 1) {
+    uint64_t gap_size = msg->sample_index - this->previous_sample_index - 1;
+    double gap_duration_s = gap_size / static_cast<double>(this->stream_info.sampling_frequency);
+
+    RCLCPP_WARN(this->get_logger(),
+                "Sample index discontinuity detected: expected %lu, received %lu (gap of %lu samples, %.3f s). ",
+                this->previous_sample_index + 1, msg->sample_index, gap_size, gap_duration_s);
+
+    /* Publish degraded health status. */
+    this->publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED, "Sample gap detected");
+
+    /* Reset the ring buffer to avoid processing with non-continuous windows. */
+    size_t buffer_size = this->decider_wrapper->get_buffer_size();
+    this->sample_buffer.reset(buffer_size);
+  }
+
+  /* Update previous sample index for next iteration. */
+  this->previous_sample_index = msg->sample_index;
 }
 
 void EegDecider::spin() {

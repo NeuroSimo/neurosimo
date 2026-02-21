@@ -323,7 +323,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
     }
 
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete the recording "${recordingBagId}"? This action cannot be undone.`
+      `Are you sure you want to delete the recording?`
     )
 
     if (!confirmDelete) {

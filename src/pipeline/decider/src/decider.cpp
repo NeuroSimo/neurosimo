@@ -558,7 +558,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
-    request.processing_type,
+    request.processing_reason,
     this->event_queue,
     this->is_coil_at_target);
 
@@ -681,26 +681,26 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   this->pulse_lockout_end_time = timed_trigger->time + this->decider_wrapper->get_pulse_lockout_duration();
 }
 
-void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingType processing_type) {
+void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason) {
   /* Create a deferred processing request. */
   DeferredProcessingRequest request;
   request.triggering_sample = msg;
-  request.processing_type = processing_type;
+  request.processing_reason = processing_reason;
 
   /* Calculate the number of look-ahead samples needed based on the processing type. */
   int look_ahead_samples;
-  switch (processing_type) {
-    case ProcessingType::Pulse:
+  switch (processing_reason) {
+    case ProcessingReason::Pulse:
       look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_pulse();
       break;
-    case ProcessingType::Event:
+    case ProcessingReason::Event:
       look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_event();
       break;
-    case ProcessingType::Periodic:
+    case ProcessingReason::Periodic:
       look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
       break;
     default:
-      RCLCPP_ERROR(this->get_logger(), "Invalid processing type: %d", static_cast<int>(processing_type));
+      RCLCPP_ERROR(this->get_logger(), "Invalid processing type: %d", static_cast<int>(processing_reason));
       return;
   }
 
@@ -816,19 +816,19 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Check if periodic processing should trigger (skip if backpressure detected). */
   if (periodic_processing_triggered && !in_lockout_period && !backpressure_detected) {
-    enqueue_deferred_request(msg, sample_time, ProcessingType::Periodic);
+    enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
   }
 
   /* Check if any decider-defined events occur at the current sample. */
   auto [has_event, event_time] = consume_next_event(sample_time);
   if (has_event) {
     RCLCPP_INFO(this->get_logger(), "Received decider-defined event at time %.4f (s)", sample_time);
-    enqueue_deferred_request(msg, sample_time, ProcessingType::Event);
+    enqueue_deferred_request(msg, sample_time, ProcessingReason::Event);
   }
 
   /* Check if the sample contains a pulse trigger. */
   if (msg->pulse_trigger) {
-    enqueue_deferred_request(msg, sample_time, ProcessingType::Pulse);
+    enqueue_deferred_request(msg, sample_time, ProcessingReason::Pulse);
   }
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */

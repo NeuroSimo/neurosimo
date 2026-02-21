@@ -61,7 +61,7 @@ struct DeferredProcessingRequest {
   std::shared_ptr<eeg_interfaces::msg::Sample> triggering_sample;
 
   /* The type of processing to perform. */
-  ProcessingType processing_type;
+  ProcessingReason processing_reason;
 
   /* Comparison operator for priority queue (min-heap by scheduled_time). */
   bool operator>(const DeferredProcessingRequest& other) const {
@@ -115,7 +115,7 @@ private:
   void pop_event();
 
   bool is_sample_window_valid() const;
-  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingType processing_type);
+  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason);
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 

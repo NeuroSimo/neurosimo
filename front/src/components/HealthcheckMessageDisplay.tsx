@@ -99,7 +99,7 @@ export const HealthcheckMessageDisplay: React.FC = () => {
   } else if (triggerTimerStatus.health === ComponentHealth.UNKNOWN) {
     displayMessage = 'Trigger Timer unresponsive'
   } else {
-    displayMessage = 'All systems operational'
+    displayMessage = 'System operational'
   }
 
   return (

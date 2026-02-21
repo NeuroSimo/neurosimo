@@ -48,6 +48,9 @@ const uint8_t UNSET_NUM_OF_CHANNELS = 255;
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
 
+/* Backpressure detection threshold: if latency exceeds this value (in seconds), skip periodic processing */
+const double_t BACKPRESSURE_CUTOFF = 0.01;  // 10ms cutoff
+
 using StreamInfo = eeg_interfaces::msg::StreamInfo;
 
 struct DeferredProcessingRequest {
@@ -106,6 +109,7 @@ private:
 
   void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
+  bool detect_backpressure(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
 
   std::tuple<bool, double> consume_next_event(double_t current_time);
   void pop_event();
@@ -142,6 +146,7 @@ private:
   /* Initialization state */
   bool is_initialized = false;
   bool is_enabled = false;
+  bool preprocessor_enabled = false;  /* Track if preprocessor is enabled (affects backpressure detection) */
   std::string initialized_project_name;
   std::string initialized_module_filename;
   std::filesystem::path initialized_working_directory;
@@ -198,7 +203,7 @@ private:
 
   /* When determining if a sample is ready to be processed, allow some tolerance to account
      for finite precision of floating point numbers. */
-  static constexpr double_t TOLERANCE_S = 2 * pow(10, -5);
+  static constexpr double_t TOLERANCE = 2 * pow(10, -5);
 };
 
 #endif //EEG_PROCESSOR_DECIDER_H

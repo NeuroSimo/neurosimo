@@ -142,6 +142,11 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
     }
   }
 
+  /* Add system timestamp for when experiment coordinator published this sample. */
+  enriched.system_time_experiment_coordinator_published =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+
   /* Publish enriched sample. */
   this->enriched_eeg_publisher->publish(enriched);
 

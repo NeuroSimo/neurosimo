@@ -15,8 +15,11 @@ if [ -z "$PROJECTS_ROOT" ]; then
     exit 1
 fi
 
-echo "Copying bundled test project..."
-cp -r "$NEUROSIMO_ROOT/bundled_projects/test" "$PROJECTS_ROOT/test"
+echo "Copying bundled template project..."
+cp -r "$NEUROSIMO_ROOT/bundled_projects/template" "$PROJECTS_ROOT/test"
+
+echo "Adding test project contents..."
+cp -r "$NEUROSIMO_ROOT/bundled_projects/test/." "$PROJECTS_ROOT/test/"
 
 echo "Generating project datasets (100Hz, 1kHz, 3kHz, 5kHz)..."
 

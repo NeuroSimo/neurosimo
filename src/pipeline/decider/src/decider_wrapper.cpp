@@ -125,8 +125,7 @@ bool DeciderWrapper::initialize_module(
   }
 
   /* Reset the module state. */
-  bool success = reset_module_state();
-  if (!success) {
+  if (!reset_module_state()) {
     return false;
   }
 
@@ -907,7 +906,6 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
 
   py::gil_scoped_acquire gil;
 
-  bool success = true;
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
   std::string coil_target;
 
@@ -948,23 +946,31 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   /* Call the appropriate Python function. */
   py::object py_result;
   try {
-    if (processing_type == ProcessingType::Pulse) {
-      /* Call pulse processor if registered. */
-      if (!pulse_processor.is_none()) {
+    switch (processing_type) {
+      case ProcessingType::Pulse:
+        /* Call pulse processor if registered. */
+        if (pulse_processor.is_none()) {
+          py_result = py::none();
+          break;
+        }
         py_result = pulse_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
-      } else {
-        py_result = py::none();
-      }
-    } else if (processing_type == ProcessingType::Event) {
-      /* Call event processor if registered. */
-      if (!event_processor.is_none()) {
+        break;
+      case ProcessingType::Event:
+        /* Call event processor if registered. */
+        if (event_processor.is_none()) {
+          py_result = py::none();
+          break;
+        }
         py_result = event_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
-      } else {
+        break;
+      case ProcessingType::Periodic:
+        /* Call standard process_periodic method (for periodic processing). */
+        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target, false);
+        break;
+      default:
+        RCLCPP_ERROR(*logger_ptr, "Invalid processing type: %d", static_cast<int>(processing_type));
         py_result = py::none();
-      }
-    } else {
-      /* Call standard process_periodic method (for periodic processing). */
-      py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target, false);
+        break;
     }
 
   } catch(const py::error_already_set& e) {
@@ -977,8 +983,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
     
-    success = false;
-    return {success, timed_trigger, coil_target};
+    return {false, timed_trigger, coil_target};
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
@@ -990,20 +995,18 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
       log_buffer.push_back({error_msg, LogLevel::ERROR});
     }
     
-    success = false;
-    return {success, timed_trigger, coil_target};
+    return {false, timed_trigger, coil_target};
   }
 
   /* If the return value is None, return early but mark it as successful. */
   if (py_result.is_none()) {
-    return {success, timed_trigger, coil_target};
+    return {true, timed_trigger, coil_target};
   }
 
   /* If the return value is not None, ensure that it is a dictionary. */
   if (!py::isinstance<py::dict>(py_result)) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary.");
-    success = false;
-    return {success, timed_trigger, coil_target};
+    return {false, timed_trigger, coil_target};
   }
 
   /* Extract the dictionary from the result first */
@@ -1015,9 +1018,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
       RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'timed_trigger', 'sensory_stimuli', 'events', and 'coil_target' are allowed.", key.c_str());
-      success = false;
-
-      return {success, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target};
     }
   }
 
@@ -1033,22 +1034,19 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   if (dict_result.contains("sensory_stimuli")) {
     if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
       RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
-      success = false;
-      return {success, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target};
     }
 
     py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
     if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
-      success = false;
-      return {success, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target};
     }
   }
 
   if (dict_result.contains("events")) {
     if (!py::isinstance<py::list>(dict_result["events"])) {
       RCLCPP_ERROR(*logger_ptr, "events must be a list.");
-      success = false;
-      return {success, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target};
     }
 
     py::list events = dict_result["events"].cast<py::list>();
@@ -1058,7 +1056,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     }
   }
 
-  return {success, timed_trigger, coil_target};
+  return {true, timed_trigger, coil_target};
 }
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;

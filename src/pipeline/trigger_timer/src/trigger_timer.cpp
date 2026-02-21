@@ -51,8 +51,8 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     10);
 
   /* Publisher for timing latency. */
-  this->loopback_latency_publisher = this->create_publisher<pipeline_interfaces::msg::LoopbackLatency>(
-    "/pipeline/latency/trigger_loopback",
+  this->loopback_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
+    "/pipeline/latency/loopback",
     10);
 
   /* Create QoS profile for latched topics */
@@ -111,7 +111,7 @@ void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t samp
     this->current_loopback_latency = sample_time - this->last_loopback_time;
 
     /* Publish loopback latency ROS message. */
-    auto msg = pipeline_interfaces::msg::LoopbackLatency();
+    auto msg = pipeline_interfaces::msg::Latency();
     msg.latency = this->current_loopback_latency;
   
     this->loopback_latency_publisher->publish(msg);  

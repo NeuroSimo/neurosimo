@@ -19,7 +19,7 @@ export const getStatusLabel = (status: number): string => {
   return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || 'Unknown'
 }
 
-interface LoopbackLatency extends ROSLIB.Message {
+interface Latency extends ROSLIB.Message {
   latency: number
 }
 
@@ -54,19 +54,31 @@ interface DecisionTrace extends ROSLIB.Message {
 }
 
 interface SessionStatisticsContextType {
-  loopbackLatency: LoopbackLatency | null
+  loopbackLatency: Latency | null
+  pulseProcessingLatency: Latency | null
+  eventProcessingLatency: Latency | null
   decisionTrace: DecisionTrace | null
 
-  setLoopbackLatency: React.Dispatch<React.SetStateAction<LoopbackLatency | null>>
+  setLoopbackLatency: React.Dispatch<React.SetStateAction<Latency | null>>
+  setPulseProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
+  setEventProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
 }
 
 const defaultSessionStatisticsState: SessionStatisticsContextType = {
   loopbackLatency: null,
+  pulseProcessingLatency: null,
+  eventProcessingLatency: null,
   decisionTrace: null,
 
   setLoopbackLatency: () => {
     console.warn('setLoopbackLatency is not yet initialized.')
+  },
+  setPulseProcessingLatency: () => {
+    console.warn('setPulseProcessingLatency is not yet initialized.')
+  },
+  setEventProcessingLatency: () => {
+    console.warn('setEventProcessingLatency is not yet initialized.')
   },
   setDecisionTrace: () => {
     console.warn('setDecisionTrace is not yet initialized.')
@@ -80,15 +92,17 @@ interface SessionStatisticsProviderProps {
 }
 
 export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps> = ({ children }) => {
-  const [loopbackLatency, setLoopbackLatency] = useState<LoopbackLatency | null>(null)
+  const [loopbackLatency, setLoopbackLatency] = useState<Latency | null>(null)
+  const [pulseProcessingLatency, setPulseProcessingLatency] = useState<Latency | null>(null)
+  const [eventProcessingLatency, setEventProcessingLatency] = useState<Latency | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
-  const latencyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const loopbackLatencyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     /* Subscriber for loopback latency. */
-    const loopbackLatencySubscriber = new Topic<LoopbackLatency>({
+    const loopbackLatencySubscriber = new Topic<Latency>({
       ros: ros,
-      name: '/pipeline/latency/trigger_loopback',
+      name: '/pipeline/latency/loopback',
       messageType: 'pipeline_interfaces/LoopbackLatency',
     })
 
@@ -97,14 +111,38 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
       setLoopbackLatency(message)
 
       // Clear existing timeout
-      if (latencyTimeoutRef.current) {
-        clearTimeout(latencyTimeoutRef.current)
+      if (loopbackLatencyTimeoutRef.current) {
+        clearTimeout(loopbackLatencyTimeoutRef.current)
       }
 
       // Set new timeout to clear latency after 0.5 seconds of no messages
-      latencyTimeoutRef.current = setTimeout(() => {
+      loopbackLatencyTimeoutRef.current = setTimeout(() => {
         setLoopbackLatency(null)
       }, 500)
+    })
+
+    /* Subscriber for pulse processing latency. */
+    const pulseProcessingLatencySubscriber = new Topic<Latency>({
+      ros: ros,
+      name: '/pipeline/latency/pulse_processing',
+      messageType: 'pipeline_interfaces/Latency',
+    })
+
+    pulseProcessingLatencySubscriber.subscribe((message) => {
+      console.log('pulseProcessingLatency', message)
+      setPulseProcessingLatency(message)
+    })
+
+    /* Subscriber for event processing latency. */
+    const eventProcessingLatencySubscriber = new Topic<Latency>({
+      ros: ros,
+      name: '/pipeline/latency/event_processing',
+      messageType: 'pipeline_interfaces/Latency',
+    })
+
+    eventProcessingLatencySubscriber.subscribe((message) => {
+      console.log('eventProcessingLatency', message)
+      setEventProcessingLatency(message)
     })
 
     /* Subscriber for decision info. */
@@ -122,9 +160,11 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     /* Unsubscribers */
     return () => {
       loopbackLatencySubscriber.unsubscribe()
+      pulseProcessingLatencySubscriber.unsubscribe()
+      eventProcessingLatencySubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
-      if (latencyTimeoutRef.current) {
-        clearTimeout(latencyTimeoutRef.current)
+      if (loopbackLatencyTimeoutRef.current) {
+        clearTimeout(loopbackLatencyTimeoutRef.current)
       }
     }
   }, [])
@@ -133,8 +173,12 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     <SessionStatisticsContext.Provider
       value={{
         loopbackLatency,
+        pulseProcessingLatency,
+        eventProcessingLatency,
         decisionTrace,
         setLoopbackLatency,
+        setPulseProcessingLatency,
+        setEventProcessingLatency,
         setDecisionTrace,
       }}
     >

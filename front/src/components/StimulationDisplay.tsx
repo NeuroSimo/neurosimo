@@ -36,7 +36,7 @@ const StimulationPanel = styled(StyledPanel)`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { loopbackLatency, decisionTrace } = useContext(SessionStatisticsContext)
+  const { loopbackLatency, pulseProcessingLatency, eventProcessingLatency, decisionTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
   const { sessionState } = useSession()
   const [positiveDecisionTrace, setPositiveDecisionTrace] = useState<any>(null)
   const [latestDecisionTrace, setLatestDecisionTrace] = useState<any>(null)
@@ -48,9 +48,11 @@ export const StimulationDisplay: React.FC = () => {
         (sessionState.state === SessionStateValue.INITIALIZING || sessionState.state === SessionStateValue.RUNNING)) {
       setPositiveDecisionTrace(null) // Reset for new session
       setLatestDecisionTrace(null) // Reset latest decision trace
+      setPulseProcessingLatency(null) // Reset pulse processing latency
+      setEventProcessingLatency(null) // Reset event processing latency
     }
     setPreviousSessionState(sessionState.state)
-  }, [sessionState.state, previousSessionState])
+  }, [sessionState.state, previousSessionState, setPulseProcessingLatency, setEventProcessingLatency])
 
   // Update latest decision trace from context
   useEffect(() => {
@@ -68,6 +70,8 @@ export const StimulationDisplay: React.FC = () => {
 
   // Latency
   const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedPulseProcessingLatency = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
+  const formattedEventProcessingLatency = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
   const formattedDecisionPathLatency = latestDecisionTrace?.decision_path_latency
     ? (latestDecisionTrace.decision_path_latency * 1000).toFixed(1) + ' ms'
     : '\u2013'
@@ -119,6 +123,14 @@ export const StimulationDisplay: React.FC = () => {
         <StateRow>
           <IndentedStateTitle>Loopback</IndentedStateTitle>
           <StateValue>{formattedLoopbackLatency}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Pulse processing</IndentedStateTitle>
+          <StateValue>{formattedPulseProcessingLatency}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Event processing</IndentedStateTitle>
+          <StateValue>{formattedEventProcessingLatency}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Decision path</IndentedStateTitle>

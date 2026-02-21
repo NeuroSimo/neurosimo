@@ -105,6 +105,16 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/pipeline/decider/log",
     qos_keep_all_logs);
 
+  /* Publisher for pulse processing latency. */
+  this->pulse_processing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
+    "/pipeline/latency/pulse_processing",
+    10);
+
+  /* Publisher for event processing latency. */
+  this->event_processing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
+    "/pipeline/latency/event_processing",
+    10);
+
   /* Service client for timed trigger. */
   this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>(
     "/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()), this->data_plane_callback_group);
@@ -591,6 +601,31 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     this->coil_target_publisher->publish(coil_target_msg);
   }
 
+  /* Calculate the total latency of the decider. */
+  auto end_time = std::chrono::high_resolution_clock::now();
+  uint64_t system_time_decider_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    end_time.time_since_epoch()).count();
+
+  double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
+
+  /* If the processing reason is pulse, publish the processing duration and return early.*/
+  if (request.processing_reason == ProcessingReason::Pulse) {
+    auto latency_msg = pipeline_interfaces::msg::Latency();
+    latency_msg.latency = decider_duration;
+    this->pulse_processing_latency_publisher->publish(latency_msg);
+
+    return;
+  }
+
+  /* If the processing reason is event, publish the processing duration and return early.*/
+  if (request.processing_reason == ProcessingReason::Event) {
+    auto latency_msg = pipeline_interfaces::msg::Latency();
+    latency_msg.latency = decider_duration;
+    this->event_processing_latency_publisher->publish(latency_msg);
+
+    return;
+  }
+
   /* Check if the decision is positive. */
   bool stimulate = (timed_trigger != nullptr);
 
@@ -607,13 +642,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     &trigger_time,
     sizeof(trigger_time),
     this->decision_fingerprint);
-
-  /* Calculate the total latency of the decider. */
-  auto end_time = std::chrono::high_resolution_clock::now();
-  uint64_t system_time_decider_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
-    end_time.time_since_epoch()).count();
-
-  double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
   /* Calculate the latency of the decision path. */
   auto decision_path_latency = (system_time_decider_finished - request.triggering_sample->system_time_data_source_published) / 1e9;  // Convert nanoseconds to seconds
@@ -646,39 +674,34 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   this->decision_trace_publisher->publish(decision_trace);
 
-  /* If the decision is negative, return early. */
-  if (!stimulate) {
-    return;
+  /* If the decision is positive, send timed trigger. */
+  if (stimulate) {
+    /* Check that the minimum intertrial interval has passed. */
+    auto time_since_previous_trial = timed_trigger->time - this->previous_stimulation_time;
+    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
+
+    if (has_minimum_intertrial_interval_passed) {
+      RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", timed_trigger->time);
+
+      auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
+      request_msg->timed_trigger = *timed_trigger;
+      request_msg->session_id = this->session_id;
+      request_msg->decision_id = this->decision_id;
+      request_msg->reference_sample_time = sample_time;
+      this->request_timed_trigger(request_msg);
+
+      /* Update the previous stimulation time. */
+      this->previous_stimulation_time = timed_trigger->time;
+      
+      /* Set the pulse lockout end time. */
+      this->pulse_lockout_end_time = timed_trigger->time + this->decider_wrapper->get_pulse_lockout_duration();
+    } else {
+      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
+      this->minimum_intertrial_interval,
+      time_since_previous_trial);
+    }
   }
-
-  /* Check that the minimum intertrial interval is respected. */
-  auto time_since_previous_trial = timed_trigger->time - this->previous_stimulation_time;
-  auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                                time_since_previous_trial >= this->minimum_intertrial_interval;
-
-  if (!has_minimum_intertrial_interval_passed) {
-    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) not respected (time since previous stimulation: %.3f s), ignoring request.",
-                  this->minimum_intertrial_interval,
-                  time_since_previous_trial);
-    return;
-  }
-
-  /* Send timed trigger if requested. */
-  auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
-
-  request_msg->timed_trigger = *timed_trigger;
-  request_msg->session_id = this->session_id;
-  request_msg->decision_id = this->decision_id;
-  request_msg->reference_sample_time = sample_time;
-  this->request_timed_trigger(request_msg);
-
-  RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", timed_trigger->time);
-
-  /* Update the previous stimulation time. */
-  this->previous_stimulation_time = timed_trigger->time;
-  
-  /* Set the pulse lockout end time. */
-  this->pulse_lockout_end_time = timed_trigger->time + this->decider_wrapper->get_pulse_lockout_duration();
 }
 
 void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason) {

@@ -27,6 +27,7 @@
 
 
 #include "pipeline_interfaces/msg/coil_target.hpp"
+#include "pipeline_interfaces/msg/latency.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
@@ -136,6 +137,8 @@ private:
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr event_processing_latency_publisher;
 
   /* Service server for initialization */
   rclcpp::Service<pipeline_interfaces::srv::InitializeDecider>::SharedPtr initialize_service_server;

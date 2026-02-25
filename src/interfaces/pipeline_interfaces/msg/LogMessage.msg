@@ -23,3 +23,12 @@ uint8 PHASE_INITIALIZATION = 0
 uint8 PHASE_RUNTIME = 1
 uint8 PHASE_RUNTIME_BLOCKED = 2
 uint8 PHASE_FINALIZATION = 3
+
+# Processing path for this message
+uint8 processing_path
+
+# Processing path constants
+uint8 PROCESSING_PATH_UNDETERMINED = 0
+uint8 PROCESSING_PATH_PULSE = 1
+uint8 PROCESSING_PATH_EVENT = 2
+uint8 PROCESSING_PATH_PERIODIC = 3

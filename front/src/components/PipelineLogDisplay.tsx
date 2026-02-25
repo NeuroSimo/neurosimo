@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { StyledPanel, DASHBOARD_PANEL_OFFSET_FROM_TOP } from 'styles/General'
 
-import { LogContext, LogMessage, LogLevel, LogPhase } from 'providers/LogProvider'
+import { LogContext, LogMessage, LogLevel, LogPhase, ProcessingPath } from 'providers/LogProvider'
 
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
@@ -144,8 +144,18 @@ const Timestamp = styled.span<{ $phase: number; $level: number }>`
   }};
 `
 
-const LogText = styled.span`
+const LogText = styled.span<{ $processingPath: number }>`
   padding: 2px 10px;
+  background-color: ${props => {
+    if (props.$processingPath === 1) return '#e8f4f8'  // PULSE - light blue
+    if (props.$processingPath === 2) return '#f0f9e8'  // EVENT - light green
+    return 'transparent'  // UNDETERMINED and PERIODIC - no background
+  }};
+  border-left: ${props => {
+    if (props.$processingPath === 1) return '3px solid #3498db'  // PULSE - blue border
+    if (props.$processingPath === 2) return '3px solid #27ae60'  // EVENT - green border
+    return 'none'  // UNDETERMINED and PERIODIC - no border
+  }};
 `
 
 export const PipelineLogDisplay: React.FC = () => {
@@ -257,7 +267,7 @@ export const PipelineLogDisplay: React.FC = () => {
                 <Timestamp $phase={log.phase} $level={log.level}>
                   {getTimestampLabel(log)}
                 </Timestamp>
-                <LogText>{log.message}</LogText>
+                <LogText $processingPath={log.processing_path}>{log.message}</LogText>
               </LogEntry>
             ))
           )}

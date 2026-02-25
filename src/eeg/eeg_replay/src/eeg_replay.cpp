@@ -340,7 +340,6 @@ void EegReplayNode::playback_loop() {
 
   /* Playback ended. */
   const bool was_stopped = stop_requested_.load();
-  is_streaming_.store(false);
 
   if (!was_stopped) {
     RCLCPP_INFO(this->get_logger(), "Bag playback finished, aborting session");

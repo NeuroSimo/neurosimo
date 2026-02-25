@@ -131,6 +131,7 @@ DECISION_TRACE_PULSE_CONFIRMATION_MAP = {
 LOG_FIELDS = [
     'sample_time',
     'phase',
+    'processing_path',
     'level',
     'message',
 ]
@@ -140,6 +141,14 @@ PHASE_MAP = {
     LogMessage.PHASE_INITIALIZATION: 'initialization',
     LogMessage.PHASE_RUNTIME: 'runtime',
     LogMessage.PHASE_FINALIZATION: 'finalization',
+}
+
+# Processing path mapping for human-readable export (see pipeline_interfaces/msg/LogMessage.msg)
+PROCESSING_PATH_MAP = {
+    LogMessage.PROCESSING_PATH_UNDETERMINED: 'undetermined',
+    LogMessage.PROCESSING_PATH_PULSE: 'pulse',
+    LogMessage.PROCESSING_PATH_EVENT: 'event',
+    LogMessage.PROCESSING_PATH_PERIODIC: 'periodic',
 }
 
 # Sensory stimulus export fields (base fields, parameters added dynamically)
@@ -537,6 +546,10 @@ class SessionExporterNode(Node):
                     # Convert phase to human-readable string
                     phase_value = getattr(log_msg, field)
                     row_data[field] = PHASE_MAP.get(phase_value, f'unknown_{phase_value}')
+                elif field == 'processing_path':
+                    # Convert processing path to human-readable string
+                    processing_path_value = getattr(log_msg, field)
+                    row_data[field] = PROCESSING_PATH_MAP.get(processing_path_value, f'unknown_{processing_path_value}')
                 else:
                     row_data[field] = getattr(log_msg, field)
             writer_info['writer'].writerow(row_data)

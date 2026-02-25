@@ -171,6 +171,19 @@ void EegDecider::handle_initialize_decider(
   const std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Response> response) {
 
+  this->is_enabled = request->enabled;
+
+  // If not enabled, just mark as disabled and return early
+  if (!request->enabled) {
+    this->is_enabled = false;
+    RCLCPP_INFO(this->get_logger(), "Decider marked as disabled: project=%s, module=%s",
+                request->project_name.c_str(), request->module_filename.c_str());
+    response->success = true;
+
+    // Do not shutdown the node if it is not enabled, only in case of error.
+    return;
+  }
+
   // Set safety configuration from request
   this->minimum_intertrial_interval = request->minimum_intertrial_interval;
 
@@ -186,24 +199,6 @@ void EegDecider::handle_initialize_decider(
 
   if (this->minimum_intertrial_interval < 0.5) {
     RCLCPP_WARN(this->get_logger(), "Note: Minimum intertrial interval is very low: %.1f (s)", this->minimum_intertrial_interval);
-  }
-
-  // Set enabled state
-  this->is_enabled = request->enabled;
-
-  // Store preprocessor enabled state for backpressure detection
-  this->preprocessor_enabled = request->preprocessor_enabled;
-
-  // If not enabled, just mark as disabled and return early
-  if (!request->enabled) {
-    this->is_enabled = false;
-    RCLCPP_INFO(this->get_logger(), "Decider marked as disabled: project=%s, module=%s",
-                request->project_name.c_str(), request->module_filename.c_str());
-    response->success = true;
-
-    // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
-    return;
   }
 
   // Change to project working directory
@@ -247,8 +242,11 @@ void EegDecider::handle_initialize_decider(
     module_name = module_name.substr(0, module_name.size() - 3);
   }
 
+  /* Store preprocessor enabled state for backpressure detection. */
+  this->preprocessor_enabled = request->preprocessor_enabled;
+
   /* Create the EEG subscriber based on whether preprocessor is enabled. */
-  std::string topic = request->preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
+  std::string topic = this->preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
   this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
     topic,
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */

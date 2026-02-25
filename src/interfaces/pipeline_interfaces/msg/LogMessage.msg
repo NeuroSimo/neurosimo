@@ -21,8 +21,7 @@ uint8 phase
 # Phase constants
 uint8 PHASE_INITIALIZATION = 0
 uint8 PHASE_RUNTIME = 1
-uint8 PHASE_RUNTIME_BLOCKED = 2
-uint8 PHASE_FINALIZATION = 3
+uint8 PHASE_FINALIZATION = 2
 
 # Processing path for this message
 uint8 processing_path

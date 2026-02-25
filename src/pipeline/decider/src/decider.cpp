@@ -374,7 +374,7 @@ void EegDecider::publish_heartbeat() {
 void EegDecider::check_and_publish_logs() {
   /* Publish any pending Python logs if handle_sample hasn't checked them since the last timer call. */
   if (!this->logs_checked_since_last_timer && !std::isnan(this->previous_sample_time)) {
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME_BLOCKED, this->previous_sample_time);
+    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
   /* Reset the flag for the next timer interval. */

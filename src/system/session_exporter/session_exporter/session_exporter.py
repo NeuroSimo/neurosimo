@@ -139,7 +139,6 @@ LOG_FIELDS = [
 PHASE_MAP = {
     LogMessage.PHASE_INITIALIZATION: 'initialization',
     LogMessage.PHASE_RUNTIME: 'runtime',
-    LogMessage.PHASE_RUNTIME_BLOCKED: 'runtime_blocked',
     LogMessage.PHASE_FINALIZATION: 'finalization',
 }
 

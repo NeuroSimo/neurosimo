@@ -681,8 +681,8 @@ class SessionManagerNode(Node):
         request = FinalizePresenter.Request()
         request.session_id = session_id
 
-        # Call finalize service with 30 second timeout
-        response = self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize', timeout_sec=30.0)
+        # Call finalize service
+        response = self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize')
 
         if response is None or not response.success:
             # Restart the presenter since finalize failed/timed out
@@ -697,8 +697,8 @@ class SessionManagerNode(Node):
         request = FinalizeDecider.Request()
         request.session_id = session_id
 
-        # Call finalize service with 30 second timeout
-        response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize', timeout_sec=30.0)
+        # Call finalize service
+        response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
 
         if response is None or not response.success:
             # Restart the decider since finalize failed/timed out
@@ -714,8 +714,8 @@ class SessionManagerNode(Node):
         request = FinalizePreprocessor.Request()
         request.session_id = session_id
 
-        # Call finalize service with 30 second timeout
-        response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize', timeout_sec=30.0)
+        # Call finalize service
+        response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
 
         if response is None or not response.success:
             # Restart the preprocessor since finalize failed/timed out
@@ -861,7 +861,7 @@ class SessionManagerNode(Node):
         self.logger.info(f'Recording stopped successfully')
         return True
 
-    def call_action(self, client, goal, action_name, timeout_sec=30.0):
+    def call_action(self, client, goal, action_name, timeout_sec=10.0, action_timeout_sec=120.0):
         """Call an action."""
         if not client.wait_for_server(timeout_sec=1.0):
             return None
@@ -899,7 +899,7 @@ class SessionManagerNode(Node):
                         pass
                     return None
 
-                if time.time() - start_time > timeout_sec:
+                if time.time() - start_time > action_timeout_sec:
                     self.logger.error(f'Action {action_name} timed out')
                     try:
                         action_goal_handle.cancel_goal_async()
@@ -916,7 +916,7 @@ class SessionManagerNode(Node):
             self.logger.error(f'Action call to {action_name} failed: {e}')
             return None
 
-    def call_service(self, client, request, service_name, timeout_sec=30.0):
+    def call_service(self, client, request, service_name, timeout_sec=10.0):
         """Call a service."""
         if not client.wait_for_service(timeout_sec=5.0):
             return None

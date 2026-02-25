@@ -252,6 +252,9 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+    volumes:
+      # Allow session manager to restart containers if they timeout during session finalization.
+      - /var/run/docker.sock:/var/run/docker.sock
     network_mode: host
 
   session_recorder:

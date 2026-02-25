@@ -5,9 +5,10 @@ import { faWindowRestore } from '@fortawesome/free-solid-svg-icons'
 
 import {
   StyledPanel,
-  ConfigRow,
-  ConfigLabel,
-  SmallerTitle,
+  StateRow,
+  StateTitle,
+  IndentedStateTitle,
+  StateValue,
   DASHBOARD_PANEL_OFFSET_FROM_TOP,
   DASHBOARD_PANEL_HEIGHT,
   StyledButton,
@@ -107,59 +108,67 @@ export const ExperimentStatePanel: React.FC = () => {
         </InfoIcon>
       </ExperimentStateTitle>
       <Panel>
-        <ConfigRow>
-          <ConfigLabel>Status:</ConfigLabel>
-          <ConfigLabel>{experimentState?.ongoing ? (isPaused ? 'Paused' : (experimentState.in_rest ? 'Rest' : 'Running')) : 'Idle'}</ConfigLabel>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Stage:</ConfigLabel>
-          <ConfigLabel>
+        <StateRow>
+          <StateTitle>Status</StateTitle>
+          <StateValue>{experimentState?.ongoing ? (isPaused ? 'Paused' : (experimentState.in_rest ? 'Rest' : 'Running')) : 'Idle'}</StateValue>
+        </StateRow>
+        <StateRow>
+          <StateTitle>Stage</StateTitle>
+          <StateValue>
             {experimentState?.stage_name
               ? `${experimentState.stage_name} (${(experimentState.stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
               : '—'}
-          </ConfigLabel>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Trial:</ConfigLabel>
-          <ConfigLabel>
+          </StateValue>
+        </StateRow>
+        <StateRow>
+          <StateTitle>Trial</StateTitle>
+          <StateValue>
             {experimentState ? (experimentState.in_rest ? '—' : `${experimentState.trial}/${experimentState.total_trials_in_stage || 0}`) : '—'}
-          </ConfigLabel>
-        </ConfigRow>
-        <ConfigRow>
-          <ConfigLabel>Experiment time:</ConfigLabel>
-          <ConfigLabel>{formatSeconds(experimentState?.experiment_time)}</ConfigLabel>
-        </ConfigRow>
+          </StateValue>
+        </StateRow>
+        <br />
+        <StateRow>
+          <StateTitle>Time</StateTitle>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Session</IndentedStateTitle>
+          <StateValue>{formatSeconds(experimentState?.session_time)}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Experiment</IndentedStateTitle>
+          <StateValue>{formatSeconds(experimentState?.experiment_time)}</StateValue>
+        </StateRow>
         <VariableContentContainer>
           {experimentState?.in_rest ? (
             <>
-              <ConfigRow>
-                <ConfigLabel>Rest elapsed:</ConfigLabel>
-                <ConfigLabel>{formatSeconds(experimentState.rest_elapsed)}</ConfigLabel>
-              </ConfigRow>
-              <ConfigRow>
-                <ConfigLabel>Rest remaining:</ConfigLabel>
-                <ConfigLabel>{formatSeconds(experimentState.rest_remaining)}</ConfigLabel>
-              </ConfigRow>
+              <StateRow>
+                <IndentedStateTitle>Rest elapsed</IndentedStateTitle>
+                <StateValue>{formatSeconds(experimentState.rest_elapsed)}</StateValue>
+              </StateRow>
+              <StateRow>
+                <IndentedStateTitle>Rest remaining</IndentedStateTitle>
+                <StateValue>{formatSeconds(experimentState.rest_remaining)}</StateValue>
+              </StateRow>
             </>
           ) : (
             <>
-              <ConfigRow>
-                <ConfigLabel>Stage elapsed:</ConfigLabel>
-                <ConfigLabel>{formatSeconds(experimentState?.stage_elapsed_time)}</ConfigLabel>
-              </ConfigRow>
-              <ConfigRow style={{ visibility: 'hidden' }}>
-                <ConfigLabel>&nbsp;</ConfigLabel>
-                <ConfigLabel>&nbsp;</ConfigLabel>
-              </ConfigRow>
+              <StateRow>
+                <IndentedStateTitle>Stage elapsed</IndentedStateTitle>
+                <StateValue>{formatSeconds(experimentState?.stage_elapsed_time)}</StateValue>
+              </StateRow>
+              <StateRow style={{ visibility: 'hidden' }}>
+                <IndentedStateTitle>&nbsp;</IndentedStateTitle>
+                <StateValue>&nbsp;</StateValue>
+              </StateRow>
             </>
           )}
         </VariableContentContainer>
         <div style={{ height: '14px' }} />
-        <ConfigRow style={{ justifyContent: 'center', paddingRight: 12 }}>
+        <StateRow style={{ justifyContent: 'center', paddingRight: 12 }}>
           <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing}>
             {pauseResumeLabel}
           </PauseResumeButton>
-        </ConfigRow>
+        </StateRow>
       </Panel>
     </>
   )

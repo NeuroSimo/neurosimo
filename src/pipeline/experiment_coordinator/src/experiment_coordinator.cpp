@@ -501,6 +501,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
     msg.in_rest = false;
     msg.paused = false;
     msg.experiment_time = 0.0;
+    msg.session_time = 0.0;
     msg.stage_name = "";
     msg.stage_index = 0;
     msg.total_stages = 0;
@@ -520,6 +521,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
   msg.in_rest = state.in_rest;
   msg.paused = state.paused;
   msg.experiment_time = experiment_time;
+  msg.session_time = current_time;
   
   /* Stage info */
   size_t total_stages = 0;

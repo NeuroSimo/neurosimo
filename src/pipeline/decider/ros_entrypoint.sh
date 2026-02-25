@@ -21,4 +21,7 @@ source /app/install/setup.bash
 # NumPy operations, whereas setting it to a smaller value such as 1 seems to speed them up.
 export OPENBLAS_NUM_THREADS=1
 
-ros2 launch decider decider.launch.py log-level:="$ROS_LOG_LEVEL"
+while true; do
+    ros2 launch decider decider.launch.py log-level:="$ROS_LOG_LEVEL"
+    echo "Decider exited, restarting..."
+done

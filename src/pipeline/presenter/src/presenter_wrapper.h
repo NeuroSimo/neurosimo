@@ -38,8 +38,6 @@ public:
       const std::string& module_name,
       const std::string& subject_id);
 
-  bool reset_module_state();
-
   bool process(pipeline_interfaces::msg::SensoryStimulus& msg);
 
   /* Exposed to Python, defined in cpp_bindings.cpp. */

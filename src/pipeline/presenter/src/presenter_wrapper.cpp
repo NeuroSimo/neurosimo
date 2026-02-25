@@ -49,20 +49,10 @@ bool PresenterWrapper::initialize_module(
     const std::string& module_name,
     const std::string& subject_id) {
 
-  /* If we have an existing presenter instance, release it which will call the destructor */
-  presenter_instance = nullptr;
-  presenter_module = nullptr;
-
   /* Set the sys.path to include the directory of the module. */
   py::module sys_module = py::module::import("sys");
   py::list sys_path = sys_module.attr("path");
   sys_path.append(directory);
-
-  /* Remove the module from sys.modules if it exists, to ensure it is reloaded. */
-  py::dict sys_modules = sys_module.attr("modules");
-  if (sys_modules.contains(module_name.c_str())) {
-    sys_modules.attr("__delitem__")(module_name.c_str());
-  }
 
   /* Import the module and initialize the presenter instance. */
   try {
@@ -151,14 +141,6 @@ bool PresenterWrapper::initialize_module(
 void PresenterWrapper::destroy_instance() {
   /* Setting to nullptr decrements the Python refcount; in CPython this triggers __del__ synchronously. */
   presenter_instance = nullptr;
-}
-
-bool PresenterWrapper::reset_module_state() {
-  presenter_module = nullptr;
-  presenter_instance = nullptr;
-  stimulus_processors.clear();
-
-  return true;
 }
 
 bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
@@ -257,7 +239,9 @@ void PresenterWrapper::drain_logs() {
 }
 
 PresenterWrapper::~PresenterWrapper() {
-  if (log_server) log_server->stop();
+  if (log_server) {
+    log_server->stop();
+  }
 }
 
 rclcpp::Logger* PresenterWrapper::logger_ptr = nullptr;

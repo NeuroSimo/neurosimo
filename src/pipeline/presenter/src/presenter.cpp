@@ -109,6 +109,8 @@ void EegPresenter::handle_initialize_presenter(
     RCLCPP_INFO(this->get_logger(), "Presenter marked as disabled: project=%s, module=%s",
                 request->project_name.c_str(), request->module_filename.c_str());
     response->success = true;
+
+    // Do not shutdown the node if it is not enabled, only in case of error.
     return;
   }
 
@@ -120,6 +122,9 @@ void EegPresenter::handle_initialize_presenter(
   if (!std::filesystem::exists(module_path)) {
     RCLCPP_ERROR(this->get_logger(), "Module file does not exist: %s", module_path.c_str());
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -132,6 +137,9 @@ void EegPresenter::handle_initialize_presenter(
   if (!filesystem_utils::change_working_directory(presenter_path.string(), this->get_logger())) {
     RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s", presenter_path.string().c_str());
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -158,6 +166,9 @@ void EegPresenter::handle_initialize_presenter(
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -186,42 +197,17 @@ void EegPresenter::handle_finalize_presenter(
   }
 
   /* Destroy the Python instance first so its __del__ runs before log draining. */
-  if (this->presenter_wrapper) {
-    this->presenter_wrapper->destroy_instance();
-  }
+  this->presenter_wrapper->destroy_instance();
 
   /* Drain and publish output from __del__. */
-  if (this->presenter_wrapper) {
-    this->presenter_wrapper->drain_logs();
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
-  }
-
-  // Finalize the presenter module if initialized
-  if (this->is_initialized && this->presenter_wrapper) {
-    bool success = this->presenter_wrapper->reset_module_state();
-    if (!success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to reset presenter module state");
-      response->success = false;
-      return;
-    }
-  }
-
-  // Reset state
-  this->is_initialized = false;
-  this->is_enabled = false;
-  this->error_occurred = false;
-  this->previous_sample_time = std::numeric_limits<double_t>::quiet_NaN();
-  this->initialized_project_name = UNSET_STRING;
-  this->initialized_module_filename = UNSET_STRING;
-  this->initialized_working_directory = "";
-
-  // Clear sensory stimuli queue
-  while (!this->sensory_stimuli.empty()) {
-    this->sensory_stimuli.pop();
-  }
+  this->presenter_wrapper->drain_logs();
+  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
 
   RCLCPP_INFO(this->get_logger(), "Presenter finalized successfully");
   response->success = true;
+
+  /* Shutdown the node to exit cleanly and get a clean state for a new session. */
+  rclcpp::shutdown();
 }
 
 void EegPresenter::publish_python_logs(uint8_t phase, double sample_time) {

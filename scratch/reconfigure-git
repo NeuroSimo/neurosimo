@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Ask for username and email
+echo "Enter your Git username:"
+read USERNAME
+
+echo "Enter your Git email:"
+read EMAIL
+
+# Configure Git globally
+echo "Reconfiguring Git username and email globally..."
+git config --global user.name "$USERNAME"
+git config --global user.email "$EMAIL"
+
+# Verify the changes
+echo "Git configuration updated:"
+git config --global user.name
+git config --global user.email

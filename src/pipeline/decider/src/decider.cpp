@@ -47,10 +47,6 @@ void crash_handler(int sig) {
 EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")) {
   RCLCPP_INFO(this->get_logger(), "Initializing decider...");
 
-  /* Create callback groups for separating data-plane and control-plane operations */
-  this->data_plane_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  this->control_plane_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-
   /* Publisher for heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
@@ -66,13 +62,10 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/decider/health", qos_persist_latest);
 
   /* Subscriber for is coil at target. */
-  rclcpp::SubscriptionOptions subscription_options;
-  subscription_options.callback_group = this->control_plane_callback_group;
   this->is_coil_at_target_subscriber = create_subscription<std_msgs::msg::Bool>(
     IS_COIL_AT_TARGET_TOPIC,
     qos_persist_latest,
-    std::bind(&EegDecider::handle_is_coil_at_target, this, _1),
-    subscription_options);
+    std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
 
   /* Publisher for decision trace. */
   this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
@@ -117,7 +110,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Service client for timed trigger. */
   this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>(
-    "/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()), this->data_plane_callback_group);
+    "/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()));
 
   while (!timed_trigger_client->wait_for_service(2s)) {
     RCLCPP_INFO(get_logger(), "Service /pipeline/timed_trigger not available, waiting...");
@@ -125,7 +118,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Service client for session abort. */
   this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>(
-    "/session/abort", rclcpp::QoS(rclcpp::ServicesQoS()), this->data_plane_callback_group);
+    "/session/abort", rclcpp::QoS(rclcpp::ServicesQoS()));
 
   while (!abort_session_client->wait_for_service(2s)) {
     RCLCPP_INFO(get_logger(), "Service /session/abort not available, waiting...");
@@ -140,27 +133,35 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializeDecider>(
     "/pipeline/decider/initialize",
     std::bind(&EegDecider::handle_initialize_decider, this, std::placeholders::_1, std::placeholders::_2),
-    rclcpp::QoS(rclcpp::ServicesQoS()),
-    this->data_plane_callback_group);
+    rclcpp::QoS(rclcpp::ServicesQoS()));
 
   /* Finalize service server */
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizeDecider>(
     "/pipeline/decider/finalize",
     std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2),
-    rclcpp::QoS(rclcpp::ServicesQoS()),
-    this->data_plane_callback_group);
+    rclcpp::QoS(rclcpp::ServicesQoS()));
 
-  /* Create heartbeat timer. */
-  this->heartbeat_publisher_timer = this->create_wall_timer(
-    std::chrono::milliseconds(500),
-    std::bind(&EegDecider::publish_heartbeat, this),
-    this->control_plane_callback_group);
+  /* Initialize thread control flags */
+  this->heartbeat_thread_running = false;
+  this->log_thread_running = false;
 
-  /* Create log timer that runs every 100ms to check for missed logs. */
-  this->log_timer = this->create_wall_timer(
-    std::chrono::milliseconds(100),
-    std::bind(&EegDecider::check_and_publish_logs, this),
-    this->control_plane_callback_group);
+  /* Start heartbeat thread */
+  this->heartbeat_thread_running = true;
+  this->heartbeat_thread = std::thread([this]() {
+    while (this->heartbeat_thread_running) {
+      this->publish_heartbeat();
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+  });
+
+  /* Start log drain thread */
+  this->log_thread_running = true;
+  this->log_thread = std::thread([this]() {
+    while (this->log_thread_running) {
+      this->check_and_publish_logs();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  });
 
   /* Publish initial health status. */
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
@@ -249,14 +250,11 @@ void EegDecider::handle_initialize_decider(
   this->eeg_subscriber.reset();
 
   std::string topic = request->preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
-  rclcpp::SubscriptionOptions eeg_subscription_options;
-  eeg_subscription_options.callback_group = this->data_plane_callback_group;
   this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
     topic,
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
     EEG_QUEUE_LENGTH,
-    std::bind(&EegDecider::process_sample, this, _1),
-    eeg_subscription_options);
+    std::bind(&EegDecider::process_sample, this, _1));
   
   // Print section header
   log_section_header("Loading decider: " + module_name);
@@ -325,6 +323,20 @@ void EegDecider::handle_initialize_decider(
               request->project_name.c_str(), request->module_filename.c_str());
 
   response->success = true;
+}
+
+EegDecider::~EegDecider() {
+  /* Stop and join threads */
+  this->heartbeat_thread_running = false;
+  this->log_thread_running = false;
+
+  if (this->heartbeat_thread.joinable()) {
+    this->heartbeat_thread.join();
+  }
+
+  if (this->log_thread.joinable()) {
+    this->log_thread.join();
+  }
 }
 
 void EegDecider::handle_finalize_decider(
@@ -903,7 +915,7 @@ void EegDecider::detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfac
 }
 
 void EegDecider::spin() {
-  auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+  auto executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
   executor->add_node(this->shared_from_this());
   executor->spin();
 }

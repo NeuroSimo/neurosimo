@@ -25,6 +25,10 @@ from std_msgs.msg import String
 from threading import Lock, Event, Thread, current_thread
 import time
 import uuid
+import subprocess
+import signal
+import os
+import docker
 
 
 class SessionManagerNode(Node):
@@ -648,15 +652,41 @@ class SessionManagerNode(Node):
         self.logger.info(f'Protocol initialized successfully')
         return True
 
+    def restart_container(self, container_name):
+        """Restart Docker containers matching the given name filter using Docker SDK."""
+        # Connect to Docker daemon
+        client = docker.from_env()
+
+        # Find all containers with the specified name filter
+        containers = client.containers.list(filters={'name': container_name})
+
+        if not containers:
+            self.logger.warn(f'No {container_name} containers found to restart')
+            return False
+
+        container = containers[0]
+        try:
+            # Restart the container
+            container.restart()
+            self.logger.info(f'Restarted {container_name} container: {container.name}')
+        except Exception as e:
+            self.logger.warn(f'Failed to restart container {container.name}: {e}')
+            return False
+
+        return True
+
     # Finalization functions
     def finalize_presenter(self, session_id):
         """Finalize the presenter component."""
         request = FinalizePresenter.Request()
         request.session_id = session_id
-        response = self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize')
+
+        # Call finalize service with 30 second timeout
+        response = self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize', timeout_sec=30.0)
 
         if response is None or not response.success:
-            self.logger.error('Presenter finalization failed')
+            # Restart the presenter since finalize failed/timed out
+            self.restart_container('presenter')
             return False
 
         self.logger.info('Presenter finalized successfully')
@@ -666,10 +696,13 @@ class SessionManagerNode(Node):
         """Finalize the decider component and return its fingerprint."""
         request = FinalizeDecider.Request()
         request.session_id = session_id
-        response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
+
+        # Call finalize service with 30 second timeout
+        response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize', timeout_sec=30.0)
 
         if response is None or not response.success:
-            self.logger.error('Decider finalization failed')
+            # Restart the decider since finalize failed/timed out
+            self.restart_container('decider')
             return False, 0
 
         decision_fingerprint = getattr(response, 'decision_fingerprint', 0)
@@ -680,10 +713,13 @@ class SessionManagerNode(Node):
         """Finalize the preprocessor component and return its fingerprint."""
         request = FinalizePreprocessor.Request()
         request.session_id = session_id
-        response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
+
+        # Call finalize service with 30 second timeout
+        response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize', timeout_sec=30.0)
 
         if response is None or not response.success:
-            self.logger.error('Preprocessor finalization failed')
+            # Restart the preprocessor since finalize failed/timed out
+            self.restart_container('preprocessor')
             return False, 0
 
         preprocessor_fingerprint = getattr(response, 'preprocessor_fingerprint', 0)

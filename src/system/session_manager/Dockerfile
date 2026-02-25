@@ -7,7 +7,8 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y \
     dos2unix \
-    ros-iron-rmw-cyclonedds-cpp && \
+    ros-iron-rmw-cyclonedds-cpp \
+    python3-docker && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the Cyclone DDS configuration

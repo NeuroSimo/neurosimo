@@ -44,8 +44,6 @@ public:
       const size_t emg_size,
       const uint16_t sampling_frequency);
 
-  bool reset_module_state();
-
   bool process(
       eeg_interfaces::msg::Sample& output_sample,
       const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
@@ -88,13 +86,13 @@ private:
   std::unique_ptr<py::array_t<double>> py_eeg;
   std::unique_ptr<py::array_t<double>> py_emg;
 
-  int look_back_samples;
-  int look_ahead_samples;
-  uint16_t sampling_frequency;
+  int look_back_samples = 0;
+  int look_ahead_samples = 0;
+  uint16_t sampling_frequency = 0;
 
   std::size_t buffer_size = 0;
-  std::size_t eeg_size;
-  std::size_t emg_size;
+  std::size_t eeg_size = 0;
+  std::size_t emg_size = 0;
 };
 
 #endif

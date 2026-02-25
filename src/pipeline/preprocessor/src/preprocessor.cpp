@@ -92,13 +92,6 @@ void EegPreprocessor::handle_initialize_preprocessor(
   const std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Response> response) {
   
-  // Reset state
-  if (!this->reset_state()) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor state while initializing");
-    response->success = false;
-    return;
-  }
-
   // Set enabled state
   this->is_enabled = request->enabled;
 
@@ -108,6 +101,8 @@ void EegPreprocessor::handle_initialize_preprocessor(
     RCLCPP_INFO(this->get_logger(), "Preprocessor marked as disabled: project=%s, module=%s",
                 request->project_name.c_str(), request->module_filename.c_str());
     response->success = true;
+
+    // Do not shutdown the node if it is not enabled, only in case of error.
     return;
   }
 
@@ -119,6 +114,9 @@ void EegPreprocessor::handle_initialize_preprocessor(
   if (!std::filesystem::exists(module_path)) {
     RCLCPP_ERROR(this->get_logger(), "Module file does not exist: %s", module_path.c_str());
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -134,6 +132,9 @@ void EegPreprocessor::handle_initialize_preprocessor(
   if (!filesystem_utils::change_working_directory(preprocessor_path.string(), this->get_logger())) {
     RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s", preprocessor_path.string().c_str());
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -167,6 +168,9 @@ void EegPreprocessor::handle_initialize_preprocessor(
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize preprocessor module");
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -201,61 +205,18 @@ void EegPreprocessor::handle_finalize_preprocessor(
   }
 
   /* Destroy the Python instance first so its __del__ runs before log draining. */
-  if (this->preprocessor_wrapper) {
-    this->preprocessor_wrapper->destroy_instance();
-  }
+  this->preprocessor_wrapper->destroy_instance();
 
   /* Drain and publish output from __del__. */
-  if (this->preprocessor_wrapper) {
-    this->preprocessor_wrapper->drain_logs();
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
-  }
+  this->preprocessor_wrapper->drain_logs();
+  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
 
-  /* Store the final fingerprint before resetting state */
+  /* Store the final fingerprint */
   response->preprocessor_fingerprint = this->preprocessor_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->preprocessor_fingerprint);
 
-  response->success = this->reset_state();
-
-  if (!response->success) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor state");
-  } else {
-    RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully");
-  }
-}
-
-bool EegPreprocessor::reset_state() {
-  bool success = true;
-
-  this->initialized_project_name = UNSET_STRING;
-  this->initialized_module_filename = UNSET_STRING;
-  this->initialized_working_directory = "";
-
-  this->is_initialized = false;
-  this->is_enabled = false;
-  this->error_occurred = false;
-  this->pending_session_start = false;
-  this->preprocessor_fingerprint = 0;
-  this->previous_sample_index = -1;
-  this->previous_sample_time = UNSET_TIME;
-
-  /* Reset sample buffer. */
-  this->sample_buffer.reset(0);
-
-  /* Clear deferred processing queue. */
-  {
-    decltype(this->deferred_processing_queue) empty;
-    this->deferred_processing_queue.swap(empty);
-  }
-
-  /* Reset preprocessor wrapper. */
-  if (this->preprocessor_wrapper) {
-    success &= this->preprocessor_wrapper->reset_module_state();
-    if (!success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to reset preprocessor module state");
-    }
-  }
-  return success;
+  /* Shutdown the node to exit cleanly */
+  rclcpp::shutdown();
 }
 
 void EegPreprocessor::publish_heartbeat() {

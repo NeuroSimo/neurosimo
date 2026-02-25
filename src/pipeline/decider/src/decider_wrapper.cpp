@@ -17,7 +17,6 @@ DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
 
   /* Start IPC log server first, so cpp_bindings.log() can forward immediately. */
   log_server = std::make_unique<LogIpcServer>([](std::string&& msg) {
-    std::lock_guard<std::mutex> lock(log_buffer_mutex);
     log_buffer.push_back({std::move(msg), LogLevel::INFO});
   });
   if (!log_server->start()) {
@@ -28,9 +27,6 @@ DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
   interpreter = std::make_unique<py::scoped_interpreter>();
   setup_custom_print();
 
-  /* After interpreter init + setup_custom_print(), release the GIL
-     so executor threads can acquire it in their callbacks. */
-  main_thread_state = PyEval_SaveThread();
 }
 
 void DeciderWrapper::setup_custom_print() {
@@ -116,8 +112,6 @@ bool DeciderWrapper::initialize_module(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue) {
 
-  py::gil_scoped_acquire gil;
-
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
     RCLCPP_ERROR(*logger_ptr, "Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
@@ -157,24 +151,18 @@ bool DeciderWrapper::initialize_module(
   } catch (const py::error_already_set &e) {
     std::string error_msg = std::string("Python import error: ") + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
+
     // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
+    log_buffer.push_back({error_msg, LogLevel::ERROR});
     return false;
 
   } catch (const std::exception &e) {
     std::string error_msg = std::string("C++ error during import: ") + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
+
     // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
-    
+    log_buffer.push_back({error_msg, LogLevel::ERROR});
+
     return false;
   }
 
@@ -186,23 +174,17 @@ bool DeciderWrapper::initialize_module(
   } catch (const py::error_already_set &e) {
     std::string error_msg = std::string("Python initialization error: ") + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
+
     // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
+    log_buffer.push_back({error_msg, LogLevel::ERROR});
     return false;
 
   } catch (const std::exception &e) {
     std::string error_msg = std::string("C++ error during initialization: ") + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
+
     // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
+    log_buffer.push_back({error_msg, LogLevel::ERROR});
     return false;
   }
 
@@ -564,8 +546,6 @@ bool DeciderWrapper::initialize_module(
 }
 
 void DeciderWrapper::destroy_instance() {
-  py::gil_scoped_acquire gil;
-
   /* Initially, there are a maximum of three references to the decider instance:
      - the decider_instance
      - the pulse_processor
@@ -579,8 +559,6 @@ void DeciderWrapper::destroy_instance() {
 }
 
 bool DeciderWrapper::reset_module_state() {
-  py::gil_scoped_acquire gil;
-
   decider_instance = nullptr;
   decider_module = nullptr;
 
@@ -600,8 +578,6 @@ bool DeciderWrapper::reset_module_state() {
 }
 
 bool DeciderWrapper::warm_up() {
-  py::gil_scoped_acquire gil;
-
   if (!decider_instance) {
     RCLCPP_WARN(*logger_ptr, "Cannot warm up: decider instance not available");
     return false;
@@ -672,24 +648,18 @@ bool DeciderWrapper::warm_up() {
     } catch (const py::error_already_set& e) {
       std::string error_msg = std::string("Python error: ") + e.what();
       RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
-      
+
       // Add error to log buffer so it can be published to UI
-      {
-        std::lock_guard<std::mutex> lock(log_buffer_mutex);
-        log_buffer.push_back({error_msg, LogLevel::ERROR});
-      }
-      
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+
       return false;
     } catch (const std::exception& e) {
       std::string error_msg = std::string("C++ error: ") + e.what();
       RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
-      
+
       // Add error to log buffer so it can be published to UI
-      {
-        std::lock_guard<std::mutex> lock(log_buffer_mutex);
-        log_buffer.push_back({error_msg, LogLevel::ERROR});
-      }
-      
+      log_buffer.push_back({error_msg, LogLevel::ERROR});
+
       return false;
     }
   }
@@ -708,12 +678,6 @@ bool DeciderWrapper::warm_up() {
 }
 
 DeciderWrapper::~DeciderWrapper() {
-  /* Restore the main thread state before destroying the interpreter */
-  if (main_thread_state) {
-    PyEval_RestoreThread(main_thread_state);
-    main_thread_state = nullptr;
-  }
-
   py_time_offsets.reset();
   py_eeg.reset();
   py_emg.reset();
@@ -730,7 +694,6 @@ DeciderWrapper::~DeciderWrapper() {
 }
 
 std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
-  std::lock_guard<std::mutex> lock(log_buffer_mutex);
   std::vector<LogEntry> logs = std::move(log_buffer);
   log_buffer.clear();
   return logs;
@@ -912,8 +875,6 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target) {
 
-  py::gil_scoped_acquire gil;
-
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
   std::string coil_target;
 
@@ -984,25 +945,19 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
+
     // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
-    
+    log_buffer.push_back({error_msg, LogLevel::ERROR});
+
     return {false, timed_trigger, coil_target};
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
+
     // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
-    
+    log_buffer.push_back({error_msg, LogLevel::ERROR});
+
     return {false, timed_trigger, coil_target};
   }
 
@@ -1073,4 +1028,3 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
 std::vector<LogEntry> DeciderWrapper::log_buffer;
-std::mutex DeciderWrapper::log_buffer_mutex;

@@ -58,7 +58,7 @@ public:
       FD_ZERO(&readfds);
       FD_SET(fd_, &readfds);
       tv.tv_sec = 0;
-      tv.tv_usec = 1000; // 1ms timeout
+      tv.tv_usec = 10000; // 10ms timeout
 
       int ready = ::select(fd_ + 1, &readfds, nullptr, nullptr, &tv);
       if (ready <= 0) {

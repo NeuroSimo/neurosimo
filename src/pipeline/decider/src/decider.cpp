@@ -359,6 +359,9 @@ void EegDecider::handle_finalize_decider(
   response->decision_fingerprint = this->decision_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session decision fingerprint: 0x%016lx", response->decision_fingerprint);
 
+  RCLCPP_INFO(this->get_logger(), "Decider finalized successfully");
+  response->success = true;
+
   /* Request shutdown */
   this->shutdown_requested = true;
 }

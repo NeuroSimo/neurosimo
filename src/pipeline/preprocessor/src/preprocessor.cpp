@@ -116,7 +116,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -134,7 +134,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -170,7 +170,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -215,8 +215,8 @@ void EegPreprocessor::handle_finalize_preprocessor(
   response->preprocessor_fingerprint = this->preprocessor_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->preprocessor_fingerprint);
 
-  /* Shutdown the node to exit cleanly */
-  rclcpp::shutdown();
+  /* Request shutdown */
+  this->shutdown_requested = true;
 }
 
 void EegPreprocessor::publish_heartbeat() {
@@ -499,8 +499,10 @@ int main(int argc, char *argv[]) {
 
   auto node = std::make_shared<EegPreprocessor>();
 
-  rclcpp::spin(node);
-  rclcpp::shutdown();
+  while (rclcpp::ok() && !node->shutdown_requested) {
+    rclcpp::spin_some(node);
+  }
 
+  rclcpp::shutdown();
   return 0;
 }

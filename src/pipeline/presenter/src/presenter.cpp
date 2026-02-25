@@ -124,7 +124,7 @@ void EegPresenter::handle_initialize_presenter(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -139,7 +139,7 @@ void EegPresenter::handle_initialize_presenter(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -168,7 +168,7 @@ void EegPresenter::handle_initialize_presenter(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -206,8 +206,8 @@ void EegPresenter::handle_finalize_presenter(
   RCLCPP_INFO(this->get_logger(), "Presenter finalized successfully");
   response->success = true;
 
-  /* Shutdown the node to exit cleanly and get a clean state for a new session. */
-  rclcpp::shutdown();
+  /* Request shutdown */
+  this->shutdown_requested = true;
 }
 
 void EegPresenter::publish_python_logs(uint8_t phase, double sample_time) {
@@ -370,8 +370,10 @@ int main(int argc, char *argv[]) {
 
   auto node = std::make_shared<EegPresenter>();
 
-  rclcpp::spin(node);
-  rclcpp::shutdown();
+  while (rclcpp::ok() && !node->shutdown_requested) {
+    rclcpp::spin_some(node);
+  }
 
+  rclcpp::shutdown();
   return 0;
 }

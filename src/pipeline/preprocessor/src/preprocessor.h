@@ -58,6 +58,7 @@ class PreprocessorWrapper;
 class EegPreprocessor : public rclcpp::Node {
 public:
   EegPreprocessor();
+  bool shutdown_requested = false;
 
 private:
   void publish_heartbeat();

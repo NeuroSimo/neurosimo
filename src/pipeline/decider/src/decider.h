@@ -208,6 +208,10 @@ private:
   /* When determining if a sample is ready to be processed, allow some tolerance to account
      for finite precision of floating point numbers. */
   static constexpr double_t TOLERANCE = 2 * pow(10, -5);
+
+public:
+  /* Flag to indicate that shutdown has been requested */
+  bool shutdown_requested = false;
 };
 
 #endif //EEG_PROCESSOR_DECIDER_H

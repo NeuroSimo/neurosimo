@@ -104,6 +104,10 @@ private:
     std::vector<std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus>>, StimulusCompare> sensory_stimuli;
 
   std::unique_ptr<PresenterWrapper> presenter_wrapper;
+
+public:
+  /* Flag to indicate that shutdown has been requested */
+  bool shutdown_requested = false;
 };
 
 #endif //EEG_PROCESSOR_PRESENTER_H

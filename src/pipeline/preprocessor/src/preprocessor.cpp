@@ -215,6 +215,9 @@ void EegPreprocessor::handle_finalize_preprocessor(
   response->preprocessor_fingerprint = this->preprocessor_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->preprocessor_fingerprint);
 
+  RCLCPP_INFO(this->get_logger(), "Preprocessor finalized successfully");
+  response->success = true;
+
   /* Request shutdown */
   this->shutdown_requested = true;
 }

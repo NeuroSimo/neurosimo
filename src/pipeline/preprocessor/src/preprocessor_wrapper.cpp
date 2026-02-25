@@ -59,23 +59,12 @@ bool PreprocessorWrapper::initialize_module(
     return false;
   }
 
-  /* If we have an existing preprocessor instance, release it which will call the destructor. */
-  preprocessor_instance = nullptr;
-  preprocessor_module = nullptr;
-
   /* Set the sys.path to include the directory of the module. */
   py::module sys_module = py::module::import("sys");
   py::list sys_path = sys_module.attr("path");
   sys_path.append(directory);
 
-  /* Remove the module from sys.modules if it exists, to ensure it is reloaded. */
-  py::dict sys_modules = sys_module.attr("modules");
-  if (sys_modules.contains(module_name.c_str())) {
-    sys_modules.attr("__delitem__")(module_name.c_str());
-  }
-
   /* Import the module and initialize the Preprocessor instance. */
-
   try {
     auto imported_module = py::module::import(module_name.c_str());
     preprocessor_module = std::make_unique<py::module>(imported_module);
@@ -175,24 +164,10 @@ void PreprocessorWrapper::destroy_instance() {
   preprocessor_instance = nullptr;
 }
 
-bool PreprocessorWrapper::reset_module_state() {
-  preprocessor_module = nullptr;
-  preprocessor_instance = nullptr;
-
-  py_time_offsets.reset();
-  py_eeg.reset();
-  py_emg.reset();
-
-  RCLCPP_INFO(*logger_ptr, "Preprocessor reset.");
-  return true;
-}
-
 PreprocessorWrapper::~PreprocessorWrapper() {
-  py_time_offsets.reset();
-  py_eeg.reset();
-  py_emg.reset();
-
-  if (log_server) log_server->stop();
+  if (log_server) {
+    log_server->stop();
+  }
 }
 
 std::size_t PreprocessorWrapper::get_buffer_size() const {

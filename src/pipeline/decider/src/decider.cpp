@@ -193,7 +193,7 @@ void EegDecider::handle_initialize_decider(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -211,7 +211,7 @@ void EegDecider::handle_initialize_decider(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -232,7 +232,7 @@ void EegDecider::handle_initialize_decider(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -277,7 +277,7 @@ void EegDecider::handle_initialize_decider(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -307,7 +307,7 @@ void EegDecider::handle_initialize_decider(
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
-    rclcpp::shutdown();
+    this->shutdown_requested = true;
     return;
   }
 
@@ -359,8 +359,8 @@ void EegDecider::handle_finalize_decider(
   response->decision_fingerprint = this->decision_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session decision fingerprint: 0x%016lx", response->decision_fingerprint);
 
-  /* Shutdown the node to exit cleanly and get a clean state for a new session. */
-  rclcpp::shutdown();
+  /* Request shutdown */
+  this->shutdown_requested = true;
 }
 
 void EegDecider::publish_heartbeat() {
@@ -891,8 +891,10 @@ int main(int argc, char *argv[]) {
 
   auto node = std::make_shared<EegDecider>();
 
-  node->spin();
-  rclcpp::shutdown();
+  while (rclcpp::ok() && !node->shutdown_requested) {
+    rclcpp::spin_some(node);
+  }
 
+  rclcpp::shutdown();
   return 0;
 }

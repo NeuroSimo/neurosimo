@@ -14,18 +14,14 @@ def generate_launch_description():
 
     logger = LaunchConfiguration("log-level")
 
-    node_executables = [
-        "eeg_replay",
-    ]
+    node = Node(
+        package="eeg_replay",
+        executable="eeg_replay",
+        name="eeg_replay",
+        arguments=['--ros-args', '--log-level', logger]
+    )
 
-    for node_executable in node_executables:
-        node = Node(
-            package="eeg_replay",
-            executable=node_executable,
-            arguments=['--ros-args', '--log-level', logger]
-        )
-        ld.add_action(node)
-
+    ld.add_action(node)
     ld.add_action(log_arg)
 
     return ld

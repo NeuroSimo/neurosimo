@@ -601,6 +601,10 @@ DeciderWrapper::~DeciderWrapper() {
   if (log_server) {
     log_server->stop();
   }
+
+  /* XXX: Let the interpreter leak - process is exiting anyway. Without this, the
+          process will segfault on exit. Maybe there is a better way to do this? */
+  interpreter.release();
 }
 
 std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {

@@ -21,7 +21,7 @@ PreprocessorWrapper::PreprocessorWrapper(rclcpp::Logger& logger) {
     RCLCPP_WARN(*logger_ptr, "Failed to start log IPC server; worker logs may be lost.");
   }
 
-  guard = std::make_unique<py::scoped_interpreter>();
+  interpreter = std::make_unique<py::scoped_interpreter>();
   setup_custom_print();
 }
 
@@ -168,6 +168,10 @@ PreprocessorWrapper::~PreprocessorWrapper() {
   if (log_server) {
     log_server->stop();
   }
+
+  /* XXX: Let the interpreter leak - process is exiting anyway. Without this, the
+          process will segfault on exit. Maybe there is a better way to do this? */
+  interpreter.release();
 }
 
 std::size_t PreprocessorWrapper::get_buffer_size() const {

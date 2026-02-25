@@ -80,7 +80,7 @@ private:
   std::unique_ptr<py::module> preprocessor_module;
   std::unique_ptr<py::object> preprocessor_instance;
 
-  std::unique_ptr<py::scoped_interpreter> guard;
+  std::unique_ptr<py::scoped_interpreter> interpreter;
 
   std::unique_ptr<py::array_t<double>> py_time_offsets;
   std::unique_ptr<py::array_t<double>> py_eeg;

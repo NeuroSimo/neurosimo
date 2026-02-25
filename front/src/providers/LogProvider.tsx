@@ -24,8 +24,7 @@ export const LogLevel = {
 export const LogPhase = {
   INITIALIZATION: 0,
   RUNTIME: 1,
-  RUNTIME_BLOCKED: 2,
-  FINALIZATION: 3,
+  FINALIZATION: 2,
 } as const
 
 export const ProcessingPath = {

@@ -337,13 +337,11 @@ void EegDecider::handle_finalize_decider(
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
-  /* Destroy the Python instance first so its __del__ runs before log draining. */
   if (this->decider_wrapper) {
+    /* Destroy the Python instance first so its __del__ runs before log draining. */
     this->decider_wrapper->destroy_instance();
-  }
 
-  /* Drain and publish output from __del__. */
-  if (this->decider_wrapper) {
+    /* Drain and publish output from __del__. */
     this->decider_wrapper->drain_logs();
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
   }

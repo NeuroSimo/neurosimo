@@ -45,8 +45,6 @@ void crash_handler(int sig) {
 }
 
 EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")) {
-  RCLCPP_INFO(this->get_logger(), "Initializing decider...");
-
   /* Publisher for heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
@@ -165,18 +163,13 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Publish initial health status. */
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+
+  RCLCPP_INFO(this->get_logger(), "Decider node initialized successfully");
 }
 
 void EegDecider::handle_initialize_decider(
   const std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Request> request,
   std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Response> response) {
-
-  // Reset state
-  if (!this->reset_state()) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to reset decider state while initializing");
-    response->success = false;
-    return;
-  }
 
   // Set safety configuration from request
   this->minimum_intertrial_interval = request->minimum_intertrial_interval;
@@ -185,6 +178,9 @@ void EegDecider::handle_initialize_decider(
   if (this->minimum_intertrial_interval <= 0) {
     RCLCPP_ERROR(this->get_logger(), "Invalid minimum intertrial interval: %.1f (s)", this->minimum_intertrial_interval);
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -204,6 +200,9 @@ void EegDecider::handle_initialize_decider(
     RCLCPP_INFO(this->get_logger(), "Decider marked as disabled: project=%s, module=%s",
                 request->project_name.c_str(), request->module_filename.c_str());
     response->success = true;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -215,6 +214,9 @@ void EegDecider::handle_initialize_decider(
   if (!std::filesystem::exists(module_path)) {
     RCLCPP_ERROR(this->get_logger(), "Module file does not exist: %s", module_path.c_str());
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -226,17 +228,16 @@ void EegDecider::handle_initialize_decider(
   // Store stream info
   this->stream_info = request->stream_info;
 
-  // Initialize sample index tracking for gap detection
-  this->previous_sample_index = -1;
-
   // Store session ID and reset decision ID
   this->session_id = request->session_id;
-  this->decision_id = 0;
 
   // Change working directory to the module directory
   if (!filesystem_utils::change_working_directory(decider_path.string(), this->get_logger())) {
     RCLCPP_ERROR(this->get_logger(), "Failed to change working directory to: %s", decider_path.string().c_str());
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -247,8 +248,6 @@ void EegDecider::handle_initialize_decider(
   }
 
   /* Create the EEG subscriber based on whether preprocessor is enabled. */
-  this->eeg_subscriber.reset();
-
   std::string topic = request->preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
   this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
     topic,
@@ -278,6 +277,9 @@ void EegDecider::handle_initialize_decider(
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module");
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -305,6 +307,9 @@ void EegDecider::handle_initialize_decider(
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
     response->success = false;
+
+    // Shutdown the node to get a clean state after the error.
+    rclcpp::shutdown();
     return;
   }
 
@@ -316,11 +321,7 @@ void EegDecider::handle_initialize_decider(
 
   // Mark as initialized
   this->is_initialized = true;
-
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
-
-  RCLCPP_INFO(this->get_logger(), "Decider initialized successfully: project=%s, module=%s",
-              request->project_name.c_str(), request->module_filename.c_str());
 
   response->success = true;
 }
@@ -349,77 +350,19 @@ void EegDecider::handle_finalize_decider(
     publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
-  if (this->decider_wrapper) {
-    /* Destroy the Python instance first so its __del__ runs before log draining. */
-    this->decider_wrapper->destroy_instance();
+  /* Destroy the Python instance first so its __del__ runs before log draining. */
+  this->decider_wrapper->destroy_instance();
 
-    /* Drain and publish output from __del__. */
-    this->decider_wrapper->drain_logs();
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
-  }
+  /* Drain and publish output from __del__. */
+  this->decider_wrapper->drain_logs();
+  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
 
   /* Store the final fingerprint before resetting state */
   response->decision_fingerprint = this->decision_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session decision fingerprint: 0x%016lx", response->decision_fingerprint);
 
-  response->success = this->reset_state();
-
-  if (!response->success) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to reset decider state");
-  } else {
-    RCLCPP_INFO(this->get_logger(), "Decider finalized successfully");
-  }
-}
-
-bool EegDecider::reset_state() {
-  bool success = true;
-
-  this->initialized_project_name = UNSET_STRING;
-  this->initialized_module_filename = UNSET_STRING;
-  this->initialized_working_directory = "";
-
-  // Reset session and decision tracking
-  this->session_id = {};
-  this->decision_id = 0;
-  this->decision_fingerprint = 0;
-
-  this->is_initialized = false;
-  this->is_enabled = false;
-  this->error_occurred = false;
-  this->logs_checked_since_last_timer = false;
-  this->previous_stimulation_time = UNSET_TIME;
-  this->previous_sample_time = UNSET_TIME;
-  this->pulse_lockout_end_time = UNSET_TIME;
-  this->next_periodic_processing_time = UNSET_TIME;
-  this->previous_sample_index = -1;
-
-  /* Clear the event queue. */
-  {
-    decltype(this->event_queue) empty;
-    this->event_queue.swap(empty);
-  }
-
-  /* Clear deferred processing queue. */
-  {
-    decltype(this->deferred_processing_queue) empty;
-    this->deferred_processing_queue.swap(empty);
-  }
-
-  /* Reset decider wrapper. */
-  if (this->decider_wrapper) {
-    success &= this->decider_wrapper->reset_module_state();
-    if (!success) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to reset decider module state");
-    }
-  }
-
-  /* Reset sample buffer. */
-  this->sample_buffer.reset(0);
-
-  /* Clear sensory stimuli. */
-  this->sensory_stimuli.clear();
-
-  return success;
+  /* Shutdown the node to exit cleanly and get a clean state for a new session. */
+  rclcpp::shutdown();
 }
 
 void EegDecider::publish_heartbeat() {

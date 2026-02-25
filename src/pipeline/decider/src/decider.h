@@ -195,7 +195,7 @@ private:
   bool is_coil_at_target = false;
 
   /* ROS parameters */
-  double_t minimum_intertrial_interval;
+  double_t minimum_intertrial_interval = UNSET_TIME;
 
   /* Event queue for storing events from the Python module. */
   std::priority_queue<double, std::vector<double>, std::greater<double>> event_queue;

@@ -26,7 +26,6 @@ DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
   /* Initialize the Python interpreter. */
   interpreter = std::make_unique<py::scoped_interpreter>();
   setup_custom_print();
-
 }
 
 void DeciderWrapper::setup_custom_print() {
@@ -56,51 +55,6 @@ void DeciderWrapper::log_section_header(const std::string& title) {
   RCLCPP_INFO(*logger_ptr, " ");
 }
 
-void DeciderWrapper::remove_modules(const std::string& base_directory) {
-  py::module sys_module = py::module::import("sys");
-  py::dict sys_modules = sys_module.attr("modules");
-  py::module os_module = py::module::import("os");
-  py::object path_obj = os_module.attr("path");
-
-  std::vector<std::string> modules_to_remove;
-
-  /* Ensure directory is an absolute path. */
-  std::string abs_directory = py::str(path_obj.attr("abspath")(base_directory));
-
-  /* Find modules that are in the specified directory or its subdirectories. */
-  for (auto item : sys_modules) {
-    std::string module_name_str = py::str(item.first).cast<std::string>();
-    py::handle module_handle = item.second;
-
-    try {
-      if (py::hasattr(module_handle, "__file__")) {
-        py::str module_file = module_handle.attr("__file__");
-        std::string abs_module_file = py::str(path_obj.attr("abspath")(module_file));
-
-        if (abs_module_file.find(abs_directory) == 0) {
-          modules_to_remove.push_back(module_name_str);
-          RCLCPP_DEBUG(*logger_ptr, "Marking module for removal: %s", module_name_str.c_str());
-        }
-      }
-    } catch (const py::error_already_set& e) {
-      RCLCPP_WARN(*logger_ptr, "Error processing module %s: %s", module_name_str.c_str(), e.what());
-    }
-  }
-
-  /* Remove the modules. */
-  for (const auto& module_name_str : modules_to_remove) {
-    try {
-      if (sys_modules.contains(module_name_str.c_str())) {
-        sys_modules.attr("__delitem__")(module_name_str.c_str());
-      } else {
-        RCLCPP_WARN(*logger_ptr, "Module %s no longer in sys.modules, skipping removal", module_name_str.c_str());
-      }
-    } catch (const py::error_already_set& e) {
-      RCLCPP_ERROR(*logger_ptr, "Failed to remove module %s: %s", module_name_str.c_str(), e.what());
-    }
-  }
-}
-
 bool DeciderWrapper::initialize_module(
     const std::string& project_directory,
     const std::string& module_directory,
@@ -118,11 +72,6 @@ bool DeciderWrapper::initialize_module(
     return false;
   }
 
-  /* Reset the module state. */
-  if (!reset_module_state()) {
-    return false;
-  }
-
   /* Local storage for logging */
   double default_window_earliest_seconds = 0.0;
   double default_window_latest_seconds = 0.0;
@@ -132,16 +81,6 @@ bool DeciderWrapper::initialize_module(
   py::module sys_module = py::module::import("sys");
   py::list sys_path = sys_module.attr("path");
   sys_path.append(module_directory);
-
-  /* Remove already loaded modules to ensure their reloading. Only remove modules under the
-     specified base directory to ensure that third-party imports such as NumPy are not reloaded -
-     attempting to reload them may result in errors.
-
-     Furthermore, use project directory as the base directory to ensure that previously loaded
-     modules are removed even when the project is changed.
-
-     TODO: Add tests. */
-  remove_modules(project_directory);
 
   /* Import the module. */
   try {
@@ -558,25 +497,6 @@ void DeciderWrapper::destroy_instance() {
   decider_instance = nullptr;
 }
 
-bool DeciderWrapper::reset_module_state() {
-  decider_instance = nullptr;
-  decider_module = nullptr;
-
-  py_time_offsets.reset();
-  py_eeg.reset();
-  py_emg.reset();
-  
-  pulse_time_offsets.reset();
-  pulse_eeg.reset();
-  pulse_emg.reset();
-  
-  event_time_offsets.reset();
-  event_eeg.reset();
-  event_emg.reset();
-
-  return true;
-}
-
 bool DeciderWrapper::warm_up() {
   if (!decider_instance) {
     RCLCPP_WARN(*logger_ptr, "Cannot warm up: decider instance not available");
@@ -678,19 +598,9 @@ bool DeciderWrapper::warm_up() {
 }
 
 DeciderWrapper::~DeciderWrapper() {
-  py_time_offsets.reset();
-  py_eeg.reset();
-  py_emg.reset();
-  
-  pulse_time_offsets.reset();
-  pulse_eeg.reset();
-  pulse_emg.reset();
-  
-  event_time_offsets.reset();
-  event_eeg.reset();
-  event_emg.reset();
-
-  if (log_server) log_server->stop();
+  if (log_server) {
+    log_server->stop();
+  }
 }
 
 std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {

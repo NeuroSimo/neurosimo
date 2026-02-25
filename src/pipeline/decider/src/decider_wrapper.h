@@ -53,8 +53,6 @@ public:
   DeciderWrapper(rclcpp::Logger& logger);
   ~DeciderWrapper();
 
-  void remove_modules(const std::string& base_directory);
-
   bool initialize_module(
       const std::string& project_directory,
       const std::string& module_directory,
@@ -65,8 +63,6 @@ public:
       const uint16_t sampling_frequency,
       std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
       std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue);
-
-  bool reset_module_state();
 
   bool warm_up();
 
@@ -142,9 +138,9 @@ private:
 
   std::unordered_map<std::string, std::chrono::steady_clock::time_point> last_log_time;
 
-  int look_back_samples;
-  int look_ahead_samples;
-  uint16_t sampling_frequency;
+  int look_back_samples = 0;
+  int look_ahead_samples = 0;
+  uint16_t sampling_frequency = 0;
   bool periodic_processing_enabled = false;
   double periodic_processing_interval = 0.0;
   double first_periodic_processing_at = 0.0;
@@ -155,15 +151,15 @@ private:
   bool has_custom_pulse_window = false;
   int pulse_look_back_samples = 0;
   int pulse_look_ahead_samples = 0;
-  
+
   /* Custom window parameters for event processor */
   bool has_custom_event_window = false;
   int event_look_back_samples = 0;
   int event_look_ahead_samples = 0;
 
   std::size_t buffer_size = 0;
-  std::size_t eeg_size;
-  std::size_t emg_size;
+  std::size_t eeg_size = 0;
+  std::size_t emg_size = 0;
 
   bool process_sensory_stimuli_list(
     const py::list& py_sensory_stimuli,

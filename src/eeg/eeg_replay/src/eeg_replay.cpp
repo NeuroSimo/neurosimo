@@ -318,9 +318,15 @@ void EegReplayNode::playback_loop() {
       rclcpp::SerializedMessage serialized(*bag_msg->serialized_data);
       eeg_serializer.deserialize_message(&serialized, &eeg_msg);
 
+      /* Get current high-resolution timestamp for both fields. */
+      auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+
       /* Rewrite the timestamp so downstream consumers see wall-clock time. */
-      eeg_msg.system_time_data_source_published = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+      eeg_msg.system_time_data_source_published = now_ns;
+
+      /* Use the same timestamp for when experiment coordinator (replay) published this sample. */
+      eeg_msg.system_time_experiment_coordinator_published = now_ns;
 
       eeg_pub->publish(eeg_msg);
 

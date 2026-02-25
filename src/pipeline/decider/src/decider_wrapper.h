@@ -20,6 +20,7 @@
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/timed_trigger.hpp"
+#include "pipeline_interfaces/msg/log_message.hpp"
 
 #include "std_msgs/msg/string.hpp"
 
@@ -46,6 +47,7 @@ enum class LogLevel : uint8_t {
 struct LogEntry {
   std::string message;
   LogLevel level;
+  uint8_t processing_path;
 };
 
 class DeciderWrapper {
@@ -97,6 +99,12 @@ public:
   /* Drain any pending log messages. Call at session end. */
   void drain_logs();
 
+  /* Set the current processing path for log messages */
+  static void set_current_processing_path(uint8_t processing_path);
+
+  /* Handle incoming IPC log messages */
+  void handle_ipc_log_message(std::string&& msg);
+
   /* Destroy the Python decider instance, triggering __del__. */
   void destroy_instance();
 
@@ -108,6 +116,9 @@ private:
 
   /* Buffer for Python logs - static to be accessible from static log functions */
   static std::vector<LogEntry> log_buffer;
+
+  /* Current processing path for log messages */
+  static uint8_t current_processing_path;
 
   /* IPC server for receiving logs from multiprocessing workers */
   std::unique_ptr<LogIpcServer> log_server;

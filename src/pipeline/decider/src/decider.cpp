@@ -412,7 +412,8 @@ void EegDecider::publish_python_logs(uint8_t phase, double sample_time) {
     log_msg.sample_time = sample_time;
     log_msg.level = static_cast<uint8_t>(log_entry.level);
     log_msg.phase = phase;
-    
+    log_msg.processing_path = log_entry.processing_path;
+
     batch_msg.messages.push_back(log_msg);
     
     // Log to console with appropriate level

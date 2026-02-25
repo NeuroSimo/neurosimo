@@ -8,6 +8,7 @@ export interface LogMessage extends ROSLIB.Message {
   sample_time: number
   level: number
   phase: number
+  processing_path: number
 }
 
 export interface LogMessages extends ROSLIB.Message {
@@ -25,6 +26,13 @@ export const LogPhase = {
   RUNTIME: 1,
   RUNTIME_BLOCKED: 2,
   FINALIZATION: 3,
+} as const
+
+export const ProcessingPath = {
+  UNDETERMINED: 0,
+  PULSE: 1,
+  EVENT: 2,
+  PERIODIC: 3,
 } as const
 
 interface LogContextType {

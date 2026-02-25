@@ -15,10 +15,13 @@ namespace py = pybind11;
 DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
 
+  /* Initialize processing path to undetermined */
+  current_processing_path = pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_UNDETERMINED;
+
   /* Start IPC log server first, so cpp_bindings.log() can forward immediately. */
-  log_server = std::make_unique<LogIpcServer>([](std::string&& msg) {
-    log_buffer.push_back({std::move(msg), LogLevel::INFO});
-  });
+  log_server = std::make_unique<LogIpcServer>(
+    std::bind(&DeciderWrapper::handle_ipc_log_message, this, std::placeholders::_1)
+  );
   if (!log_server->start()) {
     RCLCPP_WARN(*logger_ptr, "Failed to start log IPC server; worker logs may be lost.");
   }
@@ -92,7 +95,7 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
 
     // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR});
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return false;
 
   } catch (const std::exception &e) {
@@ -100,7 +103,7 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
 
     // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR});
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
 
     return false;
   }
@@ -115,7 +118,7 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
 
     // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR});
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return false;
 
   } catch (const std::exception &e) {
@@ -123,7 +126,7 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
 
     // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR});
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return false;
   }
 
@@ -570,7 +573,7 @@ bool DeciderWrapper::warm_up() {
       RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
 
       // Add error to log buffer so it can be published to UI
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
+      log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
 
       return false;
     } catch (const std::exception& e) {
@@ -578,7 +581,7 @@ bool DeciderWrapper::warm_up() {
       RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
 
       // Add error to log buffer so it can be published to UI
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
+      log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
 
       return false;
     }
@@ -617,6 +620,14 @@ void DeciderWrapper::drain_logs() {
   if (log_server) {
     log_server->drain();
   }
+}
+
+void DeciderWrapper::set_current_processing_path(uint8_t processing_path) {
+  current_processing_path = processing_path;
+}
+
+void DeciderWrapper::handle_ipc_log_message(std::string&& msg) {
+  log_buffer.push_back({std::move(msg), LogLevel::INFO, current_processing_path});
 }
 
 std::size_t DeciderWrapper::get_buffer_size() const {
@@ -831,6 +842,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   try {
     switch (processing_reason) {
       case ProcessingReason::Pulse:
+        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
         /* Call pulse processor if registered. */
         if (pulse_processor.is_none()) {
           py_result = py::none();
@@ -839,6 +851,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
         py_result = pulse_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
         break;
       case ProcessingReason::Event:
+        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
         /* Call event processor if registered. */
         if (event_processor.is_none()) {
           py_result = py::none();
@@ -847,6 +860,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
         py_result = event_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
         break;
       case ProcessingReason::Periodic:
+        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
         /* Call standard process_periodic method (for periodic processing). */
         py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target, false);
         break;
@@ -861,7 +875,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
 
     // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR});
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
 
     return {false, timed_trigger, coil_target};
 
@@ -870,7 +884,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
 
     // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR});
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
 
     return {false, timed_trigger, coil_target};
   }
@@ -942,3 +956,4 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
 std::vector<LogEntry> DeciderWrapper::log_buffer;
+uint8_t DeciderWrapper::current_processing_path;

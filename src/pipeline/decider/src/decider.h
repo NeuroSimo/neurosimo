@@ -8,6 +8,8 @@
 #include <deque>
 #include <cmath>
 #include <queue>
+#include <thread>
+#include <atomic>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -76,14 +78,11 @@ class DeciderWrapper;
 class EegDecider : public rclcpp::Node {
 public:
   EegDecider();
+  ~EegDecider();
 
   void spin();
 
 private:
-  /* Callback groups for separating data-plane and control-plane operations */
-  rclcpp::CallbackGroup::SharedPtr data_plane_callback_group;
-  rclcpp::CallbackGroup::SharedPtr control_plane_callback_group;
-
   bool reset_state();
 
   void publish_heartbeat();
@@ -122,7 +121,8 @@ private:
 
   rclcpp::Logger logger;
 
-  rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
+  std::thread heartbeat_thread;
+  std::atomic<bool> heartbeat_thread_running;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
 
@@ -186,9 +186,10 @@ private:
   /* State variables */
   bool error_occurred = false;
 
-  /* Log timer state */
+  /* Log thread state */
   bool logs_checked_since_last_timer = false;
-  rclcpp::TimerBase::SharedPtr log_timer;
+  std::thread log_thread;
+  std::atomic<bool> log_thread_running;
 
   /* Neuronavigation */
   bool is_coil_at_target = false;

@@ -112,7 +112,6 @@ private:
 
   /* Buffer for Python logs - static to be accessible from static log functions */
   static std::vector<LogEntry> log_buffer;
-  static std::mutex log_buffer_mutex;
 
   /* IPC server for receiving logs from multiprocessing workers */
   std::unique_ptr<LogIpcServer> log_server;
@@ -121,9 +120,6 @@ private:
   std::unique_ptr<py::object> decider_instance;
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
-
-  /* Main thread state for GIL management */
-  PyThreadState* main_thread_state = nullptr;
 
   /* Processor functions */
   py::object pulse_processor;

@@ -14,6 +14,7 @@ bool paused
 
 # Time tracking
 float64 experiment_time        # Pause-adjusted
+float64 session_time           # Seconds since session start
 float64 stage_start_time       # When current stage started
 float64 stage_elapsed_time     # Time in current stage
 

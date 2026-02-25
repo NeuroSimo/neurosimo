@@ -14,6 +14,7 @@ export interface ExperimentState extends ROSLIB.Message {
   in_rest: boolean
   paused: boolean
   experiment_time: number
+  session_time: number
   stage_start_time: number
   stage_elapsed_time: number
   rest_duration: number

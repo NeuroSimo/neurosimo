@@ -193,6 +193,9 @@ export const PipelineLogDisplay: React.FC = () => {
     if (log.phase === LogPhase.INITIALIZATION) return 'Init'
     if (log.phase === LogPhase.FINALIZATION) return 'Final'
     if (log.level === LogLevel.ERROR) return 'Error'
+    // If the sample time is NaN in the backend, it will be null here. This shouldn't happen unless there is a bug,
+    // but if it does, we'll show a question mark.
+    if (log.sample_time == null) return '?'
     return log.sample_time.toFixed(3)
   }
 

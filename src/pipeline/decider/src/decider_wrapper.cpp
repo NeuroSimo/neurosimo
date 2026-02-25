@@ -566,7 +566,15 @@ bool DeciderWrapper::initialize_module(
 void DeciderWrapper::destroy_instance() {
   py::gil_scoped_acquire gil;
 
-  /* Setting to nullptr decrements the Python refcount; in CPython this triggers __del__ synchronously. */
+  /* Initially, there are a maximum of three references to the decider instance:
+     - the decider_instance
+     - the pulse_processor
+     - the event_processor
+
+    Release these references one by one; once the reference count reaches 0, __del__ will be
+    triggered synchronously. */
+  pulse_processor = py::none();
+  event_processor = py::none();
   decider_instance = nullptr;
 }
 

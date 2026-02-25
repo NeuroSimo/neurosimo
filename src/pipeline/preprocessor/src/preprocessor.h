@@ -63,8 +63,6 @@ private:
   void publish_heartbeat();
   void publish_health_status(uint8_t health_level, const std::string& message);
 
-  bool reset_state();
-
   void handle_initialize_preprocessor(
     const std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Request> request,
     std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Response> response);

@@ -12,6 +12,8 @@ RUN apt-get update && \
     python3.11 \
     python3.11-venv \
     python3.11-dev \
+    python3-pip \
+    python3-colcon-common-extensions \
     libgtk-3-dev \
     libsdl2-dev \
     freeglut3-dev \
@@ -28,6 +30,7 @@ RUN apt-get update && \
 # PsychoPy and its dependencies
 ENV DEBIAN_FRONTEND=noninteractive
 
+# XXX: Use Python 3.11 for PsychoPy, as 2026.1.1 does not support Python 3.12 yet.
 RUN python3.11 -m venv /opt/psychopy-venv
 ENV PATH="/opt/psychopy-venv/bin:$PATH"
 
@@ -37,7 +40,7 @@ RUN apt-get update && \
     apt-get install -y libsdl2-2.0-0 libcairo2-dev libpango1.0-dev libglib2.0-dev
 
 RUN pip install --no-cache-dir psychopy==2026.1.1
-RUN pip install --no-cache-dir attrdict3 numpy==1.26.4 scipy==1.8.0
+RUN pip install --no-cache-dir attrdict3 numpy==1.26.4 scipy==1.12.0
 
 # Set the Cyclone DDS configuration
 COPY config/cyclonedds.xml /config/
@@ -53,12 +56,16 @@ COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 COPY src/utils/realtime src/utils/realtime/
 COPY src/utils/filesystem_utils src/utils/filesystem_utils/
-RUN source /opt/ros/jazzy/setup.bash && colcon build
+
+# XXX: Use the default Python version (3.12) for colcon build, as it's required by ROS2 Jazzy.
+RUN PATH="/usr/bin:$PATH" bash -c "source /opt/ros/jazzy/setup.bash && colcon build"
 
 # ROS node
 COPY src/pipeline/common src/pipeline/common/
 COPY src/pipeline/presenter src/pipeline/presenter/
-RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select presenter
+
+# XXX: Use the default Python version (3.12) for colcon build, as it's required by ROS2 Jazzy.
+RUN PATH="/usr/bin:$PATH" bash -c "source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select presenter"
 
 # Copy entrypoint
 WORKDIR /app

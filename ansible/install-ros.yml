@@ -14,7 +14,7 @@
 
     - name: Add Universe repository
       apt_repository:
-        repo: "deb http://archive.ubuntu.com/ubuntu/ {{ ansible_lsb.codename }} universe"
+        repo: "deb http://archive.ubuntu.com/ubuntu/ {{ ansible_facts.lsb.codename }} universe"
         state: present
 
     - name: Install curl
@@ -31,7 +31,7 @@
 
     - name: Download ros2-apt-source deb
       get_url:
-        url: "https://github.com/ros-infrastructure/ros-apt-source/releases/download/{{ ros_apt_source_version.stdout }}/ros2-apt-source_{{ ros_apt_source_version.stdout }}.{{ ansible_lsb.codename }}_all.deb"
+        url: "https://github.com/ros-infrastructure/ros-apt-source/releases/download/{{ ros_apt_source_version.stdout }}/ros2-apt-source_{{ ros_apt_source_version.stdout }}.{{ ansible_facts.lsb.codename }}_all.deb"
         dest: /tmp/ros2-apt-source.deb
 
     - name: Install ros2-apt-source deb

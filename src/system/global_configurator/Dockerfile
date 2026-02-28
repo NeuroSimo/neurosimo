@@ -25,11 +25,11 @@ WORKDIR /app
 COPY src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 COPY src/interfaces/project_interfaces src/interfaces/project_interfaces/
 COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node
 COPY src/system/global_configurator src/system/global_configurator/
-RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select global_configurator
+RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select global_configurator
 
 # Copy entrypoint
 

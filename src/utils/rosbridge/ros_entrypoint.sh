@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-source /opt/ros/iron/setup.bash
+source /opt/ros/jazzy/setup.bash
 source /app/install/setup.bash
 
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=$ROSBRIDGE_PORT

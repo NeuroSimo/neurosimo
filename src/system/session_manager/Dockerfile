@@ -1,4 +1,4 @@
-FROM osrf/ros:iron-desktop@sha256:c82d8b91b11291a2c86fad704534d15662ae1a8ad80a84346c54f756a48f5d40
+FROM docker.io/ros:jazzy@sha256:be7350a0efd17925415a6a3a076d6009b425af7500b0a5cdb5d717e87ef46f39
 
 SHELL ["/bin/bash", "-c"]
 
@@ -7,7 +7,7 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y \
     dos2unix \
-    ros-iron-rmw-cyclonedds-cpp \
+    ros-jazzy-rmw-cyclonedds-cpp \
     python3-docker && \
     rm -rf /var/lib/apt/lists/*
 

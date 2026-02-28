@@ -20,11 +20,11 @@ WORKDIR /app
 
 # ROS interfaces
 COPY src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node
 COPY src/eeg/eeg_monitor src/eeg/eeg_monitor
-RUN source /opt/ros/iron/setup.bash && colcon build --packages-select eeg_monitor
+RUN source /opt/ros/jazzy/setup.bash && colcon build --packages-select eeg_monitor
 
 # Copy entrypoint
 

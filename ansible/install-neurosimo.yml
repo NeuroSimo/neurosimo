@@ -25,9 +25,9 @@
     - name: Assert Ubuntu 24.04 / noble
       assert:
         that:
-          - ansible_distribution == "Ubuntu"
-          - ansible_distribution_release == "noble"
-        fail_msg: "This playbook is intended for Ubuntu 24.04 (noble). Detected {{ ansible_distribution }} {{ ansible_distribution_release }}"
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.distribution_release == "noble"
+        fail_msg: "This playbook is intended for Ubuntu 24.04 (noble). Detected {{ ansible_facts.distribution }} {{ ansible_facts.distribution_release }}"
 
     ########################################################################
     # Prerequisites
@@ -45,7 +45,7 @@
 
     - name: Ensure ROS2 apt source is configured for current Ubuntu codename
       ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_lsb.codename }} main"
+        repo: "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_facts.lsb.codename }} main"
         state: present
         filename: ros2-latest
 
@@ -111,8 +111,8 @@
           - linux-cloud-tools-generic
           - linux-tools-realtime
           - linux-cloud-tools-realtime
-          - "linux-tools-{{ ansible_kernel }}"
-          - "linux-cloud-tools-{{ ansible_kernel }}"
+          - "linux-tools-{{ ansible_facts.kernel }}"
+          - "linux-cloud-tools-{{ ansible_facts.kernel }}"
 
     - name: Check which kernel tool packages are available
       command: "apt-cache show {{ item }}"
@@ -213,13 +213,44 @@
         job: "find {{ target_home }}/.ros/log -type f -mtime +7 -exec rm {} \\;"
 
     ########################################################################
-    # Configure PulseAudio over TCP
+    # Configure PipeWire/PulseAudio over TCP (Ubuntu 24+)
     ########################################################################
-    - name: Append module-native-protocol-tcp to /etc/pulse/default.pa
-      lineinfile:
-        path: /etc/pulse/default.pa
-        line: "load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;172.17.0.0/16 auth-anonymous=1"
-        state: present
+    - name: Create PipeWire TCP audio configuration directory
+      file:
+        path: /etc/pipewire/pipewire-pulse.conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure PipeWire for TCP audio access
+      copy:
+        dest: /etc/pipewire/pipewire-pulse.conf.d/tcp-audio.conf
+        content: |
+          # Enable TCP audio access for Docker containers and localhost
+          # Equivalent to PulseAudio's: load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;172.17.0.0/16 auth-anonymous=1
+          pulse.properties = {
+            server.address = [
+              "unix:native"
+              {
+                address = "tcp:127.0.0.1:4713"
+                client.access = "allow"
+              }
+              {
+                address = "tcp:172.17.0.0/16:4713"
+                client.access = "allow"
+              }
+            ]
+          }
+        mode: '0644'
+
+    - name: Restart PipeWire services to apply TCP configuration
+      shell: |
+        systemctl --user daemon-reload
+        systemctl --user restart pipewire pipewire-pulse wireplumber
+      become: no
+      args:
+        executable: /bin/bash
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.user_uid }}"
 
     ########################################################################
     # Give the user passwordless sudo for specific commands

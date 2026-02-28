@@ -27,11 +27,11 @@ COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY src/utils/realtime src/utils/realtime/
 COPY src/utils/filesystem_utils src/utils/filesystem_utils/
 
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS nodes
 COPY src/pipeline/experiment_coordinator src/pipeline/experiment_coordinator/
-RUN source /opt/ros/iron/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select experiment_coordinator
+RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select experiment_coordinator
 
 # Copy entrypoint
 

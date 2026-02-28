@@ -16,9 +16,19 @@
     projects_root: "{{ target_home }}/projects"
 
     # ROS distro
-    ros_distro: "iron"
+    ros_distro: "jazzy"
 
   tasks:
+    ########################################################################
+    # OS Guard: ensure we're on Ubuntu 24.04 (noble)
+    ########################################################################
+    - name: Assert Ubuntu 24.04 / noble
+      assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_release == "noble"
+        fail_msg: "This playbook is intended for Ubuntu 24.04 (noble). Detected {{ ansible_distribution }} {{ ansible_distribution_release }}"
+
     ########################################################################
     # Prerequisites
     #
@@ -33,7 +43,7 @@
         dest: /usr/share/keyrings/ros-archive-keyring.gpg
         mode: '0644'
 
-    - name: Ensure ROS2 apt source is configured
+    - name: Ensure ROS2 apt source is configured for current Ubuntu codename
       ansible.builtin.apt_repository:
         repo: "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_lsb.codename }} main"
         state: present

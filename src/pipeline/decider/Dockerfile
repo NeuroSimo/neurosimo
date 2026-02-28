@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.2.0-base-ubuntu22.04
+FROM nvidia/cuda:12.6.0-base-ubuntu24.04
 
 SHELL ["/bin/bash", "-c"]
 
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y curl gnupg2 lsb-release && \
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    ros-iron-ros-base \
+    ros-jazzy-ros-base \
     python3-pip \
     python3-tk \
     python3-colcon-common-extensions \
@@ -26,15 +26,24 @@ RUN apt-get update && apt-get install -y \
 ENV PATH=/usr/local/cuda/bin:${PATH}
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
-# Upgrade pip.
-RUN pip3 install --upgrade pip
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # Install PyTorch.
 RUN pip3 install torch torchvision torchaudio
 
-# Install other Python packages.
+# Core scientific packages
 RUN pip3 install matplotlib wandb pyyaml omegaconf tqdm diffusers accelerate lovely-tensors \
-    numpy scipy ema-pytorch scikit-learn mne mne-realtime mne_icalabel pandas py_neuromodulation statsmodels mneflow torchinfo joblib accelerate einops
+    numpy scipy ema-pytorch scikit-learn pandas statsmodels torchinfo joblib einops
+
+# MNE ecosystem
+RUN pip3 install mne mne-realtime mne_icalabel
+
+# mneflow (pins tensorflow, install separately to avoid conflicts)
+RUN pip3 install mneflow
+
+# py_neuromodulation (heavy deps, install last)
+RUN pip3 install py_neuromodulation --no-deps || pip3 install py_neuromodulation
+
 RUN pip3 install spectrum
 
 # Set the Cyclone DDS configuration

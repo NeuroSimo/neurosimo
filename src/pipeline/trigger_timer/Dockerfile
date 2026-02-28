@@ -10,6 +10,7 @@ RUN apt-get update && \
     python3-pip \
     wget \
     tar \
+    libusb-1.0-0-dev \
     ros-jazzy-rmw-cyclonedds-cpp && \
     rm -rf /var/lib/apt/lists/*
 

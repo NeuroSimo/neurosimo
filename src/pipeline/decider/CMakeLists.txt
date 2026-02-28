@@ -37,6 +37,7 @@ target_include_directories(decider
         $<INSTALL_INTERFACE:lib>)
 
 target_link_libraries(decider
+  Python3::Python
   realtime_utils::utils
   filesystem_utils::filesystem_utils
   ${XXHASH_LIBRARIES}

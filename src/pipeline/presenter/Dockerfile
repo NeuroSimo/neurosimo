@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir --upgrade pip wheel "setuptools<=66.1.1" "packagi
 RUN apt-get update && \
     apt-get install -y libsdl2-2.0-0 libcairo2-dev libpango1.0-dev libglib2.0-dev
 
-RUN pip install --no-cache-dir psychopy==2025.1.1
+RUN pip install --no-cache-dir psychopy==2026.1.1
 RUN pip install --no-cache-dir attrdict3 numpy==1.26.4 scipy==1.8.0
 
 # Set the Cyclone DDS configuration

@@ -23,11 +23,11 @@ COPY src/interfaces/project_interfaces src/interfaces/project_interfaces/
 COPY src/interfaces/pipeline_interfaces src/interfaces/pipeline_interfaces/
 COPY src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node
 COPY src/system/recording_manager src/system/recording_manager/
-RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select recording_manager
+RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select recording_manager
 
 # Copy entrypoint
 

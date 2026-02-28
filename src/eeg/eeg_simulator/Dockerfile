@@ -27,11 +27,11 @@ COPY src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY src/utils/realtime src/utils/realtime/
 
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node
 COPY src/eeg/eeg_simulator src/eeg/eeg_simulator/
-RUN source /opt/ros/iron/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select eeg_simulator
+RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select eeg_simulator
 
 # Copy entrypoint
 

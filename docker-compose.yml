@@ -180,15 +180,18 @@ services:
       - .env
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
-      # Mount PulseAudio configuration
-      - '~/.config/pulse:/root/.config/pulse'
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
+      # Mount PipeWire configuration and sockets
+      - '~/.config/pipewire:/root/.config/pipewire'
+      - '/run/user/${UID:-1000}/pipewire-0:/run/user/0/pipewire-0'
     environment:
       # Needed for X11 forwarding.
       - DISPLAY
-      # Set PulseAudio server address
-      - PULSE_SERVER=localhost
+      # PipeWire/PulseAudio compatibility
+      - PULSE_SERVER=unix:/run/user/0/pipewire-0
+      - XDG_RUNTIME_DIR=/run/user/0
+      # ROS environment
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
     # The container needs to be privileged to set real-time priority.

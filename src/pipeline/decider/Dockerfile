@@ -53,12 +53,12 @@ COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY src/utils/realtime src/utils/realtime/
 COPY src/utils/filesystem_utils src/utils/filesystem_utils/
 
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node
 COPY src/pipeline/common src/pipeline/common/
 COPY src/pipeline/decider src/pipeline/decider/
-RUN source /opt/ros/iron/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select decider
+RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select decider
 
 # Copy CUDA test script
 COPY src/pipeline/decider/test_cuda.py /app

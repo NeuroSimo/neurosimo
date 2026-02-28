@@ -26,11 +26,11 @@ COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY src/utils/realtime src/utils/realtime/
 COPY src/utils/filesystem_utils src/utils/filesystem_utils/
 
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS nodes
 COPY src/pipeline/stimulation_tracer src/pipeline/stimulation_tracer/
-RUN source /opt/ros/iron/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select stimulation_tracer
+RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select stimulation_tracer
 
 # Copy entrypoint
 

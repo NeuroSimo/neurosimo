@@ -40,11 +40,11 @@ COPY src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
 COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
 COPY src/utils/realtime src/utils/realtime/
 
-RUN source /opt/ros/iron/setup.bash && colcon build
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node
 COPY src/pipeline/trigger_timer src/pipeline/trigger_timer/
-RUN source /opt/ros/iron/setup.bash && colcon build --symlink-install --packages-select trigger_timer
+RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select trigger_timer
 
 # Copy entrypoint
 

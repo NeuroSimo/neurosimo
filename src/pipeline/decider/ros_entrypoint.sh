@@ -14,7 +14,7 @@ fi
 
 set -e
 
-source /opt/ros/iron/setup.bash
+source /opt/ros/jazzy/setup.bash
 source /app/install/setup.bash
 
 # The default number of threads used by OpenBLAS is the number of cores; this seems to slow down

@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-tk \
     python3-colcon-common-extensions \
-    ros-iron-rmw-cyclonedds-cpp \
+    ros-jazzy-rmw-cyclonedds-cpp \
     libxxhash-dev \
     build-essential \
     dos2unix \

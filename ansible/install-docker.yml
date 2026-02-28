@@ -18,9 +18,9 @@
     - name: Assert Ubuntu 24.04 / noble
       assert:
         that:
-          - ansible_distribution == "Ubuntu"
-          - ansible_distribution_release == "noble"
-        fail_msg: "This playbook is intended for Ubuntu 24.04 (noble). Detected {{ ansible_distribution }} {{ ansible_distribution_release }}"
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.distribution_release == "noble"
+        fail_msg: "This playbook is intended for Ubuntu 24.04 (noble). Detected {{ ansible_facts.distribution }} {{ ansible_facts.distribution_release }}"
 
     # -------------------------------------------------------------------------
     # 1) Install prerequisites
@@ -81,7 +81,7 @@
         dest: "{{ docker_repo_file }}"
         mode: '0644'
         content: |
-          deb [arch=amd64 signed-by={{ docker_keyring_path }}] {{ docker_repo_url }} {{ ansible_lsb.codename }} stable
+          deb [arch=amd64 signed-by={{ docker_keyring_path }}] {{ docker_repo_url }} {{ ansible_facts.lsb.codename }} stable
 
     # -------------------------------------------------------------------------
     # 5) Update cache

@@ -8,10 +8,9 @@ RUN apt-get update && \
     apt-get install -y \
     dos2unix \
     ros-jazzy-rmw-cyclonedds-cpp \
-    python3-pip && \
+    python3-pip \
+    python3-watchdog && \
     rm -rf /var/lib/apt/lists/*
-
-RUN pip3 install watchdog
 
 # Set the Cyclone DDS configuration
 COPY config/cyclonedds.xml /config/

@@ -24,12 +24,12 @@ fi
 # Run the Docker installation playbook
 ansible-playbook -i 'localhost,' ansible/install-docker.yml \
   --connection=local --become \
-  --extra-vars "ansible_become_password=$SUDO_PASS"
+  --extra-vars "ansible_become_password='$SUDO_PASS'"
 
 # Run the ROS installation playbook
 ansible-playbook -i 'localhost,' ansible/install-ros.yml \
   --connection=local --become \
-  --extra-vars "ansible_become_password=$SUDO_PASS"
+  --extra-vars "ansible_become_password='$SUDO_PASS'"
 
 # Function to check if the kernel is preempt_rt
 is_preempt_rt() {
@@ -105,7 +105,7 @@ if [ "$USE_GPU" = true ]; then
 
             ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml \
               --connection=local --become \
-              --extra-vars "ansible_become_password=$SUDO_PASS"
+              --extra-vars "ansible_become_password='$SUDO_PASS'"
         fi
     else
         # Standard kernel - install drivers using package manager
@@ -117,7 +117,7 @@ if [ "$USE_GPU" = true ]; then
                 echo "Installing NVIDIA drivers..."
                 ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers.yml \
                   --connection=local --become \
-                  --extra-vars "ansible_become_password=$SUDO_PASS"
+                  --extra-vars "ansible_become_password='$SUDO_PASS'"
                 echo ""
                 echo "NVIDIA drivers installed. A reboot is required for the drivers to take effect."
             fi
@@ -129,13 +129,13 @@ if [ "$USE_GPU" = true ]; then
     # Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
     ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml \
       --connection=local --become \
-      --extra-vars "ansible_become_password=$SUDO_PASS"
+      --extra-vars "ansible_become_password='$SUDO_PASS'"
 fi
 
 # Run the NeuroSimo setup playbook with GPU flag
 ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml \
   --connection=local --become \
-  --extra-vars "ansible_become_password=$SUDO_PASS use_gpu=$USE_GPU"
+  --extra-vars "ansible_become_password='$SUDO_PASS' use_gpu=$USE_GPU"
 
 # Source environment to get ROS base installation
 source ~/.bash_env > /dev/null

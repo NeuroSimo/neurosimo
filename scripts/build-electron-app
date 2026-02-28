@@ -13,4 +13,15 @@ DISABLE_ESLINT_PLUGIN=true npm run build
 npm run electron-pack-linux
 cd "$PROJECT_ROOT"
 
+echo "Fixing Chrome sandbox permissions..."
+# Fix the SUID sandbox helper binary permissions for Electron
+CHROME_SANDBOX_PATH="$PROJECT_ROOT/front/dist-electron/linux-unpacked/chrome-sandbox"
+if [ -f "$CHROME_SANDBOX_PATH" ]; then
+    sudo chown root:root "$CHROME_SANDBOX_PATH"
+    sudo chmod 4755 "$CHROME_SANDBOX_PATH"
+    echo "Chrome sandbox permissions fixed."
+else
+    echo "Warning: Chrome sandbox file not found at $CHROME_SANDBOX_PATH"
+fi
+
 echo "Electron app build complete!"

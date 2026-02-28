@@ -89,6 +89,15 @@ target_include_directories(cpp_bindings
     ${CMAKE_CURRENT_SOURCE_DIR}/../common/include
 )
 
+target_link_libraries(cpp_bindings
+  Python3::Python
+  realtime_utils::utils
+  filesystem_utils::filesystem_utils
+  ${XXHASH_LIBRARIES}
+)
+
+target_include_directories(cpp_bindings PRIVATE ${XXHASH_INCLUDE_DIRS})
+
 ament_target_dependencies(
   cpp_bindings
   pybind11_vendor

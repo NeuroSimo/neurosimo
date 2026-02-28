@@ -213,7 +213,7 @@
         job: "find {{ target_home }}/.ros/log -type f -mtime +7 -exec rm {} \\;"
 
     ########################################################################
-    # Configure PipeWire/PulseAudio over TCP (Ubuntu 24+)
+    # Configure PipeWire/PulseAudio over TCP
     ########################################################################
     - name: Create PipeWire TCP audio configuration directory
       file:

@@ -294,7 +294,7 @@ void EegReplayNode::playback_loop() {
     auto bag_msg = reader.read_next();
 
     /* Sleep to preserve original timing between messages. */
-    const auto bag_ts = bag_msg->time_stamp;
+    const auto bag_ts = bag_msg->recv_timestamp;
     if (!timing_initialized) {
       first_bag_ts    = bag_ts;
       first_wall_time = std::chrono::steady_clock::now();

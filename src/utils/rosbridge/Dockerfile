@@ -8,13 +8,10 @@ RUN apt-get update && \
     apt-get install -y \
     dos2unix \
     python3-pip \
-    ros-iron-ament-cmake-mypy \
+    python3-tornado \
+    ros-jazzy-ament-cmake-mypy \
     ros-jazzy-rmw-cyclonedds-cpp && \
     rm -rf /var/lib/apt/lists/*
-
-RUN pip install \
-    pymongo \
-    tornado
 
 # Set the Cyclone DDS configuration
 COPY config/cyclonedds.xml /config/

@@ -1,5 +1,5 @@
 ---
-- name: Install Docker Engine and Docker Compose Plugin on Ubuntu 22.04
+- name: Install Docker Engine and Docker Compose Plugin on Ubuntu 24.04
   hosts: all
   become: yes
   connection: local
@@ -15,12 +15,12 @@
     # -------------------------------------------------------------------------
     # 0) Guardrails / sanity checks
     # -------------------------------------------------------------------------
-    - name: Assert Ubuntu 22.04 / jammy
+    - name: Assert Ubuntu 24.04 / noble
       assert:
         that:
           - ansible_distribution == "Ubuntu"
-          - ansible_distribution_release == "jammy"
-        fail_msg: "This playbook is intended for Ubuntu 22.04 (jammy). Detected {{ ansible_distribution }} {{ ansible_distribution_release }}"
+          - ansible_distribution_release == "noble"
+        fail_msg: "This playbook is intended for Ubuntu 24.04 (noble). Detected {{ ansible_distribution }} {{ ansible_distribution_release }}"
 
     # -------------------------------------------------------------------------
     # 1) Install prerequisites

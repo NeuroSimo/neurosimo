@@ -5,23 +5,26 @@
   <arg name="ssl" default="false" />
   <arg name="certfile" default=""/>
   <arg name="keyfile" default="" />
+  <arg name="use_events_executor" default="false" />
 
   <arg name="namespace" default="" />
 
   <arg name="retry_startup_delay" default="5.0" />
 
   <arg name="fragment_timeout" default="600" />
-  <arg name="delay_between_messages" default="0" />
+  <arg name="delay_between_messages" default="0.0" />
   <arg name="max_message_size" default="10000000" />
   <arg name="unregister_timeout" default="10.0" />
 
   <arg name="use_compression" default="false" />
-  <arg name="call_services_in_new_thread" default="false" />
-  <arg name="send_action_goals_in_new_thread" default="false" />
+  <arg name="call_services_in_new_thread" default="true" />
+  <arg name="default_call_service_timeout" default="5.0" />
+  <arg name="send_action_goals_in_new_thread" default="true" />
 
   <arg name="topics_glob" default="" />
   <arg name="services_glob" default="" />
   <arg name="params_glob" default="" />
+  <arg name="params_timeout" default="5.0" />
   <arg name="bson_only_mode" default="false" />
 
   <arg name="respawn" default="false"/>
@@ -35,6 +38,7 @@
       <param name="port" value="$(var port)"/>
       <param name="address" value="$(var address)"/>
       <param name="url_path" value="$(var url_path)"/>
+      <param name="use_events_executor" value="$(var use_events_executor)"/>
       <param name="retry_startup_delay" value="$(var retry_startup_delay)"/>
       <param name="fragment_timeout" value="$(var fragment_timeout)"/>
       <param name="delay_between_messages" value="$(var delay_between_messages)"/>
@@ -42,6 +46,7 @@
       <param name="unregister_timeout" value="$(var unregister_timeout)"/>
       <param name="use_compression" value="$(var use_compression)"/>
       <param name="call_services_in_new_thread" value="$(var call_services_in_new_thread)"/>
+      <param name="default_call_service_timeout" value="$(var default_call_service_timeout)"/>
       <param name="send_action_goals_in_new_thread" value="$(var send_action_goals_in_new_thread)"/>
 
       <param name="topics_glob" value="$(var topics_glob)"/>
@@ -55,6 +60,7 @@
       <param name="port" value="$(var port)"/>
       <param name="address" value="$(var address)"/>
       <param name="url_path" value="$(var url_path)"/>
+      <param name="use_events_executor" value="$(var use_events_executor)"/>
       <param name="retry_startup_delay" value="$(var retry_startup_delay)"/>
       <param name="fragment_timeout" value="$(var fragment_timeout)"/>
       <param name="delay_between_messages" value="$(var delay_between_messages)"/>
@@ -62,6 +68,7 @@
       <param name="unregister_timeout" value="$(var unregister_timeout)"/>
       <param name="use_compression" value="$(var use_compression)"/>
       <param name="call_services_in_new_thread" value="$(var call_services_in_new_thread)"/>
+      <param name="default_call_service_timeout" value="$(var default_call_service_timeout)"/>
       <param name="send_action_goals_in_new_thread" value="$(var send_action_goals_in_new_thread)"/>
 
       <param name="topics_glob" value="$(var topics_glob)"/>
@@ -76,5 +83,6 @@
     <param name="topics_glob" value="$(var topics_glob)"/>
     <param name="services_glob" value="$(var services_glob)"/>
     <param name="params_glob" value="$(var params_glob)"/>
+    <param name="params_timeout" value="$(var params_timeout)"/>
   </node>
 </launch>

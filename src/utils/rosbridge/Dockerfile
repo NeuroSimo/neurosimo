@@ -10,6 +10,7 @@ RUN apt-get update && \
     python3-pip \
     python3-tornado \
     python3-bson \
+    python3-cbor2 \
     python3-pil \
     ros-jazzy-ament-cmake-mypy \
     ros-jazzy-rmw-cyclonedds-cpp && \
@@ -44,9 +45,6 @@ RUN source /opt/ros/jazzy/setup.bash && colcon build --packages-up-to rosbridge_
 # Copy ROS entrypoint
 COPY src/utils/rosbridge/ros_entrypoint.sh .
 RUN chmod +x ros_entrypoint.sh
-
-# XXX: Hack around the symlink issue, allows fail with || : as this isn't needed on linux
-RUN cp install/rosbridge_server/lib/rosbridge_server/rosbridge_websocket.py install/rosbridge_server/lib/rosbridge_server/rosbridge_websocket || :
 
 # Define entrypoint
 

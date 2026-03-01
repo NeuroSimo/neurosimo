@@ -2,6 +2,45 @@
 Changelog for package rosapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.0.2 (2025-11-20)
+------------------
+* fix: Invert success check for set_param function (`#1133 <https://github.com/RobotWebTools/rosbridge_suite/issues/1133>`_)
+* Contributors: Błażej Sowa
+
+3.0.1 (2025-11-17)
+------------------
+
+3.0.0 (2025-11-04)
+------------------
+* chore: Update pre-commit hooks (`#1090 <https://github.com/RobotWebTools/rosbridge_suite/issues/1090>`_)
+* Fix mypy errors (`#1084 <https://github.com/RobotWebTools/rosbridge_suite/issues/1084>`_)
+* refactor: Add type annotations to all functions and methods (`#1069 <https://github.com/RobotWebTools/rosbridge_suite/issues/1069>`_)
+* fix: Change warn to warning (`#1067 <https://github.com/RobotWebTools/rosbridge_suite/issues/1067>`_)
+* refactor: Enable various ruff checks and fix lint errors (`#1059 <https://github.com/RobotWebTools/rosbridge_suite/issues/1059>`_)
+* chore: Use ruff to replace other linters used in pre-commit hook (`#1058 <https://github.com/RobotWebTools/rosbridge_suite/issues/1058>`_)
+* Add pydocstyle lint checks and fix rosdoc2 warnings (`#1056 <https://github.com/RobotWebTools/rosbridge_suite/issues/1056>`_)
+* fix: Clean up package dependencies (`#1053 <https://github.com/RobotWebTools/rosbridge_suite/issues/1053>`_)
+* feat: Add interface and service for retrieving action type (`#1046 <https://github.com/RobotWebTools/rosbridge_suite/issues/1046>`_)
+* fix: ament_mypy errors (`#1039 <https://github.com/RobotWebTools/rosbridge_suite/issues/1039>`_)
+* Contributors: Błażej Sowa, MNV Chaitanya Kumar, pascalauroboa
+
+2.3.0 (2025-05-19)
+------------------
+* Handle extra IDL slots when doing array introspection (`#1031 <https://github.com/RobotWebTools/rosbridge_suite/issues/1031>`_)
+* Add services to return Action interface details (`#1021 <https://github.com/RobotWebTools/rosbridge_suite/issues/1021>`_)
+* Fix array-like parameter serialization in rosbridge get_param (`#1018 <https://github.com/RobotWebTools/rosbridge_suite/issues/1018>`_)
+* Contributors: David Fernàndez López, Noah Wardlow, Scott Bell, Błażej Sowa
+
+2.2.0 (2025-02-26)
+------------------
+* New async rosapi params module implementation (`#1001 <https://github.com/RobotWebTools/rosbridge_suite/issues/1001>`_)
+* Update maintainers (`#1000 <https://github.com/RobotWebTools/rosbridge_suite/issues/1000>`_)
+* Prevent parameter retrieval crashes (`#978 <https://github.com/RobotWebTools/rosbridge_suite/issues/978>`_)
+* Add namespace to services names (`#992 <https://github.com/RobotWebTools/rosbridge_suite/issues/992>`_)
+* Add new service to retrieve the different interfaces in the ROS Network (`#988 <https://github.com/RobotWebTools/rosbridge_suite/issues/988>`_)
+* Add ament_mypy test and fix all mypy errors (`#980 <https://github.com/RobotWebTools/rosbridge_suite/issues/980>`_)
+* Contributors: Błażej Sowa, Lebecque Florian, Mehsias, Matthias Rathauscher, Lebecque Florian
+
 2.1.0 (2024-10-08)
 ------------------
 * Fix invalid import of get_parameter_value in rosapi for ROS2 Jazzy. (`#932 <https://github.com/RobotWebTools/rosbridge_suite/issues/932>`_)

@@ -1,6 +1,6 @@
 # Software License Agreement (BSD License)
 #
-# Copyright (c) 2012, Willow Garage, Inc.
+# Copyright (c) 2025, Fictionlab sp. z o.o.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,22 +30,48 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""Exceptions and code common to both publishers and subscribers."""
-
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
-class TopicNotEstablishedException(Exception):
-    def __init__(self, topic: str) -> None:
-        Exception.__init__(
-            self,
-            f"Cannot infer topic type for topic {topic} as it is not yet advertised",
-        )
+from rclpy.task import Future
+
+if TYPE_CHECKING:
+    from rclpy.node import Node
 
 
-class TypeConflictException(Exception):
-    def __init__(self, topic: str, orig_type: str, new_type: str) -> None:
-        Exception.__init__(
-            self,
-            f"Tried to register topic {topic} with type {new_type} but it is already established with type {orig_type}",
-        )
+async def futures_wait_for(node: Node, futures: list[Future], timeout_sec: float) -> None:
+    """Await a list of futures with a timeout."""
+    first_done_future: Future = Future()
+
+    def timeout_callback() -> None:
+        first_done_future.set_result(None)
+
+    timer = node.create_timer(timeout_sec, timeout_callback)
+
+    def future_done_callback(_arg: Future) -> None:
+        if all(future.done() for future in futures):
+            first_done_future.set_result(None)
+
+    for future in futures:
+        future.add_done_callback(future_done_callback)
+
+    await first_done_future
+
+    timer.cancel()
+    timer.destroy()
+
+
+async def async_sleep(node: Node, delay_sec: float) -> None:
+    """Block the coroutine for a given time."""
+    sleep_future: Future = Future()
+
+    def timeout_callback() -> None:
+        sleep_future.set_result(None)
+
+    timer = node.create_timer(delay_sec, timeout_callback)
+
+    await sleep_future
+
+    timer.cancel()
+    timer.destroy()

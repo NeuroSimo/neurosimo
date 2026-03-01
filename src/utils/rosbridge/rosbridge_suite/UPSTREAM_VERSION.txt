@@ -3,18 +3,18 @@ Upstream Repository: https://github.com/RobotWebTools/rosbridge_suite
 Vendored Location: rosbridge/rosbridge_suite
 
 Vendored Into Repository: NeuroSimo
-Vendored On: 2025-12-07
+Vendored On: 2026-02-28
 
-Upstream Commit SHA: ffa267500eb1076f04b30bc52b6f350a5627f24f
-Upstream Commit Date: 2024-12-25
-Upstream Commit Author: Błażej Sowa <bsowa123@gmail.com>
-Upstream Commit Message: Fix infinite loop in QueueMessageHandler (#983)
+Upstream Commit SHA: 61860bf4c091fcac33cb64e5b313f5a7f65b038e
+Upstream Commit Date: 2026-02-26
+Upstream Commit Author: atofetti-botbot <atofetti@botbot.bot>
+Upstream Commit Message: fix: numpy.ndarray not handled in CBOR serialization (#1161)
 
-Included History:
-    ffa267500eb1  — Fix infinite loop in QueueMessageHandler
-    3b30f441144b  — Use monotonic clock for time measuring
-    5444d9b7e801  — Add ament_mypy test and fix mypy errors
-    25fe5705f1c2  — Various upstream updates (2024-12-25)
+Latest Commits:
+    61860bf4c091  — fix: numpy.ndarray not handled in CBOR serialization (#1161)
+    abada43955cc  — feat: Add an option to use EventsExecutor (#1157)
+    728ed0d228de  — fix: Handle action rejection and server timeout (#1139)
+    1efe67a0f151  — fix: Reduce idle CPU consumption of websocket server (#1040)
 
 Local Modifications:
     None at time of vendoring.

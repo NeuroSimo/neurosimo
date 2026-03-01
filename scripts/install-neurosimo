@@ -52,19 +52,18 @@ is_preempt_rt() {
     return 1
 }
 
-# Function to check if NVIDIA GPU is present
-has_nvidia_gpu() {
-    # Check using lspci for NVIDIA VGA or 3D controller
-    if lspci | grep -qi "nvidia.*\(vga\|3d\)"; then
+# Function to check if NVIDIA drivers are installed
+has_nvidia_drivers() {
+    if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null; then
         return 0
     fi
     return 1
 }
 
-# Check if NVIDIA GPU is present and set GPU flag
-if ! has_nvidia_gpu; then
+# Check if NVIDIA drivers are installed and set GPU flag
+if ! has_nvidia_drivers; then
     echo ""
-    echo "WARNING: No NVIDIA GPU detected!"
+    echo "WARNING: No NVIDIA drivers detected!"
     echo "NeuroSimo will run in CPU-only mode, disabling GPU support."
     echo ""
     read -p "Do you want to continue without GPU support? [y/N] " -n 1 -r
@@ -75,57 +74,12 @@ if ! has_nvidia_gpu; then
     fi
     USE_GPU=false
 else
-    echo "NVIDIA GPU detected, installing NeuroSimo with GPU support."
+    echo "NVIDIA drivers detected, installing NeuroSimo with GPU support."
     USE_GPU=true
 fi
 
-# Warn about Preempt-RT kernel if not installed
-if ! is_preempt_rt; then
-    echo "WARNING: Preempt-RT kernel not detected. Please install a Preempt-RT kernel for real-time capabilities."
-fi
-
-# Install NVIDIA drivers only if GPU is present
+# Install NVIDIA Container Toolkit only if drivers are installed
 if [ "$USE_GPU" = true ]; then
-    # Check if preempt_rt kernel is installed, and install appropriate drivers
-    if is_preempt_rt; then
-        echo "Preempt-RT kernel detected."
-
-        # Prompt user for NVIDIA driver installation
-        read -p "Do you want to install NVIDIA drivers for Preempt-RT kernel? [y/N] " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo ""
-            echo "Please ensure that you are running this script in a text console (not a graphical terminal)."
-            echo "Press Ctrl+Alt+F3 to switch to a text console if necessary."
-            echo ""
-            echo "Note: you may need to switch back to the text console (Ctrl+Alt+F3) during the installation process if the display goes blank."
-            echo ""
-            read -p "Press Enter to continue..."
-            echo ""
-
-            ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers-preempt-rt.yml \
-              --connection=local --become \
-              --extra-vars "ansible_become_password='$SUDO_PASS'"
-        fi
-    else
-        # Standard kernel - install drivers using package manager
-        # Check if nvidia-smi is available (drivers already installed)
-        if ! command -v nvidia-smi &> /dev/null; then
-            read -p "Do you want to install NVIDIA drivers? [Y/n] " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-                echo "Installing NVIDIA drivers..."
-                ansible-playbook -i 'localhost,' ansible/install-nvidia-drivers.yml \
-                  --connection=local --become \
-                  --extra-vars "ansible_become_password='$SUDO_PASS'"
-                echo ""
-                echo "NVIDIA drivers installed. A reboot is required for the drivers to take effect."
-            fi
-        else
-            echo "NVIDIA drivers are already installed."
-        fi
-    fi
-
     # Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
     ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml \
       --connection=local --become \

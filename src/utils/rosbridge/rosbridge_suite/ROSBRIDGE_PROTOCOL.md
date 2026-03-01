@@ -436,7 +436,8 @@ Calls a ROS service.
   "service": <string>,
   (optional) "args": <list<json>>,
   (optional) "fragment_size": <int>,
-  (optional) "compression": <string>
+  (optional) "compression": <string>,
+  (optional) "timeout": <float>
 }
 ```
 
@@ -449,6 +450,7 @@ Calls a ROS service.
     before it is fragmented
  * **compression** – an optional string to specify the compression scheme to be
     used on messages. Valid values are "none" and "png"
+ * **timeout** – the time, in seconds, to wait for a response from the server
 
 
 Stops advertising an external ROS service server
@@ -611,3 +613,25 @@ The meta-package will contain the following packages:
     tornado, a python server implementation.
  * **rosapi** – provides ROS services for various master API calls, such as
     listing all the topics, services, types currently in ROS
+
+### 4.6 Data Type Encoding
+
+**Base64 Encoding for JSON Byte Arrays**
+
+When rosbridge sends messages containing `uint8[]` or `char[]` fields as JSON, these byte arrays are automatically encoded as base64 strings to reduce message size by approximately 60-65%.
+
+For example, a message field defined as:
+
+```
+uint8[] data = [0, 0, 0, 0]
+```
+
+Will be transmitted as:
+
+```json
+{
+  "data": "AAAAAAAA"
+}
+```
+
+Where the string value is the base64-encoded representation of the byte array. Byte arrays may be sent to the server as either a base64 string or a JSON list of numbers, but will be re-encoded as a base64 string before being sent to other clients.

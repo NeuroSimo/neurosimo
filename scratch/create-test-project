@@ -26,7 +26,7 @@ echo "Generating project datasets (100Hz, 1kHz, 3kHz, 5kHz)..."
 # Generate each dataset individually like project_manager.py does
 
 echo "Generating random_data_100_hz with 100 Hz sampling frequency..."
-python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
+python3 "$NEUROSIMO_ROOT/scripts/generate_random_data.py" \
     --duration 30 \
     --output_directory "$PROJECTS_ROOT/test/eeg_simulator" \
     --output_filename "random_data_100_hz" \
@@ -35,7 +35,7 @@ python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
     --loop
 
 echo "Generating random_data_1_khz with 1000 Hz sampling frequency..."
-python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
+python3 "$NEUROSIMO_ROOT/scripts/generate_random_data.py" \
     --duration 30 \
     --output_directory "$PROJECTS_ROOT/test/eeg_simulator" \
     --output_filename "random_data_1_khz" \
@@ -44,7 +44,7 @@ python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
     --loop
 
 echo "Generating random_data_3_khz with 3000 Hz sampling frequency..."
-python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
+python3 "$NEUROSIMO_ROOT/scripts/generate_random_data.py" \
     --duration 30 \
     --output_directory "$PROJECTS_ROOT/test/eeg_simulator" \
     --output_filename "random_data_3_khz" \
@@ -53,7 +53,7 @@ python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
     --loop
 
 echo "Generating random_data_5_khz with 5000 Hz sampling frequency..."
-python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
+python3 "$NEUROSIMO_ROOT/scripts/generate_random_data.py" \
     --duration 30 \
     --output_directory "$PROJECTS_ROOT/test/eeg_simulator" \
     --output_filename "random_data_5_khz" \
@@ -62,7 +62,7 @@ python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
     --loop
 
 echo "Generating test data with pulse at 5 seconds..."
-python3 "$NEUROSIMO_ROOT/scratch/generate_random_data.py" \
+python3 "$NEUROSIMO_ROOT/scripts/generate_random_data.py" \
     --duration 30 \
     --output_directory "$PROJECTS_ROOT/test/eeg_simulator" \
     --output_filename "test_data_with_pulse" \

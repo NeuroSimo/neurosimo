@@ -36,10 +36,10 @@ function ensure_compose_file() {
     [[ -f "$COMPOSE_FILE" ]] || die "Compose file not found: $COMPOSE_FILE (set NEUROSIMO_ROOT or place script in repo root)"
 }
 
-# List services known to compose. This is better than "running containers" because logs can be useful even if exited.
+# List all services including those with profiles
 function get_services() {
     ensure_compose_file
-    docker compose -f "$COMPOSE_FILE" config --services 2>/dev/null | sort
+    grep -E '^  [a-zA-Z_][a-zA-Z0-9_-]*:' "$COMPOSE_FILE" | sed 's/://' | sed 's/^[[:space:]]*//' | sort
 }
 
 function print_available_containers() {

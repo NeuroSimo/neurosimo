@@ -56,7 +56,8 @@ DC_MODE_SCALE = 100  # Scaling factor
 class NeurOneSimulator:
     def __init__(self, port=DEFAULT_PORT, sampling_rate=DEFAULT_SAMPLING_RATE,
                  eeg_channels=DEFAULT_EEG_CHANNELS, emg_channels=DEFAULT_EMG_CHANNELS,
-                 trigger_port=DEFAULT_TRIGGER_PORT, trigger_to_pulse_delay=DEFAULT_TRIGGER_TO_PULSE_DELAY):
+                 trigger_port=DEFAULT_TRIGGER_PORT, trigger_to_pulse_delay=DEFAULT_TRIGGER_TO_PULSE_DELAY,
+                 enable_loopback_triggers=True):
         self.port = port
         self.sampling_rate = sampling_rate
         self.eeg_channels = eeg_channels
@@ -64,6 +65,7 @@ class NeurOneSimulator:
         self.total_channels = eeg_channels + emg_channels + 1  # +1 for trigger channel
         self.trigger_port = trigger_port
         self.trigger_to_pulse_delay = trigger_to_pulse_delay
+        self.enable_loopback_triggers = enable_loopback_triggers
 
         # Create UDP socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -144,11 +146,11 @@ class NeurOneSimulator:
                         if message == "pulse_trigger":
                             trigger_time = time.time() + self.trigger_to_pulse_delay
                             self.pending_triggers.append((trigger_time, "pulse"))
-                            print(f"Received pulse trigger, scheduled to appear in {self.trigger_to_pulse_delay*1000:.1f} ms")
+                            print(f"Requested pulse trigger, scheduled to appear in {self.trigger_to_pulse_delay*1000:.1f} ms")
                         elif message == "loopback_trigger":
                             trigger_time = time.time()  # Immediate, no delay
                             self.pending_triggers.append((trigger_time, "loopback"))
-                            print(f"Received loopback trigger, appears immediately")
+                            print(f"Requested loopback trigger, appears immediately")
 
         except socket.timeout:
             pass  # Timeout is expected
@@ -215,7 +217,7 @@ class NeurOneSimulator:
             noise = random.gauss(0, 2)
             return int((base_signal + noise) * 1000)  # Convert to nV
         else:
-            # Trigger channel: set bits based on received triggers
+            # Trigger channel: set bits based on requested triggers
             trigger_value = 0
             if pulse_trigger:
                 trigger_value |= (1 << 1)  # Set bit 1 for pulse trigger (TriggerBits::A_IN)
@@ -267,6 +269,10 @@ class NeurOneSimulator:
                     remaining_triggers.append((trigger_time, trigger_type))
             
             self.pending_triggers = remaining_triggers
+
+        # Optionally disable loopback triggers before generating sample data
+        if not self.enable_loopback_triggers:
+            loopback_trigger = False
 
         # Sample data (3 bytes per channel, big-endian)
         for i in range(self.total_channels):
@@ -367,6 +373,8 @@ def main():
                        help=f'Simulated delay from trigger to pulse appearance in seconds (default: {DEFAULT_TRIGGER_TO_PULSE_DELAY})')
     parser.add_argument('--duration', type=float,
                        help='Duration in seconds to run (default: run until interrupted)')
+    parser.add_argument('--disable-loopback-triggers', action='store_true',
+                       help='If set, loopback triggers will not be sent on the trigger channel')
 
     args = parser.parse_args()
 
@@ -376,7 +384,8 @@ def main():
         eeg_channels=args.eeg_channels,
         emg_channels=args.emg_channels,
         trigger_port=args.trigger_port,
-        trigger_to_pulse_delay=args.trigger_to_pulse_delay
+        trigger_to_pulse_delay=args.trigger_to_pulse_delay,
+        enable_loopback_triggers=not args.disable_loopback_triggers
     )
 
     def signal_handler(signum, frame):

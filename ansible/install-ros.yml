@@ -46,9 +46,11 @@
       apt:
         upgrade: dist
 
-    - name: Install ROS 2 base and dev tools
+    - name: Install ROS 2 base, dev tools, and Cyclone DDS
       apt:
         name:
           - "ros-{{ ros_distro }}-ros-base"
+          - "ros-{{ ros_distro }}-rmw-cyclonedds-cpp"
+          - "ros-{{ ros_distro }}-cyclonedds"
           - ros-dev-tools
         state: present

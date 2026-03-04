@@ -260,6 +260,8 @@ void EegBridge::handle_start_streaming(
     return;
   }
 
+  this->reset_state();
+
   this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
   publish_data_source_state();
 

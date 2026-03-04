@@ -46,9 +46,9 @@ class SamplesPacketFieldIndex:
 
 # Configuration
 DEFAULT_PORT = 50000
-DEFAULT_SAMPLING_RATE = 500  # Hz
-DEFAULT_EEG_CHANNELS = 8
-DEFAULT_EMG_CHANNELS = 2
+DEFAULT_SAMPLING_RATE = 5000  # Hz
+DEFAULT_EEG_CHANNELS = 63
+DEFAULT_EMG_CHANNELS = 10
 DEFAULT_TRIGGER_PORT = 60000  # Port for receiving triggers from MockLabJackManager
 DEFAULT_TRIGGER_TO_PULSE_DELAY = 0.0  # Simulated delay from trigger to pulse appearance (seconds)
 DC_MODE_SCALE = 100  # Scaling factor

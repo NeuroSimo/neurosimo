@@ -48,6 +48,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   /* Publisher for heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
+  /* Publisher for pulse-processed trigger (Empty). */
+  this->pulse_processed_publisher = this->create_publisher<std_msgs::msg::Empty>(
+    "/decider/pulse_processed",
+    10);
+
   /* Note: The EEG subscriber will be during initialization based on whether preprocessor is enabled. */
 
   /* Set up QoS profile for persistent state topics */
@@ -568,6 +573,10 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     auto latency_msg = pipeline_interfaces::msg::Latency();
     latency_msg.latency = decider_duration;
     this->pulse_processing_latency_publisher->publish(latency_msg);
+
+    /* Publish an Empty trigger to signal that pulse processing is complete. */
+    std_msgs::msg::Empty trigger_msg;
+    this->pulse_processed_publisher->publish(trigger_msg);
 
     return;
   }

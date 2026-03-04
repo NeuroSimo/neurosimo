@@ -395,6 +395,9 @@ void TriggerTimer::handle_initialize_trigger_timer(
 
   reset_state();
 
+  /* Reset health status to a good state at the start of a new session */
+  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+
   /* Set configuration from request */
   this->maximum_timing_offset = request->maximum_timing_offset;
   this->maximum_loopback_latency = request->maximum_loopback_latency;

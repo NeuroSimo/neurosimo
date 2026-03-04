@@ -12,11 +12,6 @@
         state: present
         update_cache: yes
 
-    - name: Add Universe repository
-      apt_repository:
-        repo: "deb http://archive.ubuntu.com/ubuntu/ {{ ansible_facts.lsb.codename }} universe"
-        state: present
-
     - name: Install curl
       apt:
         name: curl

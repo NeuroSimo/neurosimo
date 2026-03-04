@@ -75,11 +75,6 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     std::chrono::duration<double>(HEARTBEAT_INTERVAL_SEC),
     std::bind(&TriggerTimer::_publish_heartbeat, this));
 
-  /* Set up a timer to monitor loopback trigger reception every second. */
-  this->loopback_monitor_timer = this->create_wall_timer(
-    std::chrono::duration<double>(loopback_monitor_interval),
-    std::bind(&TriggerTimer::_check_loopback_timeout, this));
-
   /* Publish initial READY state */
   this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
@@ -356,6 +351,12 @@ void TriggerTimer::reset_state() {
     timer.reset();
   }
 
+  /* Cancel and reset the loopback monitor timer */
+  if (loopback_monitor_timer) {
+    loopback_monitor_timer->cancel();
+    loopback_monitor_timer.reset();
+  }
+
   /* Cancel and reset active trigger timer */
   if (active_trigger_timer) {
     active_trigger_timer->cancel();
@@ -441,6 +442,16 @@ void TriggerTimer::handle_initialize_trigger_timer(
   RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
   RCLCPP_INFO(this->get_logger(), " ");
 
+  /* Set up a timer to monitor loopback trigger reception every second. */
+  this->loopback_monitor_timer = this->create_wall_timer(
+    std::chrono::duration<double>(loopback_monitor_interval),
+    std::bind(&TriggerTimer::_check_loopback_timeout, this));
+
+  /* Set up a timer to signal connection attempts every second. */
+  timer = this->create_wall_timer(
+    std::chrono::seconds(1),
+    std::bind(&TriggerTimer::attempt_labjack_connection, this));
+
   /* Initialize LabJack manager. */
   if (this->simulate_labjack) {
     labjack_manager = std::make_unique<MockLabJackManager>(this->get_logger());
@@ -448,11 +459,6 @@ void TriggerTimer::handle_initialize_trigger_timer(
     labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), false);
   }
   labjack_manager->start();
-
-  /* Set up a timer to signal connection attempts every second. */
-  timer = this->create_wall_timer(
-    std::chrono::seconds(1),
-    std::bind(&TriggerTimer::attempt_labjack_connection, this));
 
   /* Wait for LabJack connection - try for up to 1 second */
   auto start_time = std::chrono::steady_clock::now();

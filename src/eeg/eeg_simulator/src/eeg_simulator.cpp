@@ -220,6 +220,10 @@ void EegSimulator::execute_initialize(
   RCLCPP_INFO(this->get_logger(), "Simulator initialized successfully: project=%s, dataset=%s, start_time=%.3f",
               goal->project_name.c_str(), goal->dataset_filename.c_str(), goal->start_time);
 
+  // Log stream info
+  RCLCPP_INFO(this->get_logger(), "Stream info: sampling_frequency=%d Hz, num_eeg_channels=%d, num_emg_channels=%d",
+              this->dataset_info.sampling_frequency, this->dataset_info.num_eeg_channels, this->dataset_info.num_emg_channels);
+
   result->stream_info.sampling_frequency = this->dataset_info.sampling_frequency;
   result->stream_info.num_eeg_channels = this->dataset_info.num_eeg_channels;
   result->stream_info.num_emg_channels = this->dataset_info.num_emg_channels;

@@ -419,7 +419,7 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 
   // Log latency trigger when present
   if (sample.loopback_trigger) {
-    RCLCPP_DEBUG(this->get_logger(), "Received latency trigger at time: %.4f s.", sample.time);
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "Receiving loopback triggers");
   }
   
   // Log pulse trigger when present

@@ -129,6 +129,7 @@ private:
   rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_processed_publisher;
 
   rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
   rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;

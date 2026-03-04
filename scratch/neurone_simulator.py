@@ -95,16 +95,59 @@ class NeurOneSimulator:
         # Queue for pending triggers (list of tuples: (trigger_time, trigger_type))
         self.pending_triggers = []
 
-        # Generate some realistic channel configurations
+        # Generate channel configuration compatible with NeurOneAdapter
+        # Use the same EEG / EMG source channel ranges that NeurOneAdapter
+        # uses when classifying channels:
+        #
+        #   - EEG (monopolar) channels occupy all non-EMG, non-trigger channels:
+        #       1–32, 41–72, 81–112, 121–152
+        #   - EMG (bipolar) channels:
+        #       33–40, 73–80, 113–120, 153–160
+        #
+        # This avoids overlaps so that the bridge reports exactly the requested
+        # number of EEG and EMG channels.
+
+        eeg_source_ranges = [(1, 32), (41, 72), (81, 112), (121, 152)]
+        emg_source_ranges = [(33, 40), (73, 80), (113, 120), (153, 160)]
+
+        max_eeg_channels = sum(end - start + 1 for start, end in eeg_source_ranges)
+        max_emg_channels = sum(end - start + 1 for start, end in emg_source_ranges)
+
+        if self.eeg_channels > max_eeg_channels:
+            raise ValueError(
+                f"Requested {self.eeg_channels} EEG channels, but simulator only "
+                f"supports up to {max_eeg_channels} EEG channels with NeurOne-compatible "
+                "source channel numbering."
+            )
+
+        if self.emg_channels > max_emg_channels:
+            raise ValueError(
+                f"Requested {self.emg_channels} EMG channels, but simulator only "
+                f"supports up to {max_emg_channels} EMG channels with NeurOne-compatible "
+                "source channel numbering."
+            )
+
+        # Fill EEG source channels
         self.source_channels = []
-        for i in range(self.eeg_channels):
-            self.source_channels.append(i + 1)  # EEG channels 1-8
+        remaining_eeg = self.eeg_channels
+        for start, end in eeg_source_ranges:
+            if remaining_eeg <= 0:
+                break
+            for source_channel in range(start, min(end, start + remaining_eeg - 1) + 1):
+                self.source_channels.append(source_channel)
+            remaining_eeg -= min(end - start + 1, remaining_eeg)
 
-        for i in range(self.emg_channels):
-            self.source_channels.append(33 + i)  # EMG channels 33-34
+        # Fill EMG source channels
+        remaining_emg = self.emg_channels
+        for start, end in emg_source_ranges:
+            if remaining_emg <= 0:
+                break
+            for source_channel in range(start, min(end, start + remaining_emg - 1) + 1):
+                self.source_channels.append(source_channel)
+            remaining_emg -= min(end - start + 1, remaining_emg)
 
-        # Add trigger channel
-        self.source_channels.append(65535)  # SOURCE_CHANNEL_FOR_TRIGGER
+        # Add trigger channel (must match SOURCE_CHANNEL_FOR_TRIGGER in NeurOneAdapter)
+        self.source_channels.append(65535)
 
     def handle_trigger_connection(self):
         """Handle incoming trigger connections in a separate thread"""

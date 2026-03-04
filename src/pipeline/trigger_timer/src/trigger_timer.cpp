@@ -17,6 +17,7 @@ const std::string TIMED_TRIGGER_SERVICE = "/pipeline/timed_trigger";
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 
 const double_t loopback_interval = 0.1;
+const double_t loopback_monitor_interval = 1.0;
 
 const char* tms_trigger_fio = "FIO4";
 const char* loopback_trigger_fio = "FIO5";
@@ -74,6 +75,11 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     std::chrono::duration<double>(HEARTBEAT_INTERVAL_SEC),
     std::bind(&TriggerTimer::_publish_heartbeat, this));
 
+  /* Set up a timer to monitor loopback trigger reception every second. */
+  this->loopback_monitor_timer = this->create_wall_timer(
+    std::chrono::duration<double>(loopback_monitor_interval),
+    std::bind(&TriggerTimer::_check_loopback_timeout, this));
+
   /* Publish initial READY state */
   this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
 }
@@ -81,6 +87,9 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
 TriggerTimer::~TriggerTimer() {
   if (timer) {
     timer->cancel();
+  }
+  if (loopback_monitor_timer) {
+    loopback_monitor_timer->cancel();
   }
   if (labjack_manager) {
     labjack_manager->stop();
@@ -90,6 +99,16 @@ TriggerTimer::~TriggerTimer() {
 void TriggerTimer::_publish_heartbeat() {
   auto heartbeat = std_msgs::msg::Empty();
   this->heartbeat_publisher->publish(heartbeat);
+}
+
+void TriggerTimer::_check_loopback_timeout() {
+  if (this->session_started && this->data_source == "eeg_device" &&!this->loopback_received) {
+    RCLCPP_ERROR(logger, "No triggers received for over %.1f seconds", loopback_monitor_interval);    
+    this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED, "No triggers received, please check the EEG settings and connections");
+
+    // Reset the flag for the next monitoring period
+    this->loopback_received = false;
+  }
 }
 
 void TriggerTimer::_publish_health_status(uint8_t health_level, const std::string& message) {
@@ -108,26 +127,26 @@ void TriggerTimer::attempt_labjack_connection() {
 void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t sample_time) {
   /* Update current latency if loopback trigger is present. */
   if (loopback_trigger) {
+    RCLCPP_INFO_THROTTLE(logger, *this->get_clock(), 2000, "Receiving loopback triggers");
+
     this->current_loopback_latency = sample_time - this->last_loopback_time;
+    this->loopback_received = true;
 
     /* Publish loopback latency ROS message. */
     auto msg = pipeline_interfaces::msg::Latency();
     msg.latency = this->current_loopback_latency;
-  
-    this->loopback_latency_publisher->publish(msg);  
+
+    this->loopback_latency_publisher->publish(msg);
   }
 
   /* Trigger loopback trigger at specific intervals. */
   double_t time_since_last_loopback = sample_time - this->last_loopback_time;
-  if (time_since_last_loopback < loopback_interval) {
-    return;
-  }
-
-  this->last_loopback_time = sample_time;
-
-  if (!labjack_manager || !labjack_manager->trigger_output(loopback_trigger_fio)) {
-    RCLCPP_ERROR(logger, "Failed to trigger loopback trigger.");
-    return;
+  if (time_since_last_loopback >= loopback_interval) {
+    this->last_loopback_time = sample_time;
+    if (!labjack_manager || !labjack_manager->trigger_output(loopback_trigger_fio)) {
+      RCLCPP_ERROR(logger, "Failed to trigger loopback trigger.");
+      this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED, "Failed to trigger, please check the LabJack connection");
+    }
   }
 }
 
@@ -353,6 +372,13 @@ void TriggerTimer::reset_state() {
   this->current_loopback_latency = 0.0;
   this->last_loopback_time = 0.0;
 
+  /* Reset configuration */
+  this->data_source = "";
+
+  /* Reset loopback monitoring flags */
+  this->session_started = false;
+  this->loopback_received = false;
+
   /* Reset latest sample information */
   this->latest_sample_time = 0.0;
 
@@ -374,6 +400,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   this->maximum_loopback_latency = request->maximum_loopback_latency;
   this->trigger_to_pulse_delay = request->trigger_to_pulse_delay;
   this->simulate_labjack = request->simulate_labjack;
+  this->data_source = request->data_source;
 
   /* Validate the maximum timing offset is non-negative */
   if (this->maximum_timing_offset < 0.0) {
@@ -448,6 +475,9 @@ void TriggerTimer::handle_initialize_trigger_timer(
     reset_state();
     return;
   }
+
+  /* Mark session as started for loopback monitoring */
+  this->session_started = true;
 
   RCLCPP_INFO(this->get_logger(), "Trigger timer initialized successfully");
   response->success = true;

@@ -42,6 +42,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer;
   rclcpp::TimerBase::SharedPtr heartbeat_timer;
   rclcpp::TimerBase::SharedPtr active_trigger_timer;
+  rclcpp::TimerBase::SharedPtr loopback_monitor_timer;
 
   std::unique_ptr<LabJackInterface> labjack_manager;
 
@@ -61,6 +62,11 @@ private:
   double_t maximum_loopback_latency = 0.0;
   double_t trigger_to_pulse_delay = 0.0;
   bool simulate_labjack = false;
+  std::string data_source;
+
+  // Loopback monitoring flags
+  bool session_started = false;
+  bool loopback_received = false;
 
   enum class SchedulingResult {
     SCHEDULED,
@@ -87,6 +93,7 @@ private:
   double_t estimate_current_sample_time();
 
   void _publish_heartbeat();
+  void _check_loopback_timeout();
   void _publish_health_status(uint8_t health_level, const std::string& message);
 
   void handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);

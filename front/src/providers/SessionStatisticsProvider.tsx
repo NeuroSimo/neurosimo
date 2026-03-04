@@ -103,11 +103,10 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     const loopbackLatencySubscriber = new Topic<Latency>({
       ros: ros,
       name: '/pipeline/latency/loopback',
-      messageType: 'pipeline_interfaces/LoopbackLatency',
+      messageType: 'pipeline_interfaces/Latency',
     })
 
     loopbackLatencySubscriber.subscribe((message) => {
-      console.log('loopbackLatency', message)
       setLoopbackLatency(message)
 
       // Clear existing timeout

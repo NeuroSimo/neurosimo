@@ -10,9 +10,9 @@ interface StatusSquareProps {
 
 const HealthPanel = styled(StyledPanel)`
   width: 200px;
-  height: 25px;
+  height: 40px;
   position: fixed;
-  top: 36px;
+  top: 33px;
   right: 280px;
   display: grid;
   grid-template-columns: 1fr 1fr;

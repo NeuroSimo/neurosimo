@@ -10,6 +10,7 @@ using namespace std::placeholders;
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string DECISION_TRACE_TOPIC = "/pipeline/decision_trace";
 const std::string DECISION_TRACE_FINAL_TOPIC = "/pipeline/decision_trace/final";
+const std::string PULSE_PROCESSED_TOPIC = "/decider/pulse_processed";
 
 StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclcpp::get_logger("stimulation_tracer")) {
   /* Subscriber for EEG raw data. */
@@ -17,6 +18,12 @@ StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclc
     EEG_RAW_TOPIC,
     10,
     std::bind(&StimulationTracer::handle_eeg_sample, this, _1));
+
+  /* Subscriber for decider pulse-processed notifications. */
+  this->pulse_processed_subscriber = create_subscription<std_msgs::msg::Empty>(
+    PULSE_PROCESSED_TOPIC,
+    10,
+    std::bind(&StimulationTracer::handle_pulse_processed, this, _1));
 
   /* Subscriber for decision traces. */
   this->decision_trace_subscriber = create_subscription<pipeline_interfaces::msg::DecisionTrace>(
@@ -62,6 +69,7 @@ void StimulationTracer::handle_initialize_stimulation_tracer(
 
   /* Clear any existing decision traces. */
   this->decision_traces.clear();
+  this->pending_pulses.clear();
 
   RCLCPP_INFO(this->get_logger(), "StimulationTracer initialized for session with data_source: %s", this->data_source.c_str());
 
@@ -81,6 +89,7 @@ void StimulationTracer::handle_finalize_stimulation_tracer(
 
   /* Clear decision traces and reset state. */
   this->decision_traces.clear();
+  this->pending_pulses.clear();
   this->is_initialized = false;
   this->current_session_id = {};
   this->data_source = "";
@@ -132,28 +141,60 @@ void StimulationTracer::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::
   RCLCPP_INFO(this->get_logger(), "Pulse trigger detected at time: %.4f (s), sample_index: %lu", 
               actual_stimulation_time, actual_stimulation_sample_index);
 
-  /* Find the matching decision trace. */
-  auto* matching_trace = find_matching_decision(pulse_system_time);
+  /* Enqueue this pulse and wait for decider pulse-processed notification before publishing observation. */
+  PendingPulse pending;
+  pending.pulse_system_time = pulse_system_time;
+  pending.actual_stimulation_time = actual_stimulation_time;
+  pending.actual_stimulation_sample_index = actual_stimulation_sample_index;
+  this->pending_pulses.push_back(pending);
 
-  if (matching_trace == nullptr) {
-    RCLCPP_WARN(this->get_logger(), "No matching decision trace found for pulse at time: %.4f (s)", 
-                actual_stimulation_time);
+  RCLCPP_INFO(this->get_logger(),
+              "Queued pulse for observation; waiting for decider pulse_processed signal (queue size=%zu).",
+              this->pending_pulses.size());
+}
+
+void StimulationTracer::handle_pulse_processed(const std_msgs::msg::Empty::SharedPtr msg) {
+  (void)msg;
+
+  /* Skip if not initialized. */
+  if (!this->is_initialized) {
     return;
   }
 
-  /* Create and publish the observation trace. */
+  if (this->pending_pulses.empty()) {
+    RCLCPP_WARN(this->get_logger(),
+                "Received pulse_processed notification but no pending pulses are queued.");
+    return;
+  }
+
+  /* Get the oldest pending pulse. */
+  PendingPulse pending = this->pending_pulses.front();
+  this->pending_pulses.pop_front();
+
+  /* Find the matching decision trace using the stored pulse system time. */
+  auto* matching_trace = find_matching_decision(pending.pulse_system_time);
+
+  if (matching_trace == nullptr) {
+    RCLCPP_WARN(this->get_logger(),
+                "No matching decision trace found for pulse at time: %.4f (s) when processing pulse_processed.",
+                pending.actual_stimulation_time);
+    return;
+  }
+
+  /* Create and publish the observation trace now that pulse processing is complete. */
   auto observation_trace = pipeline_interfaces::msg::DecisionTrace();
   observation_trace.session_id = matching_trace->session_id;
   observation_trace.decision_id = matching_trace->decision_id;
-  observation_trace.status = pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED;
-  observation_trace.actual_stimulation_time = actual_stimulation_time;
-  observation_trace.actual_stimulation_sample_index = actual_stimulation_sample_index;
+  observation_trace.status = pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED;
+  observation_trace.actual_stimulation_time = pending.actual_stimulation_time;
+  observation_trace.actual_stimulation_sample_index = pending.actual_stimulation_sample_index;
 
   /* Calculate timing offset: actual - scheduled. */
-  observation_trace.timing_offset = actual_stimulation_time - matching_trace->requested_stimulation_time;
+  observation_trace.timing_offset =
+    pending.actual_stimulation_time - matching_trace->requested_stimulation_time;
 
-  RCLCPP_INFO(this->get_logger(), 
-              "Matched pulse to decision_id=%lu, timing_offset=%.4f ms",
+  RCLCPP_INFO(this->get_logger(),
+              "Matched pulse (after processing) to decision_id=%lu, timing_offset=%.4f ms",
               matching_trace->decision_id, observation_trace.timing_offset * 1000.0);
 
   /* Publish observation trace. */
@@ -249,7 +290,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
   }
 
   /* If the data source is not simulated, the pulse is confirmed via EEG trigger. */
-  if (!is_simulated_data_source && final_trace.status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED) {
+  if (!is_simulated_data_source && final_trace.status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED) {
     final_trace.pulse_confirmation_method = pipeline_interfaces::msg::DecisionTrace::METHOD_EEG_TRIGGER;
     final_trace.pulse_confirmed = true;
   }
@@ -269,7 +310,7 @@ bool StimulationTracer::is_terminal_status(uint8_t status) {
   if (status == pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO ||
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED ||
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE ||
-      status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_OBSERVED ||
+      status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED ||
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_MISSED ||
       status == pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR) {
     return true;

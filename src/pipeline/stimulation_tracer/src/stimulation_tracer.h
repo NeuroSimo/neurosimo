@@ -10,6 +10,7 @@
 #include <map>
 #include <vector>
 #include <array>
+#include <deque>
 
 #include "std_msgs/msg/empty.hpp"
 #include "eeg_interfaces/msg/sample.hpp"
@@ -42,8 +43,20 @@ private:
   /* Storage for decision traces keyed by decision_id */
   std::map<uint64_t, std::vector<pipeline_interfaces::msg::DecisionTrace>> decision_traces;
 
+  /* Subscriber for decider pulse-processed notifications and pending pulse queue */
+  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr pulse_processed_subscriber;
+
+  struct PendingPulse {
+    uint64_t pulse_system_time;
+    double actual_stimulation_time;
+    uint64_t actual_stimulation_sample_index;
+  };
+
+  std::deque<PendingPulse> pending_pulses;
+
   void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
   void handle_decision_trace(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg);
+  void handle_pulse_processed(const std_msgs::msg::Empty::SharedPtr msg);
 
   void handle_initialize_stimulation_tracer(
     const std::shared_ptr<pipeline_interfaces::srv::InitializeStimulationTracer::Request> request,

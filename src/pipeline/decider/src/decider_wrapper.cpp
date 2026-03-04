@@ -653,6 +653,11 @@ int DeciderWrapper::get_look_ahead_samples() const {
 }
 
 int DeciderWrapper::get_look_ahead_samples_for_pulse() const {
+  /* If no pulse processor is configured, pulses should be processed immediately. */
+  if (this->pulse_processor.is_none()) {
+    return 0;
+  }
+
   if (this->has_custom_pulse_window) {
     return this->pulse_look_ahead_samples;
   }

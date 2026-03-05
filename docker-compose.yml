@@ -81,6 +81,10 @@ services:
     build:
       context: .
       dockerfile: src/pipeline/decider/Dockerfile
+    user: "1000:1000"
+    ulimits:
+      rtprio: 99
+      memlock: -1
     env_file:
       - .env
     environment:
@@ -91,7 +95,6 @@ services:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
-    privileged: true
     network_mode: host
     profiles:
       - non-gpu
@@ -101,6 +104,10 @@ services:
     build:
       context: .
       dockerfile: src/pipeline/decider/Dockerfile
+    user: "1000:1000"
+    ulimits:
+      rtprio: 99
+      memlock: -1
     env_file:
       - .env
     environment:
@@ -112,7 +119,6 @@ services:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
-    privileged: true
     network_mode: host
     deploy:
       resources:
@@ -143,6 +149,7 @@ services:
     build:
       context: .
       dockerfile: src/system/project_manager/Dockerfile
+    user: "1000:1000"
     env_file:
       - .env
     environment:
@@ -159,6 +166,10 @@ services:
     build:
       context: .
       dockerfile: src/pipeline/preprocessor/Dockerfile
+    user: "1000:1000"
+    ulimits:
+      rtprio: 99
+      memlock: -1
     env_file:
       - .env
     environment:
@@ -168,14 +179,16 @@ services:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
-    # The container needs to be privileged to set real-time priority.
-    privileged: true
     network_mode: host
 
   presenter:
     build:
       context: .
       dockerfile: src/pipeline/presenter/Dockerfile
+    user: "1000:1000"
+    ulimits:
+      rtprio: 99
+      memlock: -1
     env_file:
       - .env
     volumes:
@@ -194,8 +207,6 @@ services:
       # ROS environment
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
-    # The container needs to be privileged to set real-time priority.
-    privileged: true
     network_mode: host
     devices:
       # Provide access to sound devices
@@ -264,6 +275,7 @@ services:
     build:
       context: .
       dockerfile: src/system/session_recorder/Dockerfile
+    user: "1000:1000"
     env_file:
       - .env
       - .git_provenance.env
@@ -280,6 +292,7 @@ services:
     build:
       context: .
       dockerfile: src/system/recording_manager/Dockerfile
+    user: "1000:1000"
     env_file:
       - .env
     environment:

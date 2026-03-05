@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, screen } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
@@ -9,9 +9,13 @@ let detachedWindow = null;
 
 function createWindow() {
   // Create the browser window.
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    x: 0,
+    y: 0,
+    width,
+    height,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
@@ -36,8 +40,8 @@ function createWindow() {
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
-    mainWindow.maximize();
     mainWindow.show();
+    mainWindow.focus();
   });
 
   // Emitted when the window is closed.

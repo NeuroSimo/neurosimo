@@ -112,12 +112,22 @@ ament_target_dependencies(
   system_interfaces
 )
 
-# Find the user's local site-packages directory
-execute_process(COMMAND ${Python3_EXECUTABLE} -c "import site; print(site.USER_SITE)"
-                OUTPUT_VARIABLE PYTHON_LOCAL_SITE_PACKAGES
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+# Install Python bindings into a user-independent site-packages directory so
+# they are importable regardless of the UID the container runs with.
 
-message(STATUS "Installing Python bindings to: ${PYTHON_LOCAL_SITE_PACKAGES}")
+# Prefer CMake's Python3_SITELIB (system site-packages); fall back to Python's
+# site.getsitepackages()[0] if it is not defined.
+set(PYTHON_SITE_PACKAGES "${Python3_SITELIB}")
+
+if(NOT PYTHON_SITE_PACKAGES)
+  execute_process(
+    COMMAND ${Python3_EXECUTABLE} -c "import site; print(site.getsitepackages()[0])"
+    OUTPUT_VARIABLE PYTHON_SITE_PACKAGES
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+endif()
+
+message(STATUS "Installing Python bindings to: ${PYTHON_SITE_PACKAGES}")
 
 install(TARGETS cpp_bindings
-        DESTINATION ${PYTHON_LOCAL_SITE_PACKAGES})
+        DESTINATION ${PYTHON_SITE_PACKAGES})

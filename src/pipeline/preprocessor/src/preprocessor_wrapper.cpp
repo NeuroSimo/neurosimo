@@ -2,6 +2,7 @@
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <algorithm>
 #include <cmath>
 
 #include "preprocessor_wrapper.h"
@@ -128,8 +129,18 @@ bool PreprocessorWrapper::initialize_module(
     return false;
   }
 
-  this->envelope_buffer_size = static_cast<std::size_t>(this->sample_window_end - this->sample_window_start + 1);
-  this->sample_window_start_offset_in_envelope = 0;
+  /* Similar to decider_wrapper.cpp, the logic below works but is too complex just to cover the case where the sample window is fully in the past. It should be simplified. */
+
+  /* Negative look-ahead is treated as zero by scheduler logic, so the envelope must
+     include samples up to max(sample_window_end, 0). */
+  const int effective_look_ahead = std::max(this->sample_window_end, 0);
+  this->envelope_buffer_size =
+      static_cast<std::size_t>(effective_look_ahead - this->sample_window_start + 1);
+
+  const int oldest_offset_in_buffer =
+      effective_look_ahead - static_cast<int>(this->envelope_buffer_size) + 1;
+  this->sample_window_start_offset_in_envelope =
+      static_cast<std::size_t>(this->sample_window_start - oldest_offset_in_buffer);
 
   /* Initialize numpy arrays. */
   py_time_offsets = std::make_unique<py::array_t<double>>(envelope_buffer_size);
@@ -178,7 +189,7 @@ std::size_t PreprocessorWrapper::get_buffer_size() const {
 int PreprocessorWrapper::get_look_ahead_samples() const {
   /* For a sample window like [-10, 5], sample_window_end is 5, which represents
      the number of samples we need to look ahead from the triggering sample. */
-  return this->sample_window_end;
+  return std::max(this->sample_window_end, 0);
 }
 
 bool PreprocessorWrapper::process(

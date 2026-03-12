@@ -287,7 +287,7 @@ void EegDecider::handle_initialize_decider(
   }
 
   // Get buffer size and set up sample buffer
-  size_t buffer_size = this->decider_wrapper->get_buffer_size();
+  size_t buffer_size = this->decider_wrapper->get_envelope_buffer_size();
   this->sample_buffer.reset(buffer_size);
 
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
@@ -678,13 +678,13 @@ void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::
   int look_ahead_samples;
   switch (processing_reason) {
     case ProcessingReason::Pulse:
-      look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_pulse();
+      look_ahead_samples = this->decider_wrapper->get_pulse_look_ahead_samples();
       break;
     case ProcessingReason::Event:
-      look_ahead_samples = this->decider_wrapper->get_look_ahead_samples_for_event();
+      look_ahead_samples = this->decider_wrapper->get_event_look_ahead_samples();
       break;
     case ProcessingReason::Periodic:
-      look_ahead_samples = this->decider_wrapper->get_look_ahead_samples();
+      look_ahead_samples = this->decider_wrapper->get_periodic_look_ahead_samples();
       break;
     default:
       RCLCPP_ERROR(this->get_logger(), "Invalid processing type: %d", static_cast<int>(processing_reason));
@@ -860,7 +860,7 @@ void EegDecider::detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfac
     this->publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED, "Sample gap detected");
 
     /* Reset the ring buffer to avoid processing with non-continuous windows. */
-    size_t buffer_size = this->decider_wrapper->get_buffer_size();
+    size_t buffer_size = this->decider_wrapper->get_envelope_buffer_size();
     this->sample_buffer.reset(buffer_size);
   }
 

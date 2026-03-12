@@ -79,13 +79,13 @@ public:
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target);
 
-  std::size_t get_buffer_size() const;
+  std::size_t get_envelope_buffer_size() const;
   double get_periodic_processing_interval() const;
   double get_first_periodic_processing_at() const;
   bool is_processing_interval_enabled() const;
-  int get_look_ahead_samples() const;
-  int get_look_ahead_samples_for_pulse() const;
-  int get_look_ahead_samples_for_event() const;
+  int get_periodic_look_ahead_samples() const;
+  int get_pulse_look_ahead_samples() const;
+  int get_event_look_ahead_samples() const;
   double get_pulse_lockout_duration() const;
 
   void setup_custom_print();
@@ -132,25 +132,23 @@ private:
   py::object pulse_processor;
   py::object event_processor;
 
-  /* Preallocated numpy arrays for default window */
-  std::unique_ptr<py::array_t<double>> py_time_offsets;
-  std::unique_ptr<py::array_t<double>> py_eeg;
-  std::unique_ptr<py::array_t<double>> py_emg;
+  /* Preallocated numpy arrays for periodic processor */
+  std::unique_ptr<py::array_t<double>> periodic_time_offsets;
+  std::unique_ptr<py::array_t<double>> periodic_eeg;
+  std::unique_ptr<py::array_t<double>> periodic_emg;
   
-  /* Preallocated numpy arrays for pulse processor (if custom window) */
+  /* Preallocated numpy arrays for pulse processor */
   std::unique_ptr<py::array_t<double>> pulse_time_offsets;
   std::unique_ptr<py::array_t<double>> pulse_eeg;
   std::unique_ptr<py::array_t<double>> pulse_emg;
   
-  /* Preallocated numpy arrays for event processor (if custom window) */
+  /* Preallocated numpy arrays for event processor */
   std::unique_ptr<py::array_t<double>> event_time_offsets;
   std::unique_ptr<py::array_t<double>> event_eeg;
   std::unique_ptr<py::array_t<double>> event_emg;
 
   std::unordered_map<std::string, std::chrono::steady_clock::time_point> last_log_time;
 
-  int look_back_samples = 0;
-  int look_ahead_samples = 0;
   uint16_t sampling_frequency = 0;
   bool periodic_processing_enabled = false;
   double periodic_processing_interval = 0.0;
@@ -158,17 +156,24 @@ private:
   double pulse_lockout_duration = 0.0;
   uint16_t warm_up_rounds = 0;
 
-  /* Custom window parameters for pulse processor */
+  /* Window parameters for periodic processing */
+  int periodic_sample_window_start = 0;
+  int periodic_sample_window_end = 0;
+  std::size_t periodic_window_start_offset_in_envelope = 0;
+
+  /* Window parameters for pulse processor */
   bool has_custom_pulse_window = false;
-  int pulse_look_back_samples = 0;
-  int pulse_look_ahead_samples = 0;
+  int pulse_sample_window_start = 0;
+  int pulse_sample_window_end = 0;
+  std::size_t pulse_window_start_offset_in_envelope = 0;
 
-  /* Custom window parameters for event processor */
+  /* Window parameters for event processor */
   bool has_custom_event_window = false;
-  int event_look_back_samples = 0;
-  int event_look_ahead_samples = 0;
+  int event_sample_window_start = 0;
+  int event_sample_window_end = 0;
+  std::size_t event_window_start_offset_in_envelope = 0;
 
-  std::size_t buffer_size = 0;
+  std::size_t envelope_buffer_size = 0;
   std::size_t eeg_size = 0;
   std::size_t emg_size = 0;
 

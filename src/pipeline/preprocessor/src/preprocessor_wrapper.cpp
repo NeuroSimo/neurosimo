@@ -95,19 +95,14 @@ bool PreprocessorWrapper::initialize_module(
     return false;
   }
 
-  /* Helpers to convert seconds to samples (ceil to guarantee coverage). */
-  const auto to_look_back_samples = [this](double earliest_seconds) -> int {
-    double seconds = std::max(0.0, -earliest_seconds);
-    return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
-  };
-  const auto to_look_ahead_samples = [this](double latest_seconds) -> int {
-    double seconds = std::max(0.0, latest_seconds);
+  /* Helper to convert seconds to sample counts. */
+  const auto to_samples = [this](double seconds) -> int {
     return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
   };
 
   /* Extract the configuration from preprocessor_instance. */
-  double window_earliest_seconds = 0.0;
-  double window_latest_seconds = 0.0;
+  double sample_window_start_seconds = 0.0;
+  double sample_window_end_seconds = 0.0;
   if (py::hasattr(*preprocessor_instance, "get_configuration")) {
     py::dict config = preprocessor_instance->attr("get_configuration")().cast<py::dict>();
 
@@ -115,12 +110,11 @@ bool PreprocessorWrapper::initialize_module(
     if (config.contains("sample_window")) {
       py::list sample_window = config["sample_window"].cast<py::list>();
       if (sample_window.size() == 2) {
-        window_earliest_seconds = sample_window[0].cast<double>();
-        window_latest_seconds = sample_window[1].cast<double>();
+        sample_window_start_seconds = sample_window[0].cast<double>();
+        sample_window_end_seconds = sample_window[1].cast<double>();
 
-        this->look_back_samples = to_look_back_samples(window_earliest_seconds);
-        this->look_ahead_samples = to_look_ahead_samples(window_latest_seconds);
-        this->buffer_size = this->look_back_samples + this->look_ahead_samples + 1;
+        this->sample_window_start = to_samples(sample_window_start_seconds);
+        this->sample_window_end = to_samples(sample_window_end_seconds);
       } else {
         RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
         return false;
@@ -134,13 +128,16 @@ bool PreprocessorWrapper::initialize_module(
     return false;
   }
 
-  /* Initialize numpy arrays. */
-  py_time_offsets = std::make_unique<py::array_t<double>>(buffer_size);
+  this->envelope_buffer_size = static_cast<std::size_t>(this->sample_window_end - this->sample_window_start + 1);
+  this->sample_window_start_offset_in_envelope = 0;
 
-  std::vector<size_t> eeg_shape = {buffer_size, eeg_size};
+  /* Initialize numpy arrays. */
+  py_time_offsets = std::make_unique<py::array_t<double>>(envelope_buffer_size);
+
+  std::vector<size_t> eeg_shape = {envelope_buffer_size, eeg_size};
   py_eeg = std::make_unique<py::array_t<double>>(eeg_shape);
 
-  std::vector<size_t> emg_shape = {buffer_size, emg_size};
+  std::vector<size_t> emg_shape = {envelope_buffer_size, emg_size};
   py_emg = std::make_unique<py::array_t<double>>(emg_shape);
 
   this->eeg_size = eeg_size;
@@ -151,8 +148,8 @@ bool PreprocessorWrapper::initialize_module(
   RCLCPP_INFO(*logger_ptr, " ");
   RCLCPP_INFO(*logger_ptr, "  - Sample window: %s[%.3f s, %.3f s]%s",
               bold_on.c_str(),
-              window_earliest_seconds,
-              window_latest_seconds,
+              sample_window_start_seconds,
+              sample_window_end_seconds,
               bold_off.c_str());
   RCLCPP_INFO(*logger_ptr, " ");
 
@@ -175,13 +172,13 @@ PreprocessorWrapper::~PreprocessorWrapper() {
 }
 
 std::size_t PreprocessorWrapper::get_buffer_size() const {
-  return this->buffer_size;
+  return this->envelope_buffer_size;
 }
 
 int PreprocessorWrapper::get_look_ahead_samples() const {
-  /* For a sample window like [-10, 5], look_ahead_samples is 5, which represents
+  /* For a sample window like [-10, 5], sample_window_end is 5, which represents
      the number of samples we need to look ahead from the triggering sample. */
-  return this->look_ahead_samples;
+  return this->sample_window_end;
 }
 
 bool PreprocessorWrapper::process(
@@ -190,24 +187,17 @@ bool PreprocessorWrapper::process(
     double_t reference_time,
     bool pulse_given) {
 
-  /* An example: If the sample window is set to [-2, 5], look_back_samples = 2, and the sample window base index
-     (the index of sample 0 in the buffer) is 2. */
-  int reference_index = this->look_back_samples;
+  int reference_index = -this->sample_window_start;
+  std::size_t num_samples = this->envelope_buffer_size;
 
-  /* Fill the numpy arrays. */
-  auto time_offsets_ptr = py_time_offsets->mutable_data();
-  auto eeg_ptr = py_eeg->mutable_data();
-  auto emg_ptr = py_emg->mutable_data();
-
-  buffer.process_elements([&](const auto& sample_ptr) {
-    const auto& sample = *sample_ptr;
-
-    *time_offsets_ptr++ = sample.time - reference_time;
-    std::memcpy(eeg_ptr, sample.eeg.data(), eeg_size * sizeof(double));
-    eeg_ptr += eeg_size;
-    std::memcpy(emg_ptr, sample.emg.data(), emg_size * sizeof(double));
-    emg_ptr += emg_size;
-  });
+  fill_arrays_from_buffer(
+    buffer,
+    reference_time,
+    *py_time_offsets,
+    *py_eeg,
+    *py_emg,
+    this->sample_window_start_offset_in_envelope,
+    num_samples);
 
   /* Call the Python function. */
   py::object result;
@@ -268,6 +258,33 @@ bool PreprocessorWrapper::process(
   output_sample.time = reference_time;
 
   return true;
+}
+
+void PreprocessorWrapper::fill_arrays_from_buffer(
+    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    double_t reference_time,
+    py::array_t<double>& time_offsets,
+    py::array_t<double>& eeg,
+    py::array_t<double>& emg,
+    std::size_t start_offset,
+    std::size_t num_samples) {
+
+  auto time_offsets_ptr = time_offsets.mutable_data();
+  auto eeg_ptr = eeg.mutable_data();
+  auto emg_ptr = emg.mutable_data();
+
+  std::size_t ring_idx = 0;
+  std::size_t out_idx = 0;
+  buffer.process_elements([&](const auto& sample_ptr) {
+    if (ring_idx >= start_offset && out_idx < num_samples) {
+      const auto& sample = *sample_ptr;
+      time_offsets_ptr[out_idx] = sample.time - reference_time;
+      std::memcpy(eeg_ptr + out_idx * eeg_size, sample.eeg.data(), eeg_size * sizeof(double));
+      std::memcpy(emg_ptr + out_idx * emg_size, sample.emg.data(), emg_size * sizeof(double));
+      out_idx++;
+    }
+    ring_idx++;
+  });
 }
 
 std::vector<LogEntry> PreprocessorWrapper::get_and_clear_logs() {

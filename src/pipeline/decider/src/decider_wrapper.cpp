@@ -377,33 +377,46 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_DEBUG(*logger_ptr, "Registered event processor");
   }
 
-  /* Calculate maximum buffer size needed to cover all windows. */
+  /* TODO: The logic below works but is too complex just to cover the case where the sample window is fully in the past. It should be simplified. */
+
+  /* Calculate maximum buffer size needed to cover all windows.
+     Negative look-ahead is treated as zero in runtime scheduling, so the envelope must
+     be sized using "effective" look-ahead values (max(window_end, 0)). */
+  const auto effective_look_ahead = [](int window_end) -> int {
+    return std::max(window_end, 0);
+  };
+
+  const int periodic_effective_look_ahead = effective_look_ahead(this->periodic_sample_window_end);
+  const int pulse_effective_look_ahead = effective_look_ahead(this->pulse_sample_window_end);
+  const int event_effective_look_ahead = effective_look_ahead(this->event_sample_window_end);
+
   int min_start = this->periodic_sample_window_start;
-  int max_end = this->periodic_sample_window_end;
-
   min_start = std::min(min_start, this->pulse_sample_window_start);
-  max_end = std::max(max_end, this->pulse_sample_window_end);
-
   min_start = std::min(min_start, this->event_sample_window_start);
-  max_end = std::max(max_end, this->event_sample_window_end);
 
-  this->envelope_buffer_size = max_end - min_start + 1;
+  int max_effective_look_ahead = periodic_effective_look_ahead;
+  max_effective_look_ahead = std::max(max_effective_look_ahead, pulse_effective_look_ahead);
+  max_effective_look_ahead = std::max(max_effective_look_ahead, event_effective_look_ahead);
 
-  /* Store each window's start index relative to the end of the envelope buffer.
-     At processing time, the newest sample in the buffer corresponds to the triggering
-     sample shifted by that processing reason's look-ahead. */
+  this->envelope_buffer_size = static_cast<std::size_t>(max_effective_look_ahead - min_start + 1);
+
+  /* Store each window's start index in the envelope.
+     The newest sample in the buffer corresponds to effective look-ahead (>= 0), not
+     necessarily to window_end when the full window lies in the past. */
+  const auto compute_window_start_offset = [this](int window_start, int effective_look_ahead_for_reason) -> std::size_t {
+    const int oldest_offset_in_buffer = effective_look_ahead_for_reason - static_cast<int>(this->envelope_buffer_size) + 1;
+    return static_cast<std::size_t>(window_start - oldest_offset_in_buffer);
+  };
+
   this->periodic_window_start_offset_in_envelope =
-      this->envelope_buffer_size -
-      static_cast<std::size_t>(this->periodic_sample_window_end - this->periodic_sample_window_start + 1);
+      compute_window_start_offset(this->periodic_sample_window_start, periodic_effective_look_ahead);
   this->pulse_window_start_offset_in_envelope =
-      this->envelope_buffer_size -
-      static_cast<std::size_t>(this->pulse_sample_window_end - this->pulse_sample_window_start + 1);
+      compute_window_start_offset(this->pulse_sample_window_start, pulse_effective_look_ahead);
   this->event_window_start_offset_in_envelope =
-      this->envelope_buffer_size -
-      static_cast<std::size_t>(this->event_sample_window_end - this->event_sample_window_start + 1);
+      compute_window_start_offset(this->event_sample_window_start, event_effective_look_ahead);
   
-  RCLCPP_DEBUG(*logger_ptr, "Maximum envelope: start=%d, end=%d, buffer size: %zu", 
-               min_start, max_end, this->envelope_buffer_size);
+  RCLCPP_DEBUG(*logger_ptr, "Maximum envelope: start=%d, latest=%d, buffer size: %zu",
+               min_start, max_effective_look_ahead, this->envelope_buffer_size);
 
   this->eeg_size = eeg_size;
   this->emg_size = emg_size;
@@ -639,7 +652,7 @@ bool DeciderWrapper::is_processing_interval_enabled() const {
 }
 
 int DeciderWrapper::get_periodic_look_ahead_samples() const {
-  return this->periodic_sample_window_end;
+  return std::max(this->periodic_sample_window_end, 0);
 }
 
 int DeciderWrapper::get_pulse_look_ahead_samples() const {
@@ -647,11 +660,11 @@ int DeciderWrapper::get_pulse_look_ahead_samples() const {
   if (this->pulse_processor.is_none()) {
     return 0;
   }
-  return this->pulse_sample_window_end;
+  return std::max(this->pulse_sample_window_end, 0);
 }
 
 int DeciderWrapper::get_event_look_ahead_samples() const {
-  return this->event_sample_window_end;
+  return std::max(this->event_sample_window_end, 0);
 }
 
 double DeciderWrapper::get_pulse_lockout_duration() const {

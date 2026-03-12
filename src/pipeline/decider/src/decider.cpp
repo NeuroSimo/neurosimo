@@ -691,6 +691,11 @@ void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::
       return;
   }
 
+  /* Negative look-ahead is treated as no deferral. */
+  if (look_ahead_samples < 0) {
+    look_ahead_samples = 0;
+  }
+
   /* Calculate the time when we'll have enough look-ahead samples.
      If look-ahead is 5 samples, we need to wait for 5 more samples after this one.
      Each sample takes sampling_period time. */

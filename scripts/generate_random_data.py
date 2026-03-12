@@ -7,7 +7,17 @@ import argparse
 import os
 import json
 
-def generate_random_data(num_eeg_channels, num_emg_channels, sampling_frequency, duration, use_timestamp_values=False):
+RANDOM_SEED = 12345
+
+
+def generate_random_data(
+    num_eeg_channels,
+    num_emg_channels,
+    sampling_frequency,
+    duration,
+    seed,
+    use_timestamp_values=False,
+):
     num_of_samples = int(duration * sampling_frequency)
 
     if use_timestamp_values:
@@ -17,7 +27,8 @@ def generate_random_data(num_eeg_channels, num_emg_channels, sampling_frequency,
         data = np.tile(timestamps.reshape(-1, 1), (1, num_eeg_channels + num_emg_channels))
     else:
         # Generate random data for EEG and EMG channels (no timestamp column)
-        data = 2 * np.random.rand(num_of_samples, num_eeg_channels + num_emg_channels) - 1
+        rng = np.random.default_rng(seed)
+        data = 2 * rng.random((num_of_samples, num_eeg_channels + num_emg_channels)) - 1
 
     return data
 
@@ -74,7 +85,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data = generate_random_data(args.eeg_channels, args.emg_channels, args.sampling_frequency, args.duration, args.timestamp_values)
+    data = generate_random_data(args.eeg_channels, args.emg_channels, args.sampling_frequency, args.duration, RANDOM_SEED, args.timestamp_values)
 
     data_filename = args.output_filename + ".csv"
     save_to_csv(

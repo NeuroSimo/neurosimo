@@ -47,7 +47,7 @@ public:
   bool process(
       eeg_interfaces::msg::Sample& output_sample,
       const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
-      double_t sample_window_base_time,
+      double_t reference_time,
       bool pulse_given);
 
   std::size_t get_buffer_size() const;
@@ -86,13 +86,23 @@ private:
   std::unique_ptr<py::array_t<double>> py_eeg;
   std::unique_ptr<py::array_t<double>> py_emg;
 
-  int look_back_samples = 0;
-  int look_ahead_samples = 0;
+  int sample_window_start = 0;
+  int sample_window_end = 0;
+  std::size_t sample_window_start_offset_in_envelope = 0;
   uint16_t sampling_frequency = 0;
 
-  std::size_t buffer_size = 0;
+  std::size_t envelope_buffer_size = 0;
   std::size_t eeg_size = 0;
   std::size_t emg_size = 0;
+
+  void fill_arrays_from_buffer(
+    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    double_t reference_time,
+    py::array_t<double>& time_offsets,
+    py::array_t<double>& eeg,
+    py::array_t<double>& emg,
+    std::size_t start_offset,
+    std::size_t num_samples);
 };
 
 #endif

@@ -59,7 +59,7 @@ class Decider:
         """Return configuration dictionary for the pipeline."""
         return {
             # Data configuration
-            'sample_window': [-1.0, 0.0],
+            'sample_window': [-1.0, -0.1],
             'warm_up_rounds': 0,  # Number of warm-up rounds to perform (0 to disable)
 
             # Periodic processing

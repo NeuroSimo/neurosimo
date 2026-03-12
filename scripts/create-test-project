@@ -77,17 +77,9 @@ python3 "$NEUROSIMO_ROOT/scripts/generate_random_data.py" \
     --output_filename "test_data_with_timestamp_values" \
     --dataset_name "Test data with timestamp values" \
     --sampling_frequency 5000 \
-    --pulse_times 3.5 \
-    --timestamp_values
-
-echo "Generating test data with 62 EEG channels and 0 EMG channels..."
-python3 "$NEUROSIMO_ROOT/scripts/generate_random_data.py" \
-    --duration 30 \
-    --output_directory "$PROJECTS_ROOT/test/eeg_simulator" \
-    --output_filename "test_data_with_62_eeg_channels_and_0_emg_channels" \
-    --dataset_name "Test data with 62 EEG channels and 0 EMG channels" \
-    --sampling_frequency 5000 \
+    --pulse_times 3.5 7.5 10.5 13.5 \
     --eeg_channels 62 \
-    --emg_channels 0
+    --emg_channels 2 \
+    --timestamp_values
 
 echo "Test project creation complete!"

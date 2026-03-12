@@ -1,17 +1,23 @@
 # Example usage:
 #
-# python3 $NEUROSIMO_ROOT/scratch/generate_random_data.py --dataset_name "Random, 100 Hz" --sampling_frequency 100 --output_filename random_data_100_hz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator --loop > /dev/null
+# python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 100 Hz" --sampling_frequency 100 --output_filename random_data_100_hz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator --loop > /dev/null
 #
 import numpy as np
 import argparse
 import os
 import json
 
-def generate_random_data(num_eeg_channels, num_emg_channels, sampling_frequency, duration):
+def generate_random_data(num_eeg_channels, num_emg_channels, sampling_frequency, duration, use_timestamp_values=False):
     num_of_samples = int(duration * sampling_frequency)
 
-    # Generate random data for EEG and EMG channels (no timestamp column)
-    data = 2 * np.random.rand(num_of_samples, num_eeg_channels + num_emg_channels) - 1
+    if use_timestamp_values:
+        # Generate timestamps for each sample
+        timestamps = np.arange(num_of_samples) / sampling_frequency
+        # Use timestamp values for all channels
+        data = np.tile(timestamps.reshape(-1, 1), (1, num_eeg_channels + num_emg_channels))
+    else:
+        # Generate random data for EEG and EMG channels (no timestamp column)
+        data = 2 * np.random.rand(num_of_samples, num_eeg_channels + num_emg_channels) - 1
 
     return data
 
@@ -64,10 +70,11 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_name", type=str, default="Random data", help="Name of the dataset")
     parser.add_argument("--loop", action="store_true", help="Whether to loop the dataset when reaching the end")
     parser.add_argument("--pulse_times", nargs='*', type=float, help="Times in seconds when pulses occur (space-separated list, optional)")
+    parser.add_argument("--timestamp_values", action="store_true", help="Generate data where values equal the timestamp (for testing)")
 
     args = parser.parse_args()
 
-    data = generate_random_data(args.eeg_channels, args.emg_channels, args.sampling_frequency, args.duration)
+    data = generate_random_data(args.eeg_channels, args.emg_channels, args.sampling_frequency, args.duration, args.timestamp_values)
 
     data_filename = args.output_filename + ".csv"
     save_to_csv(
@@ -88,7 +95,9 @@ if __name__ == "__main__":
         pulse_times=args.pulse_times,
     )
 
-    print("Random data with {} EEG channels and {} EMG channels saved to {}/{}.csv".format(
+    data_type = "Timestamp" if args.timestamp_values else "Random"
+    print("{} data with {} EEG channels and {} EMG channels saved to {}/{}.csv".format(
+        data_type,
         args.eeg_channels,
         args.emg_channels,
         args.output_directory,

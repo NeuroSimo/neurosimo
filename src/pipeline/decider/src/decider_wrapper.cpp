@@ -75,11 +75,6 @@ bool DeciderWrapper::initialize_module(
     return false;
   }
 
-  /* Local storage for logging */
-  double default_window_earliest_seconds = 0.0;
-  double default_window_latest_seconds = 0.0;
-  std::unordered_map<std::string, std::pair<double, double>> event_window_seconds;
-
   /* Set up the Python environment. */
   py::module sys_module = py::module::import("sys");
   py::list sys_path = sys_module.attr("path");
@@ -131,354 +126,349 @@ bool DeciderWrapper::initialize_module(
   }
 
   /* Extract the configuration from decider_instance. */
-  if (py::hasattr(*decider_instance, "get_configuration")) {
-    py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
-
-    /* Helper lambdas to convert seconds to non-negative sample counts. */
-    const auto to_look_back_samples = [this](double earliest_seconds) -> int {
-      /* earliest_seconds is expected to be negative or zero. */
-      double seconds = std::max(0.0, -earliest_seconds);
-      return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
-    };
-    const auto to_look_ahead_samples = [this](double latest_seconds) -> int {
-      /* latest_seconds is expected to be positive or zero. */
-      double seconds = std::max(0.0, latest_seconds);
-      return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
-    };
-
-    /* Validate that only allowed keys are present */
-    std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_processor", "event_processor"};
-    for (const auto& item : config) {
-      std::string key = py::str(item.first).cast<std::string>();
-      if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-        RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.", key.c_str());
-        return false;
-      }
-    }
-
-    /* Extract sample_window. */
-    if (config.contains("sample_window")) {
-      py::list sample_window = config["sample_window"].cast<py::list>();
-      if (sample_window.size() == 2) {
-        double earliest_seconds = sample_window[0].cast<double>();
-        double latest_seconds = sample_window[1].cast<double>();
-        
-        /* Convert seconds to sample counts (ceil to ensure coverage). */
-        this->look_back_samples = to_look_back_samples(earliest_seconds);
-        this->look_ahead_samples = to_look_ahead_samples(latest_seconds);
-        this->buffer_size = this->look_back_samples + this->look_ahead_samples + 1;
-
-        /* Store window in seconds for later logging. */
-        default_window_earliest_seconds = earliest_seconds;
-        default_window_latest_seconds = latest_seconds;
-
-        RCLCPP_DEBUG(*logger_ptr,
-          "Configured default sample window: [%.6f s, %.6f s] -> look_back=%d samples, look_ahead=%d samples",
-          earliest_seconds,
-          latest_seconds,
-          this->look_back_samples,
-          this->look_ahead_samples);
-      } else {
-        RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
-        return false;
-      }
-
-    } else {
-      RCLCPP_ERROR(*logger_ptr, "'sample_window' key not found in configuration dictionary.");
-      return false;
-    }
-
-    /* Extract predefined_sensory_stimuli (optional). */
-    if (config.contains("predefined_sensory_stimuli")) {
-      if (!py::isinstance<py::list>(config["predefined_sensory_stimuli"])) {
-        RCLCPP_ERROR(*logger_ptr, "predefined_sensory_stimuli must be a list.");
-        return false;
-      }
-
-      py::list py_sensory_stimuli = config["predefined_sensory_stimuli"].cast<py::list>();
-      if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
-        return false;
-      }
-    }
-
-    /* Extract periodic_processing_enabled (mandatory). */
-    if (config.contains("periodic_processing_enabled")) {
-      try {
-        this->periodic_processing_enabled = config["periodic_processing_enabled"].cast<bool>();
-      } catch (const py::cast_error& e) {
-        RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled must be a boolean: %s", e.what());
-        return false;
-      }
-    } else {
-      RCLCPP_ERROR(*logger_ptr, "'periodic_processing_enabled' key not found in configuration dictionary.");
-      return false;
-    }
-
-    /* Check that if periodic processing is enabled, the periodic_processing_interval is provided. */
-    if (this->periodic_processing_enabled && !config.contains("periodic_processing_interval")) {
-      RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled is true but 'periodic_processing_interval' is not provided in configuration dictionary.");
-      return false;
-    }
-
-    /* Extract periodic_processing_interval. */
-    if (config.contains("periodic_processing_interval")) {
-      try {
-        this->periodic_processing_interval = config["periodic_processing_interval"].cast<double>();
-        if (this->periodic_processing_interval <= 0.0) {
-          RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a positive number (got %.3f).", this->periodic_processing_interval);
-          return false;
-        }
-      } catch (const py::cast_error& e) {
-        RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a number: %s", e.what());
-        return false;
-      }
-    } else {
-      this->periodic_processing_interval = 0.0;
-    }
-
-    /* Extract first_periodic_processing_at (in seconds), defaulting to periodic_processing_interval. */
-    if (config.contains("first_periodic_processing_at")) {
-      try {
-        this->first_periodic_processing_at = config["first_periodic_processing_at"].cast<double>();
-        if (this->first_periodic_processing_at < 0.0) {
-          RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be non-negative.");
-          return false;
-        }
-      } catch (const py::cast_error& e) {
-        RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be a number: %s", e.what());
-        return false;
-      }
-    } else {
-      /* Default to same as periodic_processing_interval. */
-      this->first_periodic_processing_at = this->periodic_processing_interval;
-    }
-
-    /* Extract predefined_events (optional). */
-    if (config.contains("predefined_events")) {
-      py::list events = config["predefined_events"].cast<py::list>();
-      for (const auto& event : events) {
-        double event_time = event.cast<double>();
-        event_queue.push(event_time);
-      }
-    }
-
-    /* Extract warm_up_rounds (optional, defaults to 0). */
-    if (config.contains("warm_up_rounds")) {
-      try {
-        this->warm_up_rounds = config["warm_up_rounds"].cast<int>();
-        if (this->warm_up_rounds < 0) {
-          RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be non-negative.");
-          return false;
-        }
-      } catch (const py::cast_error& e) {
-        RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be an integer: %s", e.what());
-        return false;
-      }
-    } else {
-      this->warm_up_rounds = 0;
-    }
-
-    /* Extract pulse_lockout_duration (optional, defaults to 0.0). */
-    if (config.contains("pulse_lockout_duration")) {
-      try {
-        this->pulse_lockout_duration = config["pulse_lockout_duration"].cast<double>();
-        if (this->pulse_lockout_duration < 0.0) {
-          RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be non-negative.");
-          return false;
-        }
-      } catch (const py::cast_error& e) {
-        RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be a number: %s", e.what());
-        return false;
-      }
-    } else {
-      this->pulse_lockout_duration = 0.0;
-    }
-
-    /* Extract pulse_processor (optional). */
-    if (config.contains("pulse_processor")) {
-      py::object value = config["pulse_processor"].cast<py::object>();
-      
-      /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
-      if (py::isinstance<py::dict>(value)) {
-        py::dict processor_config = value.cast<py::dict>();
-        
-        /* Extract processor */
-        if (!processor_config.contains("processor")) {
-          RCLCPP_ERROR(*logger_ptr, "pulse_processor config must contain 'processor' key.");
-          return false;
-        }
-        this->pulse_processor = processor_config["processor"].cast<py::object>();
-        
-        /* Extract optional sample_window */
-        if (processor_config.contains("sample_window")) {
-          py::list sample_window = processor_config["sample_window"].cast<py::list>();
-          if (sample_window.size() != 2) {
-            RCLCPP_ERROR(*logger_ptr, "sample_window for pulse_processor must have 2 elements.");
-            return false;
-          }
-          double earliest_seconds = sample_window[0].cast<double>();
-          double latest_seconds = sample_window[1].cast<double>();
-          int pulse_look_back = to_look_back_samples(earliest_seconds);
-          int pulse_look_ahead = to_look_ahead_samples(latest_seconds);
-          
-          this->pulse_look_back_samples = pulse_look_back;
-          this->pulse_look_ahead_samples = pulse_look_ahead;
-          this->has_custom_pulse_window = true;
-          
-          RCLCPP_DEBUG(*logger_ptr,
-            "Registered custom sample window [%.6f s, %.6f s] for pulse_processor",
-            earliest_seconds, latest_seconds);
-        }
-      } else {
-        /* Simple format: value is the processor directly */
-        this->pulse_processor = value;
-      }
-      
-      if (!py::hasattr(this->pulse_processor, "__call__")) {
-        RCLCPP_ERROR(*logger_ptr, "pulse_processor is not callable.");
-        return false;
-      }
-      RCLCPP_DEBUG(*logger_ptr, "Registered pulse processor");
-    }
-
-    /* Extract event_processor (optional). */
-    if (config.contains("event_processor")) {
-      py::object value = config["event_processor"].cast<py::object>();
-      
-      /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
-      if (py::isinstance<py::dict>(value)) {
-        py::dict processor_config = value.cast<py::dict>();
-        
-        /* Extract processor */
-        if (!processor_config.contains("processor")) {
-          RCLCPP_ERROR(*logger_ptr, "event_processor config must contain 'processor' key.");
-          return false;
-        }
-        this->event_processor = processor_config["processor"].cast<py::object>();
-        
-        /* Extract optional sample_window */
-        if (processor_config.contains("sample_window")) {
-          py::list sample_window = processor_config["sample_window"].cast<py::list>();
-          if (sample_window.size() != 2) {
-            RCLCPP_ERROR(*logger_ptr, "sample_window for event_processor must have 2 elements.");
-            return false;
-          }
-          double earliest_seconds = sample_window[0].cast<double>();
-          double latest_seconds = sample_window[1].cast<double>();
-          int event_look_back = to_look_back_samples(earliest_seconds);
-          int event_look_ahead = to_look_ahead_samples(latest_seconds);
-          
-          this->event_look_back_samples = event_look_back;
-          this->event_look_ahead_samples = event_look_ahead;
-          this->has_custom_event_window = true;
-          
-          RCLCPP_DEBUG(*logger_ptr,
-            "Registered custom sample window [%.6f s, %.6f s] for event_processor",
-            earliest_seconds, latest_seconds);
-        }
-      } else {
-        /* Simple format: value is the processor directly */
-        this->event_processor = value;
-      }
-      
-      if (!py::hasattr(this->event_processor, "__call__")) {
-        RCLCPP_ERROR(*logger_ptr, "event_processor is not callable.");
-        return false;
-      }
-      RCLCPP_DEBUG(*logger_ptr, "Registered event processor");
-    }
-  } else {
+  if (!py::hasattr(*decider_instance, "get_configuration")) {
     RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Decider instance.");
     return false;
   }
 
+  /* Extract the configuration from decider_instance. */
+  py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
+
+  /* Helper lambdas to convert seconds to sample counts. */
+  const auto to_samples = [this](double seconds) -> int {
+    return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
+  };
+
+  /* Validate that only allowed keys are present */
+  std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_processor", "event_processor"};
+  for (const auto& item : config) {
+    std::string key = py::str(item.first).cast<std::string>();
+    if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
+      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.", key.c_str());
+      return false;
+    }
+  }
+
+  /* Extract predefined_sensory_stimuli (optional). */
+  if (config.contains("predefined_sensory_stimuli")) {
+    if (!py::isinstance<py::list>(config["predefined_sensory_stimuli"])) {
+      RCLCPP_ERROR(*logger_ptr, "predefined_sensory_stimuli must be a list.");
+      return false;
+    }
+
+    py::list py_sensory_stimuli = config["predefined_sensory_stimuli"].cast<py::list>();
+    if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
+      return false;
+    }
+  }
+
+  /* Extract periodic_processing_enabled (mandatory). */
+  if (!config.contains("periodic_processing_enabled")) {
+    RCLCPP_ERROR(*logger_ptr, "'periodic_processing_enabled' key not found in configuration dictionary.");
+    return false;
+  }
+
+  try {
+    this->periodic_processing_enabled = config["periodic_processing_enabled"].cast<bool>();
+  } catch (const py::cast_error& e) {
+    RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled must be a boolean: %s", e.what());
+    return false;
+  }
+
+  /* Extract periodic_processing_interval. */
+  if (config.contains("periodic_processing_interval")) {
+    try {
+      this->periodic_processing_interval = config["periodic_processing_interval"].cast<double>();
+      if (this->periodic_processing_interval <= 0.0) {
+        RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a positive number (got %.3f).", this->periodic_processing_interval);
+        return false;
+      }
+    } catch (const py::cast_error& e) {
+      RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a number: %s", e.what());
+      return false;
+    }
+  } else {
+    this->periodic_processing_interval = 0.0;
+  }
+
+  /* Check that if periodic processing is enabled, the periodic_processing_interval is provided. */
+  if (this->periodic_processing_enabled && !config.contains("periodic_processing_interval")) {
+    RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled is true but 'periodic_processing_interval' is not provided in configuration dictionary.");
+    return false;
+  }
+
+  /* Extract first_periodic_processing_at (in seconds), defaulting to periodic_processing_interval. */
+  if (config.contains("first_periodic_processing_at")) {
+    try {
+      this->first_periodic_processing_at = config["first_periodic_processing_at"].cast<double>();
+      if (this->first_periodic_processing_at < 0.0) {
+        RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be non-negative.");
+        return false;
+      }
+    } catch (const py::cast_error& e) {
+      RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be a number: %s", e.what());
+      return false;
+    }
+  } else {
+    /* Default to same as periodic_processing_interval. */
+    this->first_periodic_processing_at = this->periodic_processing_interval;
+  }
+
+  /* Extract predefined_events (optional). */
+  if (config.contains("predefined_events")) {
+    py::list events = config["predefined_events"].cast<py::list>();
+    for (const auto& event : events) {
+      double event_time = event.cast<double>();
+      event_queue.push(event_time);
+    }
+  }
+
+  /* Extract warm_up_rounds (optional, defaults to 0). */
+  if (config.contains("warm_up_rounds")) {
+    try {
+      this->warm_up_rounds = config["warm_up_rounds"].cast<int>();
+      if (this->warm_up_rounds < 0) {
+        RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be non-negative.");
+        return false;
+      }
+    } catch (const py::cast_error& e) {
+      RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be an integer: %s", e.what());
+      return false;
+    }
+  } else {
+    this->warm_up_rounds = 0;
+  }
+
+  /* Extract pulse_lockout_duration (optional, defaults to 0.0). */
+  if (config.contains("pulse_lockout_duration")) {
+    try {
+      this->pulse_lockout_duration = config["pulse_lockout_duration"].cast<double>();
+      if (this->pulse_lockout_duration < 0.0) {
+        RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be non-negative.");
+        return false;
+      }
+    } catch (const py::cast_error& e) {
+      RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be a number: %s", e.what());
+      return false;
+    }
+  } else {
+    this->pulse_lockout_duration = 0.0;
+  }
+
+  /* Extract sample_window. */
+  if (!config.contains("sample_window")) {
+    RCLCPP_ERROR(*logger_ptr, "'sample_window' key not found in configuration dictionary.");
+    return false;
+  }
+
+  double default_sample_window_start_seconds = 0.0;
+  double default_sample_window_end_seconds = 0.0;
+
+  py::list sample_window = config["sample_window"].cast<py::list>();
+  if (sample_window.size() == 2) {
+    default_sample_window_start_seconds = sample_window[0].cast<double>();
+    default_sample_window_end_seconds = sample_window[1].cast<double>();
+
+    /* Convert seconds to sample counts. */
+    this->periodic_sample_window_start = to_samples(default_sample_window_start_seconds);
+    this->periodic_sample_window_end = to_samples(default_sample_window_end_seconds);
+  } else {
+    RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
+    return false;
+  }
+
+  /* Extract pulse_processor (optional). */
+  double pulse_sample_window_start_seconds = 0.0;
+  double pulse_sample_window_end_seconds = 0.0;
+
+  if (config.contains("pulse_processor")) {
+    py::object value = config["pulse_processor"].cast<py::object>();
+    
+    /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
+    if (py::isinstance<py::dict>(value)) {
+      py::dict processor_config = value.cast<py::dict>();
+      
+      /* Extract processor */
+      if (!processor_config.contains("processor")) {
+        RCLCPP_ERROR(*logger_ptr, "pulse_processor config must contain 'processor' key.");
+        return false;
+      }
+      this->pulse_processor = processor_config["processor"].cast<py::object>();
+      
+      /* Extract optional sample_window */
+      if (processor_config.contains("sample_window")) {
+        py::list sample_window = processor_config["sample_window"].cast<py::list>();
+        if (sample_window.size() != 2) {
+          RCLCPP_ERROR(*logger_ptr, "sample_window for pulse_processor must have 2 elements.");
+          return false;
+        }
+        pulse_sample_window_start_seconds = sample_window[0].cast<double>();
+        pulse_sample_window_end_seconds = sample_window[1].cast<double>();
+
+        this->pulse_sample_window_start = to_samples(pulse_sample_window_start_seconds);
+        this->pulse_sample_window_end = to_samples(pulse_sample_window_end_seconds);
+      }
+    } else {
+      /* Simple format: value is the processor directly */
+      this->pulse_processor = value;
+
+      /* Use the same sample window as periodic processing. */
+      this->pulse_sample_window_start = this->periodic_sample_window_start;
+      this->pulse_sample_window_end = this->periodic_sample_window_end;
+
+      pulse_sample_window_start_seconds = default_sample_window_start_seconds;
+      pulse_sample_window_end_seconds = default_sample_window_end_seconds;
+    }
+    
+    if (!py::hasattr(this->pulse_processor, "__call__")) {
+      RCLCPP_ERROR(*logger_ptr, "pulse_processor is not callable.");
+      return false;
+    }
+    RCLCPP_DEBUG(*logger_ptr, "Registered pulse processor");
+  }
+
+  /* Extract event_processor (optional). */
+  double event_sample_window_start_seconds = 0.0;
+  double event_sample_window_end_seconds = 0.0;
+
+  if (config.contains("event_processor")) {
+    py::object value = config["event_processor"].cast<py::object>();
+    
+    /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
+    if (py::isinstance<py::dict>(value)) {
+      py::dict processor_config = value.cast<py::dict>();
+      
+      /* Extract processor */
+      if (!processor_config.contains("processor")) {
+        RCLCPP_ERROR(*logger_ptr, "event_processor config must contain 'processor' key.");
+        return false;
+      }
+      this->event_processor = processor_config["processor"].cast<py::object>();
+      
+      /* Extract optional sample_window */
+      if (processor_config.contains("sample_window")) {
+        py::list sample_window = processor_config["sample_window"].cast<py::list>();
+        if (sample_window.size() != 2) {
+          RCLCPP_ERROR(*logger_ptr, "sample_window for event_processor must have 2 elements.");
+          return false;
+        }
+        event_sample_window_start_seconds = sample_window[0].cast<double>();
+        event_sample_window_end_seconds = sample_window[1].cast<double>();
+
+        this->event_sample_window_start = to_samples(event_sample_window_start_seconds);
+        this->event_sample_window_end = to_samples(event_sample_window_end_seconds);
+      }
+    } else {
+      /* Simple format: value is the processor directly */
+      this->event_processor = value;
+
+      /* Use the same sample window as periodic processing. */
+      this->event_sample_window_start = this->periodic_sample_window_start;
+      this->event_sample_window_end = this->periodic_sample_window_end;
+
+      event_sample_window_start_seconds = default_sample_window_start_seconds;
+      event_sample_window_end_seconds = default_sample_window_end_seconds;
+    }
+    
+    if (!py::hasattr(this->event_processor, "__call__")) {
+      RCLCPP_ERROR(*logger_ptr, "event_processor is not callable.");
+      return false;
+    }
+    RCLCPP_DEBUG(*logger_ptr, "Registered event processor");
+  }
+
   /* Calculate maximum buffer size needed to cover all windows. */
-  int max_look_back = this->look_back_samples;
-  int max_look_ahead = this->look_ahead_samples;
+  int min_start = this->periodic_sample_window_start;
+  int max_end = this->periodic_sample_window_end;
+
+  min_start = std::min(min_start, this->pulse_sample_window_start);
+  max_end = std::max(max_end, this->pulse_sample_window_end);
+
+  min_start = std::min(min_start, this->event_sample_window_start);
+  max_end = std::max(max_end, this->event_sample_window_end);
+
+  this->envelope_buffer_size = max_end - min_start + 1;
+
+  /* Store each window's start index relative to the end of the envelope buffer.
+     At processing time, the newest sample in the buffer corresponds to the triggering
+     sample shifted by that processing reason's look-ahead. */
+  this->periodic_window_start_offset_in_envelope =
+      this->envelope_buffer_size -
+      static_cast<std::size_t>(this->periodic_sample_window_end - this->periodic_sample_window_start + 1);
+  this->pulse_window_start_offset_in_envelope =
+      this->envelope_buffer_size -
+      static_cast<std::size_t>(this->pulse_sample_window_end - this->pulse_sample_window_start + 1);
+  this->event_window_start_offset_in_envelope =
+      this->envelope_buffer_size -
+      static_cast<std::size_t>(this->event_sample_window_end - this->event_sample_window_start + 1);
   
-  if (this->has_custom_pulse_window) {
-    max_look_back = std::max(max_look_back, this->pulse_look_back_samples);
-    max_look_ahead = std::max(max_look_ahead, this->pulse_look_ahead_samples);
-  }
-  
-  if (this->has_custom_event_window) {
-    max_look_back = std::max(max_look_back, this->event_look_back_samples);
-    max_look_ahead = std::max(max_look_ahead, this->event_look_ahead_samples);
-  }
-  
-  this->buffer_size = max_look_back + max_look_ahead + 1;
-  
-  RCLCPP_DEBUG(*logger_ptr, "Maximum envelope: look_back=%d, look_ahead=%d, buffer size: %zu", 
-               max_look_back, max_look_ahead, this->buffer_size);
+  RCLCPP_DEBUG(*logger_ptr, "Maximum envelope: start=%d, end=%d, buffer size: %zu", 
+               min_start, max_end, this->envelope_buffer_size);
 
   this->eeg_size = eeg_size;
   this->emg_size = emg_size;
 
   /* Initialize numpy arrays for default window. */
-  py_time_offsets = std::make_unique<py::array_t<double>>(this->look_back_samples + this->look_ahead_samples + 1);
+  size_t periodic_buffer_size = this->periodic_sample_window_end - this->periodic_sample_window_start + 1;
+  periodic_time_offsets = std::make_unique<py::array_t<double>>(periodic_buffer_size);
 
-  std::vector<size_t> eeg_shape = {this->look_back_samples + this->look_ahead_samples + 1, eeg_size};
-  py_eeg = std::make_unique<py::array_t<double>>(eeg_shape);
+  std::vector<size_t> eeg_shape = {periodic_buffer_size, eeg_size};
+  periodic_eeg = std::make_unique<py::array_t<double>>(eeg_shape);
 
-  std::vector<size_t> emg_shape = {this->look_back_samples + this->look_ahead_samples + 1, emg_size};
-  py_emg = std::make_unique<py::array_t<double>>(emg_shape);
+  std::vector<size_t> emg_shape = {periodic_buffer_size, emg_size};
+  periodic_emg = std::make_unique<py::array_t<double>>(emg_shape);
   
-  /* Initialize numpy arrays for pulse processor if it has a custom window. */
-  if (this->has_custom_pulse_window) {
-    size_t pulse_buffer_size = this->pulse_look_back_samples + this->pulse_look_ahead_samples + 1;
-    pulse_time_offsets = std::make_unique<py::array_t<double>>(pulse_buffer_size);
-    
-    std::vector<size_t> pulse_eeg_shape = {pulse_buffer_size, eeg_size};
-    pulse_eeg = std::make_unique<py::array_t<double>>(pulse_eeg_shape);
-    
-    std::vector<size_t> pulse_emg_shape = {pulse_buffer_size, emg_size};
-    pulse_emg = std::make_unique<py::array_t<double>>(pulse_emg_shape);
-    
-    RCLCPP_DEBUG(*logger_ptr, "Preallocated arrays for pulse_processor with buffer size %zu", pulse_buffer_size);
-  }
+  /* Initialize numpy arrays for pulse processor. */
+  size_t pulse_buffer_size = this->pulse_sample_window_end - this->pulse_sample_window_start + 1;
+  pulse_time_offsets = std::make_unique<py::array_t<double>>(pulse_buffer_size);
+
+  std::vector<size_t> pulse_eeg_shape = {pulse_buffer_size, eeg_size};
+  pulse_eeg = std::make_unique<py::array_t<double>>(pulse_eeg_shape);
+
+  std::vector<size_t> pulse_emg_shape = {pulse_buffer_size, emg_size};
+  pulse_emg = std::make_unique<py::array_t<double>>(pulse_emg_shape);
   
-  /* Initialize numpy arrays for event processor if it has a custom window. */
-  if (this->has_custom_event_window) {
-    size_t event_buffer_size = this->event_look_back_samples + this->event_look_ahead_samples + 1;
-    event_time_offsets = std::make_unique<py::array_t<double>>(event_buffer_size);
-    
-    std::vector<size_t> event_eeg_shape = {event_buffer_size, eeg_size};
-    event_eeg = std::make_unique<py::array_t<double>>(event_eeg_shape);
-    
-    std::vector<size_t> event_emg_shape = {event_buffer_size, emg_size};
-    event_emg = std::make_unique<py::array_t<double>>(event_emg_shape);
-    
-    RCLCPP_DEBUG(*logger_ptr, "Preallocated arrays for event_processor with buffer size %zu", event_buffer_size);
-  }
+  /* Initialize numpy arrays for event processor. */
+  size_t event_buffer_size = this->event_sample_window_end - this->event_sample_window_start + 1;
+  event_time_offsets = std::make_unique<py::array_t<double>>(event_buffer_size);
+
+  std::vector<size_t> event_eeg_shape = {event_buffer_size, eeg_size};
+  event_eeg = std::make_unique<py::array_t<double>>(event_eeg_shape);
+
+  std::vector<size_t> event_emg_shape = {event_buffer_size, emg_size};
+  event_emg = std::make_unique<py::array_t<double>>(event_emg_shape);
 
   /* Log the configuration. */
   RCLCPP_INFO(*logger_ptr, "Configuration:");
   RCLCPP_INFO(*logger_ptr, " ");
-  RCLCPP_INFO(*logger_ptr, "  - Default sample window: %s[%.3f s, %.3f s]%s",
+  RCLCPP_INFO(*logger_ptr, "  - Periodic sample window: %s[%.3f s, %.3f s]%s",
               bold_on.c_str(),
-              default_window_earliest_seconds,
-              default_window_latest_seconds,
+              default_sample_window_start_seconds,
+              default_sample_window_end_seconds,
               bold_off.c_str());
-  
-  if (this->has_custom_pulse_window) {
-    double pulse_earliest = -this->pulse_look_back_samples / static_cast<double>(this->sampling_frequency);
-    double pulse_latest = this->pulse_look_ahead_samples / static_cast<double>(this->sampling_frequency);
-    RCLCPP_INFO(*logger_ptr, "  - Pulse processor window: %s[%.3f s, %.3f s]%s",
-                bold_on.c_str(), pulse_earliest, pulse_latest, bold_off.c_str());
-  }
-  
-  if (this->has_custom_event_window) {
-    double event_earliest = -this->event_look_back_samples / static_cast<double>(this->sampling_frequency);
-    double event_latest = this->event_look_ahead_samples / static_cast<double>(this->sampling_frequency);
-    RCLCPP_INFO(*logger_ptr, "  - Event processor window: %s[%.3f s, %.3f s]%s",
-                bold_on.c_str(), event_earliest, event_latest, bold_off.c_str());
-  }
-  
+
   if (!this->periodic_processing_enabled) {
     RCLCPP_INFO(*logger_ptr, "  - Periodic processing: %sDisabled%s", bold_on.c_str(), bold_off.c_str());
   } else {
     RCLCPP_INFO(*logger_ptr, "  - Periodic processing: %sEnabled%s (interval: %.3f s)", bold_on.c_str(), bold_off.c_str(), this->periodic_processing_interval);
   }
+            
+  if (this->pulse_processor.is_none()) {
+    RCLCPP_INFO(*logger_ptr, "  - Pulse processor: %sDisabled%s", bold_on.c_str(), bold_off.c_str());
+  } else {
+    RCLCPP_INFO(*logger_ptr, "  - Pulse processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
+    RCLCPP_INFO(*logger_ptr, "    - Pulse processor window: %s[%.3f s, %.3f s]%s",
+                bold_on.c_str(), pulse_sample_window_start_seconds, pulse_sample_window_end_seconds, bold_off.c_str());
+  }
+
+  if (this->event_processor.is_none()) {
+    RCLCPP_INFO(*logger_ptr, "  - Event processor: %sDisabled%s", bold_on.c_str(), bold_off.c_str());
+  } else {
+    RCLCPP_INFO(*logger_ptr, "  - Event processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
+    RCLCPP_INFO(*logger_ptr, "    - Event processor window: %s[%.3f s, %.3f s]%s",
+                bold_on.c_str(), event_sample_window_start_seconds, event_sample_window_end_seconds, bold_off.c_str());
+  }
+
   if (this->pulse_lockout_duration > 0.0) {
     RCLCPP_INFO(*logger_ptr, "  - Pulse lockout duration: %s%.1f%s (s)", bold_on.c_str(), this->pulse_lockout_duration, bold_off.c_str());
   }
@@ -523,20 +513,22 @@ bool DeciderWrapper::warm_up() {
   std::srand(12345);
 
   // Get pointers to numpy arrays
-  auto time_offsets_ptr = py_time_offsets->mutable_data();
-  auto eeg_ptr = py_eeg->mutable_data();
-  auto emg_ptr = py_emg->mutable_data();
+  auto time_offsets_ptr = periodic_time_offsets->mutable_data();
+  auto eeg_ptr = periodic_eeg->mutable_data();
+  auto emg_ptr = periodic_emg->mutable_data();
 
   // Dummy parameters for process method (constant across all rounds)
   double_t dummy_reference_time = 0.0;
-  int dummy_reference_index = look_back_samples;
+  int dummy_reference_index = -this->periodic_sample_window_start;
   bool dummy_is_coil_at_target = true;
+
+  size_t periodic_buffer_size = this->periodic_sample_window_end - this->periodic_sample_window_start + 1;
 
   // Perform warm-up rounds with fresh random data for each round
   for (int round = 0; round < this->warm_up_rounds; round++) {
     // Generate fresh random data for this round
-    for (size_t i = 0; i < buffer_size; i++) {
-      time_offsets_ptr[i] = -static_cast<double>(buffer_size - 1 - i) / sampling_frequency;
+    for (size_t i = 0; i < periodic_buffer_size; i++) {
+      time_offsets_ptr[i] = -static_cast<double>(periodic_buffer_size - 1 - i) / sampling_frequency;
 
       // Fill EEG data with small random values
       for (size_t j = 0; j < eeg_size; j++) {
@@ -555,9 +547,9 @@ bool DeciderWrapper::warm_up() {
       py::object py_result = decider_instance->attr("process_periodic")(
         dummy_reference_time,
         dummy_reference_index,
-        *py_time_offsets,
-        *py_eeg,
-        *py_emg,
+        *periodic_time_offsets,
+        *periodic_eeg,
+        *periodic_emg,
         dummy_is_coil_at_target,
         true  /* is_warm_up */
       );
@@ -630,8 +622,8 @@ void DeciderWrapper::handle_ipc_log_message(std::string&& msg) {
   log_buffer.push_back({std::move(msg), LogLevel::INFO, current_processing_path});
 }
 
-std::size_t DeciderWrapper::get_buffer_size() const {
-  return this->buffer_size;
+std::size_t DeciderWrapper::get_envelope_buffer_size() const {
+  return this->envelope_buffer_size;
 }
 
 double DeciderWrapper::get_periodic_processing_interval() const {
@@ -646,29 +638,20 @@ bool DeciderWrapper::is_processing_interval_enabled() const {
   return this->periodic_processing_enabled;
 }
 
-int DeciderWrapper::get_look_ahead_samples() const {
-  /* For a sample window like [-10, 5], look_ahead_samples is 5, which represents
-     the number of samples we need to look ahead from the triggering sample. */
-  return this->look_ahead_samples;
+int DeciderWrapper::get_periodic_look_ahead_samples() const {
+  return this->periodic_sample_window_end;
 }
 
-int DeciderWrapper::get_look_ahead_samples_for_pulse() const {
+int DeciderWrapper::get_pulse_look_ahead_samples() const {
   /* If no pulse processor is configured, pulses should be processed immediately. */
   if (this->pulse_processor.is_none()) {
     return 0;
   }
-
-  if (this->has_custom_pulse_window) {
-    return this->pulse_look_ahead_samples;
-  }
-  return this->look_ahead_samples;
+  return this->pulse_sample_window_end;
 }
 
-int DeciderWrapper::get_look_ahead_samples_for_event() const {
-  if (this->has_custom_event_window) {
-    return this->event_look_ahead_samples;
-  }
-  return this->look_ahead_samples;
+int DeciderWrapper::get_event_look_ahead_samples() const {
+  return this->event_sample_window_end;
 }
 
 double DeciderWrapper::get_pulse_lockout_duration() const {
@@ -809,43 +792,55 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   std::string coil_target;
 
   /* Determine which arrays to use and their parameters. */
-  py::array_t<double>* time_offsets_to_use = py_time_offsets.get();
-  py::array_t<double>* eeg_to_use = py_eeg.get();
-  py::array_t<double>* emg_to_use = py_emg.get();
-  int reference_index = this->look_back_samples;
-  size_t num_samples = this->look_back_samples + this->look_ahead_samples + 1;
+  py::array_t<double>* py_time_offsets;
+  py::array_t<double>* py_eeg;
+  py::array_t<double>* py_emg;
+  int reference_index;
+  size_t start_offset;
+  size_t num_samples;
 
-  /* Override with pulse-specific arrays if this is a pulse and it has a custom window. */
-  if (processing_reason == ProcessingReason::Pulse && this->has_custom_pulse_window) {
-    time_offsets_to_use = pulse_time_offsets.get();
-    eeg_to_use = pulse_eeg.get();
-    emg_to_use = pulse_emg.get();
-    reference_index = this->pulse_look_back_samples;
-    num_samples = this->pulse_look_back_samples + this->pulse_look_ahead_samples + 1;
+  if (processing_reason == ProcessingReason::Periodic) {
+    py_time_offsets = periodic_time_offsets.get();
+    py_eeg = periodic_eeg.get();
+    py_emg = periodic_emg.get();
+    reference_index = -this->periodic_sample_window_start;
+    start_offset = this->periodic_window_start_offset_in_envelope;
+    num_samples = this->periodic_sample_window_end - this->periodic_sample_window_start + 1;
+
+  } else if (processing_reason == ProcessingReason::Pulse) {
+    py_time_offsets = pulse_time_offsets.get();
+    py_eeg = pulse_eeg.get();
+    py_emg = pulse_emg.get();
+    reference_index = -this->pulse_sample_window_start;
+    start_offset = this->pulse_window_start_offset_in_envelope;
+    num_samples = this->pulse_sample_window_end - this->pulse_sample_window_start + 1;
+
+  } else if (processing_reason == ProcessingReason::Event) {
+    py_time_offsets = event_time_offsets.get();
+    py_eeg = event_eeg.get();
+    py_emg = event_emg.get();
+    reference_index = -this->event_sample_window_start;
+    start_offset = this->event_window_start_offset_in_envelope;
+    num_samples = this->event_sample_window_end - this->event_sample_window_start + 1;
+
+  } else {
+    RCLCPP_ERROR(*logger_ptr, "Invalid processing reason: %d", static_cast<int>(processing_reason));
+    return {false, timed_trigger, coil_target};
   }
 
-  /* Override with event-specific arrays if this is an event and it has a custom window. */
-  if (processing_reason == ProcessingReason::Event && this->has_custom_event_window) {
-    time_offsets_to_use = event_time_offsets.get();
-    eeg_to_use = event_eeg.get();
-    emg_to_use = event_emg.get();
-    reference_index = this->event_look_back_samples;
-    num_samples = this->event_look_back_samples + this->event_look_ahead_samples + 1;
-  }
-  
-  /* Always extract the most recent num_samples from the ring buffer.
-     By the time we process (after deferring for look-ahead), the buffer has advanced
-     and contains all the samples we need at the end of the buffer, including the look-ahead samples. */
-  size_t start_offset = this->buffer_size - num_samples;
-
-  /* Fill the selected arrays from buffer at the calculated offset. */
-  fill_arrays_from_buffer(buffer, reference_time, *time_offsets_to_use,
-                          *eeg_to_use, *emg_to_use, start_offset, num_samples);
+  /* Fill the selected arrays from the reason-specific window position in the envelope. */
+  fill_arrays_from_buffer(buffer, reference_time, *py_time_offsets, *py_eeg, *py_emg, start_offset, num_samples);
 
   /* Call the appropriate Python function. */
   py::object py_result;
   try {
     switch (processing_reason) {
+      case ProcessingReason::Periodic:
+        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
+        /* Call periodic processor. */
+        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, false);
+        break;
+
       case ProcessingReason::Pulse:
         set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
         /* Call pulse processor if registered. */
@@ -853,8 +848,9 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
           py_result = py::none();
           break;
         }
-        py_result = pulse_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
+        py_result = pulse_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target);
         break;
+
       case ProcessingReason::Event:
         set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
         /* Call event processor if registered. */
@@ -862,13 +858,9 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
           py_result = py::none();
           break;
         }
-        py_result = event_processor(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target);
+        py_result = event_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target);
         break;
-      case ProcessingReason::Periodic:
-        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
-        /* Call standard process_periodic method (for periodic processing). */
-        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *time_offsets_to_use, *eeg_to_use, *emg_to_use, is_coil_at_target, false);
-        break;
+
       default:
         RCLCPP_ERROR(*logger_ptr, "Invalid processing type: %d", static_cast<int>(processing_reason));
         py_result = py::none();

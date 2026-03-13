@@ -6,12 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
-- Removed support for event files in the EEG simulator.
-- Allow specifying pulse times in the EEG simulator dataset JSON configuration.
-- Define looping behavior in the EEG simulator dataset JSON configuration instead of the user interface.
-- Change format of the EEG simulator dataset JSON configuration.
-- Remove timestamp column from EEG simulator dataset CSV file.
-- Express sample window in seconds in decider and preprocessor configuration.
+### Added
+- Added session lifecycle management with explicit initialize/start/pause/stop/finalize flow and clearer session stage reporting in the UI.
+- Added explicit pause/resume support for sessions.
+- Added support for complex multi-stage protocols with rest periods.
+- Added recording and replay workflow: listing recordings, viewing recording metadata, replaying data, and deleting recordings from the UI.
+- Added export workflow for recordings in the UI (select data types for export and progress display).
+- Added project creation and project-level configuration from the UI, including subject ID/notes fields and switching the active project.
+- Added global configuration from the UI (for example timing/latency limits, dropped-sample tolerance, locale, and trigger-to-pulse delay).
+- Added richer decision diagnostics in `DecisionTrace` and UI (status, decision-path latency, stimulation horizon, strict horizon, timing/loopback limits).
+- Added component health and heartbeat reporting plus disk-space status display in the UI.
+- Added session and module fingerprints to recording metadata and UI.
+
+### Changed
+- Changed platform to ROS 2 Jazzy (from Iron) and Ubuntu 24.04 (from 22.04).
+- Changed EEG simulator dataset format:
+  - Dataset JSON now defines looping behavior and optional pulse times.
+  - Event files are no longer supported by the EEG simulator.
+  - Dataset CSV no longer includes a timestamp column.
+- Changed decider and preprocessor configuration to express sample windows in seconds.
+- Changed UI architecture and layout substantially: modularized major panels/providers, improved panel spacing/sizing, and added detached experiment-state view.
+- Changed front-end packaging from a browser-hosted React UI to an Electron desktop app.
+- Changed configuration model to rely more on ROS parameters and shared global configuration instead of environment variables.
+- Changed terminology in several user-facing areas for consistency (for example playback -> recording, timing error -> timing offset).
+- Decider API updates:
+  - Pass stage name to `process_periodic`, `process_pulse`, and `process_event` methods.
+  - Pass a boolean to `process_periodic` indicating whether the call is a warm-up call.
+
+### Fixed
+- Fixed crashes caused by Python interpreter state persisting across sessions when using complex Python libraries, by restarting Python-based pipeline nodes for each new session.
+- Fixed multiple session lifecycle race conditions and edge cases (start/stop/finalization ordering, initialization failure handling, and aborted-session handling).
+- Fixed reliability issues in Python pipeline logging, including dropped logs during bursts and improved log delivery at session end.
+- Fixed robustness issues around pipeline node shutdown/restart between sessions, including decider/preprocessor/presenter restarts and hang recovery.
+- Fixed several EEG replay and simulator streaming issues, including start/stop behavior and end-of-data handling.
+- Fixed numerous UI regressions across configuration, health/status displays, overlays, modal interactions, and latency displays.
+
+### Removed
+- Removed legacy session manager/recorder/batcher/message types and outdated mTMS-era code paths that no longer match the current architecture.
+- Removed outdated setup/runtime artifacts, including legacy docker-compose usage and obsolete installation/configuration traces.
 
 ## [0.2.0] – 2025-12-04
 
@@ -56,5 +88,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release of NeuroSimo
 
-[Unreleased]: https://github.com/your-org/neurosimo/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/your-org/neurosimo/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/your-org/neurosimo/releases/tag/v0.2.0
 [0.1.0]: https://github.com/your-org/neurosimo/releases/tag/v0.1.0

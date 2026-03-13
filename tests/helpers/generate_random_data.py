@@ -1,6 +1,6 @@
 # Example usage:
 #
-# python3 $NEUROSIMO_ROOT/scripts/generate_random_data.py --dataset_name "Random, 100 Hz" --sampling_frequency 100 --output_filename random_data_100_hz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator --loop > /dev/null
+# python3 $NEUROSIMO_ROOT/tests/helpers/generate_random_data.py --dataset_name "Random, 100 Hz" --sampling_frequency 100 --output_filename random_data_100_hz --output_directory $PROJECTS_ROOT/$PROJECT_NAME/eeg_simulator --loop > /dev/null
 #
 import numpy as np
 import argparse
@@ -32,9 +32,11 @@ def generate_random_data(
 
     return data
 
+
 def save_to_csv(output_directory, filename, data, fmt='%.5f'):
     output_path = os.path.join(output_directory, filename)
     np.savetxt(output_path, data, delimiter=",", fmt=fmt)
+
 
 def save_pulse_times_to_csv(output_directory, base_filename, pulse_times):
     """Save pulse times to a CSV file."""
@@ -46,6 +48,7 @@ def save_pulse_times_to_csv(output_directory, base_filename, pulse_times):
             pulse_file.write(f"{pulse_time}\n")
 
     return pulse_filename
+
 
 def save_to_json(output_directory, base_filename, name, sampling_frequency, num_eeg_channels, num_emg_channels, data_filename, loop, pulse_times=None):
     json_filename = base_filename + ".json"
@@ -68,6 +71,7 @@ def save_to_json(output_directory, base_filename, name, sampling_frequency, num_
     output_path = os.path.join(output_directory, json_filename)
     with open(output_path, 'w') as json_file:
         json.dump(json_data, json_file, indent=2)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate random EEG and EMG data and save it to a CSV file and JSON metadata file.")

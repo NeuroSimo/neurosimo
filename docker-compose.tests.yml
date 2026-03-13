@@ -1,0 +1,18 @@
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    user: "1000:1000"
+    env_file:
+      - .env
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID
+      - BUNDLED_PROJECTS_PATH=/app/bundled_projects
+    volumes:
+      - "$PROJECTS_ROOT:/app/projects"
+      - "./bundled_projects:/app/bundled_projects"
+    network_mode: host
+    profiles:
+      - tests

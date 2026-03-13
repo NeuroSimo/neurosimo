@@ -3,8 +3,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 
-from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import SingleThreadedExecutor
 
 from system_interfaces.msg import SessionConfig, GlobalConfig
 from project_interfaces.msg import FilenameList
@@ -18,7 +17,6 @@ class SessionConfiguratorNode(Node):
     def __init__(self):
         super().__init__('session_configurator')
         self.logger = self.get_logger()
-        self.callback_group = ReentrantCallbackGroup()
 
         # Initialize session storage manager
         self.storage_manager = SessionStorageManager(self.logger)
@@ -69,20 +67,19 @@ class SessionConfiguratorNode(Node):
             GlobalConfig,
             '/global_configurator/config',
             self.global_config_callback,
-            qos,
-            callback_group=self.callback_group
+            qos
         )
 
         # Publishers
-        self.decider_list_publisher = self.create_publisher(FilenameList, "/pipeline/decider/list", qos, callback_group=self.callback_group)
-        self.preprocessor_list_publisher = self.create_publisher(FilenameList, "/pipeline/preprocessor/list", qos, callback_group=self.callback_group)
-        self.presenter_list_publisher = self.create_publisher(FilenameList, "/pipeline/presenter/list", qos, callback_group=self.callback_group)
-        self.protocol_list_publisher = self.create_publisher(FilenameList, "/experiment/protocol/list", qos, callback_group=self.callback_group)
-        self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos, callback_group=self.callback_group)
-        self.recordings_list_publisher = self.create_publisher(FilenameList, "/recording/recordings/list", qos, callback_group=self.callback_group)
+        self.decider_list_publisher = self.create_publisher(FilenameList, "/pipeline/decider/list", qos)
+        self.preprocessor_list_publisher = self.create_publisher(FilenameList, "/pipeline/preprocessor/list", qos)
+        self.presenter_list_publisher = self.create_publisher(FilenameList, "/pipeline/presenter/list", qos)
+        self.protocol_list_publisher = self.create_publisher(FilenameList, "/experiment/protocol/list", qos)
+        self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos)
+        self.recordings_list_publisher = self.create_publisher(FilenameList, "/recording/recordings/list", qos)
         
         # Session config publisher
-        self.session_config_publisher = self.create_publisher(SessionConfig, "/session_configurator/config", qos, callback_group=self.callback_group)
+        self.session_config_publisher = self.create_publisher(SessionConfig, "/session_configurator/config", qos)
 
         # Define directory watch configurations
         self.watch_configs = [
@@ -256,7 +253,7 @@ class SessionConfiguratorNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = SessionConfiguratorNode()
-    executor = MultiThreadedExecutor()
+    executor = SingleThreadedExecutor()
     executor.add_node(node)
     try:
         executor.spin()

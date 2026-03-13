@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added richer decision diagnostics in `DecisionTrace` and UI (status, decision-path latency, stimulation horizon, strict horizon, timing/loopback limits).
 - Added component health and heartbeat reporting plus disk-space status display in the UI.
 - Added session and module fingerprints to recording metadata and UI.
+- Added experimental support for targeted pulses from decider.
 
 ### Changed
 - Changed platform to ROS 2 Jazzy (from Iron) and Ubuntu 24.04 (from 22.04).

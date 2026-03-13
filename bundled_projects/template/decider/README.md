@@ -236,6 +236,39 @@ Schedule a trigger pulse at specified time (seconds). Uses LabJack T4 for trigge
 return {'timed_trigger': reference_time + 0.005}  # Trigger after 5ms
 ```
 
+#### `targeted_pulses` (list)
+Publish targeted pulse requests to `/pipeline/targeted_pulses` for external stimulation software.
+Do not return `timed_trigger` and `targeted_pulses` in the same result.
+
+Each list item must be a dictionary with:
+- `time` (float): Absolute pulse time in seconds since recording start
+- `displacement_x` (float): X-coordinate in millimeters
+- `displacement_y` (float): Y-coordinate in millimeters
+- `rotation_angle` (float): Rotation angle in degrees
+- `intensity` (float): Intensity in V/m
+
+**Example:**
+```python
+return {
+    'targeted_pulses': [
+        {
+            'time': reference_time + 0.010,
+            'displacement_x': 0.0,
+            'displacement_y': 0.0,
+            'rotation_angle': 0.0,
+            'intensity': 30.0,
+        },
+        {
+            'time': reference_time + 0.060,
+            'displacement_x': 0.0,
+            'displacement_y': 0.0,
+            'rotation_angle': 0.0,
+            'intensity': 20.0,
+        },
+    ]
+}
+```
+
 #### `sensory_stimuli` (list)
 Dynamic sensory stimuli based on real-time data analysis. Same format as static stimuli in configuration.
 

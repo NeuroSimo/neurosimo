@@ -1,4 +1,5 @@
 #include <chrono>
+#include <algorithm>
 #include <filesystem>
 #include <signal.h>
 #include <execinfo.h>
@@ -22,6 +23,7 @@ const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
 const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
 const std::string HEARTBEAT_TOPIC = "/decider/heartbeat";
 const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
+const std::string TARGETED_PULSES_TOPIC = "/pipeline/targeted_pulses";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
@@ -83,6 +85,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   this->sensory_stimulus_publisher = this->create_publisher<pipeline_interfaces::msg::SensoryStimulus>(
     "/pipeline/sensory_stimulus",
+    qos_keep_all);
+
+  /* Publisher for targeted pulses from decider output. */
+  this->targeted_pulses_publisher = this->create_publisher<pipeline_interfaces::msg::TargetedPulses>(
+    TARGETED_PULSES_TOPIC,
     qos_keep_all);
 
   /* Publisher for coil target. */
@@ -230,6 +237,7 @@ void EegDecider::handle_initialize_decider(
 
   // Store session ID and reset decision ID
   this->session_id = request->session_id;
+  this->targeted_pulses_sequence_number = 0;
 
   // Change working directory to the module directory
   if (!filesystem_utils::change_working_directory(decider_path.string(), this->get_logger())) {
@@ -525,7 +533,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   std::string stage_name = request.triggering_sample->stage_name;
 
   /* Process the sample. */
-  auto [success, timed_trigger, coil_target] = this->decider_wrapper->process(
+  auto [success, timed_trigger, coil_target, targeted_pulses] = this->decider_wrapper->process(
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
@@ -592,8 +600,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     return;
   }
 
-  /* Check if the decision is positive. */
-  bool stimulate = (timed_trigger != nullptr);
+  /* Check if timed triggers are requested. */
+  bool request_timed_trigger = timed_trigger != nullptr;
 
   /* Update decision fingerprint with evaluation info. */
   this->decision_fingerprint = XXH64(
@@ -620,13 +628,13 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   decision_trace.decision_id = ++this->decision_id;  // Increment decision ID
 
   // Status (filled by each stage) - initially set by Decider
-  decision_trace.status = stimulate ? pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
-                                   : pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
+  decision_trace.status = request_timed_trigger ? pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
+                                                : pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
 
   // Decision info
   decision_trace.reference_sample_time = sample_time;
   decision_trace.reference_sample_index = request.triggering_sample->sample_index;
-  decision_trace.stimulate = stimulate;
+  decision_trace.stimulate = request_timed_trigger;
   decision_trace.requested_stimulation_time = timed_trigger ? timed_trigger->time : 0.0;
 
   // Decider / preprocessing timing
@@ -640,8 +648,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   this->decision_trace_publisher->publish(decision_trace);
 
-  /* If the decision is positive, send timed trigger. */
-  if (stimulate) {
+  /* If timed triggers are requested, send them. */
+  if (request_timed_trigger) {
     /* Check that the minimum intertrial interval has passed. */
     auto time_since_previous_trial = timed_trigger->time - this->previous_stimulation_time;
     auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
@@ -666,6 +674,49 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
       RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
       this->minimum_intertrial_interval,
       time_since_previous_trial);
+    }
+  }
+
+  /* If targeted pulses are requested, send them. */
+  if (!targeted_pulses.empty()) {
+
+    /* Enforce minimum intertrial interval for targeted pulse requests. */
+    double_t first_target_time = targeted_pulses.front().time;
+    double_t last_target_time = targeted_pulses.front().time;
+    for (const auto& pulse : targeted_pulses) {
+      first_target_time = std::min(first_target_time, pulse.time);
+      last_target_time = std::max(last_target_time, pulse.time);
+    }
+
+    auto time_since_previous_trial = first_target_time - this->previous_stimulation_time;
+    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
+
+    if (has_minimum_intertrial_interval_passed) {
+      auto targeted_pulses_msg = pipeline_interfaces::msg::TargetedPulses();
+      targeted_pulses_msg.session_id = this->session_id;
+      targeted_pulses_msg.reference_sample_time = sample_time;
+      targeted_pulses_msg.sequence_number = this->targeted_pulses_sequence_number;
+      targeted_pulses_msg.pulses = targeted_pulses;
+
+      this->targeted_pulses_sequence_number++;
+
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Publishing %zu targeted pulse(s) at time %.3f (s).",
+        targeted_pulses_msg.pulses.size(),
+        sample_time);
+      this->targeted_pulses_publisher->publish(targeted_pulses_msg);
+
+      /* Track last pulse timing for safety and lockout handling. */
+      this->previous_stimulation_time = last_target_time;
+      this->pulse_lockout_end_time = last_target_time + this->decider_wrapper->get_pulse_lockout_duration();
+    } else {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Targeted pulses requested but minimum intertrial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
+        this->minimum_intertrial_interval,
+        time_since_previous_trial);
     }
   }
 }

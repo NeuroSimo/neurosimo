@@ -587,6 +587,7 @@ bool DeciderWrapper::warm_up() {
         *periodic_eeg,
         *periodic_emg,
         dummy_is_coil_at_target,
+        "",
         true  /* is_warm_up */
       );
       
@@ -822,7 +823,8 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     double_t reference_time,
     ProcessingReason processing_reason,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
-    bool is_coil_at_target) {
+    bool is_coil_at_target,
+    const std::string& stage_name) {
 
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
   std::string coil_target;
@@ -874,7 +876,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
       case ProcessingReason::Periodic:
         set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
         /* Call periodic processor. */
-        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, false);
+        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, false);
         break;
 
       case ProcessingReason::Pulse:
@@ -884,7 +886,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
           py_result = py::none();
           break;
         }
-        py_result = pulse_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target);
+        py_result = pulse_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name);
         break;
 
       case ProcessingReason::Event:
@@ -894,7 +896,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
           py_result = py::none();
           break;
         }
-        py_result = event_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target);
+        py_result = event_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name);
         break;
 
       default:

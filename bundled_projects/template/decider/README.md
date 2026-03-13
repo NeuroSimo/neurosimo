@@ -124,7 +124,7 @@ When a pulse event occurs, the pulse processor is called instead of the regular 
 ```python
 def process_pulse(
         self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process pulse-specific logic
@@ -159,7 +159,7 @@ When an event occurs, the event processor is called instead of the regular `proc
 ```python
 def process_event(
         self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
     """Process general events."""
     print(f"Event at {reference_time}")
     # Process event-specific logic
@@ -217,8 +217,12 @@ EMG sample data. Shape: `(num_samples, num_emg_channels)`
 #### `is_coil_at_target` (bool)
 Whether the coil is currently positioned at the target location (for neuronavigation systems).
 
+#### `stage_name` (str)
+Current protocol stage name from the experiment coordinator.
+
 #### `is_warm_up` (bool)
 `True` when this call is a warm-up round with dummy data. Skip internal state updates in this case; return values are ignored.
+During warm-up calls, `stage_name` is an empty string (`""`).
 
 **Return Value:**
 
@@ -260,7 +264,7 @@ Event processor methods (`process_pulse` and `process_event`) are called when ev
 ```python
 def process_pulse(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process event-specific logic
@@ -268,7 +272,7 @@ def process_pulse(
 
 def process_event(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
     """Process general events."""
     print(f"Event at {reference_time}")
     # Process event-specific logic
@@ -361,7 +365,7 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 ```python
 def process_periodic(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, is_warm_up):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, is_warm_up):
     # Generate stimuli based on current time or data
     return {
         'sensory_stimuli': [
@@ -422,7 +426,7 @@ If your decider maintains internal state that depends on real EEG/EMG data patte
 ```python
 def process_periodic(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, is_warm_up):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, is_warm_up):
     
     # Your processing logic here...
     processed_data = self.analyze_eeg(eeg_buffer)

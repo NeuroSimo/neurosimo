@@ -522,6 +522,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     start_time.time_since_epoch()).count();
 
   double_t sample_time = request.triggering_sample->time;
+  std::string stage_name = request.triggering_sample->stage_name;
 
   /* Process the sample. */
   auto [success, timed_trigger, coil_target] = this->decider_wrapper->process(
@@ -530,7 +531,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     sample_time,
     request.processing_reason,
     this->event_queue,
-    this->is_coil_at_target);
+    this->is_coil_at_target,
+    stage_name);
 
   /* Log and return early if the Python call failed. */
   if (!success) {

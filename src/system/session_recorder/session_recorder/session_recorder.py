@@ -217,7 +217,6 @@ class SessionRecorderNode(Node):
         bag_name = f'{timestamp}_{request.session_config.subject_id}'
         project_bags_dir = f'/app/projects/{request.global_config.active_project}/recordings'
 
-        os.makedirs(project_bags_dir, exist_ok=True)
         self._bag_path = os.path.join(project_bags_dir, bag_name)
 
         # Create QoS override file for high-frequency EEG topics

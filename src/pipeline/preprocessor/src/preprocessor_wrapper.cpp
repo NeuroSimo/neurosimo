@@ -46,6 +46,11 @@ builtins.print = _print
     )", py::globals());
 }
 
+void PreprocessorWrapper::log_error(const std::string& message) {
+  RCLCPP_ERROR(*logger_ptr, "%s", message.c_str());
+  log_buffer.push_back({message, LogLevel::ERROR});
+}
+
 bool PreprocessorWrapper::initialize_module(
     const std::string& directory,
     const std::string& module_name,
@@ -56,7 +61,7 @@ bool PreprocessorWrapper::initialize_module(
 
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
-    RCLCPP_ERROR(*logger_ptr, "Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
+    log_error("Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
     return false;
   }
 
@@ -74,25 +79,12 @@ bool PreprocessorWrapper::initialize_module(
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
-    // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
+    log_error(error_msg);
     return false;
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
-    // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
-    
+    log_error(error_msg);
     return false;
   }
 
@@ -101,38 +93,54 @@ bool PreprocessorWrapper::initialize_module(
     return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
   };
 
-  /* Extract the configuration from preprocessor_instance. */
   double sample_window_start_seconds = 0.0;
   double sample_window_end_seconds = 0.0;
-  if (py::hasattr(*preprocessor_instance, "get_configuration")) {
-    py::dict config = preprocessor_instance->attr("get_configuration")().cast<py::dict>();
+  py::dict config;
 
-    /* Extract sample_window. */
-    if (config.contains("sample_window")) {
-      py::list sample_window = config["sample_window"].cast<py::list>();
-      if (sample_window.size() == 2) {
-        sample_window_start_seconds = sample_window[0].cast<double>();
-        sample_window_end_seconds = sample_window[1].cast<double>();
-        if (sample_window_start_seconds > sample_window_end_seconds) {
-          RCLCPP_ERROR(*logger_ptr,
-                       "Invalid sample_window: start (%.3f s) must be <= end (%.3f s).",
-                       sample_window_start_seconds,
-                       sample_window_end_seconds);
-          return false;
-        }
+  /* Extract the configuration from preprocessor_instance. */
+  if (!py::hasattr(*preprocessor_instance, "get_configuration")) {
+    log_error("get_configuration method not found in the Preprocessor instance.");
+    return false;
+  }
 
-        this->sample_window_start = to_samples(sample_window_start_seconds);
-        this->sample_window_end = to_samples(sample_window_end_seconds);
-      } else {
-        RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
-        return false;
-      }
-    } else {
-      RCLCPP_ERROR(*logger_ptr, "'sample_window' key not found in configuration dictionary.");
+  try {
+    config = preprocessor_instance->attr("get_configuration")().cast<py::dict>();
+
+  } catch(const py::error_already_set& e) {
+    std::string error_msg = std::string("Python error during get_configuration call: ") + e.what();
+    log_error(error_msg);
+    return false;
+
+  } catch(const std::exception& e) {
+    std::string error_msg = std::string("C++ error during get_configuration call: ") + e.what();
+    log_error(error_msg);
+    return false;
+  }
+
+  /* Extract sample_window. */
+  if (!config.contains("sample_window")) {
+    log_error("'sample_window' key not found in configuration dictionary.");
+    return false;
+  }
+
+  py::list sample_window = config["sample_window"].cast<py::list>();
+
+  if (sample_window.size() == 2) {
+    sample_window_start_seconds = sample_window[0].cast<double>();
+    sample_window_end_seconds = sample_window[1].cast<double>();
+    if (sample_window_start_seconds > sample_window_end_seconds) {
+      std::string error_msg = "Invalid sample_window: start (" +
+                              std::to_string(sample_window_start_seconds) +
+                              " s) must be <= end (" +
+                              std::to_string(sample_window_end_seconds) + " s).";
+      log_error(error_msg);
       return false;
     }
+
+    this->sample_window_start = to_samples(sample_window_start_seconds);
+    this->sample_window_end = to_samples(sample_window_end_seconds);
   } else {
-    RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Preprocessor instance.");
+    log_error("'sample_window' value in configuration is of incorrect length (should be two elements).");
     return false;
   }
 
@@ -224,24 +232,12 @@ bool PreprocessorWrapper::process(
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
-    // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
+    log_error(error_msg);
     return false;
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-    
-    // Add error to log buffer so it can be published to UI
-    {
-      std::lock_guard<std::mutex> lock(log_buffer_mutex);
-      log_buffer.push_back({error_msg, LogLevel::ERROR});
-    }
+    log_error(error_msg);
     return false;
   }
 

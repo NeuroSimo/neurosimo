@@ -58,6 +58,11 @@ void DeciderWrapper::log_section_header(const std::string& title) {
   RCLCPP_INFO(*logger_ptr, " ");
 }
 
+void DeciderWrapper::log_error(const std::string& message) {
+  RCLCPP_ERROR(*logger_ptr, "%s", message.c_str());
+  log_buffer.push_back({message, LogLevel::ERROR, current_processing_path});
+}
+
 bool DeciderWrapper::initialize_module(
     const std::string& project_directory,
     const std::string& module_directory,
@@ -71,7 +76,7 @@ bool DeciderWrapper::initialize_module(
 
   this->sampling_frequency = sampling_frequency;
   if (this->sampling_frequency == 0) {
-    RCLCPP_ERROR(*logger_ptr, "Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
+    log_error("Sampling frequency must be greater than zero to interpret sample_window expressed in seconds.");
     return false;
   }
 
@@ -87,19 +92,12 @@ bool DeciderWrapper::initialize_module(
 
   } catch (const py::error_already_set &e) {
     std::string error_msg = std::string("Python import error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-
-    // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    log_error(error_msg);
     return false;
 
   } catch (const std::exception &e) {
     std::string error_msg = std::string("C++ error during import: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-
-    // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-
+    log_error(error_msg);
     return false;
   }
 
@@ -110,29 +108,36 @@ bool DeciderWrapper::initialize_module(
 
   } catch (const py::error_already_set &e) {
     std::string error_msg = std::string("Python initialization error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-
-    // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    log_error(error_msg);
     return false;
 
   } catch (const std::exception &e) {
     std::string error_msg = std::string("C++ error during initialization: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
-
-    // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    log_error(error_msg);
     return false;
   }
 
   /* Extract the configuration from decider_instance. */
   if (!py::hasattr(*decider_instance, "get_configuration")) {
-    RCLCPP_ERROR(*logger_ptr, "get_configuration method not found in the Decider instance.");
+    log_error("get_configuration method not found in the Decider instance.");
     return false;
   }
+  py::dict config;
 
   /* Extract the configuration from decider_instance. */
-  py::dict config = decider_instance->attr("get_configuration")().cast<py::dict>();
+  try {
+    config = decider_instance->attr("get_configuration")().cast<py::dict>();
+
+  } catch(const py::error_already_set& e) {
+    std::string error_msg = std::string("Python error during get_configuration call: ") + e.what();
+    log_error(error_msg);
+    return false;
+
+  } catch(const std::exception& e) {
+    std::string error_msg = std::string("C++ error during get_configuration call: ") + e.what();
+    log_error(error_msg);
+    return false;
+  }
 
   /* Helper lambdas to convert seconds to sample counts. */
   const auto to_samples = [this](double seconds) -> int {
@@ -144,7 +149,7 @@ bool DeciderWrapper::initialize_module(
   for (const auto& item : config) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.", key.c_str());
+      log_error("Unexpected key '" + key + "' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.");
       return false;
     }
   }
@@ -152,7 +157,7 @@ bool DeciderWrapper::initialize_module(
   /* Extract predefined_sensory_stimuli (optional). */
   if (config.contains("predefined_sensory_stimuli")) {
     if (!py::isinstance<py::list>(config["predefined_sensory_stimuli"])) {
-      RCLCPP_ERROR(*logger_ptr, "predefined_sensory_stimuli must be a list.");
+      log_error("predefined_sensory_stimuli must be a list.");
       return false;
     }
 
@@ -164,14 +169,14 @@ bool DeciderWrapper::initialize_module(
 
   /* Extract periodic_processing_enabled (mandatory). */
   if (!config.contains("periodic_processing_enabled")) {
-    RCLCPP_ERROR(*logger_ptr, "'periodic_processing_enabled' key not found in configuration dictionary.");
+    log_error("'periodic_processing_enabled' key not found in configuration dictionary.");
     return false;
   }
 
   try {
     this->periodic_processing_enabled = config["periodic_processing_enabled"].cast<bool>();
   } catch (const py::cast_error& e) {
-    RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled must be a boolean: %s", e.what());
+    log_error(std::string("periodic_processing_enabled must be a boolean: ") + e.what());
     return false;
   }
 
@@ -180,11 +185,11 @@ bool DeciderWrapper::initialize_module(
     try {
       this->periodic_processing_interval = config["periodic_processing_interval"].cast<double>();
       if (this->periodic_processing_interval <= 0.0) {
-        RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a positive number (got %.3f).", this->periodic_processing_interval);
+        log_error("periodic_processing_interval must be a positive number (got " + std::to_string(this->periodic_processing_interval) + ").");
         return false;
       }
     } catch (const py::cast_error& e) {
-      RCLCPP_ERROR(*logger_ptr, "periodic_processing_interval must be a number: %s", e.what());
+      log_error(std::string("periodic_processing_interval must be a number: ") + e.what());
       return false;
     }
   } else {
@@ -193,7 +198,7 @@ bool DeciderWrapper::initialize_module(
 
   /* Check that if periodic processing is enabled, the periodic_processing_interval is provided. */
   if (this->periodic_processing_enabled && !config.contains("periodic_processing_interval")) {
-    RCLCPP_ERROR(*logger_ptr, "periodic_processing_enabled is true but 'periodic_processing_interval' is not provided in configuration dictionary.");
+    log_error("periodic_processing_enabled is true but 'periodic_processing_interval' is not provided in configuration dictionary.");
     return false;
   }
 
@@ -202,11 +207,11 @@ bool DeciderWrapper::initialize_module(
     try {
       this->first_periodic_processing_at = config["first_periodic_processing_at"].cast<double>();
       if (this->first_periodic_processing_at < 0.0) {
-        RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be non-negative.");
+        log_error("first_periodic_processing_at must be non-negative.");
         return false;
       }
     } catch (const py::cast_error& e) {
-      RCLCPP_ERROR(*logger_ptr, "first_periodic_processing_at must be a number: %s", e.what());
+      log_error(std::string("first_periodic_processing_at must be a number: ") + e.what());
       return false;
     }
   } else {
@@ -228,11 +233,11 @@ bool DeciderWrapper::initialize_module(
     try {
       this->warm_up_rounds = config["warm_up_rounds"].cast<int>();
       if (this->warm_up_rounds < 0) {
-        RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be non-negative.");
+        log_error("warm_up_rounds must be non-negative.");
         return false;
       }
     } catch (const py::cast_error& e) {
-      RCLCPP_ERROR(*logger_ptr, "warm_up_rounds must be an integer: %s", e.what());
+      log_error(std::string("warm_up_rounds must be an integer: ") + e.what());
       return false;
     }
   } else {
@@ -244,11 +249,11 @@ bool DeciderWrapper::initialize_module(
     try {
       this->pulse_lockout_duration = config["pulse_lockout_duration"].cast<double>();
       if (this->pulse_lockout_duration < 0.0) {
-        RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be non-negative.");
+        log_error("pulse_lockout_duration must be non-negative.");
         return false;
       }
     } catch (const py::cast_error& e) {
-      RCLCPP_ERROR(*logger_ptr, "pulse_lockout_duration must be a number: %s", e.what());
+      log_error(std::string("pulse_lockout_duration must be a number: ") + e.what());
       return false;
     }
   } else {
@@ -257,7 +262,7 @@ bool DeciderWrapper::initialize_module(
 
   /* Extract sample_window. */
   if (!config.contains("sample_window")) {
-    RCLCPP_ERROR(*logger_ptr, "'sample_window' key not found in configuration dictionary.");
+    log_error("'sample_window' key not found in configuration dictionary.");
     return false;
   }
 
@@ -269,10 +274,9 @@ bool DeciderWrapper::initialize_module(
     default_sample_window_start_seconds = sample_window[0].cast<double>();
     default_sample_window_end_seconds = sample_window[1].cast<double>();
     if (default_sample_window_start_seconds > default_sample_window_end_seconds) {
-      RCLCPP_ERROR(*logger_ptr,
-                   "Invalid sample_window: start (%.3f s) must be <= end (%.3f s).",
-                   default_sample_window_start_seconds,
-                   default_sample_window_end_seconds);
+      log_error(
+        "Invalid sample_window: start (" + std::to_string(default_sample_window_start_seconds) +
+        " s) must be <= end (" + std::to_string(default_sample_window_end_seconds) + " s).");
       return false;
     }
 
@@ -280,7 +284,7 @@ bool DeciderWrapper::initialize_module(
     this->periodic_sample_window_start = to_samples(default_sample_window_start_seconds);
     this->periodic_sample_window_end = to_samples(default_sample_window_end_seconds);
   } else {
-    RCLCPP_ERROR(*logger_ptr, "'sample_window' value in configuration is of incorrect length (should be two elements).");
+    log_error("'sample_window' value in configuration is of incorrect length (should be two elements).");
     return false;
   }
 
@@ -297,7 +301,7 @@ bool DeciderWrapper::initialize_module(
       
       /* Extract processor */
       if (!processor_config.contains("processor")) {
-        RCLCPP_ERROR(*logger_ptr, "pulse_processor config must contain 'processor' key.");
+        log_error("pulse_processor config must contain 'processor' key.");
         return false;
       }
       this->pulse_processor = processor_config["processor"].cast<py::object>();
@@ -306,16 +310,15 @@ bool DeciderWrapper::initialize_module(
       if (processor_config.contains("sample_window")) {
         py::list sample_window = processor_config["sample_window"].cast<py::list>();
         if (sample_window.size() != 2) {
-          RCLCPP_ERROR(*logger_ptr, "sample_window for pulse_processor must have 2 elements.");
+          log_error("sample_window for pulse_processor must have 2 elements.");
           return false;
         }
         pulse_sample_window_start_seconds = sample_window[0].cast<double>();
         pulse_sample_window_end_seconds = sample_window[1].cast<double>();
         if (pulse_sample_window_start_seconds > pulse_sample_window_end_seconds) {
-          RCLCPP_ERROR(*logger_ptr,
-                       "Invalid sample_window for pulse_processor: start (%.3f s) must be <= end (%.3f s).",
-                       pulse_sample_window_start_seconds,
-                       pulse_sample_window_end_seconds);
+          log_error(
+            "Invalid sample_window for pulse_processor: start (" + std::to_string(pulse_sample_window_start_seconds) +
+            " s) must be <= end (" + std::to_string(pulse_sample_window_end_seconds) + " s).");
           return false;
         }
 
@@ -335,7 +338,7 @@ bool DeciderWrapper::initialize_module(
     }
     
     if (!py::hasattr(this->pulse_processor, "__call__")) {
-      RCLCPP_ERROR(*logger_ptr, "pulse_processor is not callable.");
+      log_error("pulse_processor is not callable.");
       return false;
     }
     RCLCPP_DEBUG(*logger_ptr, "Registered pulse processor");
@@ -354,7 +357,7 @@ bool DeciderWrapper::initialize_module(
       
       /* Extract processor */
       if (!processor_config.contains("processor")) {
-        RCLCPP_ERROR(*logger_ptr, "event_processor config must contain 'processor' key.");
+        log_error("event_processor config must contain 'processor' key.");
         return false;
       }
       this->event_processor = processor_config["processor"].cast<py::object>();
@@ -363,16 +366,15 @@ bool DeciderWrapper::initialize_module(
       if (processor_config.contains("sample_window")) {
         py::list sample_window = processor_config["sample_window"].cast<py::list>();
         if (sample_window.size() != 2) {
-          RCLCPP_ERROR(*logger_ptr, "sample_window for event_processor must have 2 elements.");
+          log_error("sample_window for event_processor must have 2 elements.");
           return false;
         }
         event_sample_window_start_seconds = sample_window[0].cast<double>();
         event_sample_window_end_seconds = sample_window[1].cast<double>();
         if (event_sample_window_start_seconds > event_sample_window_end_seconds) {
-          RCLCPP_ERROR(*logger_ptr,
-                       "Invalid sample_window for event_processor: start (%.3f s) must be <= end (%.3f s).",
-                       event_sample_window_start_seconds,
-                       event_sample_window_end_seconds);
+          log_error(
+            "Invalid sample_window for event_processor: start (" + std::to_string(event_sample_window_start_seconds) +
+            " s) must be <= end (" + std::to_string(event_sample_window_end_seconds) + " s).");
           return false;
         }
 
@@ -392,7 +394,7 @@ bool DeciderWrapper::initialize_module(
     }
     
     if (!py::hasattr(this->event_processor, "__call__")) {
-      RCLCPP_ERROR(*logger_ptr, "event_processor is not callable.");
+      log_error("event_processor is not callable.");
       return false;
     }
     RCLCPP_DEBUG(*logger_ptr, "Registered event processor");

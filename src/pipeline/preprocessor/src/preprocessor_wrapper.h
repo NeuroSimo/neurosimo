@@ -67,6 +67,7 @@ public:
 
 private:
   void setup_custom_print();
+  void log_error(const std::string& message);
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */
   static rclcpp::Logger* logger_ptr;
 

@@ -268,6 +268,13 @@ bool DeciderWrapper::initialize_module(
   if (sample_window.size() == 2) {
     default_sample_window_start_seconds = sample_window[0].cast<double>();
     default_sample_window_end_seconds = sample_window[1].cast<double>();
+    if (default_sample_window_start_seconds > default_sample_window_end_seconds) {
+      RCLCPP_ERROR(*logger_ptr,
+                   "Invalid sample_window: start (%.3f s) must be <= end (%.3f s).",
+                   default_sample_window_start_seconds,
+                   default_sample_window_end_seconds);
+      return false;
+    }
 
     /* Convert seconds to sample counts. */
     this->periodic_sample_window_start = to_samples(default_sample_window_start_seconds);
@@ -304,6 +311,13 @@ bool DeciderWrapper::initialize_module(
         }
         pulse_sample_window_start_seconds = sample_window[0].cast<double>();
         pulse_sample_window_end_seconds = sample_window[1].cast<double>();
+        if (pulse_sample_window_start_seconds > pulse_sample_window_end_seconds) {
+          RCLCPP_ERROR(*logger_ptr,
+                       "Invalid sample_window for pulse_processor: start (%.3f s) must be <= end (%.3f s).",
+                       pulse_sample_window_start_seconds,
+                       pulse_sample_window_end_seconds);
+          return false;
+        }
 
         this->pulse_sample_window_start = to_samples(pulse_sample_window_start_seconds);
         this->pulse_sample_window_end = to_samples(pulse_sample_window_end_seconds);
@@ -354,6 +368,13 @@ bool DeciderWrapper::initialize_module(
         }
         event_sample_window_start_seconds = sample_window[0].cast<double>();
         event_sample_window_end_seconds = sample_window[1].cast<double>();
+        if (event_sample_window_start_seconds > event_sample_window_end_seconds) {
+          RCLCPP_ERROR(*logger_ptr,
+                       "Invalid sample_window for event_processor: start (%.3f s) must be <= end (%.3f s).",
+                       event_sample_window_start_seconds,
+                       event_sample_window_end_seconds);
+          return false;
+        }
 
         this->event_sample_window_start = to_samples(event_sample_window_start_seconds);
         this->event_sample_window_end = to_samples(event_sample_window_end_seconds);

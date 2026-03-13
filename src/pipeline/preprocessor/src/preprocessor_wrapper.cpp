@@ -113,6 +113,13 @@ bool PreprocessorWrapper::initialize_module(
       if (sample_window.size() == 2) {
         sample_window_start_seconds = sample_window[0].cast<double>();
         sample_window_end_seconds = sample_window[1].cast<double>();
+        if (sample_window_start_seconds > sample_window_end_seconds) {
+          RCLCPP_ERROR(*logger_ptr,
+                       "Invalid sample_window: start (%.3f s) must be <= end (%.3f s).",
+                       sample_window_start_seconds,
+                       sample_window_end_seconds);
+          return false;
+        }
 
         this->sample_window_start = to_samples(sample_window_start_seconds);
         this->sample_window_end = to_samples(sample_window_end_seconds);

@@ -103,7 +103,7 @@ class Decider:
         """
         return {
             # Data configuration
-            'sample_window': [self.buffer_size_seconds, 0.0],
+            'sample_window': [-self.buffer_size_seconds, 0.0],
             'warm_up_rounds': 2,
 
             # Periodic processing

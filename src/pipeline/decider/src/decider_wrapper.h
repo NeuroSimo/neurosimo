@@ -17,6 +17,7 @@
 #include "eeg_interfaces/msg/sample.hpp"
 
 #include "pipeline_interfaces/msg/coil_target.hpp"
+#include "pipeline_interfaces/msg/targeted_pulse.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "pipeline_interfaces/msg/timed_trigger.hpp"
@@ -72,7 +73,11 @@ public:
     const py::dict& py_sensory_stimulus,
     pipeline_interfaces::msg::SensoryStimulus& out_msg);
 
-  std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> process(
+  std::tuple<
+    bool,
+    std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>,
+    std::string,
+    std::vector<pipeline_interfaces::msg::TargetedPulse>> process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
@@ -183,6 +188,14 @@ private:
   bool process_sensory_stimuli_list(
     const py::list& py_sensory_stimuli,
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
+
+  bool parse_targeted_pulse_dict(
+    const py::dict& py_targeted_pulse,
+    pipeline_interfaces::msg::TargetedPulse& out_msg);
+
+  bool process_targeted_pulses_list(
+    const py::list& py_targeted_pulses,
+    std::vector<pipeline_interfaces::msg::TargetedPulse>& targeted_pulses);
 
   void fill_arrays_from_buffer(
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,

@@ -32,6 +32,7 @@
 #include "pipeline_interfaces/msg/latency.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
+#include "pipeline_interfaces/msg/targeted_pulses.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
@@ -136,6 +137,7 @@ private:
 
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
+  rclcpp::Publisher<pipeline_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
@@ -158,6 +160,7 @@ private:
   /* Session and decision tracking */
   std::array<uint8_t, 16> session_id = {};
   uint64_t decision_id = 0;
+  uint64_t targeted_pulses_sequence_number = 0;
   uint64_t decision_fingerprint = 0;
 
   double_t next_periodic_processing_time = UNSET_TIME;

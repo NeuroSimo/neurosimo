@@ -788,6 +788,60 @@ bool DeciderWrapper::process_sensory_stimuli_list(
   return true;
 }
 
+bool DeciderWrapper::parse_targeted_pulse_dict(
+  const py::dict& py_targeted_pulse,
+  pipeline_interfaces::msg::TargetedPulse& out_msg) {
+
+  static const std::vector<std::string> required = {
+    "time",
+    "displacement_x",
+    "displacement_y",
+    "rotation_angle",
+    "intensity"
+  };
+
+  for (const auto& field : required) {
+    if (!py_targeted_pulse.contains(field)) {
+      RCLCPP_ERROR(*logger_ptr, "targeted_pulse missing field '%s'", field.c_str());
+      return false;
+    }
+  }
+
+  try {
+    out_msg.time = py_targeted_pulse["time"].cast<double>();
+    out_msg.displacement_x = py_targeted_pulse["displacement_x"].cast<double>();
+    out_msg.displacement_y = py_targeted_pulse["displacement_y"].cast<double>();
+    out_msg.rotation_angle = py_targeted_pulse["rotation_angle"].cast<double>();
+    out_msg.intensity = py_targeted_pulse["intensity"].cast<double>();
+  } catch (const py::cast_error& e) {
+    RCLCPP_ERROR(*logger_ptr, "Invalid targeted_pulse field type: %s", e.what());
+    return false;
+  }
+
+  return true;
+}
+
+bool DeciderWrapper::process_targeted_pulses_list(
+  const py::list& py_targeted_pulses,
+  std::vector<pipeline_interfaces::msg::TargetedPulse>& targeted_pulses) {
+
+  for (const auto& py_targeted_pulse : py_targeted_pulses) {
+    if (!py::isinstance<py::dict>(py_targeted_pulse)) {
+      RCLCPP_ERROR(*logger_ptr, "targeted_pulses must be a list of dictionaries.");
+      return false;
+    }
+
+    pipeline_interfaces::msg::TargetedPulse msg;
+    if (!parse_targeted_pulse_dict(py_targeted_pulse.cast<py::dict>(), msg)) {
+      RCLCPP_ERROR(*logger_ptr, "Failed to parse targeted_pulse dictionary.");
+      return false;
+    }
+    targeted_pulses.push_back(msg);
+  }
+
+  return true;
+}
+
 void DeciderWrapper::fill_arrays_from_buffer(
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
@@ -817,7 +871,11 @@ void DeciderWrapper::fill_arrays_from_buffer(
 }
 
 /* TODO: Use struct for the return value. */
-std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> DeciderWrapper::process(
+std::tuple<
+  bool,
+  std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>,
+  std::string,
+  std::vector<pipeline_interfaces::msg::TargetedPulse>> DeciderWrapper::process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
@@ -828,6 +886,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
 
   std::shared_ptr<pipeline_interfaces::msg::TimedTrigger> timed_trigger = nullptr;
   std::string coil_target;
+  std::vector<pipeline_interfaces::msg::TargetedPulse> targeted_pulses;
 
   /* Determine which arrays to use and their parameters. */
   py::array_t<double>* py_time_offsets;
@@ -863,7 +922,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
 
   } else {
     RCLCPP_ERROR(*logger_ptr, "Invalid processing reason: %d", static_cast<int>(processing_reason));
-    return {false, timed_trigger, coil_target};
+    return {false, timed_trigger, coil_target, targeted_pulses};
   }
 
   /* Fill the selected arrays from the reason-specific window position in the envelope. */
@@ -912,7 +971,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     // Add error to log buffer so it can be published to UI
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
 
-    return {false, timed_trigger, coil_target};
+    return {false, timed_trigger, coil_target, targeted_pulses};
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
@@ -921,30 +980,39 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     // Add error to log buffer so it can be published to UI
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
 
-    return {false, timed_trigger, coil_target};
+    return {false, timed_trigger, coil_target, targeted_pulses};
   }
 
   /* If the return value is None, return early but mark it as successful. */
   if (py_result.is_none()) {
-    return {true, timed_trigger, coil_target};
+    return {true, timed_trigger, coil_target, targeted_pulses};
   }
 
   /* If the return value is not None, ensure that it is a dictionary. */
   if (!py::isinstance<py::dict>(py_result)) {
     RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary.");
-    return {false, timed_trigger, coil_target};
+    return {false, timed_trigger, coil_target, targeted_pulses};
   }
 
   /* Extract the dictionary from the result first */
   py::dict dict_result = py_result.cast<py::dict>();
 
   /* Validate that only allowed keys are present */
-  std::vector<std::string> allowed_keys = {"timed_trigger", "sensory_stimuli", "events", "coil_target"};
+  std::vector<std::string> allowed_keys = {
+    "timed_trigger",
+    "targeted_pulses",
+    "sensory_stimuli",
+    "events",
+    "coil_target"
+  };
   for (const auto& item : dict_result) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      RCLCPP_ERROR(*logger_ptr, "Unexpected key '%s' in return value, only 'timed_trigger', 'sensory_stimuli', 'events', and 'coil_target' are allowed.", key.c_str());
-      return {false, timed_trigger, coil_target};
+      RCLCPP_ERROR(
+        *logger_ptr,
+        "Unexpected key '%s' in return value, only 'timed_trigger', 'targeted_pulses', 'sensory_stimuli', 'events', and 'coil_target' are allowed.",
+        key.c_str());
+      return {false, timed_trigger, coil_target, targeted_pulses};
     }
   }
 
@@ -955,28 +1023,45 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
   if (dict_result.contains("timed_trigger")) {
     if (processing_reason == ProcessingReason::Pulse || processing_reason == ProcessingReason::Event) {
       RCLCPP_ERROR(*logger_ptr, "Timed trigger requests are not allowed for pulse or event processing.");
-      return {false, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target, targeted_pulses};
     }
     timed_trigger = std::make_shared<pipeline_interfaces::msg::TimedTrigger>();
     timed_trigger->time = dict_result["timed_trigger"].cast<double_t>();
   }
 
+  if (dict_result.contains("targeted_pulses")) {
+    if (!py::isinstance<py::list>(dict_result["targeted_pulses"])) {
+      RCLCPP_ERROR(*logger_ptr, "targeted_pulses must be a list.");
+      return {false, timed_trigger, coil_target, targeted_pulses};
+    }
+
+    py::list py_targeted_pulses = dict_result["targeted_pulses"].cast<py::list>();
+    if (!process_targeted_pulses_list(py_targeted_pulses, targeted_pulses)) {
+      return {false, timed_trigger, coil_target, targeted_pulses};
+    }
+  }
+
+  if (timed_trigger != nullptr && !targeted_pulses.empty()) {
+    RCLCPP_ERROR(*logger_ptr, "Return value cannot include both 'timed_trigger' and 'targeted_pulses'.");
+    return {false, timed_trigger, coil_target, targeted_pulses};
+  }
+
   if (dict_result.contains("sensory_stimuli")) {
     if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
       RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
-      return {false, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target, targeted_pulses};
     }
 
     py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
     if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
-      return {false, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target, targeted_pulses};
     }
   }
 
   if (dict_result.contains("events")) {
     if (!py::isinstance<py::list>(dict_result["events"])) {
       RCLCPP_ERROR(*logger_ptr, "events must be a list.");
-      return {false, timed_trigger, coil_target};
+      return {false, timed_trigger, coil_target, targeted_pulses};
     }
 
     py::list events = dict_result["events"].cast<py::list>();
@@ -986,7 +1071,7 @@ std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::s
     }
   }
 
-  return {true, timed_trigger, coil_target};
+  return {true, timed_trigger, coil_target, targeted_pulses};
 }
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;

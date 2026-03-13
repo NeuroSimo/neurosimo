@@ -1,0 +1,7 @@
+name: "Example protocol with 100 trials"
+description: "An example protocol consisting of 100 trials in a single stage"
+
+stages:
+  - stage:
+      name: "example_stage"
+      trials: 100

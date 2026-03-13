@@ -66,7 +66,7 @@ class Decider:
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray,
-            is_coil_at_target: bool, is_warm_up: bool) -> dict[str, Any] | None:
+            is_coil_at_target: bool, stage_name: str, is_warm_up: bool) -> dict[str, Any] | None:
         """Process EEG/EMG buffer periodically."""
         print(f"Periodic processing at time {reference_time:.1f} seconds")
 
@@ -102,7 +102,7 @@ class Decider:
 
     def process_pulse(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
-            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool) -> dict[str, Any] | None:
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool, stage_name: str) -> dict[str, Any] | None:
         """Process pulse event."""
         print(f"Pulse event received at time {reference_time}.")
         

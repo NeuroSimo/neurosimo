@@ -71,13 +71,15 @@ public:
   bool parse_sensory_stimulus_dict(
     const py::dict& py_sensory_stimulus,
     pipeline_interfaces::msg::SensoryStimulus& out_msg);
+
   std::tuple<bool, std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>, std::string> process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     ProcessingReason processing_reason,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
-    bool is_coil_at_target);
+    bool is_coil_at_target,
+    const std::string& stage_name);
 
   std::size_t get_envelope_buffer_size() const;
   double get_periodic_processing_interval() const;

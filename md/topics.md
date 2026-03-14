@@ -56,7 +56,6 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 - `/neurosimo/pipeline/decision_trace/final` - Finalized decision trace output.
 - `/neurosimo/pipeline/experiment_state` - Experiment runtime state.
 - `/neurosimo/pipeline/sensory_stimulus` - Sensory stimulus events.
-- `/targeted_pulses` - Decider targeted pulses output.
 - `/neurosimo/pipeline/latency/loopback` - Loopback latency telemetry.
 - `/neurosimo/pipeline/latency/pulse_processing` - Pulse processing latency telemetry.
 - `/neurosimo/pipeline/latency/event_processing` - Event processing latency telemetry.
@@ -64,8 +63,9 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 - `/neurosimo/pipeline/preprocessor/log` - Preprocessor log stream.
 - `/neurosimo/pipeline/presenter/log` - Presenter log stream.
 
-### Neuronavigation
+### Externally Wired Topics
 
+- `/mtms/targeted_pulses` - Targeted pulses output for mTMS system.
 - `/neuronavigation/coil_at_target` - Coil-at-target boolean/status.
 - `/neuronavigation/coil_target` - Target location/pose information.
 

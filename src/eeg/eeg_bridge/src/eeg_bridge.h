@@ -9,6 +9,7 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
+#include "std_msgs/msg/int32.hpp"
 
 #include "eeg_interfaces/msg/eeg_device_info.hpp"
 #include "eeg_interfaces/msg/sample.hpp"
@@ -82,6 +83,7 @@ private:
   void publish_health_status(uint8_t health_level, const std::string& message);
   void publish_device_info();
   void publish_data_source_state();
+  void publish_cumulative_dropped_samples();
 
   void set_device_state(EegDeviceState new_state);
 
@@ -119,6 +121,7 @@ private:
   rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;
   rclcpp::Publisher<eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr dropped_samples_publisher;
   rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::Publisher<system_interfaces::msg::DataSourceState>::SharedPtr data_source_state_publisher;
 
@@ -141,6 +144,7 @@ private:
   
   /* Device sample tracking for dropped sample detection */
   uint64_t previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
+  uint64_t cumulative_dropped_samples = 0;
   
   /* Streaming sample index (starts at 0 for each streaming run) */
   uint64_t session_sample_index = 0;

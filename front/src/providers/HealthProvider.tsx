@@ -140,7 +140,7 @@ export const HealthProvider: React.FC<HealthProviderProps> = ({ children }) => {
 
     const preprocessorHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/essor/heartbeat',
+      name: '/preprocessor/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 

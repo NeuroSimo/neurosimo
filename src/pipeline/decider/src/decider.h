@@ -32,7 +32,7 @@
 #include "pipeline_interfaces/msg/latency.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
-#include "pipeline_interfaces/msg/targeted_pulses.hpp"
+#include "pipeline_interfaces/msg/mtms/targeted_pulses.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"

@@ -237,7 +237,7 @@ return {'timed_trigger': reference_time + 0.005}  # Trigger after 5ms
 ```
 
 #### `targeted_pulses` (list)
-Publish targeted pulse requests to `/targeted_pulses` for external stimulation software.
+Publish targeted pulse requests to `/mtms/targeted_pulses` for external stimulation software.
 Do not return `timed_trigger` and `targeted_pulses` in the same result.
 
 Each list item must be a dictionary with:

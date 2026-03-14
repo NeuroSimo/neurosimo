@@ -35,21 +35,21 @@ class ResourceMonitorNode(Node):
         )
         self._disk_status_publisher = self.create_publisher(
             DiskStatus,
-            '/system/disk_status',
+            '/neurosimo/system/disk_status',
             status_qos
         )
 
         # Create heartbeat publisher
         self._heartbeat_publisher = self.create_publisher(
             Empty,
-            '/resource_monitor/heartbeat',
+            '/neurosimo/resource_monitor/heartbeat',
             10
         )
 
         # Create health publisher
         self._health_publisher = self.create_publisher(
             ComponentHealth,
-            '/resource_monitor/health',
+            '/neurosimo/resource_monitor/health',
             status_qos
         )
 
@@ -67,7 +67,7 @@ class ResourceMonitorNode(Node):
         )
         self._global_config_subscription = self.create_subscription(
             GlobalConfig,
-            '/global_configurator/config',
+            '/neurosimo/global_configurator/config',
             self._handle_global_config,
             config_qos
         )

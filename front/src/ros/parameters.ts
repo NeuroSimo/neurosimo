@@ -84,14 +84,14 @@ export const extractParameterValue = (paramValue: {
 /* Set parameters service on session_configurator node */
 const sessionConfiguratorSetParametersService = new ROSLIB.Service({
   ros: ros,
-  name: '/session_configurator/set_parameters',
+  name: '/neurosimo/session_configurator/set_parameters',
   serviceType: 'rcl_interfaces/SetParameters',
 })
 
 /* Set parameters service on global_configurator node */
 const globalConfiguratorSetParametersService = new ROSLIB.Service({
   ros: ros,
-  name: '/global_configurator/set_parameters',
+  name: '/neurosimo/global_configurator/set_parameters',
   serviceType: 'rcl_interfaces/SetParameters',
 })
 
@@ -188,14 +188,14 @@ export const setParametersRos = (
 /* Get parameters service on session_configurator node */
 const sessionConfiguratorGetParametersService = new ROSLIB.Service({
   ros: ros,
-  name: '/session_configurator/get_parameters',
+  name: '/neurosimo/session_configurator/get_parameters',
   serviceType: 'rcl_interfaces/GetParameters',
 })
 
 /* Get parameters service on global_configurator node */
 const globalConfiguratorGetParametersService = new ROSLIB.Service({
   ros: ros,
-  name: '/global_configurator/get_parameters',
+  name: '/neurosimo/global_configurator/get_parameters',
   serviceType: 'rcl_interfaces/GetParameters',
 })
 

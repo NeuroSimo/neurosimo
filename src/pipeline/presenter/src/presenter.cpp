@@ -16,8 +16,8 @@ using namespace std::chrono;
 const double_t HEARTBEAT_INTERVAL_SEC = 0.5;
 using namespace std::placeholders;
 
-const std::string SENSORY_STIMULUS_TOPIC = "/pipeline/sensory_stimulus";
-const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
+const std::string SENSORY_STIMULUS_TOPIC = "/neurosimo/pipeline/sensory_stimulus";
+const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
@@ -50,24 +50,24 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
   this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessages>(
-    "/pipeline/presenter/log",
+    "/neurosimo/pipeline/presenter/log",
     qos_keep_all_logs);
 
   /* Initialize service server for component initialization */
   this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializePresenter>(
-    "/pipeline/presenter/initialize",
+    "/neurosimo/pipeline/presenter/initialize",
     std::bind(&EegPresenter::handle_initialize_presenter, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Finalize service server */
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePresenter>(
-    "/pipeline/presenter/finalize",
+    "/neurosimo/pipeline/presenter/finalize",
     std::bind(&EegPresenter::handle_finalize_presenter, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   while (!abort_session_client->wait_for_service(2s)) {
-    RCLCPP_INFO(this->get_logger(), "Service /session/abort not available, waiting...");
+    RCLCPP_INFO(this->get_logger(), "Service /neurosimo/session/abort not available, waiting...");
   }
 
   /* Create QoS profile for latched topics */
@@ -76,12 +76,12 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
 
   /* Create heartbeat publisher */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/presenter/heartbeat",
+    "/neurosimo/presenter/heartbeat",
     10);
 
   /* Create health publisher */
   this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
-    "/presenter/health",
+    "/neurosimo/presenter/health",
     status_qos);
 
   /* Create heartbeat timer */

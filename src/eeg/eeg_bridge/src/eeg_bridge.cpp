@@ -22,9 +22,9 @@ using namespace std::chrono_literals;
 using namespace std::placeholders;
 
 /* Publisher topics */
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
-const std::string DEVICE_INFO_TOPIC = "/eeg_device/info";
-const std::string HEARTBEAT_TOPIC = "/eeg_bridge/heartbeat";
+const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
+const std::string DEVICE_INFO_TOPIC = "/neurosimo/eeg_device/info";
+const std::string HEARTBEAT_TOPIC = "/neurosimo/eeg_bridge/heartbeat";
 const std::string DROPPED_SAMPLES_TOPIC = "/eeg_bridge/dropped_samples";
 
 /* Have a long queue to avoid dropping messages. */
@@ -48,7 +48,7 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
       this->create_publisher<eeg_interfaces::msg::EegDeviceInfo>(DEVICE_INFO_TOPIC, qos_persist_latest);
 
   this->data_source_state_publisher =
-      this->create_publisher<system_interfaces::msg::DataSourceState>("/eeg_bridge/state", qos_persist_latest);
+      this->create_publisher<system_interfaces::msg::DataSourceState>("/neurosimo/eeg_bridge/state", qos_persist_latest);
 
   this->heartbeat_publisher =
     this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
@@ -57,31 +57,31 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
     this->create_publisher<std_msgs::msg::Int32>(DROPPED_SAMPLES_TOPIC, 10);
 
   this->health_publisher =
-    this->create_publisher<system_interfaces::msg::ComponentHealth>("/eeg_bridge/health", qos_persist_latest);
+    this->create_publisher<system_interfaces::msg::ComponentHealth>("/neurosimo/eeg_bridge/health", qos_persist_latest);
 
   /* Create services */
   this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
-    "/eeg_device/streaming/start",
+    "/neurosimo/eeg_device/streaming/start",
     std::bind(&EegBridge::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
   this->stop_streaming_service = this->create_service<eeg_interfaces::srv::StopStreaming>(
-    "/eeg_device/streaming/stop",
+    "/neurosimo/eeg_device/streaming/stop",
     std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
   this->initialize_service = this->create_service<eeg_interfaces::srv::InitializeEegDeviceStream>(
-    "/eeg_device/initialize",
+    "/neurosimo/eeg_device/initialize",
     std::bind(&EegBridge::handle_initialize, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   while (!abort_session_client->wait_for_service(2s)) {
-    RCLCPP_INFO(get_logger(), "Service /session/abort not available, waiting...");
+    RCLCPP_INFO(get_logger(), "Service /neurosimo/session/abort not available, waiting...");
   }
 
   /* Create subscribers */
   this->global_config_subscription = this->create_subscription<system_interfaces::msg::GlobalConfig>(
-      "/global_configurator/config",
+      "/neurosimo/global_configurator/config",
       qos_persist_latest,
       std::bind(&EegBridge::handle_global_config, this, std::placeholders::_1));
 

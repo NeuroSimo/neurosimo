@@ -69,7 +69,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     /* Subscriber for preprocessor list. */
     const preprocessorListSubscriber = new Topic<FilenameList>({
       ros: ros,
-      name: '/pipeline/preprocessor/list',
+      name: '/neurosimo/pipeline/preprocessor/list',
       messageType: 'project_interfaces/FilenameList',
     })
 
@@ -80,7 +80,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     /* Subscriber for decider list. */
     const deciderListSubscriber = new Topic<FilenameList>({
       ros: ros,
-      name: '/pipeline/decider/list',
+      name: '/neurosimo/pipeline/decider/list',
       messageType: 'project_interfaces/FilenameList',
     })
 
@@ -91,7 +91,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     /* Subscriber for presenter list. */
     const presenterListSubscriber = new Topic<FilenameList>({
       ros: ros,
-      name: '/pipeline/presenter/list',
+      name: '/neurosimo/pipeline/presenter/list',
       messageType: 'project_interfaces/FilenameList',
     })
 
@@ -102,7 +102,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     /* Subscriber for available protocols. */
     const protocolListSubscriber = new Topic<FilenameList>({
       ros: ros,
-      name: '/experiment/protocol/list',
+      name: '/neurosimo/experiment/protocol/list',
       messageType: 'project_interfaces/FilenameList',
     })
 

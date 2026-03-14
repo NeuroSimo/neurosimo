@@ -25,6 +25,7 @@ using namespace std::placeholders;
 const std::string EEG_RAW_TOPIC = "/eeg/raw";
 const std::string DEVICE_INFO_TOPIC = "/eeg_device/info";
 const std::string HEARTBEAT_TOPIC = "/eeg_bridge/heartbeat";
+const std::string DROPPED_SAMPLES_TOPIC = "/eeg_bridge/dropped_samples";
 
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -51,6 +52,9 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
 
   this->heartbeat_publisher =
     this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
+
+  this->dropped_samples_publisher =
+    this->create_publisher<std_msgs::msg::Int32>(DROPPED_SAMPLES_TOPIC, 10);
 
   this->health_publisher =
     this->create_publisher<system_interfaces::msg::ComponentHealth>("/eeg_bridge/health", qos_persist_latest);
@@ -234,13 +238,22 @@ void EegBridge::publish_health_status(uint8_t health_level, const std::string& m
   this->health_publisher->publish(health);
 }
 
+void EegBridge::publish_cumulative_dropped_samples() {
+  auto dropped_samples_msg = std_msgs::msg::Int32();
+  dropped_samples_msg.data = static_cast<int32_t>(this->cumulative_dropped_samples);
+  this->dropped_samples_publisher->publish(dropped_samples_msg);
+}
+
 bool EegBridge::reset_state() {
   this->session_sample_index = 0;
   this->time_offset = UNSET_TIME;
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
+  this->cumulative_dropped_samples = 0;
   this->is_session_start = false;
   this->last_sample_time = std::chrono::steady_clock::now();
   this->data_source_fingerprint = 0;
+
+  this->publish_cumulative_dropped_samples();
 
   this->data_source_state = system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
@@ -318,18 +331,30 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
                 device_sample_index);
   }
 
-  /* Check for dropped samples using device indices. */
+  /* Track any dropped samples using device indices. */
   if (previous_device_sample_index != UNSET_PREVIOUS_SAMPLE_INDEX &&
-      device_sample_index > previous_device_sample_index + 1 + this->maximum_dropped_samples &&
+      device_sample_index > previous_device_sample_index + 1 &&
       /* Ignore the case where the sample index wraps around. */
       device_sample_index != 0) {
 
-    RCLCPP_ERROR(this->get_logger(),
-                 "Samples dropped. Previous device sample index: %lu, current: %lu.",
-                 previous_device_sample_index,
-                 device_sample_index);
-    this->abort_session("EEG samples dropped");
-    return false;  // Samples were dropped
+    const auto dropped_samples_count = static_cast<uint64_t>(device_sample_index - previous_device_sample_index - 1);
+
+    this->cumulative_dropped_samples += dropped_samples_count;
+    this->publish_cumulative_dropped_samples();
+
+    RCLCPP_WARN(this->get_logger(),
+      "Samples dropped (%lu, cumulative %lu). Previous device sample index: %lu, current: %lu.",
+      dropped_samples_count,
+      this->cumulative_dropped_samples,
+      previous_device_sample_index,
+      device_sample_index);
+
+    if (dropped_samples_count > this->maximum_dropped_samples) {
+      RCLCPP_ERROR(this->get_logger(), "Samples dropped above allowed threshold (%d).", this->maximum_dropped_samples);
+      this->abort_session("EEG samples dropped above allowed threshold");
+
+      return false;
+    }
   }
   
   this->previous_device_sample_index = device_sample_index;

@@ -218,6 +218,11 @@ void EegBridge::set_device_state(EegDeviceState new_state) {
 }
 
 void EegBridge::abort_session(const std::string& reason) {
+  if (this->session_abort_requested) {
+    return;
+  }
+  this->session_abort_requested = true;
+
   auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
   request->source = "eeg_bridge";
   request->reason = reason;
@@ -250,6 +255,7 @@ bool EegBridge::reset_state() {
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   this->cumulative_dropped_samples = 0;
   this->is_session_start = false;
+  this->session_abort_requested = false;
   this->last_sample_time = std::chrono::steady_clock::now();
   this->data_source_fingerprint = 0;
 
@@ -393,17 +399,6 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
 }
 
 void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
-  set_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
-
-  /* Update last sample time */
-  this->last_sample_time = std::chrono::steady_clock::now();
-
-  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
-                          "Waiting for session to start...");
-    return;
-  }
-
   /* If this is the first sample, set the time offset. */
   if (std::isnan(this->time_offset)) {
     this->time_offset = sample.time;
@@ -498,6 +493,22 @@ void EegBridge::process_eeg_packet() {
   switch (packet.result) {
 
   case SAMPLE: {
+    set_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
+
+    /* Track device activity even when session isn't running yet. */
+    this->last_sample_time = std::chrono::steady_clock::now();
+
+    if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
+      RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                            "Waiting for session to start...");
+      break;
+    }
+    if (this->session_abort_requested) {
+      RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                            "Session aborted, waiting for new session...");
+      break;
+    }
+
     // Check for dropped samples using device sample index
     if (!check_for_dropped_samples(packet.sample.sample_index)) {
       // Dropped samples detected, don't process this sample

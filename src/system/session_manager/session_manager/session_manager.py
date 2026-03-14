@@ -776,7 +776,7 @@ class SessionManagerNode(Node):
         # Choose the appropriate streaming service based on data source
         if data_source == 'recording':
             client = self.recording_streaming_start_client
-            service_name = '/recording/streaming/start'
+            service_name = '/eeg_replay/streaming/start'
         elif data_source == 'simulator':
             client = self.eeg_simulator_streaming_start_client
             service_name = '/eeg_simulator/streaming/start'

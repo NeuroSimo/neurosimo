@@ -65,21 +65,21 @@ class SessionConfiguratorNode(Node):
                          history=HistoryPolicy.KEEP_LAST)
         self.global_config_subscription = self.create_subscription(
             GlobalConfig,
-            '/global_configurator/config',
+            '/neurosimo/global_configurator/config',
             self.global_config_callback,
             qos
         )
 
         # Publishers
-        self.decider_list_publisher = self.create_publisher(FilenameList, "/pipeline/decider/list", qos)
-        self.preprocessor_list_publisher = self.create_publisher(FilenameList, "/pipeline/preprocessor/list", qos)
-        self.presenter_list_publisher = self.create_publisher(FilenameList, "/pipeline/presenter/list", qos)
-        self.protocol_list_publisher = self.create_publisher(FilenameList, "/experiment/protocol/list", qos)
-        self.dataset_list_publisher = self.create_publisher(FilenameList, "/eeg_simulator/dataset/list", qos)
-        self.recordings_list_publisher = self.create_publisher(FilenameList, "/recording/recordings/list", qos)
+        self.decider_list_publisher = self.create_publisher(FilenameList, "/neurosimo/pipeline/decider/list", qos)
+        self.preprocessor_list_publisher = self.create_publisher(FilenameList, "/neurosimo/pipeline/preprocessor/list", qos)
+        self.presenter_list_publisher = self.create_publisher(FilenameList, "/neurosimo/pipeline/presenter/list", qos)
+        self.protocol_list_publisher = self.create_publisher(FilenameList, "/neurosimo/experiment/protocol/list", qos)
+        self.dataset_list_publisher = self.create_publisher(FilenameList, "/neurosimo/eeg_simulator/dataset/list", qos)
+        self.recordings_list_publisher = self.create_publisher(FilenameList, "/neurosimo/recording/recordings/list", qos)
         
         # Session config publisher
-        self.session_config_publisher = self.create_publisher(SessionConfig, "/session_configurator/config", qos)
+        self.session_config_publisher = self.create_publisher(SessionConfig, "/neurosimo/session_configurator/config", qos)
 
         # Define directory watch configurations
         self.watch_configs = [

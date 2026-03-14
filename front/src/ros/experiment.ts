@@ -32,7 +32,7 @@ export const PROTOCOL_ELEMENT_TYPE = {
 /* Pause experiment */
 const pauseExperimentService = new ROSLIB.Service({
   ros: ros,
-  name: '/experiment/pause',
+  name: '/neurosimo/experiment/pause',
   serviceType: 'std_srvs/Trigger',
 })
 
@@ -58,7 +58,7 @@ export const pauseExperimentRos = (callback: () => void) => {
 /* Resume experiment */
 const resumeExperimentService = new ROSLIB.Service({
   ros: ros,
-  name: '/experiment/resume',
+  name: '/neurosimo/experiment/resume',
   serviceType: 'std_srvs/Trigger',
 })
 
@@ -84,7 +84,7 @@ export const resumeExperimentRos = (callback: () => void) => {
 /* Get protocol info service */
 const getProtocolInfoService = new ROSLIB.Service({
   ros: ros,
-  name: '/experiment_coordinator/protocol/get_info',
+  name: '/neurosimo/experiment_coordinator/protocol/get_info',
   serviceType: 'pipeline_interfaces/GetProtocolInfo',
 })
 

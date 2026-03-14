@@ -3,8 +3,8 @@
 This suite drives the system through the same public ROS2 interfaces used by the frontend:
 
 - `/<node>/set_parameters` for configuration
-- `/session/start` to start a session
-- `/session/state` to wait for lifecycle completion
+- `/neurosimo/session/start` to start a session
+- `/neurosimo/session/state` to wait for lifecycle completion
 
 After the session finishes, it reads the latest recording metadata JSON from:
 

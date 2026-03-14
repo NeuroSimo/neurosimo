@@ -37,7 +37,7 @@ export interface RecordingInfo extends ROSLIB.Message {
 /* Get recording info service */
 const getRecordingInfoService = new ROSLIB.Service({
   ros: ros,
-  name: '/recording_manager/recording/get_info',
+  name: '/neurosimo/recording_manager/recording/get_info',
   serviceType: 'project_interfaces/GetRecordingInfo',
 })
 
@@ -70,7 +70,7 @@ export const getRecordingInfoRos = (
 /* Delete recording service */
 const deleteRecordingService = new ROSLIB.Service({
   ros: ros,
-  name: '/recording_manager/recording/delete',
+  name: '/neurosimo/recording_manager/recording/delete',
   serviceType: 'project_interfaces/DeleteRecording',
 })
 

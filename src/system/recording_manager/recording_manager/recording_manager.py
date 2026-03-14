@@ -64,7 +64,7 @@ class RecordingManagerNode(Node):
 
         self._global_config_subscriber = self.create_subscription(
             GlobalConfig,
-            '/global_configurator/config',
+            '/neurosimo/global_configurator/config',
             self._handle_global_config,
             qos_persist_latest,
             callback_group=self.callback_group
@@ -73,7 +73,7 @@ class RecordingManagerNode(Node):
         # Create service for getting recording info
         self._get_recording_info_service = self.create_service(
             GetRecordingInfo,
-            '/recording_manager/recording/get_info',
+            '/neurosimo/recording_manager/recording/get_info',
             self._handle_get_recording_info,
             callback_group=self.callback_group
         )
@@ -81,7 +81,7 @@ class RecordingManagerNode(Node):
         # Create service for deleting recording
         self._delete_recording_service = self.create_service(
             DeleteRecording,
-            '/recording_manager/recording/delete',
+            '/neurosimo/recording_manager/recording/delete',
             self._handle_delete_recording,
             callback_group=self.callback_group
         )

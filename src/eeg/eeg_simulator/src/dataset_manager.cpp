@@ -6,7 +6,7 @@
 
 DatasetManager::DatasetManager(rclcpp::Node* node) : node_(node) {
   service_ = node_->create_service<project_interfaces::srv::GetDatasetInfo>(
-      "/eeg_simulator/dataset/get_info",
+      "/neurosimo/eeg_simulator/dataset/get_info",
       std::bind(&DatasetManager::handle_get_dataset_info, this, std::placeholders::_1, std::placeholders::_2));
 }
 

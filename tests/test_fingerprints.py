@@ -54,7 +54,7 @@ class SessionTestsHarness:
         self._last_abort_reason = ""
         self._session_state_sub = self.node.create_subscription(
             SessionState,
-            "/session/state",
+            "/neurosimo/session/state",
             self.session_state_callback,
             10,
         )
@@ -80,8 +80,8 @@ class SessionTestsHarness:
         raise TimeoutError("Timed out waiting for service response")
 
     def assert_project_exists(self, project_name: str) -> None:
-        list_client = self.node.create_client(ListProjects, "/projects/list")
-        self.wait_for_service(list_client, "/projects/list")
+        list_client = self.node.create_client(ListProjects, "/neurosimo/projects/list")
+        self.wait_for_service(list_client, "/neurosimo/projects/list")
         list_response = self.call_service(list_client, ListProjects.Request())
         if not list_response.success:
             raise RuntimeError("Failed to list projects")
@@ -103,8 +103,8 @@ class SessionTestsHarness:
             raise RuntimeError(f"Failed to set parameters for {node_name}: {failures}")
 
     def start_session(self) -> None:
-        client = self.node.create_client(Trigger, "/session/start")
-        self.wait_for_service(client, "/session/start")
+        client = self.node.create_client(Trigger, "/neurosimo/session/start")
+        self.wait_for_service(client, "/neurosimo/session/start")
         response = self.call_service(client, Trigger.Request())
         if not response.success:
             raise RuntimeError(f"Session start failed: {response.message}")

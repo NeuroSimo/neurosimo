@@ -15,7 +15,7 @@ class ProjectManagerNode(Node):
         self.callback_group = ReentrantCallbackGroup()
 
         # Create the create project service
-        self.create_service(CreateProject, '/projects/create', self.create_project_callback, callback_group=self.callback_group)
+        self.create_service(CreateProject, '/neurosimo/projects/create', self.create_project_callback, callback_group=self.callback_group)
 
         self.logger.info('Project manager node initialized')
 

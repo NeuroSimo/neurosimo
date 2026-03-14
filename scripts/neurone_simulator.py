@@ -57,7 +57,7 @@ class NeurOneSimulator:
     def __init__(self, port=DEFAULT_PORT, sampling_rate=DEFAULT_SAMPLING_RATE,
                  eeg_channels=DEFAULT_EEG_CHANNELS, emg_channels=DEFAULT_EMG_CHANNELS,
                  trigger_port=DEFAULT_TRIGGER_PORT, trigger_to_pulse_delay=DEFAULT_TRIGGER_TO_PULSE_DELAY,
-                 enable_loopback_triggers=True):
+                 enable_loopback_triggers=True, simulate_dropped_samples=False):
         self.port = port
         self.sampling_rate = sampling_rate
         self.eeg_channels = eeg_channels
@@ -66,6 +66,7 @@ class NeurOneSimulator:
         self.trigger_port = trigger_port
         self.trigger_to_pulse_delay = trigger_to_pulse_delay
         self.enable_loopback_triggers = enable_loopback_triggers
+        self.simulate_dropped_samples = simulate_dropped_samples
 
         # Create UDP socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -86,6 +87,9 @@ class NeurOneSimulator:
         self.running = False
         self.sample_index = 0
         self.simulation_start_time = None
+        self.next_drop_time = None
+        self.pending_dropped_samples = 0
+        self.total_simulated_dropped_samples = 0
 
         # Trigger flags for the next sample
         self.next_pulse_trigger = False
@@ -148,6 +152,38 @@ class NeurOneSimulator:
 
         # Add trigger channel (must match SOURCE_CHANNEL_FOR_TRIGGER in NeurOneAdapter)
         self.source_channels.append(65535)
+
+    def get_drop_burst_size(self, elapsed_seconds):
+        """Return current dropped-sample burst size for elapsed simulation time."""
+        return int(elapsed_seconds // 5) + 1
+
+    def should_drop_current_sample(self, now):
+        """Decide whether the current sample should be dropped (not sent)."""
+        if not self.simulate_dropped_samples or self.simulation_start_time is None:
+            return False
+
+        if self.next_drop_time is None:
+            self.next_drop_time = self.simulation_start_time + 1.0
+
+        if self.pending_dropped_samples == 0 and now >= self.next_drop_time:
+            elapsed = now - self.simulation_start_time
+            self.pending_dropped_samples = self.get_drop_burst_size(elapsed)
+            burst_size = self.pending_dropped_samples
+
+            while self.next_drop_time <= now:
+                self.next_drop_time += 1.0
+
+            print(
+                f"Simulating dropped sample burst: {burst_size} consecutive "
+                f"(elapsed {elapsed:.1f} s)"
+            )
+
+        if self.pending_dropped_samples > 0:
+            self.pending_dropped_samples -= 1
+            self.total_simulated_dropped_samples += 1
+            return True
+
+        return False
 
     def handle_trigger_connection(self):
         """Handle incoming trigger connections in a separate thread"""
@@ -341,12 +377,17 @@ class NeurOneSimulator:
         self.running = True
         self.sample_index = 0
         self.simulation_start_time = time.time()
+        self.next_drop_time = None
+        self.pending_dropped_samples = 0
+        self.total_simulated_dropped_samples = 0
 
         print(f"Starting NeurOne simulator on port {self.port}")
         print(f"Sampling rate: {self.sampling_rate} Hz")
         print(f"EEG channels: {self.eeg_channels}, EMG channels: {self.emg_channels}")
         print(f"Trigger server listening on port {self.trigger_port}")
         print(f"Trigger to pulse delay: {self.trigger_to_pulse_delay*1000:.1f} ms")
+        if self.simulate_dropped_samples:
+            print("Dropped sample simulation enabled (burst every 1s, +1 burst size every 5s)")
 
         # Start trigger handling thread
         trigger_thread = threading.Thread(target=self.handle_trigger_connection)
@@ -367,8 +408,13 @@ class NeurOneSimulator:
             while self.running:
                 current_time = time.time()
 
-                # Send sample packet
-                self.send_sample_packet()
+                if self.should_drop_current_sample(current_time):
+                    # Keep incrementing sample index while skipping packet transmission,
+                    # so the receiver observes gaps in sample indices.
+                    self.sample_index += 1
+                else:
+                    # Send sample packet
+                    self.send_sample_packet()
 
                 # Check if we should stop after duration
                 if duration_seconds and (current_time - start_time) >= duration_seconds:
@@ -387,7 +433,10 @@ class NeurOneSimulator:
         # Send measurement end packet
         self.send_measurement_end_packet()
 
-        print(f"Simulation completed. Sent {self.sample_index} samples")
+        print(
+            f"Simulation completed. Final sample index {self.sample_index}, "
+            f"simulated dropped samples {self.total_simulated_dropped_samples}"
+        )
 
     def stop(self):
         """Stop the simulator"""
@@ -418,6 +467,8 @@ def main():
                        help='Duration in seconds to run (default: run until interrupted)')
     parser.add_argument('--disable-loopback-triggers', action='store_true',
                        help='If set, loopback triggers will not be sent on the trigger channel')
+    parser.add_argument('--simulate-dropped-samples', action='store_true',
+                       help='If set, skip sample packets in bursts: once every second, burst size increases by 1 every 5 seconds')
 
     args = parser.parse_args()
 
@@ -428,7 +479,8 @@ def main():
         emg_channels=args.emg_channels,
         trigger_port=args.trigger_port,
         trigger_to_pulse_delay=args.trigger_to_pulse_delay,
-        enable_loopback_triggers=not args.disable_loopback_triggers
+        enable_loopback_triggers=not args.disable_loopback_triggers,
+        simulate_dropped_samples=args.simulate_dropped_samples
     )
 
     def signal_handler(signum, frame):

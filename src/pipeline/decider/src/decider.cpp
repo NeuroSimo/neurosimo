@@ -23,7 +23,7 @@ const std::string EEG_PREPROCESSED_TOPIC = "/neurosimo/eeg/preprocessed";
 const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
 const std::string HEARTBEAT_TOPIC = "/neurosimo/decider/heartbeat";
 const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
-const std::string TARGETED_PULSES_TOPIC = "/targeted_pulses";
+const std::string TARGETED_PULSES_TOPIC = "/mtms/targeted_pulses";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 

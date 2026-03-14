@@ -20,48 +20,48 @@ import time
 # Topics to record during a session
 TOPICS_TO_RECORD = [
     # EEG data flow
-    '/eeg/raw',
-    '/eeg/enriched',
-    '/eeg/preprocessed',
+    '/neurosimo/eeg/raw',
+    '/neurosimo/eeg/enriched',
+    '/neurosimo/eeg/preprocessed',
 
     # Pipeline outputs
-    '/pipeline/experiment_state',
-    '/pipeline/sensory_stimulus',
-    '/pipeline/latency/loopback',
-    '/pipeline/latency/pulse_processing',
-    '/pipeline/latency/event_processing',
+    '/neurosimo/pipeline/experiment_state',
+    '/neurosimo/pipeline/sensory_stimulus',
+    '/neurosimo/pipeline/latency/loopback',
+    '/neurosimo/pipeline/latency/pulse_processing',
+    '/neurosimo/pipeline/latency/event_processing',
 
     # Pipeline logs
-    '/pipeline/decider/log',
-    '/pipeline/preprocessor/log',
-    '/pipeline/presenter/log',
+    '/neurosimo/pipeline/decider/log',
+    '/neurosimo/pipeline/preprocessor/log',
+    '/neurosimo/pipeline/presenter/log',
 
     # Session state
-    '/session/state',
+    '/neurosimo/session/state',
 
     # Decision traces
-    '/pipeline/decision_trace',        # Mostly for debugging
-    '/pipeline/decision_trace/final',
+    '/neurosimo/pipeline/decision_trace',        # Mostly for debugging
+    '/neurosimo/pipeline/decision_trace/final',
 
     # Heartbeats (for debugging)
-    '/eeg_bridge/heartbeat',
-    '/eeg_simulator/heartbeat',
-    '/preprocessor/heartbeat',
-    '/presenter/heartbeat',
-    '/decider/heartbeat',
-    '/experiment_coordinator/heartbeat',
-    '/resource_monitor/heartbeat',
-    '/trigger_timer/heartbeat',
+    '/neurosimo/eeg_bridge/heartbeat',
+    '/neurosimo/eeg_simulator/heartbeat',
+    '/neurosimo/preprocessor/heartbeat',
+    '/neurosimo/presenter/heartbeat',
+    '/neurosimo/decider/heartbeat',
+    '/neurosimo/experiment_coordinator/heartbeat',
+    '/neurosimo/resource_monitor/heartbeat',
+    '/neurosimo/trigger_timer/heartbeat',
 
     # Health (for debugging)
-    '/eeg_bridge/health',
-    '/eeg_simulator/health',
-    '/preprocessor/health',
-    '/presenter/health',
-    '/decider/health',
-    '/experiment_coordinator/health',
-    '/resource_monitor/health',
-    '/trigger_timer/health',
+    '/neurosimo/eeg_bridge/health',
+    '/neurosimo/eeg_simulator/health',
+    '/neurosimo/preprocessor/health',
+    '/neurosimo/presenter/health',
+    '/neurosimo/decider/health',
+    '/neurosimo/experiment_coordinator/health',
+    '/neurosimo/resource_monitor/health',
+    '/neurosimo/trigger_timer/health',
 ]
 
 
@@ -86,14 +86,14 @@ class SessionRecorderNode(Node):
         # Create service servers
         self.create_service(
             StartRecording,
-            '/session_recorder/start',
+            '/neurosimo/session_recorder/start',
             self.start_recording_callback,
             callback_group=self.callback_group
         )
 
         self.create_service(
             StopRecording,
-            '/session_recorder/stop',
+            '/neurosimo/session_recorder/stop',
             self.stop_recording_callback,
             callback_group=self.callback_group
         )
@@ -106,7 +106,7 @@ class SessionRecorderNode(Node):
         )
         self._state_publisher = self.create_publisher(
             RecorderState,
-            '/session_recorder/state',
+            '/neurosimo/session_recorder/state',
             state_qos
         )
 
@@ -121,7 +121,7 @@ class SessionRecorderNode(Node):
         )
         self._disk_status_subscriber = self.create_subscription(
             DiskStatus,
-            '/system/disk_status',
+            '/neurosimo/system/disk_status',
             self._disk_status_callback,
             disk_status_qos
         )
@@ -222,17 +222,17 @@ class SessionRecorderNode(Node):
         # Create QoS override file for high-frequency EEG topics
         self._qos_override_path = f'/tmp/qos_override_{session_uuid}.yaml'
         qos_config = """# QoS overrides for high-frequency EEG topics (up to 5 kHz)
-/eeg/raw:
+/neurosimo/eeg/raw:
   history: keep_last
   depth: 65535
   reliability: reliable
   durability: volatile
-/eeg/enriched:
+/neurosimo/eeg/enriched:
   history: keep_last
   depth: 65535
   reliability: reliable
   durability: volatile
-/eeg/preprocessed:
+/neurosimo/eeg/preprocessed:
   history: keep_last
   depth: 65535
   reliability: reliable

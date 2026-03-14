@@ -35,7 +35,7 @@ export const EegBridgeProvider: React.FC<EegBridgeProviderProps> = ({ children }
     /* Subscriber for EEG bridge state. */
     const stateSubscriber = new Topic<RosDataSourceState>({
       ros: ros,
-      name: '/eeg_bridge/state',
+      name: '/neurosimo/eeg_bridge/state',
       messageType: 'system_interfaces/DataSourceState',
     })
 

@@ -19,11 +19,11 @@
 using namespace std::chrono;
 using namespace std::placeholders;
 
-const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
-const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string HEARTBEAT_TOPIC = "/decider/heartbeat";
+const std::string EEG_PREPROCESSED_TOPIC = "/neurosimo/eeg/preprocessed";
+const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
+const std::string HEARTBEAT_TOPIC = "/neurosimo/decider/heartbeat";
 const std::string IS_COIL_AT_TARGET_TOPIC = "/neuronavigation/coil_at_target";
-const std::string TARGETED_PULSES_TOPIC = "/pipeline/targeted_pulses";
+const std::string TARGETED_PULSES_TOPIC = "/targeted_pulses";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
@@ -52,7 +52,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Publisher for pulse-processed trigger (Empty). */
   this->pulse_processed_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/decider/pulse_processed",
+    "/neurosimo/decider/pulse_processed",
     10);
 
   /* Note: The EEG subscriber will be during initialization based on whether preprocessor is enabled. */
@@ -64,7 +64,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Publisher for health. */
   this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
-    "/decider/health", qos_persist_latest);
+    "/neurosimo/decider/health", qos_persist_latest);
 
   /* Subscriber for is coil at target. */
   this->is_coil_at_target_subscriber = create_subscription<std_msgs::msg::Bool>(
@@ -74,7 +74,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Publisher for decision trace. */
   this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
-    "/pipeline/decision_trace",
+    "/neurosimo/pipeline/decision_trace",
     10);
 
   /* Publisher for sensory stimulus. */
@@ -84,7 +84,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
   this->sensory_stimulus_publisher = this->create_publisher<pipeline_interfaces::msg::SensoryStimulus>(
-    "/pipeline/sensory_stimulus",
+    "/neurosimo/pipeline/sensory_stimulus",
     qos_keep_all);
 
   /* Publisher for targeted pulses from decider output. */
@@ -105,33 +105,33 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
   this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessages>(
-    "/pipeline/decider/log",
+    "/neurosimo/pipeline/decider/log",
     qos_keep_all_logs);
 
   /* Publisher for pulse processing latency. */
   this->pulse_processing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
-    "/pipeline/latency/pulse_processing",
+    "/neurosimo/pipeline/latency/pulse_processing",
     10);
 
   /* Publisher for event processing latency. */
   this->event_processing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
-    "/pipeline/latency/event_processing",
+    "/neurosimo/pipeline/latency/event_processing",
     10);
 
   /* Service client for timed trigger. */
   this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>(
-    "/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()));
+    "/neurosimo/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()));
 
   while (!timed_trigger_client->wait_for_service(2s)) {
-    RCLCPP_INFO(get_logger(), "Service /pipeline/timed_trigger not available, waiting...");
+    RCLCPP_INFO(get_logger(), "Service /neurosimo/pipeline/timed_trigger not available, waiting...");
   }
 
   /* Service client for session abort. */
   this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>(
-    "/session/abort", rclcpp::QoS(rclcpp::ServicesQoS()));
+    "/neurosimo/session/abort", rclcpp::QoS(rclcpp::ServicesQoS()));
 
   while (!abort_session_client->wait_for_service(2s)) {
-    RCLCPP_INFO(get_logger(), "Service /session/abort not available, waiting...");
+    RCLCPP_INFO(get_logger(), "Service /neurosimo/session/abort not available, waiting...");
   }
 
   /* Initialize variables. */
@@ -141,13 +141,13 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
 
   /* Initialize service server for component initialization */
   this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializeDecider>(
-    "/pipeline/decider/initialize",
+    "/neurosimo/pipeline/decider/initialize",
     std::bind(&EegDecider::handle_initialize_decider, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::QoS(rclcpp::ServicesQoS()));
 
   /* Finalize service server */
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizeDecider>(
-    "/pipeline/decider/finalize",
+    "/neurosimo/pipeline/decider/finalize",
     std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::QoS(rclcpp::ServicesQoS()));
 

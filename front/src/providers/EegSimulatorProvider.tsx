@@ -78,7 +78,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
     /* Subscriber for dataset list. */
     const datasetListSubscriber = new Topic<FilenameList>({
       ros: ros,
-      name: '/eeg_simulator/dataset/list',
+      name: '/neurosimo/eeg_simulator/dataset/list',
       messageType: 'project_interfaces/FilenameList',
     })
 
@@ -89,7 +89,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
     /* Subscriber for simulator state. */
     const stateSubscriber = new Topic<RosDataSourceState>({
       ros: ros,
-      name: '/eeg_simulator/state',
+      name: '/neurosimo/eeg_simulator/state',
       messageType: 'system_interfaces/DataSourceState',
     })
 

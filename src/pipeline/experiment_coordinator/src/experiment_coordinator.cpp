@@ -7,10 +7,10 @@ using namespace std::chrono;
 using namespace std::placeholders;
 using namespace experiment_coordinator;
 
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
-const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string DECISION_TRACE_FINAL_TOPIC = "/pipeline/decision_trace/final";
-const std::string HEARTBEAT_TOPIC = "/experiment_coordinator/heartbeat";
+const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
+const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
+const std::string DECISION_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/decision_trace/final";
+const std::string HEARTBEAT_TOPIC = "/neurosimo/experiment_coordinator/heartbeat";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
 
@@ -29,7 +29,7 @@ ExperimentCoordinator::ExperimentCoordinator()
   
   /* Publisher for health. */
   this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
-    "/experiment_coordinator/health", qos_persist_latest);
+    "/neurosimo/experiment_coordinator/health", qos_persist_latest);
   
   /* Publisher for enriched EEG data. */
   this->enriched_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(
@@ -37,7 +37,7 @@ ExperimentCoordinator::ExperimentCoordinator()
   
   /* Publisher for experiment UI state. */
   this->experiment_state_publisher = this->create_publisher<pipeline_interfaces::msg::ExperimentState>(
-    "/pipeline/experiment_state", qos_persist_latest);
+    "/neurosimo/pipeline/experiment_state", qos_persist_latest);
   
   /* Subscriber for raw EEG data. */
   this->raw_eeg_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
@@ -53,35 +53,35 @@ ExperimentCoordinator::ExperimentCoordinator()
 
   /* Client for finishing the session. */
   this->finish_session_client = this->create_client<std_srvs::srv::Trigger>(
-    "/session/finish");
+    "/neurosimo/session/finish");
 
   // Wait for service client to be available
   while (!this->finish_session_client->wait_for_service(std::chrono::duration<double>(1.0))) {
-    RCLCPP_INFO(this->get_logger(), "Service /session/finish not available, waiting...");
+    RCLCPP_INFO(this->get_logger(), "Service /neurosimo/session/finish not available, waiting...");
   }
 
   /* Services for pause/resume. */
   this->pause_service = this->create_service<std_srvs::srv::Trigger>(
-    "/experiment/pause",
+    "/neurosimo/experiment/pause",
     std::bind(&ExperimentCoordinator::handle_pause, this, _1, _2));
 
   this->resume_service = this->create_service<std_srvs::srv::Trigger>(
-    "/experiment/resume",
+    "/neurosimo/experiment/resume",
     std::bind(&ExperimentCoordinator::handle_resume, this, _1, _2));
 
   /* Service for protocol initialization. */
   this->initialize_protocol_service = this->create_service<pipeline_interfaces::srv::InitializeProtocol>(
-    "/pipeline/protocol/initialize",
+    "/neurosimo/pipeline/protocol/initialize",
     std::bind(&ExperimentCoordinator::handle_initialize_protocol, this, _1, _2));
   
   /* Service for protocol finalization. */
   this->finalize_protocol_service = this->create_service<pipeline_interfaces::srv::FinalizeProtocol>(
-    "/pipeline/protocol/finalize",
+    "/neurosimo/pipeline/protocol/finalize",
     std::bind(&ExperimentCoordinator::handle_finalize_protocol, this, _1, _2));
   
   /* Service for protocol info. */
   this->get_protocol_info_service = this->create_service<pipeline_interfaces::srv::GetProtocolInfo>(
-    "/experiment_coordinator/protocol/get_info",
+    "/neurosimo/experiment_coordinator/protocol/get_info",
     std::bind(&ExperimentCoordinator::handle_get_protocol_info, this, _1, _2));
   
   /* Create timers. */

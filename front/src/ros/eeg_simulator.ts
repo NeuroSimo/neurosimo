@@ -16,7 +16,7 @@ export interface DatasetInfo extends ROSLIB.Message {
 /* Get dataset info service */
 const getDatasetInfoService = new ROSLIB.Service({
   ros: ros,
-  name: '/eeg_simulator/dataset/get_info',
+  name: '/neurosimo/eeg_simulator/dataset/get_info',
   serviceType: 'project_interfaces/GetDatasetInfo',
 })
 

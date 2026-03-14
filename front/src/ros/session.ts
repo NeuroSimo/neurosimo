@@ -6,33 +6,33 @@ import { ExportDataType } from 'components/ExportModal'
 /* Session services */
 const startSessionService = new ROSLIB.Service({
   ros: ros,
-  name: '/session/start',
+  name: '/neurosimo/session/start',
   serviceType: 'std_srvs/Trigger',
 })
 
 const abortSessionService = new ROSLIB.Service({
   ros: ros,
-  name: '/session/abort',
+  name: '/neurosimo/session/abort',
   serviceType: 'system_interfaces/AbortSession',
 })
 
 const exportSessionService = new ROSLIB.Service({
   ros: ros,
-  name: '/session/export',
+  name: '/neurosimo/session/export',
   serviceType: 'system_interfaces/ExportSession',
 })
 
 /* Session state topic */
 const sessionStateTopic = new ROSLIB.Topic({
   ros: ros,
-  name: '/session/state',
+  name: '/neurosimo/session/state',
   messageType: 'system_interfaces/SessionState',
 })
 
 /* Session exporter state topic */
 const exporterStateTopic = new ROSLIB.Topic({
   ros: ros,
-  name: '/session_exporter/state',
+  name: '/neurosimo/session_exporter/state',
   messageType: 'system_interfaces/ExporterState',
 })
 

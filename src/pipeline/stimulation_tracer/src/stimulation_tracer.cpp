@@ -7,10 +7,10 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
-const std::string DECISION_TRACE_TOPIC = "/pipeline/decision_trace";
-const std::string DECISION_TRACE_FINAL_TOPIC = "/pipeline/decision_trace/final";
-const std::string PULSE_PROCESSED_TOPIC = "/decider/pulse_processed";
+const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
+const std::string DECISION_TRACE_TOPIC = "/neurosimo/pipeline/decision_trace";
+const std::string DECISION_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/decision_trace/final";
+const std::string PULSE_PROCESSED_TOPIC = "/neurosimo/decider/pulse_processed";
 
 StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclcpp::get_logger("stimulation_tracer")) {
   /* Subscriber for EEG raw data. */
@@ -43,12 +43,12 @@ StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclc
 
   /* Initialize service server */
   this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializeStimulationTracer>(
-    "/pipeline/stimulation_tracer/initialize",
+    "/neurosimo/pipeline/stimulation_tracer/initialize",
     std::bind(&StimulationTracer::handle_initialize_stimulation_tracer, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Finalize service server */
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizeStimulationTracer>(
-    "/pipeline/stimulation_tracer/finalize",
+    "/neurosimo/pipeline/stimulation_tracer/finalize",
     std::bind(&StimulationTracer::handle_finalize_stimulation_tracer, this, std::placeholders::_1, std::placeholders::_2));
 
   RCLCPP_INFO(this->get_logger(), "StimulationTracer initialized");

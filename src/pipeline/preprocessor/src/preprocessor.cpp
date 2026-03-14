@@ -15,9 +15,9 @@
 using namespace std::chrono;
 using namespace std::placeholders;
 
-const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
-const std::string HEARTBEAT_TOPIC = "/preprocessor/heartbeat";
+const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
+const std::string EEG_PREPROCESSED_TOPIC = "/neurosimo/eeg/preprocessed";
+const std::string HEARTBEAT_TOPIC = "/neurosimo/preprocessor/heartbeat";
 
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 
@@ -35,7 +35,7 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
     .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
   this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
-    "/preprocessor/health",
+    "/neurosimo/preprocessor/health",
     health_qos);
 
   /* Publisher for preprocessed EEG data. */
@@ -54,24 +54,24 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
     .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
   this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessages>(
-    "/pipeline/preprocessor/log",
+    "/neurosimo/pipeline/preprocessor/log",
     qos_keep_all_logs);
 
   /* Initialize service server for component initialization */
   this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializePreprocessor>(
-    "/pipeline/preprocessor/initialize",
+    "/neurosimo/pipeline/preprocessor/initialize",
     std::bind(&EegPreprocessor::handle_initialize_preprocessor, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Finalize service server */
   this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePreprocessor>(
-    "/pipeline/preprocessor/finalize",
+    "/neurosimo/pipeline/preprocessor/finalize",
     std::bind(&EegPreprocessor::handle_finalize_preprocessor, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   while (!abort_session_client->wait_for_service(2s)) {
-    RCLCPP_INFO(this->get_logger(), "Service /session/abort not available, waiting...");
+    RCLCPP_INFO(this->get_logger(), "Service /neurosimo/session/abort not available, waiting...");
   }
 
   /* Initialize variables. */

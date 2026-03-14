@@ -25,14 +25,14 @@ except ImportError as e:
 
 # Mapping from export data types to ROS topics
 DATA_TYPE_TO_TOPIC = {
-    ExportDataType.RAW_EEG: '/eeg/raw',
-    ExportDataType.ENRICHED_EEG: '/eeg/enriched',
-    ExportDataType.PREPROCESSED_EEG: '/eeg/preprocessed',
-    ExportDataType.STIMULATION_DECISIONS: '/pipeline/decision_trace/final',
-    ExportDataType.DECIDER_LOGS: '/pipeline/decider/log',
-    ExportDataType.PREPROCESSOR_LOGS: '/pipeline/preprocessor/log',
-    ExportDataType.PRESENTER_LOGS: '/pipeline/presenter/log',
-    ExportDataType.SENSORY_STIMULI: '/pipeline/sensory_stimulus',
+    ExportDataType.RAW_EEG: '/neurosimo/eeg/raw',
+    ExportDataType.ENRICHED_EEG: '/neurosimo/eeg/enriched',
+    ExportDataType.PREPROCESSED_EEG: '/neurosimo/eeg/preprocessed',
+    ExportDataType.STIMULATION_DECISIONS: '/neurosimo/pipeline/decision_trace/final',
+    ExportDataType.DECIDER_LOGS: '/neurosimo/pipeline/decider/log',
+    ExportDataType.PREPROCESSOR_LOGS: '/neurosimo/pipeline/preprocessor/log',
+    ExportDataType.PRESENTER_LOGS: '/neurosimo/pipeline/presenter/log',
+    ExportDataType.SENSORY_STIMULI: '/neurosimo/pipeline/sensory_stimulus',
 }
 
 # Mapping from export data types to human-readable names
@@ -73,9 +73,9 @@ EEG_FIELDS_PREPROCESSED = EEG_FIELDS_ENRICHED + [
 
 # Mapping from topic to field list
 TOPIC_TO_FIELDS = {
-    '/eeg/raw': EEG_FIELDS_RAW,
-    '/eeg/enriched': EEG_FIELDS_ENRICHED,
-    '/eeg/preprocessed': EEG_FIELDS_PREPROCESSED,
+    '/neurosimo/eeg/raw': EEG_FIELDS_RAW,
+    '/neurosimo/eeg/enriched': EEG_FIELDS_ENRICHED,
+    '/neurosimo/eeg/preprocessed': EEG_FIELDS_PREPROCESSED,
 }
 
 # Decision trace export fields
@@ -177,7 +177,7 @@ class SessionExporterNode(Node):
         )
         self._state_publisher = self.create_publisher(
             ExporterState,
-            '/session_exporter/state',
+            '/neurosimo/session_exporter/state',
             state_qos
         )
 
@@ -187,14 +187,14 @@ class SessionExporterNode(Node):
         # Create service servers
         self.create_service(
             ExportSession,
-            '/session/export',
+            '/neurosimo/session/export',
             self.export_session_callback,
             callback_group=self.callback_group
         )
         
         self.create_service(
             CancelExport,
-            '/session/cancel_export',
+            '/neurosimo/session/cancel_export',
             self.cancel_export_callback,
             callback_group=self.callback_group
         )
@@ -371,13 +371,13 @@ class SessionExporterNode(Node):
             # Initialize writer based on topic type
             output_file = export_dir / f'{name}.csv'
             
-            if topic in ['/eeg/raw', '/eeg/enriched', '/eeg/preprocessed']:
+            if topic in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 writers[topic] = self._create_eeg_writer(output_file, topic)
-            elif topic == '/pipeline/decision_trace/final':
+            elif topic == '/neurosimo/pipeline/decision_trace/final':
                 writers[topic] = self._create_decision_trace_writer(output_file)
-            elif topic in ['/pipeline/decider/log', '/pipeline/preprocessor/log', '/pipeline/presenter/log']:
+            elif topic in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 writers[topic] = self._create_log_writer(output_file)
-            elif topic == '/pipeline/sensory_stimulus':
+            elif topic == '/neurosimo/pipeline/sensory_stimulus':
                 writers[topic] = self._create_sensory_stimulus_writer(output_file)
 
         if not writers:
@@ -426,13 +426,13 @@ class SessionExporterNode(Node):
             msg = deserialize_message(data, msg_types[topic_name])
             writer_info = writers[topic_name]
             
-            if topic_name in ['/eeg/raw', '/eeg/enriched', '/eeg/preprocessed']:
+            if topic_name in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 self._write_eeg_message(writer_info, timestamp, msg)
-            elif topic_name == '/pipeline/decision_trace/final':
+            elif topic_name == '/neurosimo/pipeline/decision_trace/final':
                 self._write_decision_trace_message(writer_info, timestamp, msg)
-            elif topic_name in ['/pipeline/decider/log', '/pipeline/preprocessor/log', '/pipeline/presenter/log']:
+            elif topic_name in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 self._write_log_message(writer_info, timestamp, msg)
-            elif topic_name == '/pipeline/sensory_stimulus':
+            elif topic_name == '/neurosimo/pipeline/sensory_stimulus':
                 self._write_sensory_stimulus_message(writer_info, timestamp, msg)
             
             message_counts[topic_name] += 1

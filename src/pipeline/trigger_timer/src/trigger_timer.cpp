@@ -13,8 +13,8 @@ const double_t HEARTBEAT_INTERVAL_SEC = 0.5;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-const std::string TIMED_TRIGGER_SERVICE = "/pipeline/timed_trigger";
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
+const std::string TIMED_TRIGGER_SERVICE = "/neurosimo/pipeline/timed_trigger";
+const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 
 const double_t loopback_interval = 0.1;
 const double_t loopback_monitor_interval = 1.0;
@@ -38,22 +38,22 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
 
   /* Service for initialization. */
   this->initialize_service = create_service<pipeline_interfaces::srv::InitializeTriggerTimer>(
-    "/pipeline/trigger_timer/initialize",
+    "/neurosimo/pipeline/trigger_timer/initialize",
     std::bind(&TriggerTimer::handle_initialize_trigger_timer, this, _1, _2));
 
   /* Service for finalization. */
   this->finalize_service = create_service<pipeline_interfaces::srv::FinalizeTriggerTimer>(
-    "/pipeline/trigger_timer/finalize",
+    "/neurosimo/pipeline/trigger_timer/finalize",
     std::bind(&TriggerTimer::handle_finalize_trigger_timer, this, _1, _2));
 
   /* Publisher for decision trace. */
   this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
-    "/pipeline/decision_trace",
+    "/neurosimo/pipeline/decision_trace",
     10);
 
   /* Publisher for timing latency. */
   this->loopback_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
-    "/pipeline/latency/loopback",
+    "/neurosimo/pipeline/latency/loopback",
     10);
 
   /* Create QoS profile for latched topics */
@@ -62,12 +62,12 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
 
   /* Create heartbeat publisher */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/trigger_timer/heartbeat",
+    "/neurosimo/trigger_timer/heartbeat",
     10);
 
   /* Create health publisher */
   this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
-    "/trigger_timer/health",
+    "/neurosimo/trigger_timer/health",
     status_qos);
 
   /* Create heartbeat timer */

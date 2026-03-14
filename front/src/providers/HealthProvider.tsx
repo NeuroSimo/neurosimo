@@ -128,98 +128,98 @@ export const HealthProvider: React.FC<HealthProviderProps> = ({ children }) => {
     // Heartbeat subscribers
     const eegBridgeHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/eeg_bridge/heartbeat',
+      name: '/neurosimo/eeg_bridge/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     const eegSimulatorHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/eeg_simulator/heartbeat',
+      name: '/neurosimo/eeg_simulator/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     const preprocessorHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/preprocessor/heartbeat',
+      name: '/neurosimo/preprocessor/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     const deciderHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/decider/heartbeat',
+      name: '/neurosimo/decider/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     const experimentCoordinatorHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/experiment_coordinator/heartbeat',
+      name: '/neurosimo/experiment_coordinator/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     const resourceMonitorHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/resource_monitor/heartbeat',
+      name: '/neurosimo/resource_monitor/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     const presenterHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/presenter/heartbeat',
+      name: '/neurosimo/presenter/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     const triggerTimerHeartbeatSubscriber = new Topic({
       ros: ros,
-      name: '/trigger_timer/heartbeat',
+      name: '/neurosimo/trigger_timer/heartbeat',
       messageType: 'std_msgs/Empty',
     })
 
     // Health status subscribers
     const eegBridgeHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/eeg_bridge/health',
+      name: '/neurosimo/eeg_bridge/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 
     const eegSimulatorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/eeg_simulator/health',
+      name: '/neurosimo/eeg_simulator/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 
     const preprocessorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/preprocessor/health',
+      name: '/neurosimo/preprocessor/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 
     const deciderHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/decider/health',
+      name: '/neurosimo/decider/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 
     const experimentCoordinatorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/experiment_coordinator/health',
+      name: '/neurosimo/experiment_coordinator/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 
     const resourceMonitorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/resource_monitor/health',
+      name: '/neurosimo/resource_monitor/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 
     const presenterHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/presenter/health',
+      name: '/neurosimo/presenter/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 
     const triggerTimerHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
-      name: '/trigger_timer/health',
+      name: '/neurosimo/trigger_timer/health',
       messageType: 'system_interfaces/ComponentHealth',
     })
 

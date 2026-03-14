@@ -15,9 +15,9 @@ using StreamInfo = eeg_interfaces::msg::StreamInfo;
 using EegSample = eeg_interfaces::msg::Sample;
 using ExperimentState = pipeline_interfaces::msg::ExperimentState;
 
-const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
-const std::string EXPERIMENT_STATE_TOPIC = "/pipeline/experiment_state";
+const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
+const std::string EEG_PREPROCESSED_TOPIC = "/neurosimo/eeg/preprocessed";
+const std::string EXPERIMENT_STATE_TOPIC = "/neurosimo/pipeline/experiment_state";
 
 
 EegReplayNode::EegReplayNode() : Node("eeg_replay") {
@@ -32,11 +32,11 @@ EegReplayNode::EegReplayNode() : Node("eeg_replay") {
   rclcpp::PublisherOptions pub_opts;
   pub_opts.callback_group = callback_group_;
   state_publisher_ = create_publisher<DataSourceState>(
-    "/eeg_replay/state", qos_persist_latest, pub_opts);
+    "/neurosimo/eeg_replay/state", qos_persist_latest, pub_opts);
 
   /* Client for aborting session. */
   abort_session_client_ = create_client<system_interfaces::srv::AbortSession>(
-    "/session/abort",
+    "/neurosimo/session/abort",
     rclcpp::ServicesQoS(),
     callback_group_);
 
@@ -44,25 +44,25 @@ EegReplayNode::EegReplayNode() : Node("eeg_replay") {
   rclcpp::SubscriptionOptions sub_opts;
   sub_opts.callback_group = callback_group_;
   global_config_sub_ = create_subscription<GlobalConfig>(
-    "/global_configurator/config", qos_persist_latest,
+    "/neurosimo/global_configurator/config", qos_persist_latest,
     [this](GlobalConfig::SharedPtr msg) { global_config_callback(msg); },
     sub_opts);
 
   /* Service servers. */
   initialize_service_ = create_service<eeg_interfaces::srv::InitializeEegReplayStream>(
-    "/eeg_replay/initialize",
+    "/neurosimo/eeg_replay/initialize",
     std::bind(&EegReplayNode::handle_initialize, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group_);
 
   start_streaming_service_ = create_service<eeg_interfaces::srv::StartStreaming>(
-    "/eeg_replay/streaming/start",
+    "/neurosimo/eeg_replay/streaming/start",
     std::bind(&EegReplayNode::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group_);
 
   stop_streaming_service_ = create_service<eeg_interfaces::srv::StopStreaming>(
-    "/eeg_replay/streaming/stop",
+    "/neurosimo/eeg_replay/streaming/stop",
     std::bind(&EegReplayNode::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group_);

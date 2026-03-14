@@ -29,7 +29,7 @@ export const EegStreamProvider: React.FC<EegStreamProviderProps> = ({ children }
   useEffect(() => {
     const eegInfoSubscriber = new Topic<EegDeviceInfo>({
       ros: ros,
-      name: '/eeg_device/info',
+      name: '/neurosimo/eeg_device/info',
       messageType: 'eeg_interfaces/EegDeviceInfo',
     })
 

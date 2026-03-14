@@ -11,9 +11,9 @@
 
 using namespace std::chrono_literals;
 
-const std::string EEG_ENRICHED_TOPIC = "/eeg/enriched";
-const std::string EEG_PREPROCESSED_TOPIC = "/eeg/preprocessed";
-const std::string EEG_STATISTICS_TOPIC = "/eeg/statistics";
+const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
+const std::string EEG_PREPROCESSED_TOPIC = "/neurosimo/eeg/preprocessed";
+const std::string EEG_STATISTICS_TOPIC = "/neurosimo/eeg/statistics";
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 

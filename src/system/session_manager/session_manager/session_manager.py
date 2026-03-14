@@ -40,21 +40,21 @@ class SessionManagerNode(Node):
         # Create service servers for session management
         self.create_service(
             Trigger,
-            '/session/start',
+            '/neurosimo/session/start',
             self.start_session_callback,
             callback_group=self.callback_group
         )
 
         self.create_service(
             AbortSession,
-            '/session/abort',
+            '/neurosimo/session/abort',
             self.abort_session_callback,
             callback_group=self.callback_group
         )
 
         self.create_service(
             Trigger,
-            '/session/finish',
+            '/neurosimo/session/finish',
             self.finish_session_callback,
             callback_group=self.callback_group
         )
@@ -67,66 +67,66 @@ class SessionManagerNode(Node):
         )
         self.session_state_publisher = self.create_publisher(
             SessionState,
-            '/session/state',
+            '/neurosimo/session/state',
             state_qos,
             callback_group=self.callback_group
         )
 
         # Create clients for initialization operations
         self.protocol_init_client = self.create_client(
-            InitializeProtocol, '/pipeline/protocol/initialize', callback_group=self.callback_group)
+            InitializeProtocol, '/neurosimo/pipeline/protocol/initialize', callback_group=self.callback_group)
         self.protocol_finalize_client = self.create_client(
-            FinalizeProtocol, '/pipeline/protocol/finalize', callback_group=self.callback_group)
+            FinalizeProtocol, '/neurosimo/pipeline/protocol/finalize', callback_group=self.callback_group)
         self.preprocessor_init_client = self.create_client(
-            InitializePreprocessor, '/pipeline/preprocessor/initialize', callback_group=self.callback_group)
+            InitializePreprocessor, '/neurosimo/pipeline/preprocessor/initialize', callback_group=self.callback_group)
         self.decider_init_client = self.create_client(
-            InitializeDecider, '/pipeline/decider/initialize', callback_group=self.callback_group)
+            InitializeDecider, '/neurosimo/pipeline/decider/initialize', callback_group=self.callback_group)
         self.presenter_init_client = self.create_client(
-            InitializePresenter, '/pipeline/presenter/initialize', callback_group=self.callback_group)
+            InitializePresenter, '/neurosimo/pipeline/presenter/initialize', callback_group=self.callback_group)
         self.stimulation_tracer_init_client = self.create_client(
-            InitializeStimulationTracer, '/pipeline/stimulation_tracer/initialize', callback_group=self.callback_group)
+            InitializeStimulationTracer, '/neurosimo/pipeline/stimulation_tracer/initialize', callback_group=self.callback_group)
         self.trigger_timer_init_client = self.create_client(
-            InitializeTriggerTimer, '/pipeline/trigger_timer/initialize', callback_group=self.callback_group)
+            InitializeTriggerTimer, '/neurosimo/pipeline/trigger_timer/initialize', callback_group=self.callback_group)
         self.simulator_stream_init_client = ActionClient(
             self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
         self.eeg_device_stream_init_client = self.create_client(
-            InitializeEegDeviceStream, '/eeg_device/initialize', callback_group=self.callback_group)
+            InitializeEegDeviceStream, '/neurosimo/eeg_device/initialize', callback_group=self.callback_group)
         self.recording_stream_init_client = self.create_client(
-            InitializeEegReplayStream, '/eeg_replay/initialize', callback_group=self.callback_group)
+            InitializeEegReplayStream, '/neurosimo/eeg_replay/initialize', callback_group=self.callback_group)
 
         # Create clients for finalization operations
         self.preprocessor_finalize_client = self.create_client(
-            FinalizePreprocessor, '/pipeline/preprocessor/finalize', callback_group=self.callback_group)
+            FinalizePreprocessor, '/neurosimo/pipeline/preprocessor/finalize', callback_group=self.callback_group)
         self.decider_finalize_client = self.create_client(
-            FinalizeDecider, '/pipeline/decider/finalize', callback_group=self.callback_group)
+            FinalizeDecider, '/neurosimo/pipeline/decider/finalize', callback_group=self.callback_group)
         self.presenter_finalize_client = self.create_client(
-            FinalizePresenter, '/pipeline/presenter/finalize', callback_group=self.callback_group)
+            FinalizePresenter, '/neurosimo/pipeline/presenter/finalize', callback_group=self.callback_group)
         self.stimulation_tracer_finalize_client = self.create_client(
-            FinalizeStimulationTracer, '/pipeline/stimulation_tracer/finalize', callback_group=self.callback_group)
+            FinalizeStimulationTracer, '/neurosimo/pipeline/stimulation_tracer/finalize', callback_group=self.callback_group)
         self.trigger_timer_finalize_client = self.create_client(
-            FinalizeTriggerTimer, '/pipeline/trigger_timer/finalize', callback_group=self.callback_group)
+            FinalizeTriggerTimer, '/neurosimo/pipeline/trigger_timer/finalize', callback_group=self.callback_group)
 
         # Create clients for session recording
         self.recording_start_client = self.create_client(
-            StartRecording, '/session_recorder/start', callback_group=self.callback_group)
+            StartRecording, '/neurosimo/session_recorder/start', callback_group=self.callback_group)
         self.recording_stop_client = self.create_client(
-            StopRecording, '/session_recorder/stop', callback_group=self.callback_group)
+            StopRecording, '/neurosimo/session_recorder/stop', callback_group=self.callback_group)
 
         # Create clients for streaming start operations
         self.recording_streaming_start_client = self.create_client(
-            StartStreaming, '/eeg_replay/streaming/start', callback_group=self.callback_group)
+            StartStreaming, '/neurosimo/eeg_replay/streaming/start', callback_group=self.callback_group)
         self.eeg_simulator_streaming_start_client = self.create_client(
-            StartStreaming, '/eeg_simulator/streaming/start', callback_group=self.callback_group)
+            StartStreaming, '/neurosimo/eeg_simulator/streaming/start', callback_group=self.callback_group)
         self.eeg_device_streaming_start_client = self.create_client(
-            StartStreaming, '/eeg_device/streaming/start', callback_group=self.callback_group)
+            StartStreaming, '/neurosimo/eeg_device/streaming/start', callback_group=self.callback_group)
 
         # Create clients for streaming stop operations
         self.recording_streaming_stop_client = self.create_client(
-            StopStreaming, '/eeg_replay/streaming/stop', callback_group=self.callback_group)
+            StopStreaming, '/neurosimo/eeg_replay/streaming/stop', callback_group=self.callback_group)
         self.eeg_simulator_streaming_stop_client = self.create_client(
-            StopStreaming, '/eeg_simulator/streaming/stop', callback_group=self.callback_group)
+            StopStreaming, '/neurosimo/eeg_simulator/streaming/stop', callback_group=self.callback_group)
         self.eeg_device_streaming_stop_client = self.create_client(
-            StopStreaming, '/eeg_device/streaming/stop', callback_group=self.callback_group)
+            StopStreaming, '/neurosimo/eeg_device/streaming/stop', callback_group=self.callback_group)
 
         # Subscribe to config topics
         config_qos = QoSProfile(
@@ -140,7 +140,7 @@ class SessionManagerNode(Node):
         
         self.global_config_subscription = self.create_subscription(
             GlobalConfig,
-            '/global_configurator/config',
+            '/neurosimo/global_configurator/config',
             self.global_config_callback,
             config_qos,
             callback_group=self.callback_group
@@ -148,7 +148,7 @@ class SessionManagerNode(Node):
         
         self.session_config_subscription = self.create_subscription(
             SessionConfig,
-            '/session_configurator/config',
+            '/neurosimo/session_configurator/config',
             self.session_config_callback,
             config_qos,
             callback_group=self.callback_group
@@ -163,26 +163,26 @@ class SessionManagerNode(Node):
                 self.get_logger().info(f'Action {topic} not available, waiting...')
 
         service_clients = [
-            (self.protocol_init_client, '/pipeline/protocol/initialize'),
-            (self.protocol_finalize_client, '/pipeline/protocol/finalize'),
-            (self.preprocessor_init_client, '/pipeline/preprocessor/initialize'),
-            (self.decider_init_client, '/pipeline/decider/initialize'),
-            (self.presenter_init_client, '/pipeline/presenter/initialize'),
-            (self.stimulation_tracer_init_client, '/pipeline/stimulation_tracer/initialize'),
-            (self.eeg_device_stream_init_client, '/eeg_device/initialize'),
-            (self.recording_stream_init_client, '/eeg_replay/initialize'),
-            (self.preprocessor_finalize_client, '/pipeline/preprocessor/finalize'),
-            (self.decider_finalize_client, '/pipeline/decider/finalize'),
-            (self.presenter_finalize_client, '/pipeline/presenter/finalize'),
-            (self.stimulation_tracer_finalize_client, '/pipeline/stimulation_tracer/finalize'),
-            (self.recording_streaming_start_client, '/eeg_replay/streaming/start'),
-            (self.eeg_simulator_streaming_start_client, '/eeg_simulator/streaming/start'),
-            (self.eeg_device_streaming_start_client, '/eeg_device/streaming/start'),
-            (self.recording_streaming_stop_client, '/eeg_replay/streaming/stop'),
-            (self.eeg_simulator_streaming_stop_client, '/eeg_simulator/streaming/stop'),
-            (self.eeg_device_streaming_stop_client, '/eeg_device/streaming/stop'),
-            (self.recording_start_client, '/session_recorder/start'),
-            (self.recording_stop_client, '/session_recorder/stop'),
+            (self.protocol_init_client, '/neurosimo/pipeline/protocol/initialize'),
+            (self.protocol_finalize_client, '/neurosimo/pipeline/protocol/finalize'),
+            (self.preprocessor_init_client, '/neurosimo/pipeline/preprocessor/initialize'),
+            (self.decider_init_client, '/neurosimo/pipeline/decider/initialize'),
+            (self.presenter_init_client, '/neurosimo/pipeline/presenter/initialize'),
+            (self.stimulation_tracer_init_client, '/neurosimo/pipeline/stimulation_tracer/initialize'),
+            (self.eeg_device_stream_init_client, '/neurosimo/eeg_device/initialize'),
+            (self.recording_stream_init_client, '/neurosimo/eeg_replay/initialize'),
+            (self.preprocessor_finalize_client, '/neurosimo/pipeline/preprocessor/finalize'),
+            (self.decider_finalize_client, '/neurosimo/pipeline/decider/finalize'),
+            (self.presenter_finalize_client, '/neurosimo/pipeline/presenter/finalize'),
+            (self.stimulation_tracer_finalize_client, '/neurosimo/pipeline/stimulation_tracer/finalize'),
+            (self.recording_streaming_start_client, '/neurosimo/eeg_replay/streaming/start'),
+            (self.eeg_simulator_streaming_start_client, '/neurosimo/eeg_simulator/streaming/start'),
+            (self.eeg_device_streaming_start_client, '/neurosimo/eeg_device/streaming/start'),
+            (self.recording_streaming_stop_client, '/neurosimo/eeg_replay/streaming/stop'),
+            (self.eeg_simulator_streaming_stop_client, '/neurosimo/eeg_simulator/streaming/stop'),
+            (self.eeg_device_streaming_stop_client, '/neurosimo/eeg_device/streaming/stop'),
+            (self.recording_start_client, '/neurosimo/session_recorder/start'),
+            (self.recording_stop_client, '/neurosimo/session_recorder/stop'),
         ]
         for client, topic in service_clients:
             while not client.wait_for_service(timeout_sec=1.0):
@@ -511,7 +511,7 @@ class SessionManagerNode(Node):
             request = InitializeEegDeviceStream.Request()
             # Request is currently empty as per requirement
             
-            response = self.call_service(self.eeg_device_stream_init_client, request, '/eeg_device/initialize')
+            response = self.call_service(self.eeg_device_stream_init_client, request, '/neurosimo/eeg_device/initialize')
             if response is None:
                 return None
             stream_info = response.stream_info
@@ -526,7 +526,7 @@ class SessionManagerNode(Node):
             request.bag_id = bag_id
             request.play_preprocessed = play_preprocessed
 
-            response = self.call_service(self.recording_stream_init_client, request, '/eeg_replay/initialize')
+            response = self.call_service(self.recording_stream_init_client, request, '/neurosimo/eeg_replay/initialize')
             if response is None:
                 return None
             stream_info = response.stream_info
@@ -555,7 +555,7 @@ class SessionManagerNode(Node):
         # Safety configuration from global config
         request.minimum_intertrial_interval = global_config.minimum_intertrial_interval
 
-        response = self.call_service(self.decider_init_client, request, '/pipeline/decider/initialize')
+        response = self.call_service(self.decider_init_client, request, '/neurosimo/pipeline/decider/initialize')
 
         if response is None or not response.success:
             return False
@@ -575,7 +575,7 @@ class SessionManagerNode(Node):
         request.module_filename = session_config.preprocessor_module
         request.enabled = session_config.preprocessor_enabled
 
-        response = self.call_service(self.preprocessor_init_client, request, '/pipeline/preprocessor/initialize')
+        response = self.call_service(self.preprocessor_init_client, request, '/neurosimo/pipeline/preprocessor/initialize')
 
         if response is None or not response.success:
             return False
@@ -594,7 +594,7 @@ class SessionManagerNode(Node):
         request.module_filename = session_config.presenter_module
         request.enabled = session_config.presenter_enabled
 
-        response = self.call_service(self.presenter_init_client, request, '/pipeline/presenter/initialize')
+        response = self.call_service(self.presenter_init_client, request, '/neurosimo/pipeline/presenter/initialize')
 
         if response is None or not response.success:
             return False
@@ -608,7 +608,7 @@ class SessionManagerNode(Node):
         request.session_id = session_id
         request.data_source = data_source
 
-        response = self.call_service(self.stimulation_tracer_init_client, request, '/pipeline/stimulation_tracer/initialize')
+        response = self.call_service(self.stimulation_tracer_init_client, request, '/neurosimo/pipeline/stimulation_tracer/initialize')
 
         if response is None or not response.success:
             return False
@@ -630,7 +630,7 @@ class SessionManagerNode(Node):
         # Set the data source
         request.data_source = session_config.data_source
 
-        response = self.call_service(self.trigger_timer_init_client, request, '/pipeline/trigger_timer/initialize')
+        response = self.call_service(self.trigger_timer_init_client, request, '/neurosimo/pipeline/trigger_timer/initialize')
 
         if response is None or not response.success:
             return False
@@ -647,7 +647,7 @@ class SessionManagerNode(Node):
         request.project_name = project_name
         request.protocol_filename = protocol_filename
 
-        response = self.call_service(self.protocol_init_client, request, '/pipeline/protocol/initialize')
+        response = self.call_service(self.protocol_init_client, request, '/neurosimo/pipeline/protocol/initialize')
 
         if response is None or not response.success:
             return False
@@ -685,7 +685,7 @@ class SessionManagerNode(Node):
         request.session_id = session_id
 
         # Call finalize service
-        response = self.call_service(self.presenter_finalize_client, request, '/pipeline/presenter/finalize')
+        response = self.call_service(self.presenter_finalize_client, request, '/neurosimo/pipeline/presenter/finalize')
 
         if response is None or not response.success:
             # Restart the presenter since finalize failed/timed out
@@ -701,7 +701,7 @@ class SessionManagerNode(Node):
         request.session_id = session_id
 
         # Call finalize service
-        response = self.call_service(self.decider_finalize_client, request, '/pipeline/decider/finalize')
+        response = self.call_service(self.decider_finalize_client, request, '/neurosimo/pipeline/decider/finalize')
 
         if response is None or not response.success:
             # Restart the decider since finalize failed/timed out
@@ -718,7 +718,7 @@ class SessionManagerNode(Node):
         request.session_id = session_id
 
         # Call finalize service
-        response = self.call_service(self.preprocessor_finalize_client, request, '/pipeline/preprocessor/finalize')
+        response = self.call_service(self.preprocessor_finalize_client, request, '/neurosimo/pipeline/preprocessor/finalize')
 
         if response is None or not response.success:
             # Restart the preprocessor since finalize failed/timed out
@@ -733,7 +733,7 @@ class SessionManagerNode(Node):
         """Finalize the stimulation tracer component."""
         request = FinalizeStimulationTracer.Request()
         request.session_id = session_id
-        response = self.call_service(self.stimulation_tracer_finalize_client, request, '/pipeline/stimulation_tracer/finalize')
+        response = self.call_service(self.stimulation_tracer_finalize_client, request, '/neurosimo/pipeline/stimulation_tracer/finalize')
 
         if response is None or not response.success:
             self.logger.error('StimulationTracer finalization failed')
@@ -746,7 +746,7 @@ class SessionManagerNode(Node):
         """Finalize the trigger timer component."""
         request = FinalizeTriggerTimer.Request()
         request.session_id = session_id
-        response = self.call_service(self.trigger_timer_finalize_client, request, '/pipeline/trigger_timer/finalize')
+        response = self.call_service(self.trigger_timer_finalize_client, request, '/neurosimo/pipeline/trigger_timer/finalize')
 
         if response is None or not response.success:
             self.logger.error('TriggerTimer finalization failed')
@@ -759,7 +759,7 @@ class SessionManagerNode(Node):
         """Finalize the protocol component."""
         request = FinalizeProtocol.Request()
         request.session_id = session_id
-        response = self.call_service(self.protocol_finalize_client, request, '/pipeline/protocol/finalize')
+        response = self.call_service(self.protocol_finalize_client, request, '/neurosimo/pipeline/protocol/finalize')
 
         if response is None or not response.success:
             self.logger.error('Protocol finalization failed')
@@ -776,13 +776,13 @@ class SessionManagerNode(Node):
         # Choose the appropriate streaming service based on data source
         if data_source == 'recording':
             client = self.recording_streaming_start_client
-            service_name = '/eeg_replay/streaming/start'
+            service_name = '/neurosimo/eeg_replay/streaming/start'
         elif data_source == 'simulator':
             client = self.eeg_simulator_streaming_start_client
-            service_name = '/eeg_simulator/streaming/start'
+            service_name = '/neurosimo/eeg_simulator/streaming/start'
         elif data_source == 'eeg_device':
             client = self.eeg_device_streaming_start_client
-            service_name = '/eeg_device/streaming/start'
+            service_name = '/neurosimo/eeg_device/streaming/start'
         else:
             self.logger.error(f'Unknown data source: {data_source}')
             return False
@@ -806,13 +806,13 @@ class SessionManagerNode(Node):
         # Choose the appropriate streaming stop service based on data source
         if data_source == 'recording':
             client = self.recording_streaming_stop_client
-            service_name = '/eeg_replay/streaming/stop'
+            service_name = '/neurosimo/eeg_replay/streaming/stop'
         elif data_source == 'simulator':
             client = self.eeg_simulator_streaming_stop_client
-            service_name = '/eeg_simulator/streaming/stop'
+            service_name = '/neurosimo/eeg_simulator/streaming/stop'
         elif data_source == 'eeg_device':
             client = self.eeg_device_streaming_stop_client
-            service_name = '/eeg_device/streaming/stop'
+            service_name = '/neurosimo/eeg_device/streaming/stop'
         else:
             self.logger.error(f'Unknown data source for stopping: {data_source}')
             return False, 0
@@ -839,7 +839,7 @@ class SessionManagerNode(Node):
         request.session_config = session_config
         request.stream_info = stream_info
 
-        response = self.call_service(self.recording_start_client, request, '/session_recorder/start')
+        response = self.call_service(self.recording_start_client, request, '/neurosimo/session_recorder/start')
 
         if response is None or not response.success:
             return False
@@ -856,7 +856,7 @@ class SessionManagerNode(Node):
         request.preprocessor_fingerprint = preprocessor_fingerprint if preprocessor_fingerprint is not None else 0
         request.data_source_fingerprint = data_source_fingerprint if data_source_fingerprint is not None else 0
 
-        response = self.call_service(self.recording_stop_client, request, '/session_recorder/stop')
+        response = self.call_service(self.recording_stop_client, request, '/neurosimo/session_recorder/stop')
 
         if response is None or not response.success:
             return False

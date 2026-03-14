@@ -71,7 +71,7 @@ export const LogProvider: React.FC<LogProviderProps> = ({ children }) => {
     /* Subscriber for preprocessor logs. */
     const preprocessorLogSubscriber = new Topic<LogMessages>({
       ros: ros,
-      name: '/pipeline/preprocessor/log',
+      name: '/neurosimo/pipeline/preprocessor/log',
       messageType: 'pipeline_interfaces/LogMessages',
     })
 
@@ -83,7 +83,7 @@ export const LogProvider: React.FC<LogProviderProps> = ({ children }) => {
     /* Subscriber for decider logs. */
     const deciderLogSubscriber = new Topic<LogMessages>({
       ros: ros,
-      name: '/pipeline/decider/log',
+      name: '/neurosimo/pipeline/decider/log',
       messageType: 'pipeline_interfaces/LogMessages',
     })
 
@@ -95,7 +95,7 @@ export const LogProvider: React.FC<LogProviderProps> = ({ children }) => {
     /* Subscriber for presenter logs. */
     const presenterLogSubscriber = new Topic<LogMessages>({
       ros: ros,
-      name: '/pipeline/presenter/log',
+      name: '/neurosimo/pipeline/presenter/log',
       messageType: 'pipeline_interfaces/LogMessages',
     })
 

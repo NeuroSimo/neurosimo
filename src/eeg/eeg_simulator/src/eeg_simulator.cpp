@@ -21,7 +21,7 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-const std::string EEG_RAW_TOPIC = "/eeg/raw";
+const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 
 const milliseconds STREAMING_INTERVAL = 1ms;
 /* Have a long queue to avoid dropping messages. */
@@ -37,7 +37,7 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
 
   /* Publisher for EEG simulator heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/eeg_simulator/heartbeat",
+    "/neurosimo/eeg_simulator/heartbeat",
     10);
 
   /* Subscriber for active project. */
@@ -47,18 +47,18 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
 
   /* Publisher for health. */
   this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
-    "/eeg_simulator/health",
+    "/neurosimo/eeg_simulator/health",
     qos_persist_latest);
 
   this->global_config_subscriber = create_subscription<system_interfaces::msg::GlobalConfig>(
-    "/global_configurator/config",
+    "/neurosimo/global_configurator/config",
     qos_persist_latest,
     std::bind(&EegSimulator::handle_global_config, this, std::placeholders::_1),
     subscription_options);
 
   /* Publisher for streamer state. */
   data_source_state_publisher = this->create_publisher<system_interfaces::msg::DataSourceState>(
-    "/eeg_simulator/state",
+    "/neurosimo/eeg_simulator/state",
     qos_persist_latest);
 
   /* Initialize dataset manager. */
@@ -66,13 +66,13 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
 
   /* Services for starting/stopping streaming. */
   this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
-    "/eeg_simulator/streaming/start",
+    "/neurosimo/eeg_simulator/streaming/start",
     std::bind(&EegSimulator::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group);
 
   this->stop_streaming_service = this->create_service<eeg_interfaces::srv::StopStreaming>(
-    "/eeg_simulator/streaming/stop",
+    "/neurosimo/eeg_simulator/streaming/stop",
     std::bind(&EegSimulator::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group);
@@ -103,7 +103,7 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     std::bind(&EegSimulator::handle_initialize_accepted, this, std::placeholders::_1));
 
   /* Initialize client for aborting session */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/session/abort");
+  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   /* Publish initial health status. */
   this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");

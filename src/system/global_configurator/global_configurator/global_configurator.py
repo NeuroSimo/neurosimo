@@ -54,13 +54,13 @@ class GlobalConfiguratorNode(Node):
         self.declare_parameter('locale', global_config['locale'])
 
         # Services
-        self.create_service(ListProjects, '/projects/list', self.list_projects_callback, callback_group=self.callback_group)
+        self.create_service(ListProjects, '/neurosimo/projects/list', self.list_projects_callback, callback_group=self.callback_group)
 
         # Publishers
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
-        self.global_config_publisher = self.create_publisher(GlobalConfig, "/global_configurator/config", qos, callback_group=self.callback_group)
+        self.global_config_publisher = self.create_publisher(GlobalConfig, "/neurosimo/global_configurator/config", qos, callback_group=self.callback_group)
 
         # Add parameter change callback to save changes to global state
         self.add_on_set_parameters_callback(self.parameter_change_callback)

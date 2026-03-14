@@ -35,14 +35,11 @@ target_link_libraries(eeg_bridge
 
 target_include_directories(eeg_bridge PRIVATE ${XXHASH_INCLUDE_DIRS})
 
-add_executable(mock_eeg_bridge src/mock_eeg_bridge.cpp)
 ament_target_dependencies(eeg_bridge rclcpp std_msgs std_srvs eeg_interfaces system_interfaces pipeline_interfaces realtime_utils)
-ament_target_dependencies(mock_eeg_bridge rclcpp std_msgs std_srvs eeg_interfaces system_interfaces pipeline_interfaces realtime_utils)
 
 
 install(TARGETS
   eeg_bridge
-  mock_eeg_bridge
   DESTINATION lib/${PROJECT_NAME}
 )
 

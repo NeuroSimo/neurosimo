@@ -695,7 +695,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     if (has_minimum_intertrial_interval_passed) {
       auto targeted_pulses_msg = pipeline_interfaces::msg::TargetedPulses();
       targeted_pulses_msg.session_id = this->session_id;
-      targeted_pulses_msg.reference_sample_time = sample_time;
+      targeted_pulses_msg.reference_eeg_device_timestamp = request.triggering_sample->eeg_device_timestamp;
       targeted_pulses_msg.sequence_number = this->targeted_pulses_sequence_number;
       targeted_pulses_msg.pulses = targeted_pulses;
 

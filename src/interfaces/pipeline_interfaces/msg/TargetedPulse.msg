@@ -1,4 +1,4 @@
-# Pulse time, relative to the start of the recording, in seconds.
+# Pulse time, relative to reference_eeg_device_timestamp, in seconds.
 float64 time
 
 # Target displacement in millimeters.

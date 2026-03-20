@@ -394,7 +394,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   sample.time = adapter_sample.time;
   sample.pulse_trigger = adapter_sample.trigger_a;
   sample.loopback_trigger = adapter_sample.trigger_b;
-  
+
   return sample;
 }
 
@@ -408,6 +408,9 @@ void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
 
   /* Set session start flag. */
   sample.is_session_start = this->is_session_start;
+
+  /* Set the EEG device timestamp. */
+  sample.eeg_device_timestamp = sample.time;
 
   /* Set the streaming sample index. */
   sample.sample_index = this->session_sample_index;

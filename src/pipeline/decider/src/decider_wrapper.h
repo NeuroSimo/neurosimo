@@ -20,7 +20,6 @@
 #include "pipeline_interfaces/msg/targeted_pulse.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
-#include "pipeline_interfaces/msg/timed_trigger.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 
 #include "std_msgs/msg/string.hpp"
@@ -75,7 +74,7 @@ public:
 
   std::tuple<
     bool,
-    std::shared_ptr<pipeline_interfaces::msg::TimedTrigger>,
+    std::shared_ptr<double_t>,
     std::string,
     std::vector<pipeline_interfaces::msg::TargetedPulse>> process(
     std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,

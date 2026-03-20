@@ -533,7 +533,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   std::string stage_name = request.triggering_sample->stage_name;
 
   /* Process the sample. */
-  auto [success, timed_trigger, coil_target, targeted_pulses] = this->decider_wrapper->process(
+  auto [success, trigger_offset, coil_target, targeted_pulses] = this->decider_wrapper->process(
     this->sensory_stimuli,
     this->sample_buffer,
     sample_time,
@@ -601,7 +601,12 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
 
   /* Check if timed triggers are requested. */
-  bool request_timed_trigger = timed_trigger != nullptr;
+  bool request_timed_trigger = trigger_offset != nullptr;
+
+  double_t requested_stimulation_time = std::numeric_limits<double_t>::quiet_NaN();
+  if (request_timed_trigger) {
+    requested_stimulation_time = sample_time + *trigger_offset;
+  }
 
   /* Update decision fingerprint with evaluation info. */
   this->decision_fingerprint = XXH64(
@@ -609,12 +614,9 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     sizeof(sample_time),
     this->decision_fingerprint);
 
-  double_t trigger_time = timed_trigger
-    ? timed_trigger->time
-    : std::numeric_limits<double_t>::quiet_NaN();
   this->decision_fingerprint = XXH64(
-    &trigger_time,
-    sizeof(trigger_time),
+    &requested_stimulation_time,
+    sizeof(requested_stimulation_time),
     this->decision_fingerprint);
 
   /* Calculate the latency of the decision path. */
@@ -635,7 +637,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   decision_trace.reference_sample_time = sample_time;
   decision_trace.reference_sample_index = request.triggering_sample->sample_index;
   decision_trace.stimulate = request_timed_trigger;
-  decision_trace.requested_stimulation_time = timed_trigger ? timed_trigger->time : 0.0;
+  decision_trace.requested_stimulation_time = trigger_offset ? requested_stimulation_time : 0.0;
 
   // Decider / preprocessing timing
   decision_trace.decider_duration = decider_duration;
@@ -651,25 +653,25 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* If timed triggers are requested, send them. */
   if (request_timed_trigger) {
     /* Check that the minimum intertrial interval has passed. */
-    auto time_since_previous_trial = timed_trigger->time - this->previous_stimulation_time;
+    auto time_since_previous_trial = requested_stimulation_time - this->previous_stimulation_time;
     auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
                                                   time_since_previous_trial >= this->minimum_intertrial_interval;
 
     if (has_minimum_intertrial_interval_passed) {
-      RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", timed_trigger->time);
+      RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", requested_stimulation_time);
 
       auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
-      request_msg->timed_trigger = *timed_trigger;
+      request_msg->trigger_offset = *trigger_offset;
       request_msg->session_id = this->session_id;
       request_msg->decision_id = this->decision_id;
       request_msg->reference_sample_time = sample_time;
       this->request_timed_trigger(request_msg);
 
       /* Update the previous stimulation time. */
-      this->previous_stimulation_time = timed_trigger->time;
+      this->previous_stimulation_time = requested_stimulation_time;
       
       /* Set the pulse lockout end time. */
-      this->pulse_lockout_end_time = timed_trigger->time + this->decider_wrapper->get_pulse_lockout_duration();
+      this->pulse_lockout_end_time = requested_stimulation_time + this->decider_wrapper->get_pulse_lockout_duration();
     } else {
       RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
       this->minimum_intertrial_interval,

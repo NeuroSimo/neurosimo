@@ -281,11 +281,11 @@
         mode: "0755"
 
     ########################################################################
-    # Create .bash_env from scratch
+    # Create .bash_neurosimo from scratch
     ########################################################################
-    - name: Create fresh .bash_env file
+    - name: Create fresh .bash_neurosimo file
       copy:
-        dest: "{{ target_home }}/.bash_env"
+        dest: "{{ target_home }}/.bash_neurosimo"
         owner: "{{ target_user }}"
         group: "{{ target_user }}"
         mode: "0644"
@@ -306,9 +306,6 @@
           export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
           export CYCLONEDDS_URI=file://$NEUROSIMO_ROOT/config/cyclonedds.xml
 
-          # Source ROS2 base installation
-          source /opt/ros/{{ ros_distro }}/setup.bash
-
           # Source NeuroSimo workspace if it exists
           if [ -f {{ repo_root }}/install/setup.bash ]; then
               source {{ repo_root }}/install/setup.bash
@@ -321,13 +318,20 @@
               set +a
           fi
 
-    - name: Ensure .bash_env is sourced in .bashrc
+    - name: Ensure ROS2 base installation is sourced in .bash_neurosimo
       lineinfile:
-        dest: "{{ target_home }}/.bashrc"
-        line: "source {{ target_home }}/.bash_env"
+        dest: "{{ target_home }}/.bash_neurosimo"
+        line: "source /opt/ros/{{ ros_distro }}/setup.bash"
         state: present
         insertafter: EOF
 
+    - name: Ensure .bash_neurosimo is sourced in .bashrc
+      lineinfile:
+        dest: "{{ target_home }}/.bashrc"
+        line: "source {{ target_home }}/.bash_neurosimo"
+        state: present
+        insertafter: EOF
+    
     ########################################################################
     # Set up the environment
     ########################################################################

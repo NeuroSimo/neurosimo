@@ -71,13 +71,13 @@ ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml \
   --extra-vars "ansible_become_password='$SUDO_PASS' use_gpu=$USE_GPU"
 
 # Source environment to get ROS base installation
-source ~/.bash_env > /dev/null
+source ~/.bash_neurosimo > /dev/null
 
 echo "Building ROS interfaces..."
 ./scripts/build-ros-interfaces
 
 # Source the environment again to pick up the newly built ROS workspace
-source ~/.bash_env > /dev/null
+source ~/.bash_neurosimo > /dev/null
 
 # Create 'example' project
 echo "Creating 'example' project..."

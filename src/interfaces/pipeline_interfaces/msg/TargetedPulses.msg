@@ -1,7 +1,7 @@
-# Metadata for a sequence of targeted pulses.
+# Metadata
 uint8[16] session_id
-float64 reference_sample_time
+float64 reference_eeg_device_timestamp
 uint64 sequence_number
 
-# Sequence of targeted pulses.
+# Pulses, with times relative to reference_eeg_device_timestamp
 TargetedPulse[] pulses

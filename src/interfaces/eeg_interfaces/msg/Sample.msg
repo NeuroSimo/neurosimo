@@ -9,6 +9,7 @@ bool is_session_start           # First sample of session
 float64[] eeg                   # Length = num_eeg_channels, in microvolts
 float64[] emg                   # Length = num_emg_channels, in microvolts
 float64 time                    # Sample time, seconds since recording start
+float64 eeg_device_timestamp    # Raw timestamp from EEG device, seconds
 uint64 sample_index             # Sample count (0-based)
 
 # ============================================================================

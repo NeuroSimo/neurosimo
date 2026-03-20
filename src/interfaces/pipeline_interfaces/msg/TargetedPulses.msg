@@ -1,7 +1,7 @@
-# Metadata for this targeted pulse output.
+# Metadata for a sequence of targeted pulses.
 uint8[16] session_id
 float64 reference_sample_time
 uint64 sequence_number
 
-# List of targeted pulses.
+# Sequence of targeted pulses.
 TargetedPulse[] pulses

@@ -15,7 +15,6 @@
 #include "pipeline_interfaces/msg/latency.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 
-#include "pipeline_interfaces/msg/timed_trigger.hpp"
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 #include "pipeline_interfaces/srv/initialize_trigger_timer.hpp"
 #include "pipeline_interfaces/srv/finalize_trigger_timer.hpp"
@@ -79,7 +78,7 @@ private:
   struct TriggerRequestComparator {
     bool operator()(const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>& a,
                     const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>& b) const {
-      return a->timed_trigger.time > b->timed_trigger.time;  // min-heap by time
+      return a->trigger_offset > b->trigger_offset;  // min-heap by time
     }
   };
 

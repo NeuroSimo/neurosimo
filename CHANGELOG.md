@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Decider API updates:
   - Pass stage name to `process_periodic`, `process_pulse`, and `process_event` methods.
   - Pass a boolean to `process_periodic` indicating whether the call is a warm-up call.
+  - Defining triggers: deciders now return `trigger_offset` (float, seconds) relative to the current `reference_time`, instead of returning a `timed_trigger` key
+    with an absolute time.
 
 ### Fixed
 - Fixed crashes caused by Python interpreter state persisting across sessions when using complex Python libraries, by restarting Python-based pipeline nodes for each new session.

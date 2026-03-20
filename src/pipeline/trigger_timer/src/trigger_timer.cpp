@@ -175,7 +175,7 @@ double_t TriggerTimer::estimate_current_sample_time() {
 TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
     std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
 
-  double_t desired_pulse_time = request->timed_trigger.time;
+  double_t desired_pulse_time = request->reference_sample_time + request->trigger_offset;
   double_t trigger_time = desired_pulse_time - this->trigger_to_pulse_delay;
   double_t estimated_current_time = estimate_current_sample_time();
 
@@ -275,7 +275,7 @@ void TriggerTimer::handle_request_timed_trigger(
   uint64_t system_time_trigger_timer_received = std::chrono::duration_cast<std::chrono::nanoseconds>(
     start_time.time_since_epoch()).count();
 
-  double_t trigger_time = request->timed_trigger.time;
+  double_t trigger_time = request->reference_sample_time + request->trigger_offset;
 
   bool is_labjack_connected = labjack_manager && labjack_manager->is_connected();
   SchedulingResult result;
@@ -338,9 +338,9 @@ void TriggerTimer::handle_request_timed_trigger(
   response->success = success;
   if (success) {
     RCLCPP_INFO(logger, "Scheduled trigger for pulse time: %.4f (s), trigger time: %.4f (s).", 
-                request->timed_trigger.time, request->timed_trigger.time - this->trigger_to_pulse_delay);
+                trigger_time, trigger_time - this->trigger_to_pulse_delay);
   } else {
-    RCLCPP_WARN(logger, "Failed to schedule trigger for pulse time: %.4f (s).", request->timed_trigger.time);
+    RCLCPP_WARN(logger, "Failed to schedule trigger for pulse time: %.4f (s).", trigger_time);
   }
 }
 

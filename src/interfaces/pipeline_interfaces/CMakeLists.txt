@@ -25,7 +25,6 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CoilTarget.msg"
-  "msg/TimedTrigger.msg"
   "msg/TargetedPulse.msg"
   "msg/TargetedPulses.msg"
   "msg/Latency.msg"

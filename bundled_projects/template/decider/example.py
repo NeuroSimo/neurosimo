@@ -52,13 +52,13 @@ class Decider:
             is_coil_at_target: bool, stage_name: str, is_warm_up: bool) -> dict[str, Any] | None:
         """Process EEG/EMG buffer periodically."""
 
-        # Trigger TMS device after 5ms delay
-        trigger_time = reference_time + 0.005
+        # Trigger TMS device after 5ms delay relative to reference sample time
+        trigger_offset = 0.005
 
-        print(f"Creating trigger for time {trigger_time} seconds")
+        print(f"Creating trigger for +{trigger_offset * 1000:.1f} ms")
 
         return {
-            'timed_trigger': trigger_time,
+            'trigger_offset': trigger_offset,
         }
 
     def process_event(

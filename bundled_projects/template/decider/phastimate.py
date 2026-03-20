@@ -129,7 +129,7 @@ class Decider:
             is_warm_up: True when this call is a warm-up round with dummy data; skip state updates if needed.
 
         Returns:
-            Dictionary with 'timed_trigger' key and execution time, or None if no trigger scheduled
+            Dictionary with 'trigger_offset' key and execution time, or None if no trigger scheduled
         """
         # Extract C3 channel with common average reference
         c3_referenced_data = self._extract_c3_referenced_data(eeg_buffer)
@@ -234,14 +234,13 @@ class Decider:
             print(f'[{reference_time:.1f}s] Not triggering: Δφ = {min_phase_difference:.1f} rad')
             return None
 
-        # Calculate trigger execution time
+        # Calculate trigger timing offset relative to reference sample time
         time_offset_seconds = (optimal_sample_index * self.downsample_ratio) / self.sampling_frequency
-        execution_time = reference_time + time_offset_seconds
         time_offset_ms = time_offset_seconds * 1000
 
         print(f'[{reference_time:.1f}s] Triggering at +{time_offset_ms:.0f}ms')
 
-        return {'timed_trigger': execution_time}
+        return {'trigger_offset': time_offset_seconds}
 
     def phastimate(self, data: np.ndarray, filter_b: np.ndarray, filter_a: list[float], 
                    edge_samples: int, ar_order: int, hilbert_window_size: int,

@@ -228,17 +228,17 @@ During warm-up calls, `stage_name` is an empty string (`""`).
 
 The `process_periodic()` method can return a dictionary with the following optional keys:
 
-#### `timed_trigger` (float)
-Schedule a trigger pulse at specified time (seconds). Uses LabJack T4 for triggering external devices like commercial TMS systems.
+#### `trigger_offset` (float)
+Schedule a trigger pulse using an offset in seconds relative to `reference_time`. Uses LabJack T4 for triggering external devices like commercial TMS systems.
 
 **Example:**
 ```python
-return {'timed_trigger': reference_time + 0.005}  # Trigger after 5ms
+return {'trigger_offset': 0.005}  # Trigger 5ms after reference_time
 ```
 
 #### `targeted_pulses` (list)
 Publish targeted pulse requests to `/mtms/targeted_pulses` for external stimulation software.
-Do not return `timed_trigger` and `targeted_pulses` in the same result.
+Do not return `trigger_offset` and `targeted_pulses` in the same result.
 
 Each list item must be a dictionary with:
 - `time` (float): Absolute pulse time in seconds since recording start

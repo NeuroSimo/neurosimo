@@ -311,11 +311,20 @@
               source {{ repo_root }}/install/setup.bash
           fi
 
-          # Source .env file if it exists
+          # Export selected ROS variables from .env file if it exists
           if [ -f {{ repo_root }}/.env ]; then
-              set -a
+              # Import values into the shell.
               source {{ repo_root }}/.env
-              set +a
+
+              # Export ROS_DOMAIN_ID if set.
+              if [ "${ROS_DOMAIN_ID+x}" = "x" ]; then
+                  export ROS_DOMAIN_ID="${ROS_DOMAIN_ID}"
+              fi
+
+              # Export ROS_LOG_LEVEL if set.
+              if [ "${ROS_LOG_LEVEL+x}" = "x" ]; then
+                  export ROS_LOG_LEVEL="${ROS_LOG_LEVEL}"
+              fi
           fi
 
     - name: Ensure ROS2 base installation is sourced in .bash_neurosimo

@@ -31,3 +31,8 @@
     - name: Configure Docker to use NVIDIA runtime
       ansible.builtin.command:
         cmd: nvidia-ctk runtime configure --runtime=docker
+
+    - name: Restart Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted

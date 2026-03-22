@@ -27,8 +27,8 @@
 
 #include "neurosimo_pipeline_interfaces/srv/request_timed_trigger.hpp"
 
-#include "stimulation_interfaces/msg/coil_target.hpp"
-#include "stimulation_interfaces/msg/targeted_pulses.hpp"
+#include "shared_stimulation_interfaces/msg/coil_target.hpp"
+#include "shared_stimulation_interfaces/msg/targeted_pulses.hpp"
 #include "neurosimo_pipeline_interfaces/msg/latency.hpp"
 
 #include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
@@ -136,8 +136,8 @@ private:
 
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
-  rclcpp::Publisher<stimulation_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
-  rclcpp::Publisher<stimulation_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
+  rclcpp::Publisher<shared_stimulation_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
+  rclcpp::Publisher<shared_stimulation_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr event_processing_latency_publisher;

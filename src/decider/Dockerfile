@@ -59,7 +59,7 @@ COPY interfaces/neurosimo_pipeline_interfaces interfaces/neurosimo_pipeline_inte
 COPY interfaces/neurosimo_project_interfaces interfaces/neurosimo_project_interfaces/
 COPY interfaces/neurosimo_eeg_interfaces interfaces/neurosimo_eeg_interfaces/
 COPY interfaces/neurosimo_system_interfaces interfaces/neurosimo_system_interfaces/
-COPY interfaces/stimulation_interfaces interfaces/stimulation_interfaces/
+COPY interfaces/shared_stimulation_interfaces interfaces/shared_stimulation_interfaces/
 COPY src/realtime src/realtime/
 COPY src/filesystem_utils src/filesystem_utils/
 

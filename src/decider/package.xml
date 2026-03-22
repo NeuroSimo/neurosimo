@@ -15,7 +15,7 @@
   <depend>std_srvs</depend>
 
   <depend>neurosimo_eeg_interfaces</depend>
-  <depend>stimulation_interfaces</depend>
+  <depend>shared_stimulation_interfaces</depend>
   <depend>neurosimo_pipeline_interfaces</depend>
   <depend>neurosimo_project_interfaces</depend>
   <depend>neurosimo_system_interfaces</depend>

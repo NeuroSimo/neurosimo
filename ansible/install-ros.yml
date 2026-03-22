@@ -37,10 +37,6 @@
       apt:
         update_cache: yes
 
-    - name: Upgrade system packages
-      apt:
-        upgrade: dist
-
     - name: Install ROS 2 base, dev tools, and Cyclone DDS
       apt:
         name:

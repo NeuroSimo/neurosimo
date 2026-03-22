@@ -12,10 +12,6 @@ RUN apt-get update && \
     python3-watchdog && \
     rm -rf /var/lib/apt/lists/*
 
-# Set the Cyclone DDS configuration
-COPY config/cyclonedds.xml /config/
-ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
-
 # Copy ROS workspace and build packages
 
 WORKDIR /app
@@ -29,6 +25,10 @@ RUN source /opt/ros/jazzy/setup.bash && colcon build
 # ROS node
 COPY src/global_configurator src/global_configurator/
 RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select global_configurator
+
+# Set the Cyclone DDS configuration
+COPY config/cyclonedds.xml /config/
+ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy entrypoint
 

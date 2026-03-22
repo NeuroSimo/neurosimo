@@ -16,10 +16,6 @@ RUN apt-get update && \
     ros-jazzy-rmw-cyclonedds-cpp && \
     rm -rf /var/lib/apt/lists/*
 
-# Set the Cyclone DDS configuration
-COPY config/cyclonedds.xml /config/
-ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
-
 # Copy ROS workspace and build packages
 
 WORKDIR /app
@@ -41,6 +37,10 @@ RUN find src/rosbridge -type f -exec dos2unix {} +
 
 # Build the rosbridge node after building interfaces
 RUN source /opt/ros/jazzy/setup.bash && colcon build --packages-up-to rosbridge_server
+
+# Set the Cyclone DDS configuration
+COPY config/cyclonedds.xml /config/
+ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy ROS entrypoint
 COPY src/rosbridge/ros_entrypoint.sh .

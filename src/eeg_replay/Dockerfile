@@ -11,10 +11,6 @@ RUN apt-get update && \
     nlohmann-json3-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Set the Cyclone DDS configuration
-COPY config/cyclonedds.xml /config/
-ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
-
 # Copy ROS workspace and build packages
 
 WORKDIR /app
@@ -28,6 +24,10 @@ RUN source /opt/ros/jazzy/setup.bash && colcon build
 # ROS node
 COPY src/eeg_replay src/eeg_replay
 RUN source /opt/ros/jazzy/setup.bash && colcon build --packages-select eeg_replay
+
+# Set the Cyclone DDS configuration
+COPY config/cyclonedds.xml /config/
+ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy entrypoint
 

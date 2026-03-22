@@ -40,10 +40,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # RUN pip install --no-cache-dir psychopy==2026.1.1
 # RUN pip install --no-cache-dir attrdict3 numpy==1.26.4 scipy==1.12.0
 
-# Set the Cyclone DDS configuration
-COPY config/cyclonedds.xml /config/
-ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
-
 # Copy ROS workspace and build packages
 WORKDIR /app
 
@@ -62,6 +58,10 @@ COPY src/common src/common/
 COPY src/presenter src/presenter/
 
 RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon build --symlink-install --packages-select presenter
+
+# Set the Cyclone DDS configuration
+COPY config/cyclonedds.xml /config/
+ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy entrypoint
 WORKDIR /app

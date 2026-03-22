@@ -26,10 +26,6 @@ RUN wget https://files.labjack.com/installers/LJM/Linux/x64/release/labjack_ljm_
     cd .. && \
     rm -rf labjack_ljm_software_2019_07_16_x86_64 labjack_ljm_software_2019_07_16_x86_64.tar.gz
 
-# Set the Cyclone DDS configuration
-COPY config/cyclonedds.xml /config/
-ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
-
 # Copy ROS workspace and build packages
 
 WORKDIR /app
@@ -46,6 +42,10 @@ RUN source /opt/ros/jazzy/setup.bash && colcon build
 # ROS node
 COPY src/trigger_timer src/trigger_timer/
 RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select trigger_timer
+
+# Set the Cyclone DDS configuration
+COPY config/cyclonedds.xml /config/
+ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy entrypoint
 

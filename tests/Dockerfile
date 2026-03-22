@@ -7,10 +7,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt/neurosimo_tests
 
-# Set the Cyclone DDS configuration
-COPY config/cyclonedds.xml /config/
-ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
-
 # Copy interfaces
 COPY interfaces/neurosimo_eeg_interfaces /opt/neurosimo_tests/interfaces/neurosimo_eeg_interfaces
 COPY interfaces/neurosimo_pipeline_interfaces /opt/neurosimo_tests/interfaces/neurosimo_pipeline_interfaces
@@ -23,5 +19,9 @@ RUN . /opt/ros/jazzy/setup.sh && colcon build --packages-select neurosimo_eeg_in
 # Copy tests
 COPY tests /opt/neurosimo_tests/tests
 RUN chmod +x /opt/neurosimo_tests/tests/helpers/create-test-project /opt/neurosimo_tests/tests/run-fingerprint-tests.sh
+
+# Set the Cyclone DDS configuration
+COPY config/cyclonedds.xml /config/
+ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 ENTRYPOINT ["/opt/neurosimo_tests/tests/run-fingerprint-tests.sh"]

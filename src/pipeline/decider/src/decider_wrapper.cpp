@@ -708,8 +708,7 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
   // 1) Check presence
   for (const auto& field : required) {
     if (!py_sensory_stimulus.contains(field)) {
-      RCLCPP_ERROR(*logger_ptr,
-        "sensory_stimulus missing field '%s'", field.c_str());
+      log_error("sensory_stimulus missing field '" + field + "'");
       return false;
     }
   }
@@ -718,14 +717,14 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
   try {
     out_msg.time = py_sensory_stimulus["time"].cast<double>();
   } catch (const py::cast_error& e) {
-    RCLCPP_ERROR(*logger_ptr, "'time' must be a float or int: %s", e.what());
+    log_error(std::string("'time' must be a float or int: ") + e.what());
     return false;
   }
 
   try {
     out_msg.type = py_sensory_stimulus["type"].cast<std::string>();
   } catch (const py::cast_error& e) {
-    RCLCPP_ERROR(*logger_ptr, "'type' must be a string: %s", e.what());
+    log_error(std::string("'type' must be a string: ") + e.what());
     return false;
   }
 
@@ -733,7 +732,7 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
   try {
     params = py_sensory_stimulus["parameters"].cast<py::dict>();
   } catch (const py::cast_error& e) {
-    RCLCPP_ERROR(*logger_ptr, "'parameters' must be a dictionary: %s", e.what());
+    log_error(std::string("'parameters' must be a dictionary: ") + e.what());
     return false;
   }
 
@@ -744,7 +743,7 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
     try {
       key = item.first.cast<std::string>();
     } catch (const py::cast_error& e) {
-      RCLCPP_ERROR(*logger_ptr, "parameter key is not a string: %s", e.what());
+      log_error(std::string("parameter key is not a string: ") + e.what());
       return false;
     }
 
@@ -752,7 +751,7 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
     try {
       val = py::str(item.second);  // Serializes any Python value
     } catch (const std::exception& e) {
-      RCLCPP_ERROR(*logger_ptr, "parameter value could not be serialized to string: %s", e.what());
+      log_error(std::string("parameter value could not be serialized to string: ") + e.what());
       return false;
     }
 
@@ -772,7 +771,7 @@ bool DeciderWrapper::process_sensory_stimuli_list(
   if (py_sensory_stimuli.size() > 0) {
     for (const auto& py_sensory_stimulus : py_sensory_stimuli) {
       if (!py::isinstance<py::dict>(py_sensory_stimulus)) {
-        RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list of dictionaries.");
+        log_error("sensory_stimuli must be a list of dictionaries.");
         return false;
       }
       py::dict py_sensory_stimulus_dict = py_sensory_stimulus.cast<py::dict>();
@@ -780,7 +779,7 @@ bool DeciderWrapper::process_sensory_stimuli_list(
       if (parse_sensory_stimulus_dict(py_sensory_stimulus_dict, msg)) {
         sensory_stimuli.push_back(msg);
       } else {
-        RCLCPP_ERROR(*logger_ptr, "Failed to parse sensory_stimuli dictionary.");
+        log_error("Failed to parse sensory_stimuli dictionary.");
         return false;
       }
     }
@@ -802,7 +801,7 @@ bool DeciderWrapper::parse_targeted_pulse_dict(
 
   for (const auto& field : required) {
     if (!py_targeted_pulse.contains(field)) {
-      RCLCPP_ERROR(*logger_ptr, "targeted_pulse missing field '%s'", field.c_str());
+      log_error("targeted_pulse missing field '" + field + "'");
       return false;
     }
   }
@@ -814,7 +813,7 @@ bool DeciderWrapper::parse_targeted_pulse_dict(
     out_msg.rotation_angle = py_targeted_pulse["rotation_angle"].cast<double>();
     out_msg.intensity = py_targeted_pulse["intensity"].cast<double>();
   } catch (const py::cast_error& e) {
-    RCLCPP_ERROR(*logger_ptr, "Invalid targeted_pulse field type: %s", e.what());
+    log_error(std::string("Invalid targeted_pulse field type: ") + e.what());
     return false;
   }
 
@@ -827,13 +826,13 @@ bool DeciderWrapper::process_targeted_pulses_list(
 
   for (const auto& py_targeted_pulse : py_targeted_pulses) {
     if (!py::isinstance<py::dict>(py_targeted_pulse)) {
-      RCLCPP_ERROR(*logger_ptr, "targeted_pulses must be a list of dictionaries.");
+      log_error("targeted_pulses must be a list of dictionaries.");
       return false;
     }
 
     stimulation_interfaces::msg::TargetedPulse msg;
     if (!parse_targeted_pulse_dict(py_targeted_pulse.cast<py::dict>(), msg)) {
-      RCLCPP_ERROR(*logger_ptr, "Failed to parse targeted_pulse dictionary.");
+      log_error("Failed to parse targeted_pulse dictionary.");
       return false;
     }
     targeted_pulses.push_back(msg);
@@ -921,7 +920,7 @@ std::tuple<
     num_samples = this->event_sample_window_end - this->event_sample_window_start + 1;
 
   } else {
-    RCLCPP_ERROR(*logger_ptr, "Invalid processing reason: %d", static_cast<int>(processing_reason));
+    log_error("Invalid processing reason: " + std::to_string(static_cast<int>(processing_reason)));
     return {false, trigger_offset, coil_target, targeted_pulses};
   }
 
@@ -959,14 +958,14 @@ std::tuple<
         break;
 
       default:
-        RCLCPP_ERROR(*logger_ptr, "Invalid processing type: %d", static_cast<int>(processing_reason));
+        log_error("Invalid processing type: " + std::to_string(static_cast<int>(processing_reason)));
         py_result = py::none();
         break;
     }
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    log_error(error_msg);
 
     // Add error to log buffer so it can be published to UI
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
@@ -975,7 +974,7 @@ std::tuple<
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
-    RCLCPP_ERROR(*logger_ptr, "%s", error_msg.c_str());
+    log_error(error_msg);
 
     // Add error to log buffer so it can be published to UI
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
@@ -990,7 +989,7 @@ std::tuple<
 
   /* If the return value is not None, ensure that it is a dictionary. */
   if (!py::isinstance<py::dict>(py_result)) {
-    RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary.");
+    log_error("Python module should return a dictionary.");
     return {false, trigger_offset, coil_target, targeted_pulses};
   }
 
@@ -1008,10 +1007,7 @@ std::tuple<
   for (const auto& item : dict_result) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      RCLCPP_ERROR(
-        *logger_ptr,
-        "Unexpected key '%s' in return value, only 'trigger_offset', 'targeted_pulses', 'sensory_stimuli', 'events', and 'coil_target' are allowed.",
-        key.c_str());
+      log_error("Unexpected key '" + key + "' in return value, only 'trigger_offset', 'targeted_pulses', 'sensory_stimuli', 'events', and 'coil_target' are allowed.");
       return {false, trigger_offset, coil_target, targeted_pulses};
     }
   }
@@ -1022,7 +1018,7 @@ std::tuple<
 
   if (dict_result.contains("trigger_offset")) {
     if (processing_reason == ProcessingReason::Pulse || processing_reason == ProcessingReason::Event) {
-      RCLCPP_ERROR(*logger_ptr, "Timed trigger requests are not allowed for pulse or event processing.");
+      log_error("Timed trigger requests are not allowed for pulse or event processing.");
       return {false, trigger_offset, coil_target, targeted_pulses};
     }
     trigger_offset = std::make_shared<double_t>(dict_result["trigger_offset"].cast<double_t>());
@@ -1030,7 +1026,7 @@ std::tuple<
 
   if (dict_result.contains("targeted_pulses")) {
     if (!py::isinstance<py::list>(dict_result["targeted_pulses"])) {
-      RCLCPP_ERROR(*logger_ptr, "targeted_pulses must be a list.");
+      log_error("targeted_pulses must be a list.");
       return {false, trigger_offset, coil_target, targeted_pulses};
     }
 
@@ -1041,13 +1037,13 @@ std::tuple<
   }
 
   if (trigger_offset != nullptr && !targeted_pulses.empty()) {
-    RCLCPP_ERROR(*logger_ptr, "Return value cannot include both 'trigger_offset' and 'targeted_pulses'.");
+    log_error("Return value cannot include both 'trigger_offset' and 'targeted_pulses'.");
     return {false, trigger_offset, coil_target, targeted_pulses};
   }
 
   if (dict_result.contains("sensory_stimuli")) {
     if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
-      RCLCPP_ERROR(*logger_ptr, "sensory_stimuli must be a list.");
+      log_error("sensory_stimuli must be a list.");
       return {false, trigger_offset, coil_target, targeted_pulses};
     }
 
@@ -1059,7 +1055,7 @@ std::tuple<
 
   if (dict_result.contains("events")) {
     if (!py::isinstance<py::list>(dict_result["events"])) {
-      RCLCPP_ERROR(*logger_ptr, "events must be a list.");
+      log_error("events must be a list.");
       return {false, trigger_offset, coil_target, targeted_pulses};
     }
 

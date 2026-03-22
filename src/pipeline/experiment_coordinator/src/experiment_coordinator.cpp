@@ -88,6 +88,9 @@ ExperimentCoordinator::ExperimentCoordinator()
   this->heartbeat_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&ExperimentCoordinator::publish_heartbeat, this));
+
+  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  RCLCPP_INFO(this->get_logger(), "Experiment coordinator ready");
 }
 
 void ExperimentCoordinator::publish_heartbeat() {

@@ -46,10 +46,6 @@ RUN pip3 install py_neuromodulation --no-deps || pip3 install py_neuromodulation
 
 RUN pip3 install spectrum
 
-# Set the Cyclone DDS configuration
-COPY config/cyclonedds.xml /config/
-ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
-
 # Copy ROS workspace and build packages
 
 WORKDIR /app
@@ -72,6 +68,10 @@ RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash && colcon buil
 
 # Copy CUDA test script
 COPY src/decider/test_cuda.py /app
+
+# Set the Cyclone DDS configuration
+COPY config/cyclonedds.xml /config/
+ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy entrypoint
 

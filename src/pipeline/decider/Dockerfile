@@ -59,6 +59,7 @@ COPY interfaces/pipeline_interfaces interfaces/pipeline_interfaces/
 COPY interfaces/project_interfaces interfaces/project_interfaces/
 COPY interfaces/eeg_interfaces interfaces/eeg_interfaces/
 COPY interfaces/system_interfaces interfaces/system_interfaces/
+COPY interfaces/stimulation_interfaces interfaces/stimulation_interfaces/
 COPY src/utils/realtime src/utils/realtime/
 COPY src/utils/filesystem_utils src/utils/filesystem_utils/
 

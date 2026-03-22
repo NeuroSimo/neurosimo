@@ -27,12 +27,11 @@
 
 #include "pipeline_interfaces/srv/request_timed_trigger.hpp"
 
-
-#include "pipeline_interfaces/msg/coil_target.hpp"
+#include "stimulation_interfaces/msg/coil_target.hpp"
+#include "stimulation_interfaces/msg/targeted_pulses.hpp"
 #include "pipeline_interfaces/msg/latency.hpp"
 
 #include "pipeline_interfaces/msg/sensory_stimulus.hpp"
-#include "pipeline_interfaces/msg/targeted_pulses.hpp"
 #include "pipeline_interfaces/msg/decision_trace.hpp"
 #include "pipeline_interfaces/msg/log_message.hpp"
 #include "pipeline_interfaces/msg/log_messages.hpp"
@@ -137,8 +136,8 @@ private:
 
   rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
+  rclcpp::Publisher<stimulation_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
+  rclcpp::Publisher<stimulation_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
   rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr event_processing_latency_publisher;

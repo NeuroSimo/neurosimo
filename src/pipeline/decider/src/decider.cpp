@@ -88,12 +88,12 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     qos_keep_all);
 
   /* Publisher for targeted pulses from decider output. */
-  this->targeted_pulses_publisher = this->create_publisher<pipeline_interfaces::msg::TargetedPulses>(
+  this->targeted_pulses_publisher = this->create_publisher<stimulation_interfaces::msg::TargetedPulses>(
     TARGETED_PULSES_TOPIC,
     qos_keep_all);
 
   /* Publisher for coil target. */
-  this->coil_target_publisher = this->create_publisher<pipeline_interfaces::msg::CoilTarget>(
+  this->coil_target_publisher = this->create_publisher<stimulation_interfaces::msg::CoilTarget>(
     "/neuronavigation/coil_target",
     10);
 
@@ -565,7 +565,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   
   /* Publish coil target if it is set. */
   if (!coil_target.empty()) {
-    auto coil_target_msg = pipeline_interfaces::msg::CoilTarget();
+    auto coil_target_msg = stimulation_interfaces::msg::CoilTarget();
     coil_target_msg.target_name = coil_target;
     RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
     this->coil_target_publisher->publish(coil_target_msg);
@@ -695,7 +695,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
                                                   time_since_previous_trial >= this->minimum_intertrial_interval;
 
     if (has_minimum_intertrial_interval_passed) {
-      auto targeted_pulses_msg = pipeline_interfaces::msg::TargetedPulses();
+      auto targeted_pulses_msg = stimulation_interfaces::msg::TargetedPulses();
       targeted_pulses_msg.session_id = this->session_id;
       targeted_pulses_msg.reference_eeg_device_timestamp = request.triggering_sample->eeg_device_timestamp;
       targeted_pulses_msg.sequence_number = this->targeted_pulses_sequence_number;

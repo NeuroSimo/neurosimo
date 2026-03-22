@@ -15,6 +15,7 @@ find_package(rcpputils REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(eeg_interfaces REQUIRED)
+find_package(stimulation_interfaces REQUIRED)
 find_package(pipeline_interfaces REQUIRED)
 find_package(project_interfaces REQUIRED)
 find_package(system_interfaces REQUIRED)
@@ -52,6 +53,7 @@ ament_target_dependencies(
   std_msgs
   std_srvs
   eeg_interfaces
+  stimulation_interfaces
   pipeline_interfaces
   project_interfaces
   system_interfaces
@@ -107,6 +109,7 @@ ament_target_dependencies(
   std_msgs
   std_srvs
   eeg_interfaces
+  stimulation_interfaces
   pipeline_interfaces
   project_interfaces
   system_interfaces

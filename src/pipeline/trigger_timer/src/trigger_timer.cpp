@@ -403,7 +403,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   this->maximum_timing_offset = request->maximum_timing_offset;
   this->maximum_loopback_latency = request->maximum_loopback_latency;
   this->trigger_to_pulse_delay = request->trigger_to_pulse_delay;
-  this->simulate_labjack = request->simulate_labjack;
+  this->enable_labjack = request->enable_labjack;
   this->data_source = request->data_source;
 
   /* Validate the maximum timing offset is non-negative */
@@ -439,7 +439,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   RCLCPP_INFO(this->get_logger(), "  Timing tolerance (ms): %.1f", 1000 * this->maximum_timing_offset);
   RCLCPP_INFO(this->get_logger(), "  Maximum loopback latency (ms): %.1f", 1000 * this->maximum_loopback_latency);
   RCLCPP_INFO(this->get_logger(), "  Trigger to pulse delay (ms): %.1f", 1000 * this->trigger_to_pulse_delay);
-  RCLCPP_INFO(this->get_logger(), "  LabJack simulation: %s", this->simulate_labjack ? "enabled" : "disabled");
+  RCLCPP_INFO(this->get_logger(), "  LabJack enabled: %s", this->enable_labjack ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Set up a timer to monitor loopback trigger reception every second. */
@@ -453,10 +453,10 @@ void TriggerTimer::handle_initialize_trigger_timer(
     std::bind(&TriggerTimer::attempt_labjack_connection, this));
 
   /* Initialize LabJack manager. */
-  if (this->simulate_labjack) {
-    labjack_manager = std::make_unique<MockLabJackManager>(this->get_logger());
-  } else {
+  if (this->enable_labjack) {
     labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), false);
+  } else {
+    labjack_manager = std::make_unique<MockLabJackManager>(this->get_logger());
   }
   labjack_manager->start();
 

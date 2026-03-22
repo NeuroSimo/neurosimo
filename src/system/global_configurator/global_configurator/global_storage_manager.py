@@ -49,7 +49,7 @@ class GlobalStorageManager:
             "turbolink_eeg_channel_count": 64,
             "maximum_dropped_samples": 2,
             # LabJack Configuration
-            "simulate_labjack": False,
+            "enable_labjack": True,
             # Safety Configuration
             "minimum_intertrial_interval": 2.0,
             "maximum_loopback_latency": 0.005,
@@ -70,7 +70,7 @@ class GlobalStorageManager:
             "eeg_port", "eeg_device",
             "turbolink_sampling_frequency", "turbolink_eeg_channel_count",
             "maximum_dropped_samples",
-            "simulate_labjack",
+            "enable_labjack",
             "minimum_intertrial_interval", "maximum_loopback_latency",
             "maximum_timing_offset", "trigger_to_pulse_delay",
             "disk_warning_threshold", "disk_error_threshold",

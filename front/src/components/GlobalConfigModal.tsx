@@ -244,7 +244,7 @@ interface GlobalConfigValues {
   maximumDroppedSamples: number
   
   // LabJack Configuration
-  simulateLabjack: boolean
+  enableLabjack: boolean
   
   // Safety Configuration
   minimumIntertrialInterval: number
@@ -271,7 +271,7 @@ const emptyConfig: GlobalConfigValues = {
   maximumDroppedSamples: 0,
   
   // LabJack Configuration
-  simulateLabjack: false,
+  enableLabjack: false,
   
   // Safety Configuration
   minimumIntertrialInterval: 0,
@@ -340,7 +340,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
         turbolinkSamplingFrequency: globalConfig.turbolinkSamplingFrequency,
         turbolinkEegChannelCount: globalConfig.turbolinkEegChannelCount,
         maximumDroppedSamples: globalConfig.maximumDroppedSamples,
-        simulateLabjack: globalConfig.simulateLabjack,
+        enableLabjack: globalConfig.enableLabjack,
         minimumIntertrialInterval: globalConfig.minimumIntertrialInterval,
         maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
         maximumTimingOffset: globalConfig.maximumTimingOffset,
@@ -384,7 +384,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
       turbolinkSamplingFrequency: config.turbolinkSamplingFrequency,
       turbolinkEegChannelCount: config.turbolinkEegChannelCount,
       maximumDroppedSamples: config.maximumDroppedSamples,
-      simulateLabjack: config.simulateLabjack,
+      enableLabjack: config.enableLabjack,
       minimumIntertrialInterval: config.minimumIntertrialInterval,
       maximumLoopbackLatency: config.maximumLoopbackLatency,
       maximumTimingOffset: config.maximumTimingOffset,
@@ -550,12 +550,12 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
             <InputGroup>
               <CheckboxWrapper>
                 <Checkbox
-                  id="simulateLabjack"
+                  id="enableLabjack"
                   type="checkbox"
-                  checked={config.simulateLabjack}
-                  onChange={(e) => updateConfig('simulateLabjack', e.target.checked)}
+                  checked={config.enableLabjack}
+                  onChange={(e) => updateConfig('enableLabjack', e.target.checked)}
                 />
-                <Label htmlFor="simulateLabjack">Simulate LabJack</Label>
+                <Label htmlFor="enableLabjack">Enable LabJack</Label>
               </CheckboxWrapper>
             </InputGroup>
               </Section>

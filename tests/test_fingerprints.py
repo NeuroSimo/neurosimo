@@ -182,7 +182,7 @@ def test_fingerprints(ros_node: Node, projects_root: Path) -> None:
         "global_configurator",
         {
             "active_project": project_name,
-            "simulate_labjack": True,
+            "enable_labjack": True,
         },
     )
 

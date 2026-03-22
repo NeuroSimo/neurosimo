@@ -36,7 +36,7 @@ class GlobalConfiguratorNode(Node):
         self.declare_parameter('maximum_dropped_samples', global_config['maximum_dropped_samples'])
         
         # LabJack Configuration
-        self.declare_parameter('simulate_labjack', global_config['simulate_labjack'])
+        self.declare_parameter('enable_labjack', global_config['enable_labjack'])
         
         # Safety Configuration
         self.declare_parameter('minimum_intertrial_interval', global_config['minimum_intertrial_interval'])
@@ -95,7 +95,7 @@ class GlobalConfiguratorNode(Node):
         config.maximum_dropped_samples = global_config.get('maximum_dropped_samples', 2)
         
         # LabJack Configuration
-        config.simulate_labjack = global_config.get('simulate_labjack', False)
+        config.enable_labjack = global_config.get('enable_labjack', False)
         
         # Safety Configuration
         config.minimum_intertrial_interval = global_config.get('minimum_intertrial_interval', 2.0)

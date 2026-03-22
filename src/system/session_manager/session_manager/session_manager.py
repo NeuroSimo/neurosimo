@@ -625,7 +625,7 @@ class SessionManagerNode(Node):
         request.maximum_timing_offset = global_config.maximum_timing_offset
         request.maximum_loopback_latency = global_config.maximum_loopback_latency
         request.trigger_to_pulse_delay = global_config.trigger_to_pulse_delay
-        request.simulate_labjack = global_config.simulate_labjack
+        request.enable_labjack = global_config.enable_labjack
 
         # Set the data source
         request.data_source = session_config.data_source

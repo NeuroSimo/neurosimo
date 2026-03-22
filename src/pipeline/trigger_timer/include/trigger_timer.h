@@ -60,7 +60,7 @@ private:
   double_t maximum_timing_offset = 0.0;
   double_t maximum_loopback_latency = 0.0;
   double_t trigger_to_pulse_delay = 0.0;
-  bool simulate_labjack = false;
+  bool enable_labjack = false;
   std::string data_source;
 
   // Loopback monitoring flags

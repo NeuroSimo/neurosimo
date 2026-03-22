@@ -6,7 +6,7 @@ uint8[16] session_id
 float64 maximum_timing_offset
 float64 maximum_loopback_latency
 float64 trigger_to_pulse_delay
-bool simulate_labjack
+bool enable_labjack
 string data_source
 ---
 bool success

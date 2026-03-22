@@ -9,7 +9,7 @@ int32 turbolink_eeg_channel_count
 int32 maximum_dropped_samples
 
 # LabJack Configuration
-bool simulate_labjack
+bool enable_labjack
 
 # Safety Configuration
 float64 minimum_intertrial_interval

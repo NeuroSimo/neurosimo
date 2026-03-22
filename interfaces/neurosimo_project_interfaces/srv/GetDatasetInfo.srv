@@ -1,0 +1,4 @@
+string filename
+---
+neurosimo_project_interfaces/DatasetInfo dataset_info
+bool success

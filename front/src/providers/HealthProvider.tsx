@@ -178,49 +178,49 @@ export const HealthProvider: React.FC<HealthProviderProps> = ({ children }) => {
     const eegBridgeHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/eeg_bridge/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     const eegSimulatorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/eeg_simulator/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     const preprocessorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/preprocessor/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     const deciderHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/decider/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     const experimentCoordinatorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/experiment_coordinator/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     const resourceMonitorHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/resource_monitor/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     const presenterHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/presenter/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     const triggerTimerHealthSubscriber = new Topic<ComponentHealthMessage>({
       ros: ros,
       name: '/neurosimo/trigger_timer/health',
-      messageType: 'system_interfaces/ComponentHealth',
+      messageType: 'neurosimo_system_interfaces/ComponentHealth',
     })
 
     // Subscribe to heartbeats

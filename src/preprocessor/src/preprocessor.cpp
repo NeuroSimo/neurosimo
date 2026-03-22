@@ -34,15 +34,15 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   auto health_qos = rclcpp::QoS(rclcpp::KeepLast(1))
     .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
     .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+  this->health_publisher = this->create_publisher<neurosimo_system_interfaces::msg::ComponentHealth>(
     "/neurosimo/preprocessor/health",
     health_qos);
 
   /* Publisher for preprocessed EEG data. */
-  this->preprocessed_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
+  this->preprocessed_eeg_publisher = this->create_publisher<neurosimo_eeg_interfaces::msg::Sample>(EEG_PREPROCESSED_TOPIC, EEG_QUEUE_LENGTH);
 
   /* Subscriber for EEG data. */
-  this->enriched_eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
+  this->enriched_eeg_subscriber = create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_ENRICHED_TOPIC,
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
     EEG_QUEUE_LENGTH,
@@ -53,22 +53,22 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   auto qos_keep_all_logs = rclcpp::QoS(rclcpp::KeepAll())
     .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
-  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessages>(
+  this->python_log_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::LogMessages>(
     "/neurosimo/pipeline/preprocessor/log",
     qos_keep_all_logs);
 
   /* Initialize service server for component initialization */
-  this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializePreprocessor>(
+  this->initialize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::InitializePreprocessor>(
     "/neurosimo/pipeline/preprocessor/initialize",
     std::bind(&EegPreprocessor::handle_initialize_preprocessor, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Finalize service server */
-  this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePreprocessor>(
+  this->finalize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::FinalizePreprocessor>(
     "/neurosimo/pipeline/preprocessor/finalize",
     std::bind(&EegPreprocessor::handle_finalize_preprocessor, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
+  this->abort_session_client = this->create_client<neurosimo_system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   while (!abort_session_client->wait_for_service(2s)) {
     RCLCPP_INFO(this->get_logger(), "Service /neurosimo/session/abort not available, waiting...");
@@ -77,20 +77,20 @@ EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_lo
   /* Initialize variables. */
   this->preprocessor_wrapper = std::make_unique<PreprocessorWrapper>(logger);
 
-  this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
-  this->preprocessed_sample = eeg_interfaces::msg::Sample();
+  this->sample_buffer = RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>();
+  this->preprocessed_sample = neurosimo_eeg_interfaces::msg::Sample();
 
   this->heartbeat_publisher_timer = this->create_wall_timer(
     std::chrono::milliseconds(500),
     std::bind(&EegPreprocessor::publish_heartbeat, this));
 
   /* Publish initial health status. */
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 void EegPreprocessor::handle_initialize_preprocessor(
-  const std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Request> request,
-  std::shared_ptr<pipeline_interfaces::srv::InitializePreprocessor::Response> response) {
+  const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializePreprocessor::Request> request,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializePreprocessor::Response> response) {
   
   // Set enabled state
   this->is_enabled = request->enabled;
@@ -163,7 +163,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
 
   // Publish initialization logs from Python constructor
   this->preprocessor_wrapper->drain_logs();
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize preprocessor module");
@@ -182,7 +182,7 @@ void EegPreprocessor::handle_initialize_preprocessor(
   this->is_initialized = true;
 
   // Publish READY health status
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   RCLCPP_INFO(this->get_logger(), "EEG configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
@@ -195,13 +195,13 @@ void EegPreprocessor::handle_initialize_preprocessor(
 }
 
 void EegPreprocessor::handle_finalize_preprocessor(
-  [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
-  std::shared_ptr<pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
+  [[maybe_unused]] const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizePreprocessor::Request> request,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizePreprocessor::Response> response) {
 
   /* Publish logs from the previous sample at the beginning of the finalization. */
   if (!std::isnan(this->previous_sample_time)) {
     this->preprocessor_wrapper->drain_logs();
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
   /* Destroy the Python instance first so its __del__ runs before log draining. */
@@ -209,7 +209,7 @@ void EegPreprocessor::handle_finalize_preprocessor(
 
   /* Drain and publish output from __del__. */
   this->preprocessor_wrapper->drain_logs();
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
 
   /* Store the final fingerprint */
   response->preprocessor_fingerprint = this->preprocessor_fingerprint;
@@ -228,7 +228,7 @@ void EegPreprocessor::publish_heartbeat() {
 }
 
 void EegPreprocessor::publish_health_status(uint8_t health_level, const std::string& message) {
-  auto health = system_interfaces::msg::ComponentHealth();
+  auto health = neurosimo_system_interfaces::msg::ComponentHealth();
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
@@ -242,11 +242,11 @@ void EegPreprocessor::publish_python_logs(uint8_t phase, double sample_time) {
   }
   
   // Create a single batched message containing all logs
-  auto batch_msg = pipeline_interfaces::msg::LogMessages();
+  auto batch_msg = neurosimo_pipeline_interfaces::msg::LogMessages();
   
   for (const auto& log_entry : logs) {
     // Create individual log message
-    auto log_msg = pipeline_interfaces::msg::LogMessage();
+    auto log_msg = neurosimo_pipeline_interfaces::msg::LogMessage();
     log_msg.message = log_entry.message;
     log_msg.sample_time = sample_time;
     log_msg.level = static_cast<uint8_t>(log_entry.level);
@@ -295,7 +295,7 @@ bool EegPreprocessor::is_sample_window_valid() const {
   }
 
   bool has_invalid_sample = false;
-  this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<eeg_interfaces::msg::Sample>& sample) {
+  this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>& sample) {
     if (sample->paused || sample->in_rest) {
       has_invalid_sample = true;
     }
@@ -305,7 +305,7 @@ bool EegPreprocessor::is_sample_window_valid() const {
 }
 
 void EegPreprocessor::abort_session(const std::string& reason) {
-  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  auto request = std::make_shared<neurosimo_system_interfaces::srv::AbortSession::Request>();
   request->source = "preprocessor";
   request->reason = reason;
 
@@ -390,7 +390,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   preprocessed_eeg_publisher->publish(preprocessed_sample);
 }
 
-void EegPreprocessor::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time) {
+void EegPreprocessor::enqueue_deferred_request(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time) {
   /* For every sample, create a deferred processing request. */
   int look_ahead_samples = this->preprocessor_wrapper->get_look_ahead_samples();
 
@@ -411,7 +411,7 @@ void EegPreprocessor::enqueue_deferred_request(const std::shared_ptr<eeg_interfa
   this->deferred_processing_queue.push(request);
 }
 
-void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+void EegPreprocessor::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Return early if preprocessor is not enabled or initialized. */
   if (!this->is_enabled || !this->is_initialized) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
@@ -428,7 +428,7 @@ void EegPreprocessor::process_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   /* Publish logs from the previous sample at the beginning of this sample */
   if (!std::isnan(this->previous_sample_time)) {
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
   /* Update previous sample time for next iteration's log publishing */

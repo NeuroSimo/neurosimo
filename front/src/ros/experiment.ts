@@ -85,7 +85,7 @@ export const resumeExperimentRos = (callback: () => void) => {
 const getProtocolInfoService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/experiment_coordinator/protocol/get_info',
-  serviceType: 'pipeline_interfaces/GetProtocolInfo',
+  serviceType: 'neurosimo_pipeline_interfaces/GetProtocolInfo',
 })
 
 export const getProtocolInfoRos = (

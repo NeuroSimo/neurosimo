@@ -26,33 +26,33 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
   RCLCPP_INFO(this->get_logger(), "Initializing trigger timer...");
 
   /* Subscriber for EEG raw data. */
-  this->eeg_raw_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
+  this->eeg_raw_subscriber = create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     10,
     std::bind(&TriggerTimer::handle_eeg_raw, this, _1));
 
   /* Service for trigger request. */
-  this->trigger_request_service = create_service<pipeline_interfaces::srv::RequestTimedTrigger>(
+  this->trigger_request_service = create_service<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>(
     TIMED_TRIGGER_SERVICE,
     std::bind(&TriggerTimer::handle_request_timed_trigger, this, _1, _2));
 
   /* Service for initialization. */
-  this->initialize_service = create_service<pipeline_interfaces::srv::InitializeTriggerTimer>(
+  this->initialize_service = create_service<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer>(
     "/neurosimo/pipeline/trigger_timer/initialize",
     std::bind(&TriggerTimer::handle_initialize_trigger_timer, this, _1, _2));
 
   /* Service for finalization. */
-  this->finalize_service = create_service<pipeline_interfaces::srv::FinalizeTriggerTimer>(
+  this->finalize_service = create_service<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer>(
     "/neurosimo/pipeline/trigger_timer/finalize",
     std::bind(&TriggerTimer::handle_finalize_trigger_timer, this, _1, _2));
 
   /* Publisher for decision trace. */
-  this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
+  this->decision_trace_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     "/neurosimo/pipeline/decision_trace",
     10);
 
   /* Publisher for timing latency. */
-  this->loopback_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
+  this->loopback_latency_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::Latency>(
     "/neurosimo/pipeline/latency/loopback",
     10);
 
@@ -66,7 +66,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     10);
 
   /* Create health publisher */
-  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+  this->health_publisher = this->create_publisher<neurosimo_system_interfaces::msg::ComponentHealth>(
     "/neurosimo/trigger_timer/health",
     status_qos);
 
@@ -76,7 +76,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     std::bind(&TriggerTimer::_publish_heartbeat, this));
 
   /* Publish initial READY state */
-  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 TriggerTimer::~TriggerTimer() {
@@ -99,7 +99,7 @@ void TriggerTimer::_publish_heartbeat() {
 void TriggerTimer::_check_loopback_timeout() {
   if (this->session_started && this->data_source == "eeg_device" &&!this->loopback_received) {
     RCLCPP_ERROR(logger, "No triggers received for over %.1f seconds", loopback_monitor_interval);    
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED, "No triggers received, please check the EEG settings and connections");
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED, "No triggers received, please check the EEG settings and connections");
 
     // Reset the flag for the next monitoring period
     this->loopback_received = false;
@@ -107,7 +107,7 @@ void TriggerTimer::_check_loopback_timeout() {
 }
 
 void TriggerTimer::_publish_health_status(uint8_t health_level, const std::string& message) {
-  auto health = system_interfaces::msg::ComponentHealth();
+  auto health = neurosimo_system_interfaces::msg::ComponentHealth();
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
@@ -128,7 +128,7 @@ void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t samp
     this->loopback_received = true;
 
     /* Publish loopback latency ROS message. */
-    auto msg = pipeline_interfaces::msg::Latency();
+    auto msg = neurosimo_pipeline_interfaces::msg::Latency();
     msg.latency = this->current_loopback_latency;
 
     this->loopback_latency_publisher->publish(msg);
@@ -140,12 +140,12 @@ void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t samp
     this->last_loopback_time = sample_time;
     if (!labjack_manager || !labjack_manager->trigger_output(loopback_trigger_fio)) {
       RCLCPP_ERROR(logger, "Failed to trigger loopback trigger.");
-      this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED, "Failed to trigger, please check the LabJack connection");
+      this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED, "Failed to trigger, please check the LabJack connection");
     }
   }
 }
 
-void TriggerTimer::handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+void TriggerTimer::handle_eeg_raw(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   std::lock_guard<std::mutex> lock(handler_mutex);
 
   double_t sample_time = msg->time;
@@ -173,7 +173,7 @@ double_t TriggerTimer::estimate_current_sample_time() {
 }
 
 TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
-    std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
 
   double_t desired_pulse_time = request->reference_sample_time + request->trigger_offset;
   double_t trigger_time = desired_pulse_time - this->trigger_to_pulse_delay;
@@ -197,7 +197,7 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
                  this->current_loopback_latency * 1000, this->maximum_loopback_latency * 1000);
 
     /* Publish degraded health status */
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED,
                                  "Loopback latency exceeds threshold, stimulation rejected");
     return SchedulingResult::LOOPBACK_LATENCY_EXCEEDED;
   }
@@ -231,7 +231,7 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
       double_t estimated_current_time = estimate_current_sample_time();
       double_t error = estimated_current_time - trigger_time;
 
-      uint8_t status = pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
+      uint8_t status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
 
       /* Capture timing when hardware trigger is fired. */
       auto now = std::chrono::high_resolution_clock::now();
@@ -242,13 +242,13 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
                   trigger_time, desired_pulse_time, estimated_current_time, error);
 
       if (labjack_manager && labjack_manager->trigger_output(tms_trigger_fio)) {
-        status = pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
+        status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
       } else {
         RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
       }
 
       /* Publish second DecisionTrace (fired). */
-      auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
+      auto decision_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
       decision_trace.session_id = request->session_id;
       decision_trace.decision_id = request->decision_id;
       decision_trace.status = status;
@@ -265,8 +265,8 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
 }
 
 void TriggerTimer::handle_request_timed_trigger(
-    const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response) {
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Response> response) {
 
   std::lock_guard<std::mutex> lock(handler_mutex);
 
@@ -284,7 +284,7 @@ void TriggerTimer::handle_request_timed_trigger(
     RCLCPP_WARN(logger, "LabJack is not connected, rejecting trigger at time: %.4f (s).", trigger_time);
 
     /* Publish degraded health status */
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED,
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED,
                                  "LabJack device not connected");
     result = SchedulingResult::ERROR;
   } else {
@@ -304,21 +304,21 @@ void TriggerTimer::handle_request_timed_trigger(
   uint8_t status;
   switch (result) {
     case SchedulingResult::SCHEDULED:
-      status = pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED;
+      status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_SCHEDULED;
       break;
     case SchedulingResult::TOO_LATE:
-      status = pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE;
+      status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE;
       break;
     case SchedulingResult::LOOPBACK_LATENCY_EXCEEDED:
-      status = pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED;
+      status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED;
       break;
     case SchedulingResult::ERROR:
-      status = pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
+      status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR;
       break;
   }
 
   /* Publish first DecisionTrace (scheduled or rejected). */
-  auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
+  auto decision_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
   decision_trace.session_id = request->session_id;
   decision_trace.decision_id = request->decision_id;
   decision_trace.status = status;
@@ -389,15 +389,15 @@ void TriggerTimer::reset_state() {
 }
 
 void TriggerTimer::handle_initialize_trigger_timer(
-    const std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Response> response) {
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer::Response> response) {
 
   RCLCPP_INFO(this->get_logger(), "Initializing trigger timer for session");
 
   reset_state();
 
   /* Reset health status to a good state at the start of a new session */
-  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   /* Set configuration from request */
   this->maximum_timing_offset = request->maximum_timing_offset;
@@ -410,7 +410,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   if (this->maximum_timing_offset < 0.0) {
     RCLCPP_ERROR(this->get_logger(), "Maximum timing offset must be non-negative");
     response->success = false;
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
                                  "Invalid configuration: maximum timing offset must be non-negative");
     return;
   }
@@ -419,7 +419,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   if (this->trigger_to_pulse_delay < 0.0) {
     RCLCPP_ERROR(this->get_logger(), "Trigger to pulse delay must be non-negative");
     response->success = false;
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
                                  "Invalid configuration: trigger to pulse delay must be non-negative");
     return;
   }
@@ -428,7 +428,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   if (this->maximum_loopback_latency <= 0.0) {
     RCLCPP_ERROR(this->get_logger(), "Maximum loopback latency must be positive");
     response->success = false;
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
                                  "Invalid configuration: maximum loopback latency must be positive");
     return;
   }
@@ -477,7 +477,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
     response->success = false;
 
     /* Publish error health status */
-    this->_publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
                                  "Failed to connect to LabJack device");
 
     /* Clean up on failure */
@@ -492,12 +492,12 @@ void TriggerTimer::handle_initialize_trigger_timer(
   response->success = true;
 
   /* Publish ready health status */
-  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 void TriggerTimer::handle_finalize_trigger_timer(
-    const std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response) {
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response) {
 
   reset_state();
 

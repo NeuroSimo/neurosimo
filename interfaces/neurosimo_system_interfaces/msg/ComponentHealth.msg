@@ -1,4 +1,4 @@
-# system_interfaces/msg/ComponentHealth.msg
+# neurosimo_system_interfaces/msg/ComponentHealth.msg
 
 uint8 READY    = 0
 uint8 DEGRADED = 1

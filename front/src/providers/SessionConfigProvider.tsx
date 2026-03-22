@@ -138,7 +138,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
     const sessionConfigSubscriber = new Topic({
       ros: ros,
       name: '/neurosimo/session_configurator/config',
-      messageType: 'system_interfaces/SessionConfig',
+      messageType: 'neurosimo_system_interfaces/SessionConfig',
       queue_size: 1,
     })
 

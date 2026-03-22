@@ -240,7 +240,7 @@ ProtocolInfoResult ProtocolLoader::get_protocol_info(
   
   /* Convert to ROS message. */
   const auto& protocol = load_result.protocol.value();
-  pipeline_interfaces::msg::ProtocolInfo info_msg = to_protocol_info_msg(protocol, protocol_filename);
+  neurosimo_pipeline_interfaces::msg::ProtocolInfo info_msg = to_protocol_info_msg(protocol, protocol_filename);
   
   info_result.success = true;
   info_result.protocol_info = info_msg;
@@ -248,11 +248,11 @@ ProtocolInfoResult ProtocolLoader::get_protocol_info(
   return info_result;
 }
 
-pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_info_msg(
+neurosimo_pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_info_msg(
     const Protocol& protocol, 
     const std::string& yaml_filename) {
   
-  pipeline_interfaces::msg::ProtocolInfo info_msg;
+  neurosimo_pipeline_interfaces::msg::ProtocolInfo info_msg;
   
   info_msg.yaml_filename = yaml_filename;
   info_msg.name = protocol.name;
@@ -260,12 +260,12 @@ pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_info_msg(
   
   /* Convert each protocol element to ROS message. */
   for (const auto& element : protocol.elements) {
-    pipeline_interfaces::msg::ProtocolElementInfo element_msg;
+    neurosimo_pipeline_interfaces::msg::ProtocolElementInfo element_msg;
     
     if (element.type == ProtocolElement::Type::STAGE) {
       const auto& stage = element.stage.value();
       
-      element_msg.type = pipeline_interfaces::msg::ProtocolElementInfo::STAGE;
+      element_msg.type = neurosimo_pipeline_interfaces::msg::ProtocolElementInfo::STAGE;
       element_msg.stage.name = stage.name;
       element_msg.stage.trials = stage.trials;
       element_msg.stage.notes = stage.notes;
@@ -273,7 +273,7 @@ pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_info_msg(
     } else if (element.type == ProtocolElement::Type::REST) {
       const auto& rest = element.rest.value();
       
-      element_msg.type = pipeline_interfaces::msg::ProtocolElementInfo::REST;
+      element_msg.type = neurosimo_pipeline_interfaces::msg::ProtocolElementInfo::REST;
       element_msg.rest.notes = rest.notes;
     }
     

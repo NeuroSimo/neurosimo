@@ -3,6 +3,6 @@
 uint8[16] session_id
 GlobalConfig global_config
 SessionConfig session_config
-eeg_interfaces/StreamInfo stream_info
+neurosimo_eeg_interfaces/StreamInfo stream_info
 ---
 bool success

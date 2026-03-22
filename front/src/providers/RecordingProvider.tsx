@@ -26,7 +26,7 @@ export const RecordingProvider: React.FC<RecordingProviderProps> = ({ children }
     const recordingsListSubscriber = new Topic<FilenameList>({
       ros: ros,
       name: '/neurosimo/recording/recordings/list',
-      messageType: 'project_interfaces/FilenameList',
+      messageType: 'neurosimo_project_interfaces/FilenameList',
     })
 
     recordingsListSubscriber.subscribe((message: FilenameList) => {

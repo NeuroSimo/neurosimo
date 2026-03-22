@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(eeg_interfaces)
+project(neurosimo_system_interfaces)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -7,7 +7,6 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(builtin_interfaces REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -21,23 +20,26 @@ if(BUILD_TESTING)
 endif()
 
 find_package(rosidl_default_generators REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/StreamInfo.msg"
-  "msg/EegDeviceInfo.msg"
-
-  "msg/Sample.msg"
-
-  "msg/EegStatistics.msg"
-
-  "action/InitializeSimulatorStream.action"
-
-  "srv/InitializeEegDeviceStream.srv"
-  "srv/InitializeEegReplayStream.srv"
-  "srv/StartStreaming.srv"
-  "srv/StopStreaming.srv"
-
-  DEPENDENCIES builtin_interfaces
+  "msg/DiskStatus.msg"
+  "msg/ExportDataType.msg"
+  "msg/ExporterState.msg"
+  "msg/RecorderState.msg"
+  "msg/GlobalConfig.msg"
+  "msg/SessionConfig.msg"
+  "msg/SessionState.msg"
+  "msg/DataSourceState.msg"
+  "msg/ComponentHealth.msg"
+  "srv/AbortSession.srv"
+  "srv/CancelExport.srv"
+  "srv/ExportSession.srv"
+  "srv/GetGlobalConfig.srv"
+  "srv/GetSessionConfig.srv"
+  "srv/StartRecording.srv"
+  "srv/StopRecording.srv"
+  DEPENDENCIES neurosimo_eeg_interfaces
 )
 
 ament_package()

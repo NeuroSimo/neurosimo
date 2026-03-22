@@ -32,7 +32,7 @@ export const DiskStatusProvider: React.FC<DiskStatusProviderProps> = ({ children
     const diskStatusSubscriber = new Topic<DiskStatus>({
       ros: ros,
       name: '/neurosimo/system/disk_status',
-      messageType: 'system_interfaces/DiskStatus',
+      messageType: 'neurosimo_system_interfaces/DiskStatus',
     })
 
     diskStatusSubscriber.subscribe((message) => {

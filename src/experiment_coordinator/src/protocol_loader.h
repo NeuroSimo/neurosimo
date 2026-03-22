@@ -5,7 +5,7 @@
 #include <optional>
 #include "protocol.h"
 #include "rclcpp/rclcpp.hpp"
-#include "pipeline_interfaces/msg/protocol_info.hpp"
+#include "neurosimo_pipeline_interfaces/msg/protocol_info.hpp"
 
 namespace experiment_coordinator {
 
@@ -24,7 +24,7 @@ struct LoadResult {
 struct ProtocolInfoResult {
   bool success;
   std::string error_message;
-  std::optional<pipeline_interfaces::msg::ProtocolInfo> protocol_info;
+  std::optional<neurosimo_pipeline_interfaces::msg::ProtocolInfo> protocol_info;
 };
 
 /**
@@ -71,7 +71,7 @@ public:
    * @param yaml_filename Original YAML filename
    * @return ROS ProtocolInfo message
    */
-  static pipeline_interfaces::msg::ProtocolInfo to_protocol_info_msg(
+  static neurosimo_pipeline_interfaces::msg::ProtocolInfo to_protocol_info_msg(
     const Protocol& protocol, 
     const std::string& yaml_filename);
   

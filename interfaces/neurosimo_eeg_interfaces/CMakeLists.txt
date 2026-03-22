@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(project_interfaces)
+project(neurosimo_eeg_interfaces)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -7,6 +7,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -22,20 +23,21 @@ endif()
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "srv/ListProjects.srv"
-  "srv/SetActiveProject.srv"
-  "srv/CreateProject.srv"
+  "msg/StreamInfo.msg"
+  "msg/EegDeviceInfo.msg"
 
-  "srv/SetModule.srv"
+  "msg/Sample.msg"
 
-  "msg/DatasetInfo.msg"
-  "msg/FilenameList.msg"
-  "msg/RecordingInfo.msg"
-  "srv/SetDataset.srv"
-  "srv/SetStartTime.srv"
-  "srv/GetDatasetInfo.srv"
-  "srv/GetRecordingInfo.srv"
-  "srv/DeleteRecording.srv"
+  "msg/EegStatistics.msg"
+
+  "action/InitializeSimulatorStream.action"
+
+  "srv/InitializeEegDeviceStream.srv"
+  "srv/InitializeEegReplayStream.srv"
+  "srv/StartStreaming.srv"
+  "srv/StopStreaming.srv"
+
+  DEPENDENCIES builtin_interfaces
 )
 
 ament_package()

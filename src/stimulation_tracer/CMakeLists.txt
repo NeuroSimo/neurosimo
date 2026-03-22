@@ -8,9 +8,9 @@ endif ()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(eeg_interfaces REQUIRED)
-find_package(pipeline_interfaces REQUIRED)
-find_package(system_interfaces REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
+find_package(neurosimo_pipeline_interfaces REQUIRED)
+find_package(neurosimo_system_interfaces REQUIRED)
 
 add_executable(
         stimulation_tracer
@@ -21,9 +21,9 @@ ament_target_dependencies(
   stimulation_tracer
   rclcpp
   std_msgs
-  eeg_interfaces
-  pipeline_interfaces
-  system_interfaces
+  neurosimo_eeg_interfaces
+  neurosimo_pipeline_interfaces
+  neurosimo_system_interfaces
 )
 
 install(TARGETS

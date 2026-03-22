@@ -103,7 +103,7 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     const loopbackLatencySubscriber = new Topic<Latency>({
       ros: ros,
       name: '/neurosimo/pipeline/latency/loopback',
-      messageType: 'pipeline_interfaces/Latency',
+      messageType: 'neurosimo_pipeline_interfaces/Latency',
     })
 
     loopbackLatencySubscriber.subscribe((message) => {
@@ -124,7 +124,7 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     const pulseProcessingLatencySubscriber = new Topic<Latency>({
       ros: ros,
       name: '/neurosimo/pipeline/latency/pulse_processing',
-      messageType: 'pipeline_interfaces/Latency',
+      messageType: 'neurosimo_pipeline_interfaces/Latency',
     })
 
     pulseProcessingLatencySubscriber.subscribe((message) => {
@@ -136,7 +136,7 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     const eventProcessingLatencySubscriber = new Topic<Latency>({
       ros: ros,
       name: '/neurosimo/pipeline/latency/event_processing',
-      messageType: 'pipeline_interfaces/Latency',
+      messageType: 'neurosimo_pipeline_interfaces/Latency',
     })
 
     eventProcessingLatencySubscriber.subscribe((message) => {
@@ -148,7 +148,7 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     const decisionTraceSubscriber = new Topic<DecisionTrace>({
       ros: ros,
       name: '/neurosimo/pipeline/decision_trace/final',
-      messageType: 'pipeline_interfaces/DecisionTrace',
+      messageType: 'neurosimo_pipeline_interfaces/DecisionTrace',
     })
 
     decisionTraceSubscriber.subscribe((message) => {

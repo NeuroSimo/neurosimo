@@ -4,9 +4,9 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from system_interfaces.srv import ExportSession, CancelExport
-from system_interfaces.msg import ExportDataType, ExporterState
-from pipeline_interfaces.msg import LogMessage
+from neurosimo_system_interfaces.srv import ExportSession, CancelExport
+from neurosimo_system_interfaces.msg import ExportDataType, ExporterState
+from neurosimo_pipeline_interfaces.msg import LogMessage
 
 import os
 import csv
@@ -136,14 +136,14 @@ LOG_FIELDS = [
     'message',
 ]
 
-# Phase mapping for human-readable export (see pipeline_interfaces/msg/LogMessage.msg)
+# Phase mapping for human-readable export (see neurosimo_pipeline_interfaces/msg/LogMessage.msg)
 PHASE_MAP = {
     LogMessage.PHASE_INITIALIZATION: 'initialization',
     LogMessage.PHASE_RUNTIME: 'runtime',
     LogMessage.PHASE_FINALIZATION: 'finalization',
 }
 
-# Processing path mapping for human-readable export (see pipeline_interfaces/msg/LogMessage.msg)
+# Processing path mapping for human-readable export (see neurosimo_pipeline_interfaces/msg/LogMessage.msg)
 PROCESSING_PATH_MAP = {
     LogMessage.PROCESSING_PATH_UNDETERMINED: 'undetermined',
     LogMessage.PROCESSING_PATH_PULSE: 'pulse',

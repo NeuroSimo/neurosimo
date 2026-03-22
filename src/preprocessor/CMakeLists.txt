@@ -12,10 +12,10 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(eeg_interfaces REQUIRED)
-find_package(pipeline_interfaces REQUIRED)
-find_package(project_interfaces REQUIRED)
-find_package(system_interfaces REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
+find_package(neurosimo_pipeline_interfaces REQUIRED)
+find_package(neurosimo_project_interfaces REQUIRED)
+find_package(neurosimo_system_interfaces REQUIRED)
 
 find_package(realtime_utils REQUIRED)
 find_package(filesystem_utils REQUIRED)
@@ -43,10 +43,10 @@ ament_target_dependencies(preprocessor_core
   rclcpp
   std_msgs
   std_srvs
-  eeg_interfaces
-  pipeline_interfaces
-  project_interfaces
-  system_interfaces
+  neurosimo_eeg_interfaces
+  neurosimo_pipeline_interfaces
+  neurosimo_project_interfaces
+  neurosimo_system_interfaces
 )
 
 target_link_libraries(preprocessor_core
@@ -61,10 +61,10 @@ ament_target_dependencies(preprocessor
   rclcpp
   std_msgs
   std_srvs
-  eeg_interfaces
-  pipeline_interfaces
-  project_interfaces
-  system_interfaces
+  neurosimo_eeg_interfaces
+  neurosimo_pipeline_interfaces
+  neurosimo_project_interfaces
+  neurosimo_system_interfaces
   realtime_utils
   filesystem_utils
 )

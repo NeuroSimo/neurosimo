@@ -10,16 +10,16 @@
 
 #include "labjack_interface.h"
 
-#include "eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
 
-#include "pipeline_interfaces/msg/latency.hpp"
-#include "pipeline_interfaces/msg/decision_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/latency.hpp"
+#include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
 
-#include "pipeline_interfaces/srv/request_timed_trigger.hpp"
-#include "pipeline_interfaces/srv/initialize_trigger_timer.hpp"
-#include "pipeline_interfaces/srv/finalize_trigger_timer.hpp"
+#include "neurosimo_pipeline_interfaces/srv/request_timed_trigger.hpp"
+#include "neurosimo_pipeline_interfaces/srv/initialize_trigger_timer.hpp"
+#include "neurosimo_pipeline_interfaces/srv/finalize_trigger_timer.hpp"
 
-#include "system_interfaces/msg/component_health.hpp"
+#include "neurosimo_system_interfaces/msg/component_health.hpp"
 #include "std_msgs/msg/empty.hpp"
 
 
@@ -30,14 +30,14 @@ public:
 
 private:
   rclcpp::Logger logger;
-  rclcpp::Service<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
-  rclcpp::Service<pipeline_interfaces::srv::InitializeTriggerTimer>::SharedPtr initialize_service;
-  rclcpp::Service<pipeline_interfaces::srv::FinalizeTriggerTimer>::SharedPtr finalize_service;
-  rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr loopback_latency_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer>::SharedPtr initialize_service;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer>::SharedPtr finalize_service;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr loopback_latency_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
-  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
-  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
+  rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
+  rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;
   rclcpp::TimerBase::SharedPtr timer;
   rclcpp::TimerBase::SharedPtr heartbeat_timer;
   rclcpp::TimerBase::SharedPtr active_trigger_timer;
@@ -76,8 +76,8 @@ private:
 
   /* Comparator for priority queue - sorts by trigger time. */
   struct TriggerRequestComparator {
-    bool operator()(const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>& a,
-                    const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request>& b) const {
+    bool operator()(const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>& a,
+                    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>& b) const {
       return a->trigger_offset > b->trigger_offset;  // min-heap by time
     }
   };
@@ -88,23 +88,23 @@ private:
   void reset_state();
 
   void measure_loopback_latency(bool loopback_trigger, double_t sample_time);
-  SchedulingResult schedule_trigger_with_timer(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
+  SchedulingResult schedule_trigger_with_timer(std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   double_t estimate_current_sample_time();
 
   void _publish_heartbeat();
   void _check_loopback_timeout();
   void _publish_health_status(uint8_t health_level, const std::string& message);
 
-  void handle_eeg_raw(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
+  void handle_eeg_raw(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   void handle_request_timed_trigger(
-    const std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Response> response);
   void handle_initialize_trigger_timer(
-    const std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::InitializeTriggerTimer::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer::Response> response);
   void handle_finalize_trigger_timer(
-    const std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response);
 };
 
 #endif //EEG_PROCESSOR_TRIGGERTIMER_H

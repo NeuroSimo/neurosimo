@@ -5,7 +5,7 @@ import { ros } from './ros'
 const listProjectsService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/projects/list',
-  serviceType: 'project_interfaces/ListProjects',
+  serviceType: 'neurosimo_project_interfaces/ListProjects',
 })
 
 export const listProjects = (callback: (projects: string[]) => void) => {
@@ -31,7 +31,7 @@ export const listProjects = (callback: (projects: string[]) => void) => {
 const createProjectService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/projects/create',
-  serviceType: 'project_interfaces/CreateProject',
+  serviceType: 'neurosimo_project_interfaces/CreateProject',
 })
 
 export const createProject = (projectName: string, callback: (success: boolean) => void) => {

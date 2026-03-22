@@ -14,11 +14,11 @@ find_package(rclcpp REQUIRED)
 find_package(rcpputils REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(eeg_interfaces REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
 find_package(stimulation_interfaces REQUIRED)
-find_package(pipeline_interfaces REQUIRED)
-find_package(project_interfaces REQUIRED)
-find_package(system_interfaces REQUIRED)
+find_package(neurosimo_pipeline_interfaces REQUIRED)
+find_package(neurosimo_project_interfaces REQUIRED)
+find_package(neurosimo_system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
 find_package(filesystem_utils REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -52,11 +52,11 @@ ament_target_dependencies(
   rcpputils
   std_msgs
   std_srvs
-  eeg_interfaces
+  neurosimo_eeg_interfaces
   stimulation_interfaces
-  pipeline_interfaces
-  project_interfaces
-  system_interfaces
+  neurosimo_pipeline_interfaces
+  neurosimo_project_interfaces
+  neurosimo_system_interfaces
   realtime_utils
   filesystem_utils
 )
@@ -108,11 +108,11 @@ ament_target_dependencies(
   rcpputils
   std_msgs
   std_srvs
-  eeg_interfaces
+  neurosimo_eeg_interfaces
   stimulation_interfaces
-  pipeline_interfaces
-  project_interfaces
-  system_interfaces
+  neurosimo_pipeline_interfaces
+  neurosimo_project_interfaces
+  neurosimo_system_interfaces
 )
 
 # Install Python bindings into a user-independent site-packages directory so

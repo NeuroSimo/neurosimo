@@ -20,27 +20,27 @@
 #include "std_msgs/msg/int32.hpp"
 #include "std_msgs/msg/empty.hpp"
 
-#include "eeg_interfaces/msg/sample.hpp"
-#include "eeg_interfaces/msg/stream_info.hpp"
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_eeg_interfaces/msg/stream_info.hpp"
 
-#include "system_interfaces/msg/component_health.hpp"
+#include "neurosimo_system_interfaces/msg/component_health.hpp"
 
-#include "pipeline_interfaces/srv/request_timed_trigger.hpp"
+#include "neurosimo_pipeline_interfaces/srv/request_timed_trigger.hpp"
 
 #include "stimulation_interfaces/msg/coil_target.hpp"
 #include "stimulation_interfaces/msg/targeted_pulses.hpp"
-#include "pipeline_interfaces/msg/latency.hpp"
+#include "neurosimo_pipeline_interfaces/msg/latency.hpp"
 
-#include "pipeline_interfaces/msg/sensory_stimulus.hpp"
-#include "pipeline_interfaces/msg/decision_trace.hpp"
-#include "pipeline_interfaces/msg/log_message.hpp"
-#include "pipeline_interfaces/msg/log_messages.hpp"
-#include "pipeline_interfaces/srv/initialize_decider.hpp"
-#include "pipeline_interfaces/srv/finalize_decider.hpp"
-#include "system_interfaces/srv/abort_session.hpp"
+#include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
+#include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/log_message.hpp"
+#include "neurosimo_pipeline_interfaces/msg/log_messages.hpp"
+#include "neurosimo_pipeline_interfaces/srv/initialize_decider.hpp"
+#include "neurosimo_pipeline_interfaces/srv/finalize_decider.hpp"
+#include "neurosimo_system_interfaces/srv/abort_session.hpp"
 
-#include "project_interfaces/msg/filename_list.hpp"
-#include "project_interfaces/srv/set_module.hpp"
+#include "neurosimo_project_interfaces/msg/filename_list.hpp"
+#include "neurosimo_project_interfaces/srv/set_module.hpp"
 
 #include "std_srvs/srv/set_bool.hpp"
 
@@ -54,14 +54,14 @@ const std::string UNSET_STRING = "";
 /* Backpressure detection threshold: if latency exceeds this value (in seconds), skip periodic processing */
 const double_t BACKPRESSURE_CUTOFF = 0.01;  // 10ms cutoff
 
-using StreamInfo = eeg_interfaces::msg::StreamInfo;
+using StreamInfo = neurosimo_eeg_interfaces::msg::StreamInfo;
 
 struct DeferredProcessingRequest {
   /* The time when processing should actually occur (after look-ahead samples have arrived). */
   double_t scheduled_time;
 
   /* The sample that triggered the processing request. */
-  std::shared_ptr<eeg_interfaces::msg::Sample> triggering_sample;
+  std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> triggering_sample;
 
   /* The type of processing to perform. */
   ProcessingReason processing_reason;
@@ -91,8 +91,8 @@ private:
 
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
 
-  void request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
-  void timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
+  void request_timed_trigger(std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
+  void timed_trigger_callback(rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
 
   void abort_session(const std::string& reason);
 
@@ -100,22 +100,22 @@ private:
   void publish_python_logs(uint8_t phase, double sample_time);
 
   void handle_initialize_decider(
-    const std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeDecider::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeDecider::Response> response);
 
   void handle_finalize_decider(
-    const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeDecider::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeDecider::Response> response);
 
-  void process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
-  void detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
-  bool detect_backpressure(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
+  void process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
+  void detect_and_handle_sample_gap(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
+  bool detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
 
   std::tuple<bool, double> consume_next_event(double_t current_time);
   void pop_event();
 
   bool is_sample_window_valid() const;
-  void enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason);
+  void enqueue_deferred_request(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason);
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 
@@ -124,29 +124,29 @@ private:
   std::thread heartbeat_thread;
   std::atomic<bool> heartbeat_thread_running;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
-  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
+  rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
 
-  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
+  rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_processed_publisher;
 
-  rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
-  rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
+  rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
+  rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
-  rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<stimulation_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
   rclcpp::Publisher<stimulation_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::Latency>::SharedPtr event_processing_latency_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr event_processing_latency_publisher;
 
   /* Service server for initialization */
-  rclcpp::Service<pipeline_interfaces::srv::InitializeDecider>::SharedPtr initialize_service_server;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeDecider>::SharedPtr initialize_service_server;
 
   /* Service server for finalization */
-  rclcpp::Service<pipeline_interfaces::srv::FinalizeDecider>::SharedPtr finalize_service_server;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::FinalizeDecider>::SharedPtr finalize_service_server;
 
   /* Initialization state */
   bool is_initialized = false;
@@ -179,8 +179,8 @@ private:
 
   StreamInfo stream_info;
 
-  RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>> sample_buffer;
-  std::vector<pipeline_interfaces::msg::SensoryStimulus> sensory_stimuli;
+  RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>> sample_buffer;
+  std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus> sensory_stimuli;
 
   std::unique_ptr<DeciderWrapper> decider_wrapper;
 

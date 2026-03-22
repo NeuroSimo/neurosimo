@@ -14,9 +14,9 @@ find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
-find_package(eeg_interfaces REQUIRED)
-find_package(project_interfaces REQUIRED)
-find_package(system_interfaces REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
+find_package(neurosimo_project_interfaces REQUIRED)
+find_package(neurosimo_system_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(XXHASH REQUIRED libxxhash)
@@ -47,9 +47,9 @@ ament_target_dependencies(
   rclcpp_action
   std_msgs
   std_srvs
-  eeg_interfaces
-  project_interfaces
-  system_interfaces
+  neurosimo_eeg_interfaces
+  neurosimo_project_interfaces
+  neurosimo_system_interfaces
   realtime_utils
 )
 

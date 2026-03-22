@@ -789,7 +789,7 @@ bool DeciderWrapper::process_sensory_stimuli_list(
 
 bool DeciderWrapper::parse_targeted_pulse_dict(
   const py::dict& py_targeted_pulse,
-  stimulation_interfaces::msg::TargetedPulse& out_msg) {
+  shared_stimulation_interfaces::msg::TargetedPulse& out_msg) {
 
   static const std::vector<std::string> required = {
     "time",
@@ -822,7 +822,7 @@ bool DeciderWrapper::parse_targeted_pulse_dict(
 
 bool DeciderWrapper::process_targeted_pulses_list(
   const py::list& py_targeted_pulses,
-  std::vector<stimulation_interfaces::msg::TargetedPulse>& targeted_pulses) {
+  std::vector<shared_stimulation_interfaces::msg::TargetedPulse>& targeted_pulses) {
 
   for (const auto& py_targeted_pulse : py_targeted_pulses) {
     if (!py::isinstance<py::dict>(py_targeted_pulse)) {
@@ -830,7 +830,7 @@ bool DeciderWrapper::process_targeted_pulses_list(
       return false;
     }
 
-    stimulation_interfaces::msg::TargetedPulse msg;
+    shared_stimulation_interfaces::msg::TargetedPulse msg;
     if (!parse_targeted_pulse_dict(py_targeted_pulse.cast<py::dict>(), msg)) {
       log_error("Failed to parse targeted_pulse dictionary.");
       return false;
@@ -874,7 +874,7 @@ std::tuple<
   bool,
   std::shared_ptr<double_t>,
   std::string,
-  std::vector<stimulation_interfaces::msg::TargetedPulse>> DeciderWrapper::process(
+  std::vector<shared_stimulation_interfaces::msg::TargetedPulse>> DeciderWrapper::process(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
@@ -885,7 +885,7 @@ std::tuple<
 
   std::shared_ptr<double_t> trigger_offset = nullptr;
   std::string coil_target;
-  std::vector<stimulation_interfaces::msg::TargetedPulse> targeted_pulses;
+  std::vector<shared_stimulation_interfaces::msg::TargetedPulse> targeted_pulses;
 
   /* Determine which arrays to use and their parameters. */
   py::array_t<double>* py_time_offsets;

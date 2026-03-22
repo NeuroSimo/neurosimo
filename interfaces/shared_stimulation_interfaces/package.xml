@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>stimulation_interfaces</name>
+  <name>shared_stimulation_interfaces</name>
   <version>0.1.0</version>
   <description>Stimulation interfaces</description>
   <maintainer email="okahilak@gmail.com">Olli-Pekka Kahilakoski</maintainer>

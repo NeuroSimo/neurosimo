@@ -15,7 +15,7 @@ find_package(rcpputils REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(neurosimo_eeg_interfaces REQUIRED)
-find_package(stimulation_interfaces REQUIRED)
+find_package(shared_stimulation_interfaces REQUIRED)
 find_package(neurosimo_pipeline_interfaces REQUIRED)
 find_package(neurosimo_project_interfaces REQUIRED)
 find_package(neurosimo_system_interfaces REQUIRED)
@@ -53,7 +53,7 @@ ament_target_dependencies(
   std_msgs
   std_srvs
   neurosimo_eeg_interfaces
-  stimulation_interfaces
+  shared_stimulation_interfaces
   neurosimo_pipeline_interfaces
   neurosimo_project_interfaces
   neurosimo_system_interfaces
@@ -109,7 +109,7 @@ ament_target_dependencies(
   std_msgs
   std_srvs
   neurosimo_eeg_interfaces
-  stimulation_interfaces
+  shared_stimulation_interfaces
   neurosimo_pipeline_interfaces
   neurosimo_project_interfaces
   neurosimo_system_interfaces

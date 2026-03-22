@@ -1,3 +1,9 @@
+# SHARED CONTRACT
+#
+# This message is part of the shared ROS 2 interface between mTMS and NeuroSimo.
+# Do not modify the file in this repository only. Any change needs to be synchronized
+# with the corresponding interface definition in the other repository.
+
 # Pulse time, relative to reference_eeg_device_timestamp, in seconds.
 float64 time
 

@@ -22,6 +22,7 @@ def generate_launch_description():
         node = Node(
             package="session_manager",
             executable=node_executable,
+            namespace="neurosimo",
             arguments=['--ros-args', '--log-level', logger]
         )
         ld.add_action(node)

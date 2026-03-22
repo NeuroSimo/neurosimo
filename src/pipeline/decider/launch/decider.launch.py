@@ -20,6 +20,7 @@ def generate_launch_description():
         package="decider",
         executable="decider",
         name="decider",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
 

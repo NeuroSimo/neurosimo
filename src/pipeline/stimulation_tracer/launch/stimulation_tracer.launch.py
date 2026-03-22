@@ -19,6 +19,7 @@ def generate_launch_description():
         package="stimulation_tracer",
         executable="stimulation_tracer",
         name="stimulation_tracer",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
     ld.add_action(node)

@@ -18,6 +18,7 @@ def generate_launch_description():
         package="eeg_replay",
         executable="eeg_replay",
         name="eeg_replay",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
 

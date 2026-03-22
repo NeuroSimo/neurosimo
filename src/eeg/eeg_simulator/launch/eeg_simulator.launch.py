@@ -17,6 +17,7 @@ def generate_launch_description():
     node = Node(
         package="eeg_simulator",
         executable="eeg_simulator",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
     ld.add_action(node)

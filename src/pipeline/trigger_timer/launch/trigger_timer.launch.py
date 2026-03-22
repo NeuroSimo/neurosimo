@@ -22,6 +22,7 @@ def generate_launch_description():
         package="trigger_timer",
         executable="trigger_timer",
         name="trigger_timer",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
     ld.add_action(node)

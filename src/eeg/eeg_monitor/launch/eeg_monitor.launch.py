@@ -18,6 +18,7 @@ def generate_launch_description():
         package="eeg_monitor",
         executable="eeg_monitor",
         name="eeg_monitor",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
 

@@ -19,6 +19,7 @@ def generate_launch_description():
         package="preprocessor",
         executable="preprocessor",
         name="preprocessor",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
     ld.add_action(node)

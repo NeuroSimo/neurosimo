@@ -19,6 +19,7 @@ def generate_launch_description():
         package="presenter",
         executable="presenter",
         name="presenter",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
     ld.add_action(node)

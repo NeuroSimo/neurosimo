@@ -18,6 +18,7 @@ def generate_launch_description():
             package="eeg_bridge",
             executable="eeg_bridge",
             name="eeg_bridge",
+            namespace="neurosimo",
             output="screen",
             emulate_tty=True,
             arguments=['--ros-args', '--log-level', logger]

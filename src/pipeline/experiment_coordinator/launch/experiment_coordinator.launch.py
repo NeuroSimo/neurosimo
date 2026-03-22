@@ -19,6 +19,7 @@ def generate_launch_description():
         package="experiment_coordinator",
         executable="experiment_coordinator",
         name="experiment_coordinator",
+        namespace="neurosimo",
         arguments=['--ros-args', '--log-level', logger]
     )
     ld.add_action(node)

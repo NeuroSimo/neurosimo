@@ -25,6 +25,7 @@ def generate_launch_description():
         node = Node(
             package="resource_monitor",
             executable=node_executable,
+            namespace="neurosimo",
             arguments=['--ros-args', '--log-level', logger]
         )
         ld.add_action(node)

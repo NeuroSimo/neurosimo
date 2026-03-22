@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import { useRosConnection } from 'providers/RosConnectionProvider'
+import { useHeartbeat } from 'providers/HeartbeatProvider'
 
 const Overlay = styled.div<{ isVisible: boolean }>`
   position: fixed;
@@ -29,14 +30,23 @@ const Message = styled.div`
 
 export const RosConnectionOverlay: React.FC = () => {
   const { isConnected } = useRosConnection()
+  const { waitingFor } = useHeartbeat()
+
+  const disconnected = !isConnected
+  const heartbeatStale = isConnected && waitingFor.length > 0
+  const visible = disconnected || heartbeatStale
+
+  const title = disconnected
+    ? '🔌 Not connected to backend'
+    : `Waiting for: ${waitingFor.join(', ')}`
 
   return (
-    <Overlay isVisible={!isConnected}>
+    <Overlay isVisible={visible}>
       <Message>
-        <div>🔌 Not connected to backend</div>
-        <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>
-          Attempting to reconnect...
-        </div>
+        <div>{title}</div>
+        {disconnected ? (
+          <div style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>Attempting to reconnect...</div>
+        ) : null}
       </Message>
     </Overlay>
   )

@@ -346,7 +346,7 @@ services:
       context: .
       dockerfile: src/utils/rosbridge/Dockerfile
       args:
-        INTERFACES_PATH: src/interfaces
+        INTERFACES_PATH: interfaces
     env_file:
       - .env
     environment:

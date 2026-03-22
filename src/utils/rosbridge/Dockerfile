@@ -25,11 +25,11 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 WORKDIR /app
 
 # Copy shared ROS interfaces
-COPY src/interfaces src/interfaces
+COPY interfaces interfaces
 
 # Copy project-specific interfaces
 ARG INTERFACES_PATH
-COPY ${INTERFACES_PATH} src/interfaces
+COPY ${INTERFACES_PATH} interfaces
 
 RUN source /opt/ros/jazzy/setup.bash && colcon build
 

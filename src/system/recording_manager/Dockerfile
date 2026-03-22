@@ -19,10 +19,10 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 WORKDIR /app
 
 # ROS interfaces
-COPY src/interfaces/project_interfaces src/interfaces/project_interfaces/
-COPY src/interfaces/pipeline_interfaces src/interfaces/pipeline_interfaces/
-COPY src/interfaces/eeg_interfaces src/interfaces/eeg_interfaces/
-COPY src/interfaces/system_interfaces src/interfaces/system_interfaces/
+COPY interfaces/project_interfaces interfaces/project_interfaces/
+COPY interfaces/pipeline_interfaces interfaces/pipeline_interfaces/
+COPY interfaces/eeg_interfaces interfaces/eeg_interfaces/
+COPY interfaces/system_interfaces interfaces/system_interfaces/
 RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node

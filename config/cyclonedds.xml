@@ -4,10 +4,5 @@
       <ParticipantIndex>auto</ParticipantIndex>
       <MaxAutoParticipantIndex>1000</MaxAutoParticipantIndex>
     </Discovery>
-    <General>
-      <Interfaces>
-        <NetworkInterface name="lo" multicast="false" />
-      </Interfaces>
-    </General>
   </Domain>
 </CycloneDDS>

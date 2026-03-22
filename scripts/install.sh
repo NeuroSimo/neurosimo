@@ -1,4 +1,19 @@
 #!/bin/bash
+
+# curl | bash leaves stdin as the script stream; re-run from a file with a real TTY so
+# sudo/read and child scripts (install-neurosimo) work. Do not use exec </dev/tty here —
+# bash would then read the rest of this file from the keyboard and hang.
+if [ ! -t 0 ]; then
+  if [ ! -c /dev/tty ]; then
+    echo "No terminal on stdin and no /dev/tty; save the script and run: bash install.sh" >&2
+    exit 1
+  fi
+  tmp=$(mktemp)
+  trap 'rm -f "$tmp"' EXIT
+  cat > "$tmp"
+  exec bash "$tmp" < /dev/tty
+fi
+
 set -e
 
 INSTALL_DIR="$HOME/neurosimo"

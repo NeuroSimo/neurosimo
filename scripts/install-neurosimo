@@ -13,6 +13,7 @@ fi
 # Prompt for sudo password once
 read -s -p "Enter sudo password: " SUDO_PASS
 echo ""
+export ANSIBLE_BECOME_PASS="$SUDO_PASS"
 
 # Clean up previous installation artifacts if NEUROSIMO_ROOT is defined
 if [ -n "$NEUROSIMO_ROOT" ]; then
@@ -28,8 +29,7 @@ ansible-playbook -i 'localhost,' ansible/install-docker.yml \
 
 # Run the ROS installation playbook
 ansible-playbook -i 'localhost,' ansible/install-ros.yml \
-  --connection=local --become \
-  --extra-vars "ansible_become_password='$SUDO_PASS'"
+  --connection=local --become
 
 # Function to check if NVIDIA drivers are installed
 has_nvidia_drivers() {
@@ -61,14 +61,13 @@ fi
 if [ "$USE_GPU" = true ]; then
     # Run the NVIDIA Container Toolkit installation playbook; note that this needs to be run after the NVIDIA driver installation
     ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml \
-      --connection=local --become \
-      --extra-vars "ansible_become_password='$SUDO_PASS'"
+      --connection=local --become
 fi
 
 # Run the NeuroSimo setup playbook with GPU flag
 ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml \
   --connection=local --become \
-  --extra-vars "ansible_become_password='$SUDO_PASS' use_gpu=$USE_GPU"
+  --extra-vars "use_gpu=$USE_GPU"
 
 # Source environment to get ROS base installation
 source ~/.bash_neurosimo > /dev/null

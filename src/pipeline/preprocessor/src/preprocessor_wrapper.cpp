@@ -243,24 +243,24 @@ bool PreprocessorWrapper::process(
 
   /* Validate the return value of the Python function call. */
   if (!py::isinstance<py::dict>(result)) {
-    RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary.");
+    log_error("Python module should return a dictionary.");
     return false;
   }
 
   py::dict dict_result = result.cast<py::dict>();
 
   if (!dict_result.contains("eeg_sample")) {
-    RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary with the field: eeg_sample.");
+    log_error("Python module should return a dictionary with the field: eeg_sample.");
     return false;
   }
 
   if (!dict_result.contains("emg_sample")) {
-    RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary with the field: emg_sample.");
+    log_error("Python module should return a dictionary with the field: emg_sample.");
     return false;
   }
 
   if (!dict_result.contains("valid")) {
-    RCLCPP_ERROR(*logger_ptr, "Python module should return a dictionary with the field: valid.");
+    log_error("Python module should return a dictionary with the field: valid.");
     return false;
   }
 

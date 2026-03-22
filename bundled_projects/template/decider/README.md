@@ -22,7 +22,7 @@ The following third-party libraries are currently available in the decider envir
 - statsmodels
 - mneflow
 
-To add more libraries, modify `src/pipeline/decider/Dockerfile` and run `build-neurosimo` from the command line.
+To add more libraries, modify `src/decider/Dockerfile` and run `build-neurosimo` from the command line.
 
 ## Class Methods
 

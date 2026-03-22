@@ -2,7 +2,7 @@ services:
   eeg_bridge:
     build:
       context: .
-      dockerfile: src/eeg/eeg_bridge/Dockerfile
+      dockerfile: src/eeg_bridge/Dockerfile
     env_file:
       - .env
     environment:
@@ -18,7 +18,7 @@ services:
   eeg_monitor:
     build:
       context: .
-      dockerfile: src/eeg/eeg_monitor/Dockerfile
+      dockerfile: src/eeg_monitor/Dockerfile
     env_file:
       - .env
     environment:
@@ -33,7 +33,7 @@ services:
   eeg_simulator:
     build:
       context: .
-      dockerfile: src/eeg/eeg_simulator/Dockerfile
+      dockerfile: src/eeg_simulator/Dockerfile
     env_file:
       - .env
     environment:
@@ -49,7 +49,7 @@ services:
   eeg_replay:
     build:
       context: .
-      dockerfile: src/eeg/eeg_replay/Dockerfile
+      dockerfile: src/eeg_replay/Dockerfile
     env_file:
       - .env
     environment:
@@ -64,7 +64,7 @@ services:
   experiment_coordinator:
     build:
       context: .
-      dockerfile: src/pipeline/experiment_coordinator/Dockerfile
+      dockerfile: src/experiment_coordinator/Dockerfile
     env_file:
       - .env
     environment:
@@ -80,7 +80,7 @@ services:
   decider_non_gpu:
     build:
       context: .
-      dockerfile: src/pipeline/decider/Dockerfile
+      dockerfile: src/decider/Dockerfile
     user: "1000:1000"
     ulimits:
       rtprio: 99
@@ -103,7 +103,7 @@ services:
   decider:
     build:
       context: .
-      dockerfile: src/pipeline/decider/Dockerfile
+      dockerfile: src/decider/Dockerfile
     user: "1000:1000"
     ulimits:
       rtprio: 99
@@ -133,7 +133,7 @@ services:
   global_configurator:
     build:
       context: .
-      dockerfile: src/system/global_configurator/Dockerfile
+      dockerfile: src/global_configurator/Dockerfile
     env_file:
       - .env
     environment:
@@ -148,7 +148,7 @@ services:
   project_manager:
     build:
       context: .
-      dockerfile: src/system/project_manager/Dockerfile
+      dockerfile: src/project_manager/Dockerfile
     user: "1000:1000"
     env_file:
       - .env
@@ -165,7 +165,7 @@ services:
   preprocessor:
     build:
       context: .
-      dockerfile: src/pipeline/preprocessor/Dockerfile
+      dockerfile: src/preprocessor/Dockerfile
     user: "1000:1000"
     ulimits:
       rtprio: 99
@@ -184,7 +184,7 @@ services:
   presenter:
     build:
       context: .
-      dockerfile: src/pipeline/presenter/Dockerfile
+      dockerfile: src/presenter/Dockerfile
     user: "1000:1000"
     ulimits:
       rtprio: 99
@@ -215,7 +215,7 @@ services:
   resource_monitor:
     build:
       context: .
-      dockerfile: src/system/resource_monitor/Dockerfile
+      dockerfile: src/resource_monitor/Dockerfile
     env_file:
       - .env
     environment:
@@ -230,7 +230,7 @@ services:
   session_configurator:
     build:
       context: .
-      dockerfile: src/system/session_configurator/Dockerfile
+      dockerfile: src/session_configurator/Dockerfile
     env_file:
       - .env
     environment:
@@ -245,7 +245,7 @@ services:
   session_exporter:
     build:
       context: .
-      dockerfile: src/system/session_exporter/Dockerfile
+      dockerfile: src/session_exporter/Dockerfile
     env_file:
       - .env
     environment:
@@ -260,7 +260,7 @@ services:
   session_manager:
     build:
       context: .
-      dockerfile: src/system/session_manager/Dockerfile
+      dockerfile: src/session_manager/Dockerfile
     env_file:
       - .env
     environment:
@@ -274,7 +274,7 @@ services:
   session_recorder:
     build:
       context: .
-      dockerfile: src/system/session_recorder/Dockerfile
+      dockerfile: src/session_recorder/Dockerfile
     user: "1000:1000"
     env_file:
       - .env
@@ -291,7 +291,7 @@ services:
   recording_manager:
     build:
       context: .
-      dockerfile: src/system/recording_manager/Dockerfile
+      dockerfile: src/recording_manager/Dockerfile
     user: "1000:1000"
     env_file:
       - .env
@@ -307,7 +307,7 @@ services:
   stimulation_tracer:
     build:
       context: .
-      dockerfile: src/pipeline/stimulation_tracer/Dockerfile
+      dockerfile: src/stimulation_tracer/Dockerfile
     env_file:
       - .env
     environment:
@@ -321,7 +321,7 @@ services:
   trigger_timer:
     build:
       context: .
-      dockerfile: src/pipeline/trigger_timer/Dockerfile
+      dockerfile: src/trigger_timer/Dockerfile
     env_file:
       - .env
     environment:
@@ -344,7 +344,7 @@ services:
   rosbridge:
     build:
       context: .
-      dockerfile: src/utils/rosbridge/Dockerfile
+      dockerfile: src/rosbridge/Dockerfile
       args:
         INTERFACES_PATH: interfaces
     env_file:

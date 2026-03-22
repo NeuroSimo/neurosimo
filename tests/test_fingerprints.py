@@ -92,7 +92,7 @@ class SessionTestsHarness:
             )
 
     def set_parameters(self, node_name: str, params: dict[str, Any]) -> None:
-        service_name = f"/{node_name}/set_parameters"
+        service_name = f"/neurosimo/{node_name}/set_parameters"
         client = self.node.create_client(SetParameters, service_name)
         self.wait_for_service(client, service_name)
         request = SetParameters.Request()

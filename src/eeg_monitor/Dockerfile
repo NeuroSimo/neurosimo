@@ -19,7 +19,7 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 WORKDIR /app
 
 # ROS interfaces
-COPY interfaces/eeg_interfaces interfaces/eeg_interfaces/
+COPY interfaces/neurosimo_eeg_interfaces interfaces/neurosimo_eeg_interfaces/
 RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node

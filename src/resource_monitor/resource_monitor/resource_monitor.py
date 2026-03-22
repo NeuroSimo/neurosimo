@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from system_interfaces.msg import DiskStatus, ComponentHealth, GlobalConfig
+from neurosimo_system_interfaces.msg import DiskStatus, ComponentHealth, GlobalConfig
 from std_msgs.msg import Empty
 from .utils import parse_size_string
 

@@ -50,7 +50,7 @@ export const ExperimentProvider: React.FC<ExperimentProviderProps> = ({ children
     const experimentStateSubscriber = new Topic<ExperimentState>({
       ros: ros,
       name: '/neurosimo/pipeline/experiment_state',
-      messageType: 'pipeline_interfaces/ExperimentState',
+      messageType: 'neurosimo_pipeline_interfaces/ExperimentState',
     })
 
     experimentStateSubscriber.subscribe((message) => {

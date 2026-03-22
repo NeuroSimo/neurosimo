@@ -4,8 +4,8 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from system_interfaces.srv import StartRecording, StopRecording
-from system_interfaces.msg import RecorderState, SessionConfig, DiskStatus
+from neurosimo_system_interfaces.srv import StartRecording, StopRecording
+from neurosimo_system_interfaces.msg import RecorderState, SessionConfig, DiskStatus
 from rosidl_runtime_py.convert import message_to_ordereddict
 
 import os

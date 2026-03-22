@@ -5,8 +5,8 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 
 from rclpy.executors import SingleThreadedExecutor
 
-from system_interfaces.msg import SessionConfig, GlobalConfig
-from project_interfaces.msg import FilenameList
+from neurosimo_system_interfaces.msg import SessionConfig, GlobalConfig
+from neurosimo_project_interfaces.msg import FilenameList
 from rcl_interfaces.msg import SetParametersResult
 
 from .session_storage_manager import SessionStorageManager

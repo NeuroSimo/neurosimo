@@ -10,7 +10,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "pipeline_interfaces/msg/sensory_stimulus.hpp"
+#include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "log_ipc_server.h"
 
 namespace py = pybind11;
@@ -38,7 +38,7 @@ public:
       const std::string& module_name,
       const std::string& subject_id);
 
-  bool process(pipeline_interfaces::msg::SensoryStimulus& msg);
+  bool process(neurosimo_pipeline_interfaces::msg::SensoryStimulus& msg);
 
   /* Exposed to Python, defined in cpp_bindings.cpp. */
   static void log(const std::string& message);

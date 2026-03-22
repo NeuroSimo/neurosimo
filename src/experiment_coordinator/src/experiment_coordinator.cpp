@@ -28,25 +28,25 @@ ExperimentCoordinator::ExperimentCoordinator()
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
   
   /* Publisher for health. */
-  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+  this->health_publisher = this->create_publisher<neurosimo_system_interfaces::msg::ComponentHealth>(
     "/neurosimo/experiment_coordinator/health", qos_persist_latest);
   
   /* Publisher for enriched EEG data. */
-  this->enriched_eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(
+  this->enriched_eeg_publisher = this->create_publisher<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_ENRICHED_TOPIC, EEG_QUEUE_LENGTH);
   
   /* Publisher for experiment UI state. */
-  this->experiment_state_publisher = this->create_publisher<pipeline_interfaces::msg::ExperimentState>(
+  this->experiment_state_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::ExperimentState>(
     "/neurosimo/pipeline/experiment_state", qos_persist_latest);
   
   /* Subscriber for raw EEG data. */
-  this->raw_eeg_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
+  this->raw_eeg_subscriber = this->create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     EEG_QUEUE_LENGTH,
     std::bind(&ExperimentCoordinator::handle_raw_sample, this, _1));
   
   /* Subscriber for decision trace final events. */
-  this->decision_trace_final_subscriber = this->create_subscription<pipeline_interfaces::msg::DecisionTrace>(
+  this->decision_trace_final_subscriber = this->create_subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     DECISION_TRACE_FINAL_TOPIC,
     100,
     std::bind(&ExperimentCoordinator::handle_decision_trace_final, this, _1));
@@ -70,17 +70,17 @@ ExperimentCoordinator::ExperimentCoordinator()
     std::bind(&ExperimentCoordinator::handle_resume, this, _1, _2));
 
   /* Service for protocol initialization. */
-  this->initialize_protocol_service = this->create_service<pipeline_interfaces::srv::InitializeProtocol>(
+  this->initialize_protocol_service = this->create_service<neurosimo_pipeline_interfaces::srv::InitializeProtocol>(
     "/neurosimo/pipeline/protocol/initialize",
     std::bind(&ExperimentCoordinator::handle_initialize_protocol, this, _1, _2));
   
   /* Service for protocol finalization. */
-  this->finalize_protocol_service = this->create_service<pipeline_interfaces::srv::FinalizeProtocol>(
+  this->finalize_protocol_service = this->create_service<neurosimo_pipeline_interfaces::srv::FinalizeProtocol>(
     "/neurosimo/pipeline/protocol/finalize",
     std::bind(&ExperimentCoordinator::handle_finalize_protocol, this, _1, _2));
   
   /* Service for protocol info. */
-  this->get_protocol_info_service = this->create_service<pipeline_interfaces::srv::GetProtocolInfo>(
+  this->get_protocol_info_service = this->create_service<neurosimo_pipeline_interfaces::srv::GetProtocolInfo>(
     "/neurosimo/experiment_coordinator/protocol/get_info",
     std::bind(&ExperimentCoordinator::handle_get_protocol_info, this, _1, _2));
   
@@ -89,7 +89,7 @@ ExperimentCoordinator::ExperimentCoordinator()
     std::chrono::milliseconds(500),
     std::bind(&ExperimentCoordinator::publish_heartbeat, this));
 
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
   RCLCPP_INFO(this->get_logger(), "Experiment coordinator ready");
 }
 
@@ -99,13 +99,13 @@ void ExperimentCoordinator::publish_heartbeat() {
 }
 
 void ExperimentCoordinator::publish_health_status(uint8_t health_level, const std::string& message) {
-  auto health = system_interfaces::msg::ComponentHealth();
+  auto health = neurosimo_system_interfaces::msg::ComponentHealth();
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
 }
 
-void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Handle session start marker from EEG bridge/simulator. */
   if (msg->is_session_start) {
     RCLCPP_INFO(this->get_logger(), "Session started, resetting experiment state");
@@ -156,7 +156,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<eeg_interfac
   publish_experiment_state(sample_time);
 }
 
-void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg) {
+void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg) {
   /* Only process confirmed pulses. */
   if (!msg->pulse_confirmed) {
     return;
@@ -256,8 +256,8 @@ void ExperimentCoordinator::handle_resume(
 }
 
 void ExperimentCoordinator::handle_initialize_protocol(
-    const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response) {
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeProtocol::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeProtocol::Response> response) {
 
   this->is_protocol_initialized = false;
 
@@ -271,7 +271,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s",
       result.error_message.c_str());
 
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, 
+    this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR, 
       "Protocol loading error: " + result.error_message);
     response->success = false;
 
@@ -285,13 +285,13 @@ void ExperimentCoordinator::handle_initialize_protocol(
   /* Reset experiment state. */
   reset_experiment_state();
 
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
   response->success = true;
 }
 
 void ExperimentCoordinator::handle_finalize_protocol(
-    const std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Response> response) {
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeProtocol::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeProtocol::Response> response) {
   (void)request;  // session_id not currently used
   
   RCLCPP_INFO(this->get_logger(), "Finalizing protocol");
@@ -305,8 +305,8 @@ void ExperimentCoordinator::handle_finalize_protocol(
 }
 
 void ExperimentCoordinator::handle_get_protocol_info(
-    const std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Response> response) {
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::GetProtocolInfo::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::GetProtocolInfo::Response> response) {
 
   RCLCPP_INFO(this->get_logger(), "Getting protocol info for: project='%s', protocol='%s'",
     request->project_name.c_str(), request->filename.c_str());
@@ -491,7 +491,7 @@ void ExperimentCoordinator::publish_experiment_state(double current_time) {
     return;
   }
   
-  pipeline_interfaces::msg::ExperimentState msg;
+  neurosimo_pipeline_interfaces::msg::ExperimentState msg;
   
   const bool has_protocol = this->is_protocol_initialized;
   const bool ongoing = state.is_session_ongoing && !state.protocol_complete;

@@ -21,10 +21,10 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 WORKDIR /app
 
 # ROS interfaces
-COPY interfaces/project_interfaces interfaces/project_interfaces/
+COPY interfaces/neurosimo_project_interfaces interfaces/neurosimo_project_interfaces/
 
-COPY interfaces/eeg_interfaces interfaces/eeg_interfaces/
-COPY interfaces/system_interfaces interfaces/system_interfaces/
+COPY interfaces/neurosimo_eeg_interfaces interfaces/neurosimo_eeg_interfaces/
+COPY interfaces/neurosimo_system_interfaces interfaces/neurosimo_system_interfaces/
 COPY src/realtime src/realtime/
 
 RUN source /opt/ros/jazzy/setup.bash && colcon build

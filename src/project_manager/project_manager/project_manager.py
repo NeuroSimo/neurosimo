@@ -4,7 +4,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 import os
 import shutil
 
-from project_interfaces.srv import CreateProject
+from neurosimo_project_interfaces.srv import CreateProject
 from .random_data_generator import RandomDataGenerator
 
 

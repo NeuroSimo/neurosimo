@@ -9,11 +9,11 @@
 using namespace std::chrono_literals;
 using json = nlohmann::json;
 
-using DataSourceState = system_interfaces::msg::DataSourceState;
-using GlobalConfig = system_interfaces::msg::GlobalConfig;
-using StreamInfo = eeg_interfaces::msg::StreamInfo;
-using EegSample = eeg_interfaces::msg::Sample;
-using ExperimentState = pipeline_interfaces::msg::ExperimentState;
+using DataSourceState = neurosimo_system_interfaces::msg::DataSourceState;
+using GlobalConfig = neurosimo_system_interfaces::msg::GlobalConfig;
+using StreamInfo = neurosimo_eeg_interfaces::msg::StreamInfo;
+using EegSample = neurosimo_eeg_interfaces::msg::Sample;
+using ExperimentState = neurosimo_pipeline_interfaces::msg::ExperimentState;
 
 const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
 const std::string EEG_PREPROCESSED_TOPIC = "/neurosimo/eeg/preprocessed";
@@ -35,7 +35,7 @@ EegReplayNode::EegReplayNode() : Node("eeg_replay") {
     "/neurosimo/eeg_replay/state", qos_persist_latest, pub_opts);
 
   /* Client for aborting session. */
-  abort_session_client_ = create_client<system_interfaces::srv::AbortSession>(
+  abort_session_client_ = create_client<neurosimo_system_interfaces::srv::AbortSession>(
     "/neurosimo/session/abort",
     rclcpp::ServicesQoS(),
     callback_group_);
@@ -49,19 +49,19 @@ EegReplayNode::EegReplayNode() : Node("eeg_replay") {
     sub_opts);
 
   /* Service servers. */
-  initialize_service_ = create_service<eeg_interfaces::srv::InitializeEegReplayStream>(
+  initialize_service_ = create_service<neurosimo_eeg_interfaces::srv::InitializeEegReplayStream>(
     "/neurosimo/eeg_replay/initialize",
     std::bind(&EegReplayNode::handle_initialize, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group_);
 
-  start_streaming_service_ = create_service<eeg_interfaces::srv::StartStreaming>(
+  start_streaming_service_ = create_service<neurosimo_eeg_interfaces::srv::StartStreaming>(
     "/neurosimo/eeg_replay/streaming/start",
     std::bind(&EegReplayNode::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group_);
 
-  stop_streaming_service_ = create_service<eeg_interfaces::srv::StopStreaming>(
+  stop_streaming_service_ = create_service<neurosimo_eeg_interfaces::srv::StopStreaming>(
     "/neurosimo/eeg_replay/streaming/stop",
     std::bind(&EegReplayNode::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
@@ -98,8 +98,8 @@ void EegReplayNode::publish_state(uint8_t state) {
 /* -------------------------------------------------------------------------- */
 
 void EegReplayNode::handle_initialize(
-  const std::shared_ptr<eeg_interfaces::srv::InitializeEegReplayStream::Request> request,
-  std::shared_ptr<eeg_interfaces::srv::InitializeEegReplayStream::Response> response)
+  const std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegReplayStream::Request> request,
+  std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegReplayStream::Response> response)
 {
   RCLCPP_INFO(this->get_logger(),
     "Initializing replay: project=%s, bag_id=%s, play_preprocessed=%d",
@@ -179,8 +179,8 @@ void EegReplayNode::handle_initialize(
 /* -------------------------------------------------------------------------- */
 
 void EegReplayNode::handle_start_streaming(
-  const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> /*request*/,
-  std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response)
+  const std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Request> /*request*/,
+  std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Response> response)
 {
   RCLCPP_INFO(this->get_logger(), "Received start streaming request");
 
@@ -212,8 +212,8 @@ void EegReplayNode::handle_start_streaming(
 }
 
 void EegReplayNode::handle_stop_streaming(
-  const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> /*request*/,
-  std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response)
+  const std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Request> /*request*/,
+  std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Response> response)
 {
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
@@ -360,7 +360,7 @@ void EegReplayNode::abort_session() {
     return;
   }
 
-  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  auto request = std::make_shared<neurosimo_system_interfaces::srv::AbortSession::Request>();
   request->source = "eeg_replay";
   abort_session_client_->async_send_request(request);
   RCLCPP_INFO(this->get_logger(), "Requested session abort: bag playback finished");

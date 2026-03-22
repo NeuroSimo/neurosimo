@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <vector>
 
-#include "eeg_interfaces/msg/eeg_device_info.hpp"
+#include "neurosimo_eeg_interfaces/msg/eeg_device_info.hpp"
 #include "socket.h"
 
 /** UDP datagram length is limited by Ethernet MTU (IP layer fragmentation isn't
@@ -62,8 +62,8 @@ public:
   virtual AdapterPacket process_packet(const uint8_t* buffer, size_t buffer_size) = 0;
 
   /// Get EEG device configuration info
-  eeg_interfaces::msg::EegDeviceInfo get_device_info() const {
-    auto device_info_msg = eeg_interfaces::msg::EegDeviceInfo();
+  neurosimo_eeg_interfaces::msg::EegDeviceInfo get_device_info() const {
+    auto device_info_msg = neurosimo_eeg_interfaces::msg::EegDeviceInfo();
     device_info_msg.sampling_frequency = sampling_frequency;
     device_info_msg.num_eeg_channels = num_eeg_channels;
     device_info_msg.num_emg_channels = num_emg_channels;

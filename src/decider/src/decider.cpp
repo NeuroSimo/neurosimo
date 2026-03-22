@@ -63,7 +63,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
   /* Publisher for health. */
-  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+  this->health_publisher = this->create_publisher<neurosimo_system_interfaces::msg::ComponentHealth>(
     "/neurosimo/decider/health", qos_persist_latest);
 
   /* Subscriber for is coil at target. */
@@ -73,7 +73,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
 
   /* Publisher for decision trace. */
-  this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
+  this->decision_trace_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     "/neurosimo/pipeline/decision_trace",
     10);
 
@@ -83,7 +83,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   auto qos_keep_all = rclcpp::QoS(rclcpp::KeepAll())
   .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
-  this->sensory_stimulus_publisher = this->create_publisher<pipeline_interfaces::msg::SensoryStimulus>(
+  this->sensory_stimulus_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::SensoryStimulus>(
     "/neurosimo/pipeline/sensory_stimulus",
     qos_keep_all);
 
@@ -104,22 +104,22 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE)
     .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
-  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessages>(
+  this->python_log_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::LogMessages>(
     "/neurosimo/pipeline/decider/log",
     qos_keep_all_logs);
 
   /* Publisher for pulse processing latency. */
-  this->pulse_processing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
+  this->pulse_processing_latency_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::Latency>(
     "/neurosimo/pipeline/latency/pulse_processing",
     10);
 
   /* Publisher for event processing latency. */
-  this->event_processing_latency_publisher = this->create_publisher<pipeline_interfaces::msg::Latency>(
+  this->event_processing_latency_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::Latency>(
     "/neurosimo/pipeline/latency/event_processing",
     10);
 
   /* Service client for timed trigger. */
-  this->timed_trigger_client = this->create_client<pipeline_interfaces::srv::RequestTimedTrigger>(
+  this->timed_trigger_client = this->create_client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>(
     "/neurosimo/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()));
 
   while (!timed_trigger_client->wait_for_service(2s)) {
@@ -127,7 +127,7 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   }
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>(
+  this->abort_session_client = this->create_client<neurosimo_system_interfaces::srv::AbortSession>(
     "/neurosimo/session/abort", rclcpp::QoS(rclcpp::ServicesQoS()));
 
   while (!abort_session_client->wait_for_service(2s)) {
@@ -137,16 +137,16 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   /* Initialize variables. */
   this->decider_wrapper = std::make_unique<DeciderWrapper>(logger);
 
-  this->sample_buffer = RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>();
+  this->sample_buffer = RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>();
 
   /* Initialize service server for component initialization */
-  this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializeDecider>(
+  this->initialize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::InitializeDecider>(
     "/neurosimo/pipeline/decider/initialize",
     std::bind(&EegDecider::handle_initialize_decider, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::QoS(rclcpp::ServicesQoS()));
 
   /* Finalize service server */
-  this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizeDecider>(
+  this->finalize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::FinalizeDecider>(
     "/neurosimo/pipeline/decider/finalize",
     std::bind(&EegDecider::handle_finalize_decider, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::QoS(rclcpp::ServicesQoS()));
@@ -174,14 +174,14 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   });
 
   /* Publish initial health status. */
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   RCLCPP_INFO(this->get_logger(), "Decider node initialized successfully");
 }
 
 void EegDecider::handle_initialize_decider(
-  const std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Request> request,
-  std::shared_ptr<pipeline_interfaces::srv::InitializeDecider::Response> response) {
+  const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeDecider::Request> request,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeDecider::Response> response) {
 
   this->is_enabled = request->enabled;
 
@@ -260,7 +260,7 @@ void EegDecider::handle_initialize_decider(
 
   /* Create the EEG subscriber based on whether preprocessor is enabled. */
   std::string topic = this->preprocessor_enabled ? EEG_PREPROCESSED_TOPIC : EEG_ENRICHED_TOPIC;
-  this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
+  this->eeg_subscriber = create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
     topic,
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
     EEG_QUEUE_LENGTH,
@@ -283,7 +283,7 @@ void EegDecider::handle_initialize_decider(
 
   // Publish initialization logs from Python constructor
   this->decider_wrapper->drain_logs();
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize decider module");
@@ -315,7 +315,7 @@ void EegDecider::handle_initialize_decider(
     RCLCPP_ERROR(this->get_logger(), "Failed to warm up decider module.");
 
     this->decider_wrapper->drain_logs();
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
     response->success = false;
 
@@ -332,7 +332,7 @@ void EegDecider::handle_initialize_decider(
 
   // Mark as initialized
   this->is_initialized = true;
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   response->success = true;
 }
@@ -352,13 +352,13 @@ EegDecider::~EegDecider() {
 }
 
 void EegDecider::handle_finalize_decider(
-  [[maybe_unused]] const std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Request> request,
-  std::shared_ptr<pipeline_interfaces::srv::FinalizeDecider::Response> response) {
+  [[maybe_unused]] const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeDecider::Request> request,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeDecider::Response> response) {
 
   /* Publish logs from the previous sample at the beginning of the finalization. */
   if (!std::isnan(this->previous_sample_time)) {
     this->decider_wrapper->drain_logs();
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
   /* Destroy the Python instance first so its __del__ runs before log draining. */
@@ -366,7 +366,7 @@ void EegDecider::handle_finalize_decider(
 
   /* Drain and publish output from __del__. */
   this->decider_wrapper->drain_logs();
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
 
   /* Store the final fingerprint before resetting state */
   response->decision_fingerprint = this->decision_fingerprint;
@@ -387,7 +387,7 @@ void EegDecider::publish_heartbeat() {
 void EegDecider::check_and_publish_logs() {
   /* Publish any pending Python logs if handle_sample hasn't checked them since the last timer call. */
   if (!this->logs_checked_since_last_timer && !std::isnan(this->previous_sample_time)) {
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
   /* Reset the flag for the next timer interval. */
@@ -395,7 +395,7 @@ void EegDecider::check_and_publish_logs() {
 }
 
 void EegDecider::publish_health_status(uint8_t health_level, const std::string& message) {
-  auto health = system_interfaces::msg::ComponentHealth();
+  auto health = neurosimo_system_interfaces::msg::ComponentHealth();
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
@@ -416,11 +416,11 @@ void EegDecider::publish_python_logs(uint8_t phase, double sample_time) {
   }
   
   // Create a single batched message containing all logs
-  auto batch_msg = pipeline_interfaces::msg::LogMessages();
+  auto batch_msg = neurosimo_pipeline_interfaces::msg::LogMessages();
   
   for (const auto& log_entry : logs) {
     // Create individual log message
-    auto log_msg = pipeline_interfaces::msg::LogMessage();
+    auto log_msg = neurosimo_pipeline_interfaces::msg::LogMessage();
     log_msg.message = log_entry.message;
     log_msg.sample_time = sample_time;
     log_msg.level = static_cast<uint8_t>(log_entry.level);
@@ -506,7 +506,7 @@ bool EegDecider::is_sample_window_valid() const {
   }
 
   bool has_invalid_sample = false;
-  this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<eeg_interfaces::msg::Sample>& sample) {
+  this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>& sample) {
     if (sample->paused || sample->in_rest || !sample->valid) {
       has_invalid_sample = true;
     }
@@ -580,7 +580,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   /* If the processing reason is pulse, publish the processing duration and return early.*/
   if (request.processing_reason == ProcessingReason::Pulse) {
-    auto latency_msg = pipeline_interfaces::msg::Latency();
+    auto latency_msg = neurosimo_pipeline_interfaces::msg::Latency();
     latency_msg.latency = decider_duration;
     this->pulse_processing_latency_publisher->publish(latency_msg);
 
@@ -593,7 +593,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   /* If the processing reason is event, publish the processing duration and return early.*/
   if (request.processing_reason == ProcessingReason::Event) {
-    auto latency_msg = pipeline_interfaces::msg::Latency();
+    auto latency_msg = neurosimo_pipeline_interfaces::msg::Latency();
     latency_msg.latency = decider_duration;
     this->event_processing_latency_publisher->publish(latency_msg);
 
@@ -623,15 +623,15 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   auto decision_path_latency = (system_time_decider_finished - request.triggering_sample->system_time_data_source_published) / 1e9;  // Convert nanoseconds to seconds
 
   /* Publish decision trace. */
-  auto decision_trace = pipeline_interfaces::msg::DecisionTrace();
+  auto decision_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
 
   // Metadata (filled by Decider)
   decision_trace.session_id = this->session_id;
   decision_trace.decision_id = ++this->decision_id;  // Increment decision ID
 
   // Status (filled by each stage) - initially set by Decider
-  decision_trace.status = request_timed_trigger ? pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
-                                                : pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
+  decision_trace.status = request_timed_trigger ? neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
+                                                : neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
 
   // Decision info
   decision_trace.reference_sample_time = sample_time;
@@ -660,7 +660,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     if (has_minimum_intertrial_interval_passed) {
       RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", requested_stimulation_time);
 
-      auto request_msg = std::make_shared<pipeline_interfaces::srv::RequestTimedTrigger::Request>();
+      auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
       request_msg->trigger_offset = *trigger_offset;
       request_msg->session_id = this->session_id;
       request_msg->decision_id = this->decision_id;
@@ -723,7 +723,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
 }
 
-void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason) {
+void EegDecider::enqueue_deferred_request(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason) {
   /* Create a deferred processing request. */
   DeferredProcessingRequest request;
   request.triggering_sample = msg;
@@ -762,8 +762,8 @@ void EegDecider::enqueue_deferred_request(const std::shared_ptr<eeg_interfaces::
 
 /* Service clients */
 
-void EegDecider::request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
-  using ServiceResponseFuture = rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest;
+void EegDecider::request_timed_trigger(std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
+  using ServiceResponseFuture = rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest;
 
   auto response_received_callback = [this](ServiceResponseFuture future) {
     this->timed_trigger_callback(future);
@@ -772,7 +772,7 @@ void EegDecider::request_timed_trigger(std::shared_ptr<pipeline_interfaces::srv:
   auto future_result = this->timed_trigger_client->async_send_request(request, response_received_callback);
 }
 
-void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future) {
+void EegDecider::timed_trigger_callback(rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future) {
   auto result = future.get().second;
   if (!result->success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to send timed trigger.");
@@ -780,7 +780,7 @@ void EegDecider::timed_trigger_callback(rclcpp::Client<pipeline_interfaces::srv:
 }
 
 void EegDecider::abort_session(const std::string& reason) {
-  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  auto request = std::make_shared<neurosimo_system_interfaces::srv::AbortSession::Request>();
   request->source = "decider";
   request->reason = reason;
 
@@ -794,7 +794,7 @@ void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::B
   this->is_coil_at_target = msg->data;
 }
 
-void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Return early if decider is not enabled or initialized. */
   if (!this->is_enabled || !this->is_initialized) {
     RCLCPP_INFO_THROTTLE(this->get_logger(),
@@ -808,7 +808,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
 
   /* Publish logs from the previous sample at the beginning of this sample */
   if (!std::isnan(this->previous_sample_time)) {
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
 
     /* Mark that logs have been checked in this sample processing cycle. */
     this->logs_checked_since_last_timer = true;
@@ -882,7 +882,7 @@ void EegDecider::process_sample(const std::shared_ptr<eeg_interfaces::msg::Sampl
   process_ready_deferred_requests(sample_time);
 }
 
-bool EegDecider::detect_backpressure(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+bool EegDecider::detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   uint64_t upstream_timestamp_ns = this->preprocessor_enabled ?
     msg->system_time_preprocessor_published :
@@ -906,7 +906,7 @@ bool EegDecider::detect_backpressure(const std::shared_ptr<eeg_interfaces::msg::
   return false;
 }
 
-void EegDecider::detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+void EegDecider::detect_and_handle_sample_gap(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Check for sample index discontinuity (gap detection). */
   if (this->previous_sample_index != -1 && msg->sample_index > this->previous_sample_index + 1) {
     uint64_t gap_size = msg->sample_index - this->previous_sample_index - 1;
@@ -917,7 +917,7 @@ void EegDecider::detect_and_handle_sample_gap(const std::shared_ptr<eeg_interfac
                 this->previous_sample_index + 1, msg->sample_index, gap_size, gap_duration_s);
 
     /* Publish degraded health status. */
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::DEGRADED, "Sample gap detected");
+    this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED, "Sample gap detected");
 
     /* Reset the ring buffer to avoid processing with non-continuous windows. */
     size_t buffer_size = this->decider_wrapper->get_envelope_buffer_size();

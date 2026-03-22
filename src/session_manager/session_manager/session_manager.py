@@ -7,19 +7,19 @@ from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
-from system_interfaces.msg import SessionState
-from system_interfaces.srv import StartRecording, StopRecording, AbortSession
+from neurosimo_system_interfaces.msg import SessionState
+from neurosimo_system_interfaces.srv import StartRecording, StopRecording, AbortSession
 from std_srvs.srv import Trigger
-from system_interfaces.msg import SessionConfig, GlobalConfig
-from pipeline_interfaces.srv import (
+from neurosimo_system_interfaces.msg import SessionConfig, GlobalConfig
+from neurosimo_pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
     InitializeStimulationTracer, FinalizeStimulationTracer,
     InitializeTriggerTimer, FinalizeTriggerTimer
 )
-from eeg_interfaces.action import InitializeSimulatorStream
-from eeg_interfaces.srv import InitializeEegDeviceStream, InitializeEegReplayStream, StartStreaming, StopStreaming
-from eeg_interfaces.msg import StreamInfo, EegDeviceInfo
+from neurosimo_eeg_interfaces.action import InitializeSimulatorStream
+from neurosimo_eeg_interfaces.srv import InitializeEegDeviceStream, InitializeEegReplayStream, StartStreaming, StopStreaming
+from neurosimo_eeg_interfaces.msg import StreamInfo, EegDeviceInfo
 
 from std_msgs.msg import String
 from threading import Lock, Event, Thread, current_thread

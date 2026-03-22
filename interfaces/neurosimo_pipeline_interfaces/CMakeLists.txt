@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(pipeline_interfaces)
+project(neurosimo_pipeline_interfaces)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -8,7 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
-find_package(eeg_interfaces REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -55,7 +55,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   DEPENDENCIES
     diagnostic_msgs
     std_msgs
-    eeg_interfaces
+    neurosimo_eeg_interfaces
 )
 
 ament_package()

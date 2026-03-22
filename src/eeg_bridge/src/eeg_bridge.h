@@ -11,16 +11,16 @@
 #include "std_msgs/msg/empty.hpp"
 #include "std_msgs/msg/int32.hpp"
 
-#include "eeg_interfaces/msg/eeg_device_info.hpp"
-#include "eeg_interfaces/msg/sample.hpp"
-#include "eeg_interfaces/srv/start_streaming.hpp"
-#include "eeg_interfaces/srv/stop_streaming.hpp"
-#include "eeg_interfaces/srv/initialize_eeg_device_stream.hpp"
+#include "neurosimo_eeg_interfaces/msg/eeg_device_info.hpp"
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_eeg_interfaces/srv/start_streaming.hpp"
+#include "neurosimo_eeg_interfaces/srv/stop_streaming.hpp"
+#include "neurosimo_eeg_interfaces/srv/initialize_eeg_device_stream.hpp"
 
-#include "system_interfaces/msg/component_health.hpp"
-#include "system_interfaces/srv/abort_session.hpp"
-#include "system_interfaces/msg/data_source_state.hpp"
-#include "system_interfaces/msg/global_config.hpp"
+#include "neurosimo_system_interfaces/msg/component_health.hpp"
+#include "neurosimo_system_interfaces/srv/abort_session.hpp"
+#include "neurosimo_system_interfaces/msg/data_source_state.hpp"
+#include "neurosimo_system_interfaces/msg/global_config.hpp"
 
 #include "std_srvs/srv/trigger.hpp"
 
@@ -70,10 +70,10 @@ private:
 
   void process_eeg_packet();
 
-  eeg_interfaces::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
-                                          const eeg_interfaces::msg::EegDeviceInfo& device_info);
+  neurosimo_eeg_interfaces::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
+                                          const neurosimo_eeg_interfaces::msg::EegDeviceInfo& device_info);
 
-  void handle_sample(eeg_interfaces::msg::Sample sample);
+  void handle_sample(neurosimo_eeg_interfaces::msg::Sample sample);
   bool check_for_dropped_samples(uint64_t device_sample_index);
   void check_for_sample_timeout();
 
@@ -90,16 +90,16 @@ private:
   void abort_session(const std::string& reason);
 
   void handle_start_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
-      std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response);
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Request> request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Response> response);
   void handle_stop_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
-      std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response);
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Request> request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Response> response);
   void handle_initialize(
-      const std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Request> request,
-      std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Response> response);
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream::Request> request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream::Response> response);
 
-  void handle_global_config(const system_interfaces::msg::GlobalConfig::SharedPtr msg);
+  void handle_global_config(const neurosimo_system_interfaces::msg::GlobalConfig::SharedPtr msg);
 
   /* Configuration */
   uint16_t port = 0;
@@ -118,28 +118,28 @@ private:
   std::chrono::steady_clock::time_point last_sample_time;
 
   /* Publishers */
-  rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;
-  rclcpp::Publisher<eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
+  rclcpp::Publisher<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_publisher;
+  rclcpp::Publisher<neurosimo_eeg_interfaces::msg::EegDeviceInfo>::SharedPtr device_info_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr dropped_samples_publisher;
-  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
-  rclcpp::Publisher<system_interfaces::msg::DataSourceState>::SharedPtr data_source_state_publisher;
+  rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
+  rclcpp::Publisher<neurosimo_system_interfaces::msg::DataSourceState>::SharedPtr data_source_state_publisher;
 
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
 
   /* Services */
-  rclcpp::Service<eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service;
-  rclcpp::Service<eeg_interfaces::srv::StopStreaming>::SharedPtr stop_streaming_service;
-  rclcpp::Service<eeg_interfaces::srv::InitializeEegDeviceStream>::SharedPtr initialize_service;
+  rclcpp::Service<neurosimo_eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service;
+  rclcpp::Service<neurosimo_eeg_interfaces::srv::StopStreaming>::SharedPtr stop_streaming_service;
+  rclcpp::Service<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream>::SharedPtr initialize_service;
 
   /* Service client for session abort */
-  rclcpp::Client<system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
+  rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   /* Subscribers */
-  rclcpp::Subscription<system_interfaces::msg::GlobalConfig>::SharedPtr global_config_subscription;
+  rclcpp::Subscription<neurosimo_system_interfaces::msg::GlobalConfig>::SharedPtr global_config_subscription;
 
   /* Data source state */
-  system_interfaces::msg::DataSourceState::_state_type data_source_state = system_interfaces::msg::DataSourceState::READY;
+  neurosimo_system_interfaces::msg::DataSourceState::_state_type data_source_state = neurosimo_system_interfaces::msg::DataSourceState::READY;
   bool is_session_start = false;
   bool session_abort_requested = false;
   

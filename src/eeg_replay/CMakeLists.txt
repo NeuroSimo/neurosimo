@@ -8,9 +8,9 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(eeg_interfaces REQUIRED)
-find_package(pipeline_interfaces REQUIRED)
-find_package(system_interfaces REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
+find_package(neurosimo_pipeline_interfaces REQUIRED)
+find_package(neurosimo_system_interfaces REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(rosbag2_cpp REQUIRED)
 find_package(rosbag2_storage REQUIRED)
@@ -18,7 +18,7 @@ find_package(rosbag2_storage REQUIRED)
 add_executable(eeg_replay
         src/eeg_replay.cpp
 )
-ament_target_dependencies(eeg_replay rclcpp std_msgs eeg_interfaces pipeline_interfaces system_interfaces nlohmann_json rosbag2_cpp rosbag2_storage)
+ament_target_dependencies(eeg_replay rclcpp std_msgs neurosimo_eeg_interfaces neurosimo_pipeline_interfaces neurosimo_system_interfaces nlohmann_json rosbag2_cpp rosbag2_storage)
 
 
 install(TARGETS

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(system_interfaces)
+project(neurosimo_project_interfaces)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -20,26 +20,22 @@ if(BUILD_TESTING)
 endif()
 
 find_package(rosidl_default_generators REQUIRED)
-find_package(eeg_interfaces REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/DiskStatus.msg"
-  "msg/ExportDataType.msg"
-  "msg/ExporterState.msg"
-  "msg/RecorderState.msg"
-  "msg/GlobalConfig.msg"
-  "msg/SessionConfig.msg"
-  "msg/SessionState.msg"
-  "msg/DataSourceState.msg"
-  "msg/ComponentHealth.msg"
-  "srv/AbortSession.srv"
-  "srv/CancelExport.srv"
-  "srv/ExportSession.srv"
-  "srv/GetGlobalConfig.srv"
-  "srv/GetSessionConfig.srv"
-  "srv/StartRecording.srv"
-  "srv/StopRecording.srv"
-  DEPENDENCIES eeg_interfaces
+  "srv/ListProjects.srv"
+  "srv/SetActiveProject.srv"
+  "srv/CreateProject.srv"
+
+  "srv/SetModule.srv"
+
+  "msg/DatasetInfo.msg"
+  "msg/FilenameList.msg"
+  "msg/RecordingInfo.msg"
+  "srv/SetDataset.srv"
+  "srv/SetStartTime.srv"
+  "srv/GetDatasetInfo.srv"
+  "srv/GetRecordingInfo.srv"
+  "srv/DeleteRecording.srv"
 )
 
 ament_package()

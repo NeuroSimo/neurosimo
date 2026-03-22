@@ -13,27 +13,27 @@ const startSessionService = new ROSLIB.Service({
 const abortSessionService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/session/abort',
-  serviceType: 'system_interfaces/AbortSession',
+  serviceType: 'neurosimo_system_interfaces/AbortSession',
 })
 
 const exportSessionService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/session/export',
-  serviceType: 'system_interfaces/ExportSession',
+  serviceType: 'neurosimo_system_interfaces/ExportSession',
 })
 
 /* Session state topic */
 const sessionStateTopic = new ROSLIB.Topic({
   ros: ros,
   name: '/neurosimo/session/state',
-  messageType: 'system_interfaces/SessionState',
+  messageType: 'neurosimo_system_interfaces/SessionState',
 })
 
 /* Session exporter state topic */
 const exporterStateTopic = new ROSLIB.Topic({
   ros: ros,
   name: '/neurosimo/session_exporter/state',
-  messageType: 'system_interfaces/ExporterState',
+  messageType: 'neurosimo_system_interfaces/ExporterState',
 })
 
 export const startSessionRos = (

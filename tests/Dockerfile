@@ -12,13 +12,13 @@ COPY config/cyclonedds.xml /config/
 ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 # Copy interfaces
-COPY interfaces/eeg_interfaces /opt/neurosimo_tests/interfaces/eeg_interfaces
-COPY interfaces/pipeline_interfaces /opt/neurosimo_tests/interfaces/pipeline_interfaces
-COPY interfaces/project_interfaces /opt/neurosimo_tests/interfaces/project_interfaces
-COPY interfaces/system_interfaces /opt/neurosimo_tests/interfaces/system_interfaces
+COPY interfaces/neurosimo_eeg_interfaces /opt/neurosimo_tests/interfaces/neurosimo_eeg_interfaces
+COPY interfaces/neurosimo_pipeline_interfaces /opt/neurosimo_tests/interfaces/neurosimo_pipeline_interfaces
+COPY interfaces/neurosimo_project_interfaces /opt/neurosimo_tests/interfaces/neurosimo_project_interfaces
+COPY interfaces/neurosimo_system_interfaces /opt/neurosimo_tests/interfaces/neurosimo_system_interfaces
 
 # Build interfaces
-RUN . /opt/ros/jazzy/setup.sh && colcon build --packages-select eeg_interfaces pipeline_interfaces project_interfaces system_interfaces
+RUN . /opt/ros/jazzy/setup.sh && colcon build --packages-select neurosimo_eeg_interfaces neurosimo_pipeline_interfaces neurosimo_project_interfaces neurosimo_system_interfaces
 
 # Copy tests
 COPY tests /opt/neurosimo_tests/tests

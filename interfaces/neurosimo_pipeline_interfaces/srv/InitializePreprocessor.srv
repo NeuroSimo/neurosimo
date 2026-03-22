@@ -7,7 +7,7 @@ string module_filename
 bool enabled
 
 # Stream info
-eeg_interfaces/StreamInfo stream_info
+neurosimo_eeg_interfaces/StreamInfo stream_info
 
 # Metadata
 string subject_id

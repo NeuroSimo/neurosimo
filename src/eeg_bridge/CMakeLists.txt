@@ -9,9 +9,9 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(eeg_interfaces REQUIRED)
-find_package(system_interfaces REQUIRED)
-find_package(pipeline_interfaces REQUIRED)
+find_package(neurosimo_eeg_interfaces REQUIRED)
+find_package(neurosimo_system_interfaces REQUIRED)
+find_package(neurosimo_pipeline_interfaces REQUIRED)
 find_package(realtime_utils REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(XXHASH REQUIRED libxxhash)
@@ -35,7 +35,7 @@ target_link_libraries(eeg_bridge
 
 target_include_directories(eeg_bridge PRIVATE ${XXHASH_INCLUDE_DIRS})
 
-ament_target_dependencies(eeg_bridge rclcpp std_msgs std_srvs eeg_interfaces system_interfaces pipeline_interfaces realtime_utils)
+ament_target_dependencies(eeg_bridge rclcpp std_msgs std_srvs neurosimo_eeg_interfaces neurosimo_system_interfaces neurosimo_pipeline_interfaces realtime_utils)
 
 
 install(TARGETS

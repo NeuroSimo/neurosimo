@@ -13,10 +13,10 @@
 #include <deque>
 
 #include "std_msgs/msg/empty.hpp"
-#include "eeg_interfaces/msg/sample.hpp"
-#include "pipeline_interfaces/msg/decision_trace.hpp"
-#include "pipeline_interfaces/srv/initialize_stimulation_tracer.hpp"
-#include "pipeline_interfaces/srv/finalize_stimulation_tracer.hpp"
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
+#include "neurosimo_pipeline_interfaces/srv/initialize_stimulation_tracer.hpp"
+#include "neurosimo_pipeline_interfaces/srv/finalize_stimulation_tracer.hpp"
 
 class StimulationTracer : public rclcpp::Node {
 public:
@@ -26,14 +26,14 @@ public:
 private:
   rclcpp::Logger logger;
 
-  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_subscriber;
-  rclcpp::Subscription<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_subscriber;
-  rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_final_publisher;
+  rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_subscriber;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_subscriber;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_final_publisher;
 
   /* Service servers for initialization and finalization */
-  rclcpp::Service<pipeline_interfaces::srv::InitializeStimulationTracer>::SharedPtr initialize_service_server;
-  rclcpp::Service<pipeline_interfaces::srv::FinalizeStimulationTracer>::SharedPtr finalize_service_server;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeStimulationTracer>::SharedPtr initialize_service_server;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer>::SharedPtr finalize_service_server;
 
   /* Current session tracking */
   bool is_initialized = false;
@@ -41,7 +41,7 @@ private:
   std::string data_source = "";
 
   /* Storage for decision traces keyed by decision_id */
-  std::map<uint64_t, std::vector<pipeline_interfaces::msg::DecisionTrace>> decision_traces;
+  std::map<uint64_t, std::vector<neurosimo_pipeline_interfaces::msg::DecisionTrace>> decision_traces;
 
   /* Subscriber for decider pulse-processed notifications and pending pulse queue */
   rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr pulse_processed_subscriber;
@@ -54,20 +54,20 @@ private:
 
   std::deque<PendingPulse> pending_pulses;
 
-  void handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
-  void handle_decision_trace(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg);
+  void handle_eeg_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
+  void handle_decision_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg);
   void handle_pulse_processed(const std_msgs::msg::Empty::SharedPtr msg);
 
   void handle_initialize_stimulation_tracer(
-    const std::shared_ptr<pipeline_interfaces::srv::InitializeStimulationTracer::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::InitializeStimulationTracer::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeStimulationTracer::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeStimulationTracer::Response> response);
 
   void handle_finalize_stimulation_tracer(
-    const std::shared_ptr<pipeline_interfaces::srv::FinalizeStimulationTracer::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::FinalizeStimulationTracer::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer::Response> response);
 
   /* Find the matching decision trace for a pulse trigger */
-  pipeline_interfaces::msg::DecisionTrace* find_matching_decision(uint64_t pulse_system_time);
+  neurosimo_pipeline_interfaces::msg::DecisionTrace* find_matching_decision(uint64_t pulse_system_time);
 
   /* Merge all decision traces for a given key and publish final */
   void finalize_decision(uint64_t decision_id);

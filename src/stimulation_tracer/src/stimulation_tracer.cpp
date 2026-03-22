@@ -14,7 +14,7 @@ const std::string PULSE_PROCESSED_TOPIC = "/neurosimo/decider/pulse_processed";
 
 StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclcpp::get_logger("stimulation_tracer")) {
   /* Subscriber for EEG raw data. */
-  this->eeg_sample_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
+  this->eeg_sample_subscriber = create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     10,
     std::bind(&StimulationTracer::handle_eeg_sample, this, _1));
@@ -26,28 +26,28 @@ StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclc
     std::bind(&StimulationTracer::handle_pulse_processed, this, _1));
 
   /* Subscriber for decision traces. */
-  this->decision_trace_subscriber = create_subscription<pipeline_interfaces::msg::DecisionTrace>(
+  this->decision_trace_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     DECISION_TRACE_TOPIC,
     100,
     std::bind(&StimulationTracer::handle_decision_trace, this, _1));
 
   /* Publisher for decision trace updates. */
-  this->decision_trace_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
+  this->decision_trace_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     DECISION_TRACE_TOPIC,
     10);
 
   /* Publisher for final merged decision traces. */
-  this->decision_trace_final_publisher = this->create_publisher<pipeline_interfaces::msg::DecisionTrace>(
+  this->decision_trace_final_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     DECISION_TRACE_FINAL_TOPIC,
     10);
 
   /* Initialize service server */
-  this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializeStimulationTracer>(
+  this->initialize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::InitializeStimulationTracer>(
     "/neurosimo/pipeline/stimulation_tracer/initialize",
     std::bind(&StimulationTracer::handle_initialize_stimulation_tracer, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Finalize service server */
-  this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizeStimulationTracer>(
+  this->finalize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer>(
     "/neurosimo/pipeline/stimulation_tracer/finalize",
     std::bind(&StimulationTracer::handle_finalize_stimulation_tracer, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -59,8 +59,8 @@ StimulationTracer::~StimulationTracer() {
 }
 
 void StimulationTracer::handle_initialize_stimulation_tracer(
-  const std::shared_ptr<pipeline_interfaces::srv::InitializeStimulationTracer::Request> request,
-  std::shared_ptr<pipeline_interfaces::srv::InitializeStimulationTracer::Response> response) {
+  const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeStimulationTracer::Request> request,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeStimulationTracer::Response> response) {
 
   /* Store the session ID, data source, and mark as initialized. */
   this->current_session_id = request->session_id;
@@ -77,8 +77,8 @@ void StimulationTracer::handle_initialize_stimulation_tracer(
 }
 
 void StimulationTracer::handle_finalize_stimulation_tracer(
-  const std::shared_ptr<pipeline_interfaces::srv::FinalizeStimulationTracer::Request> request,
-  std::shared_ptr<pipeline_interfaces::srv::FinalizeStimulationTracer::Response> response) {
+  const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer::Request> request,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer::Response> response) {
 
   /* Verify session ID matches. */
   if (request->session_id != this->current_session_id) {
@@ -99,7 +99,7 @@ void StimulationTracer::handle_finalize_stimulation_tracer(
   response->success = true;
 }
 
-void StimulationTracer::handle_decision_trace(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg) {
+void StimulationTracer::handle_decision_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg) {
   /* Skip if not initialized. */
   if (!this->is_initialized) {
     return;
@@ -124,7 +124,7 @@ void StimulationTracer::handle_decision_trace(const std::shared_ptr<pipeline_int
   }
 }
 
-void StimulationTracer::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+void StimulationTracer::handle_eeg_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Check if this sample contains a pulse trigger. */
   if (!msg->pulse_trigger) {
     return;
@@ -182,10 +182,10 @@ void StimulationTracer::handle_pulse_processed(const std_msgs::msg::Empty::Share
   }
 
   /* Create and publish the observation trace now that pulse processing is complete. */
-  auto observation_trace = pipeline_interfaces::msg::DecisionTrace();
+  auto observation_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
   observation_trace.session_id = matching_trace->session_id;
   observation_trace.decision_id = matching_trace->decision_id;
-  observation_trace.status = pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED;
+  observation_trace.status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED;
   observation_trace.actual_stimulation_time = pending.actual_stimulation_time;
   observation_trace.actual_stimulation_sample_index = pending.actual_stimulation_sample_index;
 
@@ -201,9 +201,9 @@ void StimulationTracer::handle_pulse_processed(const std_msgs::msg::Empty::Share
   this->decision_trace_publisher->publish(observation_trace);
 }
 
-pipeline_interfaces::msg::DecisionTrace* StimulationTracer::find_matching_decision(uint64_t pulse_system_time) {
+neurosimo_pipeline_interfaces::msg::DecisionTrace* StimulationTracer::find_matching_decision(uint64_t pulse_system_time) {
   /* Find decision trace with latest system_time_decider_finished that's before pulse_system_time. */
-  pipeline_interfaces::msg::DecisionTrace* best_match = nullptr;
+  neurosimo_pipeline_interfaces::msg::DecisionTrace* best_match = nullptr;
   uint64_t latest_decision_time = 0;
 
   for (auto& [key, traces] : this->decision_traces) {
@@ -232,7 +232,7 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
   }
 
   /* Merge all traces into one final trace. */
-  auto final_trace = pipeline_interfaces::msg::DecisionTrace();
+  auto final_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
 
   for (const auto& trace : it->second) {
     /* Copy all non-zero/non-empty fields from each trace. */
@@ -284,14 +284,14 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
   bool is_simulated_data_source = this->data_source == "simulator" || this->data_source == "recording";
 
   /* If the data source is simulated, the pulse is confirmed via trigger timer fire. */
-  if (is_simulated_data_source && final_trace.status == pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
-    final_trace.pulse_confirmation_method = pipeline_interfaces::msg::DecisionTrace::METHOD_TRIGGER_TIMER_FIRE;
+  if (is_simulated_data_source && final_trace.status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
+    final_trace.pulse_confirmation_method = neurosimo_pipeline_interfaces::msg::DecisionTrace::METHOD_TRIGGER_TIMER_FIRE;
     final_trace.pulse_confirmed = true;
   }
 
   /* If the data source is not simulated, the pulse is confirmed via EEG trigger. */
-  if (!is_simulated_data_source && final_trace.status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED) {
-    final_trace.pulse_confirmation_method = pipeline_interfaces::msg::DecisionTrace::METHOD_EEG_TRIGGER;
+  if (!is_simulated_data_source && final_trace.status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED) {
+    final_trace.pulse_confirmation_method = neurosimo_pipeline_interfaces::msg::DecisionTrace::METHOD_EEG_TRIGGER;
     final_trace.pulse_confirmed = true;
   }
 
@@ -307,18 +307,18 @@ void StimulationTracer::finalize_decision(uint64_t decision_id) {
 
 bool StimulationTracer::is_terminal_status(uint8_t status) {
   /* A decision is finalized when it reaches one of these terminal statuses. */
-  if (status == pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO ||
-      status == pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED ||
-      status == pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE ||
-      status == pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED ||
-      status == pipeline_interfaces::msg::DecisionTrace::STATUS_MISSED ||
-      status == pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR) {
+  if (status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO ||
+      status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED ||
+      status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_TOO_LATE ||
+      status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_PULSE_PROCESSED ||
+      status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_MISSED ||
+      status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_ERROR) {
     return true;
   }
 
   /* For recording and simulator data sources, STATUS_FIRED is also sufficient to finalize. */
   if ((this->data_source == "recording" || this->data_source == "simulator") &&
-      status == pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
+      status == neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED) {
     return true;
   }
 

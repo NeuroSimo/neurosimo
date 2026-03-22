@@ -4,9 +4,9 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from project_interfaces.srv import GetRecordingInfo, DeleteRecording
-from project_interfaces.msg import RecordingInfo
-from system_interfaces.msg import GlobalConfig
+from neurosimo_project_interfaces.srv import GetRecordingInfo, DeleteRecording
+from neurosimo_project_interfaces.msg import RecordingInfo
+from neurosimo_system_interfaces.msg import GlobalConfig
 
 import os
 import json

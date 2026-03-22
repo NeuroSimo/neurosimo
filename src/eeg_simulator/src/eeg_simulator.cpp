@@ -46,18 +46,18 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
         .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
   /* Publisher for health. */
-  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+  this->health_publisher = this->create_publisher<neurosimo_system_interfaces::msg::ComponentHealth>(
     "/neurosimo/eeg_simulator/health",
     qos_persist_latest);
 
-  this->global_config_subscriber = create_subscription<system_interfaces::msg::GlobalConfig>(
+  this->global_config_subscriber = create_subscription<neurosimo_system_interfaces::msg::GlobalConfig>(
     "/neurosimo/global_configurator/config",
     qos_persist_latest,
     std::bind(&EegSimulator::handle_global_config, this, std::placeholders::_1),
     subscription_options);
 
   /* Publisher for streamer state. */
-  data_source_state_publisher = this->create_publisher<system_interfaces::msg::DataSourceState>(
+  data_source_state_publisher = this->create_publisher<neurosimo_system_interfaces::msg::DataSourceState>(
     "/neurosimo/eeg_simulator/state",
     qos_persist_latest);
 
@@ -65,13 +65,13 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
   this->dataset_manager_ = std::make_unique<DatasetManager>(this);
 
   /* Services for starting/stopping streaming. */
-  this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
+  this->start_streaming_service = this->create_service<neurosimo_eeg_interfaces::srv::StartStreaming>(
     "/neurosimo/eeg_simulator/streaming/start",
     std::bind(&EegSimulator::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
     callback_group);
 
-  this->stop_streaming_service = this->create_service<eeg_interfaces::srv::StopStreaming>(
+  this->stop_streaming_service = this->create_service<neurosimo_eeg_interfaces::srv::StopStreaming>(
     "/neurosimo/eeg_simulator/streaming/stop",
     std::bind(&EegSimulator::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS(),
@@ -81,7 +81,7 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
 
      NB: It is crucial to not use the shared, re-entrant callback group for this publisher, as EEG sample messages
        are time-critical and using the shared callback group seems to hinder the performance. */
-  eeg_publisher = this->create_publisher<eeg_interfaces::msg::Sample>(
+  eeg_publisher = this->create_publisher<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
     EEG_QUEUE_LENGTH);
 
@@ -95,7 +95,7 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
       callback_group);
 
   /* Initialize action server for simulator initialization */
-  this->initialize_action_server = rclcpp_action::create_server<eeg_interfaces::action::InitializeSimulatorStream>(
+  this->initialize_action_server = rclcpp_action::create_server<neurosimo_eeg_interfaces::action::InitializeSimulatorStream>(
     this,
     "/eeg_simulator/initialize",
     std::bind(&EegSimulator::handle_initialize_goal, this, std::placeholders::_1, std::placeholders::_2),
@@ -103,10 +103,10 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     std::bind(&EegSimulator::handle_initialize_accepted, this, std::placeholders::_1));
 
   /* Initialize client for aborting session */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
+  this->abort_session_client = this->create_client<neurosimo_system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   /* Publish initial health status. */
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   /* Publish initial streamer state. */
   publish_data_source_state();
@@ -118,14 +118,14 @@ void EegSimulator::publish_heartbeat() {
 }
 
 void EegSimulator::publish_health_status(uint8_t health_level, const std::string& message) {
-  auto health = system_interfaces::msg::ComponentHealth();
+  auto health = neurosimo_system_interfaces::msg::ComponentHealth();
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
 }
 
 void EegSimulator::abort_session() {
-  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  auto request = std::make_shared<neurosimo_system_interfaces::srv::AbortSession::Request>();
   request->source = "eeg_simulator";
 
   auto result = this->abort_session_client->async_send_request(request);
@@ -134,7 +134,7 @@ void EegSimulator::abort_session() {
 
 rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(
   const rclcpp_action::GoalUUID & uuid,
-  std::shared_ptr<const eeg_interfaces::action::InitializeSimulatorStream::Goal> goal) {
+  std::shared_ptr<const neurosimo_eeg_interfaces::action::InitializeSimulatorStream::Goal> goal) {
   RCLCPP_INFO(this->get_logger(), "Initializing simulator with dataset '%s' and start time %.3f",
               goal->dataset_filename.c_str(), goal->start_time);
 
@@ -144,22 +144,22 @@ rclcpp_action::GoalResponse EegSimulator::handle_initialize_goal(
 }
 
 rclcpp_action::CancelResponse EegSimulator::handle_initialize_cancel(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<neurosimo_eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
   RCLCPP_INFO(this->get_logger(), "Received request to cancel initialize goal");
   (void)goal_handle;
   return rclcpp_action::CancelResponse::ACCEPT;
 }
 
 void EegSimulator::handle_initialize_accepted(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<neurosimo_eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
   // Execute the initialization in a new thread
   std::thread{std::bind(&EegSimulator::execute_initialize, this, std::placeholders::_1), goal_handle}.detach();
 }
 
 void EegSimulator::execute_initialize(
-  const std::shared_ptr<rclcpp_action::ServerGoalHandle<eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
+  const std::shared_ptr<rclcpp_action::ServerGoalHandle<neurosimo_eeg_interfaces::action::InitializeSimulatorStream>> goal_handle) {
   const auto goal = goal_handle->get_goal();
-  auto result = std::make_shared<eeg_interfaces::action::InitializeSimulatorStream::Result>();
+  auto result = std::make_shared<neurosimo_eeg_interfaces::action::InitializeSimulatorStream::Result>();
 
   // Store initialization parameters
   this->initialized_project_name = goal->project_name;
@@ -171,7 +171,7 @@ void EegSimulator::execute_initialize(
   auto [success, dataset_info, pulse_times] = this->dataset_manager_->get_dataset_info(goal->dataset_filename, data_directory);
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to get dataset info: %s", goal->dataset_filename.c_str());
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Failed to get dataset info");
+    this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR, "Failed to get dataset info");
     goal_handle->abort(result);
     return;
   }
@@ -179,16 +179,16 @@ void EegSimulator::execute_initialize(
   this->pulse_times = pulse_times;
 
   // Load dataset into buffer
-  this->data_source_state = system_interfaces::msg::DataSourceState::LOADING;
+  this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::LOADING;
   publish_data_source_state();
 
   auto [load_success, error_msg] = this->dataset_manager_->load_dataset(goal->project_name, dataset_info, this->dataset_buffer);
   if (!load_success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load dataset: %s", error_msg.c_str());
-    this->data_source_state = system_interfaces::msg::DataSourceState::ERROR;
+    this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::ERROR;
     this->error_message = error_msg;
     publish_data_source_state();
-    this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR, "Failed to load dataset: " + error_msg);
+    this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR, "Failed to load dataset: " + error_msg);
     goal_handle->abort(result);
     return;
   }
@@ -206,10 +206,10 @@ void EegSimulator::execute_initialize(
                 this->pulse_times.size(), this->pulse_times[0]);
   }
 
-  this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+  this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
 
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   // Set the start time
   this->play_dataset_from = goal->start_time;
@@ -232,7 +232,7 @@ void EegSimulator::execute_initialize(
 }
 
 void EegSimulator::publish_data_source_state() {
-  system_interfaces::msg::DataSourceState msg;
+  neurosimo_system_interfaces::msg::DataSourceState msg;
   msg.state = this->data_source_state;
   this->data_source_state_publisher->publish(msg);
 }
@@ -245,7 +245,7 @@ void EegSimulator::stop_streaming_timer() {
   }
 }
 
-void EegSimulator::handle_global_config(const std::shared_ptr<system_interfaces::msg::GlobalConfig> msg) {
+void EegSimulator::handle_global_config(const std::shared_ptr<neurosimo_system_interfaces::msg::GlobalConfig> msg) {
   std::string project_name = msg->active_project;
   
   RCLCPP_INFO(this->get_logger(), "Global config received: active_project=%s", project_name.c_str());
@@ -261,8 +261,8 @@ void EegSimulator::handle_global_config(const std::shared_ptr<system_interfaces:
 }
 
 void EegSimulator::handle_start_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> request,
-      std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Request> request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received start streaming request");
   if (!this->is_initialized) {
     response->success = false;
@@ -272,7 +272,7 @@ void EegSimulator::handle_start_streaming(
   this->session_sample_index = 0;
   this->is_session_start = true;
   this->data_source_fingerprint = 0;
-  this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
+  this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::RUNNING;
   
   /* Create the streaming timer to drive sample publication. */
   if (!this->stream_timer) {
@@ -286,11 +286,11 @@ void EegSimulator::handle_start_streaming(
 }
 
 void EegSimulator::handle_stop_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> request,
-      std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Request> request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
-  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
+  if (this->data_source_state != neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
     RCLCPP_ERROR(this->get_logger(), "Not streaming, cannot stop streaming.");
 
     response->success = false;
@@ -304,7 +304,7 @@ void EegSimulator::handle_stop_streaming(
   response->data_source_fingerprint = this->data_source_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_source_fingerprint);
 
-  this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+  this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
 
   response->success = true;
@@ -312,7 +312,7 @@ void EegSimulator::handle_stop_streaming(
 
 
 void EegSimulator::stream_timer_callback() {
-  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
+  if (this->data_source_state != neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
     return;
   }
 
@@ -326,7 +326,7 @@ void EegSimulator::stream_timer_callback() {
   bool success = this->publish_until(target_time);
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to publish samples until target time. Stopping streaming.");
-    this->data_source_state = system_interfaces::msg::DataSourceState::ERROR;
+    this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::ERROR;
     stop_streaming_timer();
     publish_data_source_state();
     return;
@@ -353,7 +353,7 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
   double_t time = sample_time + this->time_offset;
 
   /* Create the sample message. */
-  eeg_interfaces::msg::Sample msg;
+  neurosimo_eeg_interfaces::msg::Sample msg;
 
   msg.eeg.insert(msg.eeg.end(), data.begin(), data.begin() + this->dataset_info.num_eeg_channels);
   msg.emg.insert(msg.emg.end(), data.begin() + this->dataset_info.num_eeg_channels, data.end());

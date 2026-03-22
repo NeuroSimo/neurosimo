@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "eeg_interfaces/msg/sample.hpp"
-#include "eeg_interfaces/msg/eeg_statistics.hpp"
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_eeg_interfaces/msg/eeg_statistics.hpp"
 
 using namespace std::chrono_literals;
 
@@ -24,7 +24,7 @@ public:
     num_of_raw_eeg_samples = 0;
 
     /* Subscriber for raw EEG. */
-    auto eeg_enriched_subscriber_callback = [this](const std::shared_ptr<eeg_interfaces::msg::Sample> msg) -> void {
+    auto eeg_enriched_subscriber_callback = [this](const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) -> void {
       /* Update the maximum time between two consecutive samples. */
       auto now = this->now();
 
@@ -40,13 +40,13 @@ public:
       num_of_raw_eeg_samples++;
     };
 
-    eeg_enriched_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
+    eeg_enriched_subscriber = this->create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
       EEG_ENRICHED_TOPIC,
       10,
       eeg_enriched_subscriber_callback);
 
     /* Subscriber for preprocessed EEG. */
-    auto eeg_preprocessed_subscriber_callback = [this](const std::shared_ptr<eeg_interfaces::msg::Sample> msg) -> void {
+    auto eeg_preprocessed_subscriber_callback = [this](const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) -> void {
       /* Update the maximum time between two consecutive samples. */
       auto now = this->now();
 
@@ -65,13 +65,13 @@ public:
       preprocessor_durations.push_back(msg->preprocessor_duration);
     };
 
-    eeg_preprocessed_subscriber = this->create_subscription<eeg_interfaces::msg::Sample>(
+    eeg_preprocessed_subscriber = this->create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
       EEG_PREPROCESSED_TOPIC,
       10,
       eeg_preprocessed_subscriber_callback);
 
     /* Publisher for statistics. */
-    eeg_statistics_publisher = this->create_publisher<eeg_interfaces::msg::EegStatistics>(
+    eeg_statistics_publisher = this->create_publisher<neurosimo_eeg_interfaces::msg::EegStatistics>(
       EEG_STATISTICS_TOPIC,
       10);
 
@@ -110,7 +110,7 @@ public:
     }
 
     /* Publish the statistics. */
-    auto msg = eeg_interfaces::msg::EegStatistics();
+    auto msg = neurosimo_eeg_interfaces::msg::EegStatistics();
 
     msg.num_of_raw_samples = num_of_raw_eeg_samples;
     msg.max_interval_between_raw_samples = max_interval_between_raw_samples;
@@ -142,9 +142,9 @@ public:
 
 
 private:
-  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_enriched_subscriber;
-  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr eeg_preprocessed_subscriber;
-  rclcpp::Publisher<eeg_interfaces::msg::EegStatistics>::SharedPtr eeg_statistics_publisher;
+  rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_enriched_subscriber;
+  rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_preprocessed_subscriber;
+  rclcpp::Publisher<neurosimo_eeg_interfaces::msg::EegStatistics>::SharedPtr eeg_statistics_publisher;
 
   rclcpp::TimerBase::SharedPtr timer;
 

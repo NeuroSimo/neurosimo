@@ -5,8 +5,8 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
-from project_interfaces.srv import ListProjects
-from system_interfaces.msg import GlobalConfig
+from neurosimo_project_interfaces.srv import ListProjects
+from neurosimo_system_interfaces.msg import GlobalConfig
 
 from rcl_interfaces.msg import SetParametersResult
 

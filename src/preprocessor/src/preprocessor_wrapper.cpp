@@ -6,7 +6,7 @@
 #include <cmath>
 
 #include "preprocessor_wrapper.h"
-#include <eeg_interfaces/msg/sample.hpp>
+#include <neurosimo_eeg_interfaces/msg/sample.hpp>
 
 namespace py = pybind11;
 
@@ -208,8 +208,8 @@ int PreprocessorWrapper::get_look_ahead_samples() const {
 }
 
 bool PreprocessorWrapper::process(
-    eeg_interfaces::msg::Sample& output_sample,
-    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    neurosimo_eeg_interfaces::msg::Sample& output_sample,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
     bool pulse_given) {
 
@@ -275,7 +275,7 @@ bool PreprocessorWrapper::process(
 }
 
 void PreprocessorWrapper::fill_arrays_from_buffer(
-    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
     py::array_t<double>& time_offsets,
     py::array_t<double>& eeg,

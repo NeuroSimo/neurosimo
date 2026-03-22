@@ -42,13 +42,13 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
                                 .durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
   this->eeg_sample_publisher =
-      this->create_publisher<eeg_interfaces::msg::Sample>(EEG_RAW_TOPIC, EEG_QUEUE_LENGTH);
+      this->create_publisher<neurosimo_eeg_interfaces::msg::Sample>(EEG_RAW_TOPIC, EEG_QUEUE_LENGTH);
 
   this->device_info_publisher =
-      this->create_publisher<eeg_interfaces::msg::EegDeviceInfo>(DEVICE_INFO_TOPIC, qos_persist_latest);
+      this->create_publisher<neurosimo_eeg_interfaces::msg::EegDeviceInfo>(DEVICE_INFO_TOPIC, qos_persist_latest);
 
   this->data_source_state_publisher =
-      this->create_publisher<system_interfaces::msg::DataSourceState>("/neurosimo/eeg_bridge/state", qos_persist_latest);
+      this->create_publisher<neurosimo_system_interfaces::msg::DataSourceState>("/neurosimo/eeg_bridge/state", qos_persist_latest);
 
   this->heartbeat_publisher =
     this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
@@ -57,30 +57,30 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
     this->create_publisher<std_msgs::msg::Int32>(DROPPED_SAMPLES_TOPIC, 10);
 
   this->health_publisher =
-    this->create_publisher<system_interfaces::msg::ComponentHealth>("/neurosimo/eeg_bridge/health", qos_persist_latest);
+    this->create_publisher<neurosimo_system_interfaces::msg::ComponentHealth>("/neurosimo/eeg_bridge/health", qos_persist_latest);
 
   /* Create services */
-  this->start_streaming_service = this->create_service<eeg_interfaces::srv::StartStreaming>(
+  this->start_streaming_service = this->create_service<neurosimo_eeg_interfaces::srv::StartStreaming>(
     "/neurosimo/eeg_device/streaming/start",
     std::bind(&EegBridge::handle_start_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
-  this->stop_streaming_service = this->create_service<eeg_interfaces::srv::StopStreaming>(
+  this->stop_streaming_service = this->create_service<neurosimo_eeg_interfaces::srv::StopStreaming>(
     "/neurosimo/eeg_device/streaming/stop",
     std::bind(&EegBridge::handle_stop_streaming, this, std::placeholders::_1, std::placeholders::_2));
 
-  this->initialize_service = this->create_service<eeg_interfaces::srv::InitializeEegDeviceStream>(
+  this->initialize_service = this->create_service<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream>(
     "/neurosimo/eeg_device/initialize",
     std::bind(&EegBridge::handle_initialize, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
+  this->abort_session_client = this->create_client<neurosimo_system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   while (!abort_session_client->wait_for_service(2s)) {
     RCLCPP_INFO(get_logger(), "Service /neurosimo/session/abort not available, waiting...");
   }
 
   /* Create subscribers */
-  this->global_config_subscription = this->create_subscription<system_interfaces::msg::GlobalConfig>(
+  this->global_config_subscription = this->create_subscription<neurosimo_system_interfaces::msg::GlobalConfig>(
       "/neurosimo/global_configurator/config",
       qos_persist_latest,
       std::bind(&EegBridge::handle_global_config, this, std::placeholders::_1));
@@ -91,12 +91,12 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
 
   /* Publish initial state and health status. */
   publish_data_source_state();
-  publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 }
 
-void EegBridge::handle_global_config(const system_interfaces::msg::GlobalConfig::SharedPtr msg) {
+void EegBridge::handle_global_config(const neurosimo_system_interfaces::msg::GlobalConfig::SharedPtr msg) {
   /* Ignore config changes during ongoing session */
-  if (this->data_source_state == system_interfaces::msg::DataSourceState::RUNNING) {
+  if (this->data_source_state == neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
     RCLCPP_WARN(this->get_logger(), "Ignoring global config update during ongoing session");
     return;
   }
@@ -142,7 +142,7 @@ void EegBridge::handle_global_config(const system_interfaces::msg::GlobalConfig:
     this->socket_ = std::make_shared<UdpSocket>(this->port);
     if (!this->socket_->init_socket()) {
       RCLCPP_ERROR(this->get_logger(), "Failed to initialize UDP socket");
-      this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+      this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
                                    "Failed to initialize UDP socket");
       return;
     }
@@ -155,7 +155,7 @@ void EegBridge::handle_global_config(const system_interfaces::msg::GlobalConfig:
       this->socket_ = std::make_shared<UdpSocket>(this->port);
       if (!this->socket_->init_socket()) {
         RCLCPP_ERROR(this->get_logger(), "Failed to initialize UDP socket");
-        this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+        this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
                                      "Failed to initialize UDP socket");
         return;
       }
@@ -169,7 +169,7 @@ void EegBridge::handle_global_config(const system_interfaces::msg::GlobalConfig:
                                                              this->turbolink_eeg_channel_count);
     } else {
       RCLCPP_ERROR(this->get_logger(), "Unsupported EEG device: %s", this->eeg_device_type.c_str());
-      this->publish_health_status(system_interfaces::msg::ComponentHealth::ERROR,
+      this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
                                    "Unsupported EEG device type");
       return;
     }
@@ -189,7 +189,7 @@ void EegBridge::handle_global_config(const system_interfaces::msg::GlobalConfig:
   }
   RCLCPP_INFO(this->get_logger(), " ");
 
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 }
 
 void EegBridge::publish_device_info() {
@@ -204,7 +204,7 @@ void EegBridge::publish_device_info() {
 }
 
 void EegBridge::publish_data_source_state() {
-  system_interfaces::msg::DataSourceState msg;
+  neurosimo_system_interfaces::msg::DataSourceState msg;
   msg.state = this->data_source_state;
   this->data_source_state_publisher->publish(msg);
 }
@@ -223,7 +223,7 @@ void EegBridge::abort_session(const std::string& reason) {
   }
   this->session_abort_requested = true;
 
-  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  auto request = std::make_shared<neurosimo_system_interfaces::srv::AbortSession::Request>();
   request->source = "eeg_bridge";
   request->reason = reason;
 
@@ -237,7 +237,7 @@ void EegBridge::publish_heartbeat() {
 }
 
 void EegBridge::publish_health_status(uint8_t health_level, const std::string& message) {
-  auto health = system_interfaces::msg::ComponentHealth();
+  auto health = neurosimo_system_interfaces::msg::ComponentHealth();
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
@@ -261,17 +261,17 @@ bool EegBridge::reset_state() {
 
   this->publish_cumulative_dropped_samples();
 
-  this->data_source_state = system_interfaces::msg::DataSourceState::READY;
+  this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::READY;
   publish_data_source_state();
 
-  this->publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   return true;
 }
 
 void EegBridge::handle_start_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StartStreaming::Request> [[maybe_unused]] request,
-      std::shared_ptr<eeg_interfaces::srv::StartStreaming::Response> response) {
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Request> [[maybe_unused]] request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received start streaming request");
 
   if (this->device_state != EegDeviceState::EEG_DEVICE_STREAMING) {
@@ -281,7 +281,7 @@ void EegBridge::handle_start_streaming(
 
   this->reset_state();
 
-  this->data_source_state = system_interfaces::msg::DataSourceState::RUNNING;
+  this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::RUNNING;
   publish_data_source_state();
 
   this->is_session_start = true;
@@ -289,11 +289,11 @@ void EegBridge::handle_start_streaming(
 }
 
 void EegBridge::handle_stop_streaming(
-      const std::shared_ptr<eeg_interfaces::srv::StopStreaming::Request> [[maybe_unused]] request,
-      std::shared_ptr<eeg_interfaces::srv::StopStreaming::Response> response) {
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Request> [[maybe_unused]] request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 
-  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
+  if (this->data_source_state != neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
     RCLCPP_ERROR(this->get_logger(), "Not streaming, cannot stop streaming.");
 
     response->success = false;
@@ -311,8 +311,8 @@ void EegBridge::handle_stop_streaming(
 }
 
 void EegBridge::handle_initialize(
-    const std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Request> [[maybe_unused]] request,
-    std::shared_ptr<eeg_interfaces::srv::InitializeEegDeviceStream::Response> response) {
+    const std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream::Request> [[maybe_unused]] request,
+    std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Initializing EEG device stream");
 
   // Get device info and create stream info
@@ -369,7 +369,7 @@ bool EegBridge::check_for_dropped_samples(uint64_t device_sample_index) {
 
 void EegBridge::check_for_sample_timeout() {
   /* Only check timeout when streaming is active */
-  if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
+  if (this->data_source_state != neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
     return;
   }
 
@@ -386,9 +386,9 @@ void EegBridge::check_for_sample_timeout() {
   }
 }
 
-eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
-                                                    const eeg_interfaces::msg::EegDeviceInfo& [[maybe_unused]] device_info) {
-  auto sample = eeg_interfaces::msg::Sample();
+neurosimo_eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& adapter_sample,
+                                                    const neurosimo_eeg_interfaces::msg::EegDeviceInfo& [[maybe_unused]] device_info) {
+  auto sample = neurosimo_eeg_interfaces::msg::Sample();
   sample.eeg = adapter_sample.eeg;
   sample.emg = adapter_sample.emg;
   sample.time = adapter_sample.time;
@@ -398,7 +398,7 @@ eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const AdapterSample& ad
   return sample;
 }
 
-void EegBridge::handle_sample(eeg_interfaces::msg::Sample sample) {
+void EegBridge::handle_sample(neurosimo_eeg_interfaces::msg::Sample sample) {
   /* If this is the first sample, set the time offset. */
   if (std::isnan(this->time_offset)) {
     this->time_offset = sample.time;
@@ -501,7 +501,7 @@ void EegBridge::process_eeg_packet() {
     /* Track device activity even when session isn't running yet. */
     this->last_sample_time = std::chrono::steady_clock::now();
 
-    if (this->data_source_state != system_interfaces::msg::DataSourceState::RUNNING) {
+    if (this->data_source_state != neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
                             "Waiting for session to start...");
       break;

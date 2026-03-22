@@ -7,19 +7,19 @@
 #include <filesystem>
 
 #include "rclcpp/rclcpp.hpp"
-#include "eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
-#include "project_interfaces/msg/filename_list.hpp"
-#include "project_interfaces/srv/set_module.hpp"
-#include "pipeline_interfaces/msg/experiment_state.hpp"
-#include "pipeline_interfaces/msg/decision_trace.hpp"
-#include "pipeline_interfaces/msg/protocol_info.hpp"
-#include "pipeline_interfaces/srv/initialize_protocol.hpp"
-#include "pipeline_interfaces/srv/finalize_protocol.hpp"
-#include "pipeline_interfaces/srv/get_protocol_info.hpp"
-#include "system_interfaces/msg/component_health.hpp"
+#include "neurosimo_project_interfaces/msg/filename_list.hpp"
+#include "neurosimo_project_interfaces/srv/set_module.hpp"
+#include "neurosimo_pipeline_interfaces/msg/experiment_state.hpp"
+#include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/protocol_info.hpp"
+#include "neurosimo_pipeline_interfaces/srv/initialize_protocol.hpp"
+#include "neurosimo_pipeline_interfaces/srv/finalize_protocol.hpp"
+#include "neurosimo_pipeline_interfaces/srv/get_protocol_info.hpp"
+#include "neurosimo_system_interfaces/msg/component_health.hpp"
 
 #include "protocol.h"
 #include "protocol_loader.h"
@@ -33,15 +33,15 @@ public:
 private:
   /* ROS2 interfaces */
   // Subscribers
-  rclcpp::Subscription<eeg_interfaces::msg::Sample>::SharedPtr raw_eeg_subscriber;
-  rclcpp::Subscription<pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_final_subscriber;
+  rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr raw_eeg_subscriber;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_final_subscriber;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   
   // Publishers
-  rclcpp::Publisher<eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
+  rclcpp::Publisher<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
-  rclcpp::Publisher<system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
-  rclcpp::Publisher<pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
+  rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
 
   // Clients
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr stop_simulator_client;
@@ -51,9 +51,9 @@ private:
   // Services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_service;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_service;
-  rclcpp::Service<pipeline_interfaces::srv::InitializeProtocol>::SharedPtr initialize_protocol_service;
-  rclcpp::Service<pipeline_interfaces::srv::FinalizeProtocol>::SharedPtr finalize_protocol_service;
-  rclcpp::Service<pipeline_interfaces::srv::GetProtocolInfo>::SharedPtr get_protocol_info_service;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeProtocol>::SharedPtr initialize_protocol_service;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::FinalizeProtocol>::SharedPtr finalize_protocol_service;
+  rclcpp::Service<neurosimo_pipeline_interfaces::srv::GetProtocolInfo>::SharedPtr get_protocol_info_service;
     
   // Timers
   rclcpp::TimerBase::SharedPtr heartbeat_timer;
@@ -68,8 +68,8 @@ private:
   rclcpp::Logger logger;
 
   /* Callbacks */
-  void handle_raw_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg);
-  void handle_decision_trace_final(const std::shared_ptr<pipeline_interfaces::msg::DecisionTrace> msg);
+  void handle_raw_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
+  void handle_decision_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg);
   
   void handle_pause(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
@@ -79,14 +79,14 @@ private:
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void handle_initialize_protocol(
-    const std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::InitializeProtocol::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeProtocol::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeProtocol::Response> response);
   void handle_finalize_protocol(
-    const std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::FinalizeProtocol::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeProtocol::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeProtocol::Response> response);
   void handle_get_protocol_info(
-    const std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Request> request,
-    std::shared_ptr<pipeline_interfaces::srv::GetProtocolInfo::Response> response);
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::GetProtocolInfo::Request> request,
+    std::shared_ptr<neurosimo_pipeline_interfaces::srv::GetProtocolInfo::Response> response);
   void request_finish_session();
   void mark_protocol_complete();
   void publish_experiment_state(double current_time);

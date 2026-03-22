@@ -14,13 +14,13 @@
 
 #include <diagnostic_msgs/msg/key_value.hpp>
 
-#include "eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
 
 #include "stimulation_interfaces/msg/coil_target.hpp"
 #include "stimulation_interfaces/msg/targeted_pulse.hpp"
 
-#include "pipeline_interfaces/msg/sensory_stimulus.hpp"
-#include "pipeline_interfaces/msg/log_message.hpp"
+#include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
+#include "neurosimo_pipeline_interfaces/msg/log_message.hpp"
 
 #include "std_msgs/msg/string.hpp"
 
@@ -63,22 +63,22 @@ public:
       const size_t eeg_size,
       const size_t emg_size,
       const uint16_t sampling_frequency,
-      std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+      std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
       std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue);
 
   bool warm_up();
 
   bool parse_sensory_stimulus_dict(
     const py::dict& py_sensory_stimulus,
-    pipeline_interfaces::msg::SensoryStimulus& out_msg);
+    neurosimo_pipeline_interfaces::msg::SensoryStimulus& out_msg);
 
   std::tuple<
     bool,
     std::shared_ptr<double_t>,
     std::string,
     std::vector<stimulation_interfaces::msg::TargetedPulse>> process(
-    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     ProcessingReason processing_reason,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
@@ -186,7 +186,7 @@ private:
 
   bool process_sensory_stimuli_list(
     const py::list& py_sensory_stimuli,
-    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli);
 
   bool parse_targeted_pulse_dict(
     const py::dict& py_targeted_pulse,
@@ -197,7 +197,7 @@ private:
     std::vector<stimulation_interfaces::msg::TargetedPulse>& targeted_pulses);
 
   void fill_arrays_from_buffer(
-    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t sample_window_base_time,
     py::array_t<double>& timestamps,
     py::array_t<double>& eeg,

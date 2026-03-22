@@ -90,7 +90,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     const globalConfigSubscriber = new Topic({
       ros: ros,
       name: '/neurosimo/global_configurator/config',
-      messageType: 'system_interfaces/GlobalConfig',
+      messageType: 'neurosimo_system_interfaces/GlobalConfig',
       queue_size: 1,
     })
 

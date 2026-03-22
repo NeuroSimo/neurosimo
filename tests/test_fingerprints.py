@@ -12,8 +12,8 @@ from rcl_interfaces.srv import SetParameters
 from rclpy.node import Node
 from std_srvs.srv import Trigger
 
-from project_interfaces.srv import ListProjects
-from system_interfaces.msg import SessionState
+from neurosimo_project_interfaces.srv import ListProjects
+from neurosimo_system_interfaces.msg import SessionState
 
 
 pytestmark = [pytest.mark.tests]

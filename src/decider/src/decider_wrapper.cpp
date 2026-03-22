@@ -8,7 +8,7 @@
 #include <cstdlib>
 
 #include "decider_wrapper.h"
-#include <eeg_interfaces/msg/sample.hpp>
+#include <neurosimo_eeg_interfaces/msg/sample.hpp>
 
 namespace py = pybind11;
 
@@ -16,7 +16,7 @@ DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
 
   /* Initialize processing path to undetermined */
-  current_processing_path = pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_UNDETERMINED;
+  current_processing_path = neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_UNDETERMINED;
 
   /* Start IPC log server first, so cpp_bindings.log() can forward immediately. */
   log_server = std::make_unique<LogIpcServer>(
@@ -71,7 +71,7 @@ bool DeciderWrapper::initialize_module(
     const size_t eeg_size,
     const size_t emg_size,
     const uint16_t sampling_frequency,
-    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue) {
 
   this->sampling_frequency = sampling_frequency;
@@ -697,7 +697,7 @@ double DeciderWrapper::get_pulse_lockout_duration() const {
 
 bool DeciderWrapper::parse_sensory_stimulus_dict(
   const py::dict& py_sensory_stimulus,
-  pipeline_interfaces::msg::SensoryStimulus& out_msg) {
+  neurosimo_pipeline_interfaces::msg::SensoryStimulus& out_msg) {
 
   static const std::vector<std::string> required = {
     "time",
@@ -766,7 +766,7 @@ bool DeciderWrapper::parse_sensory_stimulus_dict(
 
 bool DeciderWrapper::process_sensory_stimuli_list(
     const py::list& py_sensory_stimuli,
-    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli) {
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli) {
 
   if (py_sensory_stimuli.size() > 0) {
     for (const auto& py_sensory_stimulus : py_sensory_stimuli) {
@@ -775,7 +775,7 @@ bool DeciderWrapper::process_sensory_stimuli_list(
         return false;
       }
       py::dict py_sensory_stimulus_dict = py_sensory_stimulus.cast<py::dict>();
-      pipeline_interfaces::msg::SensoryStimulus msg;
+      neurosimo_pipeline_interfaces::msg::SensoryStimulus msg;
       if (parse_sensory_stimulus_dict(py_sensory_stimulus_dict, msg)) {
         sensory_stimuli.push_back(msg);
       } else {
@@ -842,7 +842,7 @@ bool DeciderWrapper::process_targeted_pulses_list(
 }
 
 void DeciderWrapper::fill_arrays_from_buffer(
-    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
     py::array_t<double>& time_offsets,
     py::array_t<double>& eeg,
@@ -875,8 +875,8 @@ std::tuple<
   std::shared_ptr<double_t>,
   std::string,
   std::vector<stimulation_interfaces::msg::TargetedPulse>> DeciderWrapper::process(
-    std::vector<pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    const RingBuffer<std::shared_ptr<eeg_interfaces::msg::Sample>>& buffer,
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
     ProcessingReason processing_reason,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
@@ -932,13 +932,13 @@ std::tuple<
   try {
     switch (processing_reason) {
       case ProcessingReason::Periodic:
-        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
+        set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
         /* Call periodic processor. */
         py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, false);
         break;
 
       case ProcessingReason::Pulse:
-        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
+        set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
         /* Call pulse processor if registered. */
         if (pulse_processor.is_none()) {
           py_result = py::none();
@@ -948,7 +948,7 @@ std::tuple<
         break;
 
       case ProcessingReason::Event:
-        set_current_processing_path(pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
+        set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
         /* Call event processor if registered. */
         if (event_processor.is_none()) {
           py_result = py::none();

@@ -12,9 +12,9 @@
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
 
-  <depend>eeg_interfaces</depend>
-  <depend>pipeline_interfaces</depend>
-  <depend>system_interfaces</depend>
+  <depend>neurosimo_eeg_interfaces</depend>
+  <depend>neurosimo_pipeline_interfaces</depend>
+  <depend>neurosimo_system_interfaces</depend>
   <depend>realtime_utils</depend>
 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>

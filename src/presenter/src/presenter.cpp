@@ -9,7 +9,7 @@
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
-#include "system_interfaces/msg/component_health.hpp"
+#include "neurosimo_system_interfaces/msg/component_health.hpp"
 
 using namespace std::chrono;
 
@@ -28,7 +28,7 @@ const uint16_t EEG_QUEUE_LENGTH = 65535;
 
 EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("presenter")) {
   /* Subscriber for EEG samples (to get session markers and time). */
-  this->eeg_subscriber = create_subscription<eeg_interfaces::msg::Sample>(
+  this->eeg_subscriber = create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_ENRICHED_TOPIC,
     EEG_QUEUE_LENGTH,
     std::bind(&EegPresenter::handle_eeg_sample, this, _1));
@@ -39,7 +39,7 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
   auto qos_keep_all = rclcpp::QoS(rclcpp::KeepAll())
   .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
-  this->sensory_stimulus_subscriber = create_subscription<pipeline_interfaces::msg::SensoryStimulus>(
+  this->sensory_stimulus_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::SensoryStimulus>(
     SENSORY_STIMULUS_TOPIC,
     qos_keep_all,
     std::bind(&EegPresenter::handle_sensory_stimulus, this, _1));
@@ -49,22 +49,22 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
   auto qos_keep_all_logs = rclcpp::QoS(rclcpp::KeepAll())
     .reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
 
-  this->python_log_publisher = this->create_publisher<pipeline_interfaces::msg::LogMessages>(
+  this->python_log_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::LogMessages>(
     "/neurosimo/pipeline/presenter/log",
     qos_keep_all_logs);
 
   /* Initialize service server for component initialization */
-  this->initialize_service_server = this->create_service<pipeline_interfaces::srv::InitializePresenter>(
+  this->initialize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::InitializePresenter>(
     "/neurosimo/pipeline/presenter/initialize",
     std::bind(&EegPresenter::handle_initialize_presenter, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Finalize service server */
-  this->finalize_service_server = this->create_service<pipeline_interfaces::srv::FinalizePresenter>(
+  this->finalize_service_server = this->create_service<neurosimo_pipeline_interfaces::srv::FinalizePresenter>(
     "/neurosimo/pipeline/presenter/finalize",
     std::bind(&EegPresenter::handle_finalize_presenter, this, std::placeholders::_1, std::placeholders::_2));
 
   /* Service client for session abort. */
-  this->abort_session_client = this->create_client<system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
+  this->abort_session_client = this->create_client<neurosimo_system_interfaces::srv::AbortSession>("/neurosimo/session/abort");
 
   while (!abort_session_client->wait_for_service(2s)) {
     RCLCPP_INFO(this->get_logger(), "Service /neurosimo/session/abort not available, waiting...");
@@ -80,7 +80,7 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     10);
 
   /* Create health publisher */
-  this->health_publisher = this->create_publisher<system_interfaces::msg::ComponentHealth>(
+  this->health_publisher = this->create_publisher<neurosimo_system_interfaces::msg::ComponentHealth>(
     "/neurosimo/presenter/health",
     status_qos);
 
@@ -90,15 +90,15 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
     std::bind(&EegPresenter::_publish_heartbeat, this));
 
   /* Publish initial health status. */
-  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
 }
 
 void EegPresenter::handle_initialize_presenter(
-  const std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Request> request,
-  std::shared_ptr<pipeline_interfaces::srv::InitializePresenter::Response> response) {
+  const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializePresenter::Request> request,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializePresenter::Response> response) {
   
   // Set enabled state
   this->is_enabled = request->enabled;
@@ -161,7 +161,7 @@ void EegPresenter::handle_initialize_presenter(
 
   // Publish initialization logs from Python constructor
   this->presenter_wrapper->drain_logs();
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_INITIALIZATION, 0.0);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to initialize presenter module");
@@ -176,7 +176,7 @@ void EegPresenter::handle_initialize_presenter(
   this->is_initialized = true;
 
   /* Publish ready health status */
-  this->_publish_health_status(system_interfaces::msg::ComponentHealth::READY, "");
+  this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   RCLCPP_INFO(this->get_logger(), "Presenter initialized successfully: project=%s, module=%s",
               request->project_name.c_str(), request->module_filename.c_str());
@@ -185,15 +185,15 @@ void EegPresenter::handle_initialize_presenter(
 }
 
 void EegPresenter::handle_finalize_presenter(
-  const std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Request> /* request */,
-  std::shared_ptr<pipeline_interfaces::srv::FinalizePresenter::Response> response) {
+  const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizePresenter::Request> /* request */,
+  std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizePresenter::Response> response) {
 
   RCLCPP_INFO(this->get_logger(), "Received finalize request");
 
   /* Publish logs from the previous sample at the beginning of the finalization. */
   if (!std::isnan(this->previous_sample_time)) {
     this->presenter_wrapper->drain_logs();
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
   /* Destroy the Python instance first so its __del__ runs before log draining. */
@@ -201,7 +201,7 @@ void EegPresenter::handle_finalize_presenter(
 
   /* Drain and publish output from __del__. */
   this->presenter_wrapper->drain_logs();
-  publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_FINALIZATION, 0.0);
 
   RCLCPP_INFO(this->get_logger(), "Presenter finalized successfully");
   response->success = true;
@@ -218,11 +218,11 @@ void EegPresenter::publish_python_logs(uint8_t phase, double sample_time) {
   }
   
   // Create a single batched message containing all logs
-  auto batch_msg = pipeline_interfaces::msg::LogMessages();
+  auto batch_msg = neurosimo_pipeline_interfaces::msg::LogMessages();
   
   for (const auto& log_entry : logs) {
     // Create individual log message
-    auto log_msg = pipeline_interfaces::msg::LogMessage();
+    auto log_msg = neurosimo_pipeline_interfaces::msg::LogMessage();
     log_msg.message = log_entry.message;
     log_msg.sample_time = sample_time;
     log_msg.level = static_cast<uint8_t>(log_entry.level);
@@ -243,7 +243,7 @@ void EegPresenter::publish_python_logs(uint8_t phase, double sample_time) {
 }
 
 /* EEG sample handler (for session markers and time updates). */
-void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::Sample> msg) {
+void EegPresenter::handle_eeg_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   // Return early if the presenter is not enabled or initialized.
   if (!this->is_enabled || !this->is_initialized) {
     return;
@@ -260,7 +260,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
 
   /* Publish logs from the previous sample at the beginning of this sample */
   if (!std::isnan(this->previous_sample_time)) {
-    publish_python_logs(pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
+    publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, this->previous_sample_time);
   }
 
   /* Update previous sample time for next iteration's log publishing */
@@ -305,7 +305,7 @@ void EegPresenter::handle_eeg_sample(const std::shared_ptr<eeg_interfaces::msg::
   }
 }
 
-void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<pipeline_interfaces::msg::SensoryStimulus> msg) {
+void EegPresenter::handle_sensory_stimulus(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::SensoryStimulus> msg) {
   RCLCPP_INFO(this->get_logger(), "Received sensory stimulus (type: %s, time: %.3f)", msg->type.c_str(), msg->time);
 
   if (!this->is_enabled || !this->is_initialized) {
@@ -331,14 +331,14 @@ void EegPresenter::_publish_heartbeat() {
 }
 
 void EegPresenter::_publish_health_status(uint8_t health_level, const std::string& message) {
-  auto health = system_interfaces::msg::ComponentHealth();
+  auto health = neurosimo_system_interfaces::msg::ComponentHealth();
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
 }
 
 void EegPresenter::abort_session(const std::string& reason) {
-  auto request = std::make_shared<system_interfaces::srv::AbortSession::Request>();
+  auto request = std::make_shared<neurosimo_system_interfaces::srv::AbortSession::Request>();
   request->source = "presenter";
   request->reason = reason;
 

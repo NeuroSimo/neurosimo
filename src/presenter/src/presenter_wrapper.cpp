@@ -143,7 +143,7 @@ void PresenterWrapper::destroy_instance() {
   presenter_instance = nullptr;
 }
 
-bool PresenterWrapper::process(pipeline_interfaces::msg::SensoryStimulus& msg) {
+bool PresenterWrapper::process(neurosimo_pipeline_interfaces::msg::SensoryStimulus& msg) {
   // Extract fields
   std::string type = msg.type;
 

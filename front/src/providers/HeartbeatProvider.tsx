@@ -5,7 +5,7 @@ import { REQUIRED_NEUROSIMO_HEARTBEATS } from 'config/requiredHeartbeats'
 import { ros } from 'ros/ros'
 import { useRosConnection } from './RosConnectionProvider'
 
-const STALE_MS = 1000
+const STALE_MS = 3000
 const TICK_MS = 200
 
 interface HeartbeatContextType {

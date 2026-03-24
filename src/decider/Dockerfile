@@ -29,7 +29,7 @@ ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # Install PyTorch.
-RUN pip3 install --timeout 300 --retries 3 torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0
+RUN pip3 install --timeout 900 --retries 3 torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0
 
 # Core scientific packages
 RUN pip3 install matplotlib==3.10.8 wandb==0.25.0 pyyaml==6.0.1 omegaconf==2.3.0 tqdm==4.67.3 diffusers==0.36.0 accelerate==1.12.0 lovely-tensors==0.1.21 \

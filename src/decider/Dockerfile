@@ -2,7 +2,7 @@ FROM nvidia/cuda:12.6.0-base-ubuntu24.04
 
 SHELL ["/bin/bash", "-c"]
 
-# Set up ROS2 repository.
+# Install ROS2.
 ARG ROS_APT_SOURCE_VERSION=1.1.0
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
     apt-get install -y --no-install-recommends ros-jazzy-ros-base && \
     rm -rf /var/lib/apt/lists/*
 
+# Install other dependencies.
 RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-tk \
@@ -31,23 +32,23 @@ ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
-# Install PyTorch.
-RUN pip3 install --timeout 900 --retries 3 torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0
+# Python dependencies
+WORKDIR /app
 
-# Core scientific packages
-RUN pip3 install matplotlib==3.10.8 wandb==0.25.0 pyyaml==6.0.1 omegaconf==2.3.0 tqdm==4.67.3 diffusers==0.36.0 accelerate==1.12.0 lovely-tensors==0.1.21 \
-    numpy==1.26.4 scipy==1.17.1 ema-pytorch==0.7.9 scikit-learn==1.8.0 pandas==3.0.1 statsmodels==0.14.6 torchinfo==1.8.0 joblib==1.5.3 einops==0.8.2
+COPY src/decider/requirements/torch.txt requirements/torch.txt
+RUN pip3 install --timeout 900 --retries 3 -r requirements/torch.txt
 
-# MNE ecosystem
-RUN pip3 install mne==1.7.0 mne-realtime==0.3.0 mne_icalabel==0.8.1
+COPY src/decider/requirements/science.txt requirements/science.txt
+RUN pip3 install -r requirements/science.txt
 
-# mneflow (pins tensorflow, install separately to avoid conflicts)
-RUN pip3 install mneflow==0.5.10
+COPY src/decider/requirements/mne.txt requirements/mne.txt
+RUN pip3 install -r requirements/mne.txt
 
-# py_neuromodulation (heavy deps, install last)
-RUN pip3 install py_neuromodulation==0.1.7 --no-deps || pip3 install py_neuromodulation==0.1.7
-
-RUN pip3 install spectrum==0.9.0
+# mneflow pins tensorflow<=2.16.1 which conflicts with numpy>=2.0.
+# py_neuromodulation pulls transitive dependencies that conflict similarly.
+# Install both without deps since their runtime requirements are already met.
+RUN pip3 install --no-deps mneflow==0.5.10 py_neuromodulation==0.1.7 && \
+    pip3 install spectrum==0.9.0
 
 # Copy ROS workspace and build packages
 

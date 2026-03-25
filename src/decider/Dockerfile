@@ -3,15 +3,18 @@ FROM nvidia/cuda:12.6.0-base-ubuntu24.04
 SHELL ["/bin/bash", "-c"]
 
 # Set up ROS2 repository.
-RUN apt-get update && apt-get install -y curl gnupg2 lsb-release && \
-    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
+ARG ROS_APT_SOURCE_VERSION=1.1.0
 
-# Set non-interactive mode to avoid prompts during ROS2 installation.
-ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
+    curl -L -o /tmp/ros2-apt-source.deb \
+      "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb" && \
+    dpkg -i /tmp/ros2-apt-source.deb && \
+    rm /tmp/ros2-apt-source.deb && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ros-jazzy-ros-base && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
-    ros-jazzy-ros-base \
     python3-pip \
     python3-tk \
     python3-colcon-common-extensions \

@@ -607,6 +607,9 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   if (request_timed_trigger) {
     requested_stimulation_time = sample_time + *trigger_offset;
   }
+  if (!targeted_pulses.empty()) {
+    requested_stimulation_time = sample_time + targeted_pulses.front().time_offset;
+  }
 
   /* Update decision fingerprint with evaluation info. */
   this->decision_fingerprint = XXH64(

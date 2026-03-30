@@ -20,7 +20,7 @@ TOPICS_GLOB="\"[\
 '/neurosimo/system/disk_status',\
 '/neurosimo/eeg_device/info',\
 '/neurosimo/eeg/statistics',\
-'/eeg_bridge/dropped_samples',\
+'/neurosimo/eeg/dropped_samples',\
 '/rosout'\
 ]\""
 

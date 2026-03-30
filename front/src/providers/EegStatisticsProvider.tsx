@@ -47,7 +47,7 @@ export const EegStatisticsProvider: React.FC<EegStatisticsProviderProps> = ({ ch
 
     const droppedSamplesSubscriber = new Topic<Int32>({
       ros: ros,
-      name: '/eeg_bridge/dropped_samples',
+      name: '/neurosimo/eeg/dropped_samples',
       messageType: 'std_msgs/Int32',
     })
 

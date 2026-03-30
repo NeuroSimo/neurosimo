@@ -483,8 +483,8 @@ void EegBridge::process_eeg_packet() {
     return;
   }
 
-  // Process the packet
-  AdapterPacket packet = this->eeg_adapter->process_packet(this->buffer, BUFFER_SIZE);
+  // Process the packet (fills this->packet in place, no heap allocation in steady state)
+  this->eeg_adapter->process_packet(this->buffer, BUFFER_SIZE, this->packet);
 
   auto device_info = this->eeg_adapter->get_device_info();
 
@@ -493,7 +493,7 @@ void EegBridge::process_eeg_packet() {
     return;
   }
 
-  switch (packet.result) {
+  switch (this->packet.result) {
 
   case SAMPLE: {
     set_device_state(EegDeviceState::EEG_DEVICE_STREAMING);
@@ -513,12 +513,12 @@ void EegBridge::process_eeg_packet() {
     }
 
     // Check for dropped samples using device sample index
-    if (!check_for_dropped_samples(packet.sample.sample_index)) {
+    if (!check_for_dropped_samples(this->packet.sample.sample_index)) {
       // Dropped samples detected, don't process this sample
       break;
     }
 
-    auto ros_sample = create_ros_sample(packet.sample, device_info);
+    auto ros_sample = create_ros_sample(this->packet.sample, device_info);
 
     // Always handle the sample
     handle_sample(ros_sample);

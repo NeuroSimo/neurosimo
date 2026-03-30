@@ -80,11 +80,11 @@ void NeurOneAdapter::handle_measurement_start_packet(const uint8_t* buffer) {
 
   RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "  Number of EEG channels: %u", this->num_eeg_channels);
   RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "  Number of EMG channels: %u", this->num_emg_channels);
+
+  this->needs_sample_resize_ = true;
 }
 
-AdapterSample NeurOneAdapter::handle_sample_packet(const uint8_t* buffer) {
-  auto adapter_sample = AdapterSample();
-
+void NeurOneAdapter::handle_sample_packet(const uint8_t* buffer, AdapterSample& sample) {
   uint16_t num_sample_bundles = ntohs(
       *reinterpret_cast<const uint16_t *>(buffer + SamplesPacketFieldIndex::SAMPLE_NUM_SAMPLE_BUNDLES));
 
@@ -94,7 +94,7 @@ AdapterSample NeurOneAdapter::handle_sample_packet(const uint8_t* buffer) {
                  "Please ensure that the sampling frequency and the packet frequency "
                  "are set to the same value in the EEG software.",
                  num_sample_bundles);
-    return adapter_sample;
+    return;
   }
 
   /* Note: be64toh is Linux specific. */
@@ -108,6 +108,11 @@ AdapterSample NeurOneAdapter::handle_sample_packet(const uint8_t* buffer) {
   uint16_t channel_count =
       ntohs(*reinterpret_cast<const uint16_t *>(buffer + SamplesPacketFieldIndex::SAMPLE_NUM_CHANNELS));
 
+  uint16_t eeg_idx = 0;
+  uint16_t emg_idx = 0;
+  sample.trigger_a = false;
+  sample.trigger_b = false;
+
   for (uint16_t i = 0; i < channel_count; i++) {
     const uint8_t *buffer_offset = buffer + SamplesPacketFieldIndex::SAMPLE_SAMPLES + 3 * i;
     int32_t value = int24asint32(const_cast<uint8_t *>(buffer_offset));
@@ -119,17 +124,21 @@ AdapterSample NeurOneAdapter::handle_sample_packet(const uint8_t* buffer) {
     switch (channel_type) {
 
     case ChannelType::EEG_CHANNEL:
-      adapter_sample.eeg.push_back(result_uV);
+      if (eeg_idx < sample.eeg.size()) {
+        sample.eeg[eeg_idx++] = result_uV;
+      }
       break;
 
     case ChannelType::BIPOLAR_CHANNEL:
-      adapter_sample.emg.push_back(result_uV);
+      if (emg_idx < sample.emg.size()) {
+        sample.emg[emg_idx++] = result_uV;
+      }
       break;
 
     case ChannelType::TRIGGER_CHANNEL: {
       auto triggers = std::bitset<32>(value);
-      adapter_sample.trigger_a = triggers[TriggerBits::A_IN];
-      adapter_sample.trigger_b = triggers[TriggerBits::B_IN];
+      sample.trigger_a = triggers[TriggerBits::A_IN];
+      sample.trigger_b = triggers[TriggerBits::B_IN];
       break;
     }
 
@@ -138,17 +147,12 @@ AdapterSample NeurOneAdapter::handle_sample_packet(const uint8_t* buffer) {
     }
   }
 
-  adapter_sample.time = sample_time_s;
-  adapter_sample.sample_index = sample_index;
-
-  return adapter_sample;
+  sample.time = sample_time_s;
+  sample.sample_index = sample_index;
 }
 
-AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unused]] size_t buffer_size) {
-  /* Return variables */
-  AdapterPacket packet;
-  packet.result = INTERNAL;
-  packet.sample = AdapterSample();
+void NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unused]] size_t buffer_size, AdapterPacket& out_packet) {
+  out_packet.result = INTERNAL;
 
   uint8_t frame_type = buffer[0];
 
@@ -157,12 +161,18 @@ AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unus
   case FrameType::MEASUREMENT_START:
     RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Measurement start packet received");
     handle_measurement_start_packet(buffer);
-    packet.result = INTERNAL;
+    out_packet.result = INTERNAL;
     break;
 
   case FrameType::SAMPLES:
-    packet.sample = handle_sample_packet(buffer);
-    packet.result = SAMPLE;
+    /* Pre-size vectors once after a measurement start so subsequent fills never allocate. */
+    if (this->needs_sample_resize_) {
+      out_packet.sample.eeg.resize(this->num_eeg_channels);
+      out_packet.sample.emg.resize(this->num_emg_channels);
+      this->needs_sample_resize_ = false;
+    }
+    handle_sample_packet(buffer, out_packet.sample);
+    out_packet.result = SAMPLE;
     break;
 
   case FrameType::MEASUREMENT_END:
@@ -171,12 +181,12 @@ AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unus
     this->num_eeg_channels = UNSET_CHANNEL_COUNT;
     this->sampling_frequency = UNSET_SAMPLING_FREQUENCY;
 
-    packet.result = END;
+    out_packet.result = END;
     break;
 
   case FrameType::TRIGGER:
     RCLCPP_DEBUG(rclcpp::get_logger(LOGGER_NAME), "Standalone trigger packet received (ignored).");
-    packet.result = INTERNAL;
+    out_packet.result = INTERNAL;
     break;
 
   case FrameType::HARDWARE_STATE:
@@ -199,8 +209,6 @@ AdapterPacket NeurOneAdapter::process_packet(const uint8_t* buffer, [[maybe_unus
     }
     packets_since_measurement_start_packet_requested = (packets_since_measurement_start_packet_requested + 1) % 1000;
   }
-
-  return packet;
 }
 
 int32_t NeurOneAdapter::int24asint32(const uint8_t *value) {

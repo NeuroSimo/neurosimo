@@ -792,7 +792,7 @@ bool DeciderWrapper::parse_targeted_pulse_dict(
   shared_stimulation_interfaces::msg::TargetedPulse& out_msg) {
 
   static const std::vector<std::string> required = {
-    "time",
+    "time_offset",
     "displacement_x",
     "displacement_y",
     "rotation_angle",
@@ -807,7 +807,7 @@ bool DeciderWrapper::parse_targeted_pulse_dict(
   }
 
   try {
-    out_msg.time = py_targeted_pulse["time"].cast<double>();
+    out_msg.time_offset = py_targeted_pulse["time_offset"].cast<double>();
     out_msg.displacement_x = py_targeted_pulse["displacement_x"].cast<double>();
     out_msg.displacement_y = py_targeted_pulse["displacement_y"].cast<double>();
     out_msg.rotation_angle = py_targeted_pulse["rotation_angle"].cast<double>();

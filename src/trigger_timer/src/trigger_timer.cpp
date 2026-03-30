@@ -154,6 +154,11 @@ void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t samp
 }
 
 void TriggerTimer::handle_eeg_raw(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
+  if (!this->enable_labjack) {
+    RCLCPP_WARN_THROTTLE(logger, *this->get_clock(), 5000, "LabJack is not enabled, skipping EEG data handling");
+    return;
+  }
+
   std::lock_guard<std::mutex> lock(handler_mutex);
 
   double_t sample_time = msg->time;

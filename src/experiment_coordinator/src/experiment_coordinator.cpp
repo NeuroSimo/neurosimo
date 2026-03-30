@@ -13,6 +13,7 @@ const std::string DECISION_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/decision_tra
 const std::string HEARTBEAT_TOPIC = "/neurosimo/experiment_coordinator/heartbeat";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
+const uint16_t EXPERIMENT_STATE_PUBLISH_RATE_HZ = 20;
 
 ExperimentCoordinator::ExperimentCoordinator()
   : Node("experiment_coordinator"),
@@ -89,6 +90,10 @@ ExperimentCoordinator::ExperimentCoordinator()
     std::chrono::milliseconds(500),
     std::bind(&ExperimentCoordinator::publish_heartbeat, this));
 
+  this->experiment_state_timer = this->create_wall_timer(
+    std::chrono::milliseconds(1000 / EXPERIMENT_STATE_PUBLISH_RATE_HZ),
+    [this]() { publish_experiment_state(); });
+
   this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
   RCLCPP_INFO(this->get_logger(), "Experiment coordinator ready");
 }
@@ -115,8 +120,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
 
     /* Mark session as ongoing after resetting state (which would set it to false). */
     state.is_session_ongoing = true;
-
-    publish_experiment_state(0.0);
   }
 
   double sample_time = msg->time;
@@ -152,8 +155,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
 
   /* Publish enriched sample. */
   this->enriched_eeg_publisher->publish(enriched);
-
-  publish_experiment_state(sample_time);
 }
 
 void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg) {
@@ -206,8 +207,6 @@ void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<ne
     /* Advance to next element. */
     advance_to_next_element();
   }
-
-  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::handle_pause(
@@ -229,7 +228,6 @@ void ExperimentCoordinator::handle_pause(
   
   response->success = true;
   response->message = "Experiment paused";
-  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::handle_resume(
@@ -252,7 +250,6 @@ void ExperimentCoordinator::handle_resume(
 
   response->success = true;
   response->message = "Experiment resumed";
-  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::handle_initialize_protocol(
@@ -349,8 +346,6 @@ void ExperimentCoordinator::update_experiment_state(double current_time) {
       }
     }
   }
-  
-  publish_experiment_state(current_time);
 }
 
 void ExperimentCoordinator::advance_to_next_element() {
@@ -373,8 +368,6 @@ void ExperimentCoordinator::advance_to_next_element() {
   } else if (element.type == ProtocolElement::Type::REST) {
     start_rest(element.rest.value(), current_time);
   }
-  
-  publish_experiment_state(current_time);
 }
 
 void ExperimentCoordinator::mark_protocol_complete() {
@@ -385,7 +378,6 @@ void ExperimentCoordinator::mark_protocol_complete() {
   state.protocol_complete = true;
   RCLCPP_INFO(this->get_logger(), "Protocol complete! Requesting session stop.");
   request_finish_session();
-  publish_experiment_state(state.last_sample_time);
 }
 
 void ExperimentCoordinator::start_rest(const Rest& rest, double current_time) {
@@ -450,8 +442,6 @@ void ExperimentCoordinator::reset_experiment_state() {
       start_rest(first_element.rest.value(), initial_time);
     }
   }
-  
-  publish_experiment_state(0.0);
 }
 
 void ExperimentCoordinator::request_finish_session() {
@@ -486,16 +476,17 @@ void ExperimentCoordinator::request_finish_session() {
     });
 }
 
-void ExperimentCoordinator::publish_experiment_state(double current_time) {
+void ExperimentCoordinator::publish_experiment_state() {
   if (!this->experiment_state_publisher) {
     return;
   }
   
   neurosimo_pipeline_interfaces::msg::ExperimentState msg;
   
+  const double current_time = state.last_sample_time;
+  const double experiment_time = get_experiment_time(current_time);
   const bool has_protocol = this->is_protocol_initialized;
   const bool ongoing = state.is_session_ongoing && !state.protocol_complete;
-  const auto experiment_time = get_experiment_time(current_time);
   
   msg.ongoing = ongoing;
   

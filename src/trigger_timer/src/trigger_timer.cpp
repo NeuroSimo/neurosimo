@@ -25,6 +25,14 @@ const char* loopback_trigger_fio = "FIO5";
 TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger("trigger_timer")) {
   RCLCPP_INFO(this->get_logger(), "Initializing trigger timer...");
 
+  /* Get launch arguments. */
+  this->declare_parameter("use_mock_labjack", false);
+  this->use_mock_labjack = get_parameter("use_mock_labjack").as_bool();
+
+  RCLCPP_INFO(this->get_logger(), "Arguments:");
+  RCLCPP_INFO(this->get_logger(), "  use_mock_labjack: %s", this->use_mock_labjack ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), " ");
+
   /* Subscriber for EEG raw data. */
   this->eeg_raw_subscriber = create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_RAW_TOPIC,
@@ -460,10 +468,10 @@ void TriggerTimer::handle_initialize_trigger_timer(
     std::bind(&TriggerTimer::attempt_labjack_connection, this));
 
   /* Initialize LabJack manager. */
-  if (this->enable_labjack) {
-    labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), false);
-  } else {
+  if (this->use_mock_labjack) {
     labjack_manager = std::make_unique<MockLabJackManager>(this->get_logger());
+  } else {
+    labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), false);
   }
   labjack_manager->start();
 

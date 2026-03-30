@@ -331,6 +331,8 @@ services:
     env_file:
       - .env
     environment:
+      - USE_MOCK_LABJACK=${USE_MOCK_LABJACK}
+      # ROS configuration
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
     volumes:

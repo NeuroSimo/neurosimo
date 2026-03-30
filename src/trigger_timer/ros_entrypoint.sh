@@ -4,4 +4,6 @@ set -e
 source /opt/ros/jazzy/setup.bash
 source /app/install/setup.bash
 
-ros2 launch trigger_timer trigger_timer.launch.py log-level:="$ROS_LOG_LEVEL"
+ros2 launch trigger_timer trigger_timer.launch.py \
+  log-level:="$ROS_LOG_LEVEL" \
+  use_mock_labjack:="$USE_MOCK_LABJACK"

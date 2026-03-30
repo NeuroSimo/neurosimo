@@ -879,6 +879,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Check if the sample contains a pulse trigger. */
   if (msg->pulse_trigger) {
+    RCLCPP_INFO(this->get_logger(), "Received pulse trigger at time %.4f (s)", sample_time);
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Pulse);
   }
 

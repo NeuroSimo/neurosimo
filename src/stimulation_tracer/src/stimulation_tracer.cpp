@@ -156,6 +156,8 @@ void StimulationTracer::handle_eeg_sample(const std::shared_ptr<neurosimo_eeg_in
 void StimulationTracer::handle_pulse_processed(const std_msgs::msg::Empty::SharedPtr msg) {
   (void)msg;
 
+  RCLCPP_INFO(this->get_logger(), "Received pulse processed notification");
+
   /* Skip if not initialized. */
   if (!this->is_initialized) {
     return;

@@ -43,10 +43,12 @@ SERVICES_GLOB="\"[\
 '/rosapi/*'\
 ]\""
 
+PARAMS_GLOB="\"[]\""
+
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml \
   port:=$ROSBRIDGE_PORT \
   namespace:=neurosimo \
   use_events_executor:=true \
   topics_glob:="$TOPICS_GLOB" \
   services_glob:="$SERVICES_GLOB" \
-  params_glob:="[]"
+  params_glob:="$PARAMS_GLOB"

@@ -25,7 +25,7 @@ using namespace std::placeholders;
 const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 const std::string DEVICE_INFO_TOPIC = "/neurosimo/eeg_device/info";
 const std::string HEARTBEAT_TOPIC = "/neurosimo/eeg_bridge/heartbeat";
-const std::string DROPPED_SAMPLES_TOPIC = "/eeg_bridge/dropped_samples";
+const std::string DROPPED_SAMPLES_TOPIC = "/neurosimo/eeg/dropped_samples";
 
 /* Have a long queue to avoid dropping messages. */
 const uint16_t EEG_QUEUE_LENGTH = 65535;

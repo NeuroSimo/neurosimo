@@ -100,6 +100,9 @@ void StimulationTracer::handle_finalize_stimulation_tracer(
 }
 
 void StimulationTracer::handle_decision_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg) {
+  RCLCPP_INFO(this->get_logger(), "Received decision trace: decision_id=%lu, status=%u, stimulate=%d, requested_stimulation_time=%f",
+              msg->decision_id, msg->status, msg->stimulate, msg->requested_stimulation_time);
+
   /* Skip if not initialized. */
   if (!this->is_initialized) {
     return;
@@ -114,9 +117,6 @@ void StimulationTracer::handle_decision_trace(const std::shared_ptr<neurosimo_pi
   uint64_t decision_id = msg->decision_id;
   
   this->decision_traces[decision_id].push_back(*msg);
-
-  RCLCPP_DEBUG(this->get_logger(), "Stored decision trace: decision_id=%lu, status=%u", 
-               decision_id, msg->status);
 
   /* If this trace has a terminal status, finalize the decision. */
   if (this->is_terminal_status(msg->status)) {
@@ -225,6 +225,8 @@ neurosimo_pipeline_interfaces::msg::DecisionTrace* StimulationTracer::find_match
 }
 
 void StimulationTracer::finalize_decision(uint64_t decision_id) {
+  RCLCPP_INFO(this->get_logger(), "Finalizing decision: decision_id=%lu", decision_id);
+
   /* Find all traces for this decision. */
   auto it = this->decision_traces.find(decision_id);
   if (it == this->decision_traces.end() || it->second.empty()) {

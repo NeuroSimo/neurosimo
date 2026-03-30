@@ -97,8 +97,8 @@ void TriggerTimer::_publish_heartbeat() {
 }
 
 void TriggerTimer::_check_loopback_timeout() {
-  if (this->session_started && this->data_source == "eeg_device" &&!this->loopback_received) {
-    RCLCPP_ERROR(logger, "No triggers received for over %.1f seconds", loopback_monitor_interval);    
+  if (this->enable_labjack && this->session_started && this->data_source == "eeg_device" &&!this->loopback_received) {
+    RCLCPP_ERROR(logger, "No triggers received for over %.1f seconds", loopback_monitor_interval);
     this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED, "No triggers received, please check the EEG settings and connections");
 
     // Reset the flag for the next monitoring period

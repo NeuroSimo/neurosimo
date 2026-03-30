@@ -21,7 +21,6 @@ find_package(filesystem_utils REQUIRED)
 add_executable(
   experiment_coordinator
 
-  src/experiment_coordinator_node.cpp
   src/experiment_coordinator.cpp
   src/protocol_loader.cpp
 )

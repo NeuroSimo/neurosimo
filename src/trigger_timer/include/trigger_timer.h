@@ -56,6 +56,9 @@ private:
   double_t stored_sample_time = 0.0;
   std::chrono::high_resolution_clock::time_point stored_system_time;
 
+  // Launch arguments
+  bool use_mock_labjack = false;
+
   // Configuration parameters
   double_t maximum_timing_offset = 0.0;
   double_t maximum_loopback_latency = 0.0;

@@ -57,6 +57,7 @@ private:
     
   // Timers
   rclcpp::TimerBase::SharedPtr heartbeat_timer;
+  rclcpp::TimerBase::SharedPtr experiment_state_timer;
   
   /* Protocol and state */
   std::optional<experiment_coordinator::Protocol> protocol;
@@ -89,7 +90,7 @@ private:
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::GetProtocolInfo::Response> response);
   void request_finish_session();
   void mark_protocol_complete();
-  void publish_experiment_state(double current_time);
+  void publish_experiment_state();
   
   /* Experiment logic */
   void update_experiment_state(double current_time);

@@ -967,7 +967,9 @@ int main(int argc, char *argv[]) {
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(node);
   while (rclcpp::ok() && !node->shutdown_requested) {
-    executor.spin_some(std::chrono::milliseconds(20));
+    /* XXX: Do not use spin_some here, as we want to block for the time specified to avoid busy-looping,
+            and spin_some doesn't block. Use spin_once instead. */
+    executor.spin_once(std::chrono::milliseconds(20));
   }
 
   rclcpp::shutdown();

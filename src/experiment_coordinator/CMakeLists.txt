@@ -16,6 +16,7 @@ find_package(neurosimo_pipeline_interfaces REQUIRED)
 find_package(neurosimo_system_interfaces REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(filesystem_utils REQUIRED)
+find_package(realtime_utils REQUIRED)
 
 # Experiment coordinator executable
 add_executable(
@@ -33,6 +34,7 @@ target_include_directories(experiment_coordinator
 target_link_libraries(experiment_coordinator
   yaml-cpp
   filesystem_utils::filesystem_utils
+  realtime_utils::utils
 )
 
 ament_target_dependencies(
@@ -45,6 +47,7 @@ ament_target_dependencies(
   neurosimo_pipeline_interfaces
   neurosimo_system_interfaces
   filesystem_utils
+  realtime_utils
 )
 
 install(

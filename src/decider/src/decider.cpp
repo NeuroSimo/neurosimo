@@ -630,14 +630,15 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   decision_trace.decision_id = ++this->decision_id;  // Increment decision ID
 
   // Status (filled by each stage) - initially set by Decider
-  decision_trace.status = request_timed_trigger ? neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
-                                                : neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
+  bool decided_yes = request_timed_trigger || !targeted_pulses.empty();
+  decision_trace.status = decided_yes ? neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
+                                      : neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
 
   // Decision info
   decision_trace.reference_sample_time = sample_time;
   decision_trace.reference_sample_index = request.triggering_sample->sample_index;
-  decision_trace.stimulate = request_timed_trigger;
-  decision_trace.requested_stimulation_time = trigger_offset ? requested_stimulation_time : 0.0;
+  decision_trace.stimulate = decided_yes;
+  decision_trace.requested_stimulation_time = decided_yes ? requested_stimulation_time : 0.0;
 
   // Decider / preprocessing timing
   decision_trace.decider_duration = decider_duration;

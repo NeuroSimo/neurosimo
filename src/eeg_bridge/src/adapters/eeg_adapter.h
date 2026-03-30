@@ -59,7 +59,7 @@ public:
       @param buffer_size The size of valid data in the buffer
       @return AdapterPacket containing the result type, sample data (when applicable),
       and trigger_a timestamp for latency measurement triggers. */
-  virtual AdapterPacket process_packet(const uint8_t* buffer, size_t buffer_size) = 0;
+  virtual void process_packet(const uint8_t* buffer, size_t buffer_size, AdapterPacket& out_packet) = 0;
 
   /// Get EEG device configuration info
   neurosimo_eeg_interfaces::msg::EegDeviceInfo get_device_info() const {

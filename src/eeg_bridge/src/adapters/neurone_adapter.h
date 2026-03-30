@@ -92,13 +92,13 @@ public:
 
   ~NeurOneAdapter() noexcept override = default;
 
-  AdapterPacket process_packet(const uint8_t* buffer, size_t buffer_size) override;
+  void process_packet(const uint8_t* buffer, size_t buffer_size, AdapterPacket& out_packet) override;
 
 private:
   bool request_measurement_start_packet() const;
   void handle_measurement_start_packet(const uint8_t* buffer);
 
-  AdapterSample handle_sample_packet(const uint8_t* buffer);
+  void handle_sample_packet(const uint8_t* buffer, AdapterSample& out_sample);
 
   /** Convert big-endian int24 represented as 3 uint8_t bytes to int32_t.
 
@@ -114,6 +114,7 @@ private:
 
   bool measurement_start_packet_received = false;
   uint16_t packets_since_measurement_start_packet_requested = 0;
+  bool needs_sample_resize_ = false;
 };
 
 #endif // EEG_BRIDGE_SRC_ADAPTERS_NEURONE_ADAPTER_H

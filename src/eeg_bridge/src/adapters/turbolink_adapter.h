@@ -27,10 +27,11 @@ public:
   TurboLinkAdapter(std::shared_ptr<UdpSocket> socket, uint32_t sampling_frequency, uint8_t eeg_channel_count);
   ~TurboLinkAdapter() noexcept override = default;
 
-  AdapterPacket process_packet(const uint8_t* buffer, size_t buffer_size) override;
+  void process_packet(const uint8_t* buffer, size_t buffer_size, AdapterPacket& out_packet) override;
 
 private:
-  std::tuple<AdapterSample, bool> handle_packet(const uint8_t* buffer);
+  void handle_packet(const uint8_t* buffer, AdapterPacket& out_packet);
+  bool needs_vector_resize = true;
 
   static float_t convert_be_float_to_host(uint8_t *buffer);
 };

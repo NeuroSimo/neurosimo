@@ -112,6 +112,7 @@ private:
   std::shared_ptr<UdpSocket> socket_;
   std::shared_ptr<EegAdapter> eeg_adapter;
   uint8_t buffer[BUFFER_SIZE] = {0};
+  AdapterPacket packet;
 
   /* State */
   EegDeviceState device_state = EegDeviceState::WAITING_FOR_EEG_DEVICE;

@@ -683,11 +683,11 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   if (!targeted_pulses.empty()) {
 
     /* Enforce minimum intertrial interval for targeted pulse requests. */
-    double_t first_target_time = targeted_pulses.front().time;
-    double_t last_target_time = targeted_pulses.front().time;
+    double_t first_target_time = targeted_pulses.front().time_offset;
+    double_t last_target_time = targeted_pulses.front().time_offset;
     for (const auto& pulse : targeted_pulses) {
-      first_target_time = std::min(first_target_time, pulse.time);
-      last_target_time = std::max(last_target_time, pulse.time);
+      first_target_time = std::min(first_target_time, pulse.time_offset);
+      last_target_time = std::max(last_target_time, pulse.time_offset);
     }
 
     auto time_since_previous_trial = first_target_time - this->previous_stimulation_time;

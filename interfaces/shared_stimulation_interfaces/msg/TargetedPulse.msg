@@ -4,8 +4,8 @@
 # Do not modify the file in this repository only. Any change needs to be synchronized
 # with the corresponding interface definition in the other repository.
 
-# Pulse time, relative to reference_eeg_device_timestamp, in seconds.
-float64 time
+# Pulse time offset, relative to reference_eeg_device_timestamp, in seconds.
+float64 time_offset
 
 # Target displacement in millimeters.
 float64 displacement_x

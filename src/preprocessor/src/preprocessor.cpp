@@ -502,8 +502,10 @@ int main(int argc, char *argv[]) {
 
   auto node = std::make_shared<EegPreprocessor>();
 
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(node);
   while (rclcpp::ok() && !node->shutdown_requested) {
-    rclcpp::spin_some(node);
+    executor.spin_some(std::chrono::milliseconds(20));
   }
 
   rclcpp::shutdown();

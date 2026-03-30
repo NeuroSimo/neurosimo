@@ -78,7 +78,8 @@ services:
 
   # Non-GPU version of decider
   decider_non_gpu:
-    build:
+    image: neurosimo-decider:latest
+    build:  # Only build if the image is not present
       context: .
       dockerfile: src/decider/Dockerfile
     user: "1000:1000"
@@ -101,7 +102,8 @@ services:
 
   # GPU-enabled version of decider
   decider:
-    build:
+    image: neurosimo-decider:latest
+    build:  # Only build if the image is not present
       context: .
       dockerfile: src/decider/Dockerfile
     user: "1000:1000"

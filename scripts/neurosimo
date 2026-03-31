@@ -13,7 +13,7 @@ if [ ! -f "$ELECTRON_APP" ]; then
     # Install dependencies if needed
     if [ ! -d "node_modules" ]; then
         echo "Installing dependencies..."
-        npm install
+        npm ci
     fi
     
     # Build the app

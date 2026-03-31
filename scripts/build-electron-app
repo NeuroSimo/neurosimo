@@ -8,7 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "Building NeuroSimo desktop app..."
 cd "$PROJECT_ROOT/front"
-npm install
+npm ci
 DISABLE_ESLINT_PLUGIN=true npm run build
 npm run electron-pack-linux
 cd "$PROJECT_ROOT"

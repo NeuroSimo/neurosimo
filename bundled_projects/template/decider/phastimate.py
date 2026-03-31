@@ -113,9 +113,9 @@ class Decider:
         }
 
     def process_periodic(
-            self, reference_time: float, reference_index: int, time_offsets: np.ndarray, 
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray,
-            is_coil_at_target: bool, stage_name: str, is_warm_up: bool) -> dict[str, Any] | None:
+            is_coil_at_target: bool, stage_name: str, pulse_count: int, is_warm_up: bool) -> dict[str, Any] | None:
         """
         Process the EEG data to estimate phase and schedule a trigger periodically.
 

@@ -94,6 +94,8 @@ EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("pre
 
   /* Initialize variables. */
   this->presenter_wrapper = std::make_unique<PresenterWrapper>(logger);
+
+  RCLCPP_INFO(this->get_logger(), "Presenter initialized successfully");
 }
 
 void EegPresenter::handle_initialize_presenter(

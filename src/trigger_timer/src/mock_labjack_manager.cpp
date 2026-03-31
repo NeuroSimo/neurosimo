@@ -29,13 +29,18 @@ void MockLabJackManager::start() {
 
 void MockLabJackManager::stop() {
   thread_running_.store(false);
+
+  // Close any in-progress connect() fd to unblock the worker thread.
+  int cfd = connecting_fd_.exchange(-1);
+  if (cfd >= 0) close(cfd);
+
+  // Close the established socket.
+  close_socket();
   connection_cv_.notify_one();
 
   if (connection_thread_.joinable()) {
     connection_thread_.join();
   }
-
-  close_socket();
 
   RCLCPP_DEBUG(logger_, "MockLabJackManager stopped");
 }
@@ -139,10 +144,19 @@ void MockLabJackManager::attempt_connection() {
 }
 
 bool MockLabJackManager::connect_socket() {
-  // Create socket
-  socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-  if (socket_fd_ < 0) {
+  // Use a local fd until connect() succeeds so send_trigger() never sees a
+  // partially-connected socket on socket_fd_.
+  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0) {
     RCLCPP_ERROR(logger_, "Failed to create socket");
+    return false;
+  }
+
+  // Publish fd so stop() can close it to interrupt a blocking connect().
+  connecting_fd_.store(fd);
+  if (!thread_running_.load()) {
+    connecting_fd_.exchange(-1);
+    close(fd);
     return false;
   }
 
@@ -154,17 +168,27 @@ bool MockLabJackManager::connect_socket() {
 
   if (inet_pton(AF_INET, host_.c_str(), &server_addr.sin_addr) <= 0) {
     RCLCPP_WARN(logger_, "Invalid address: %s (continuing with mock)", host_.c_str());
-    close_socket();
+    int owned = connecting_fd_.exchange(-1);
+    if (owned >= 0) close(owned);
     return false;
   }
 
-  // Connect to server
-  if (connect(socket_fd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+  // connect() may block; stop() can interrupt it by closing connecting_fd_.
+  if (connect(fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
     RCLCPP_ERROR(logger_, "Failed to connect to %s:%d", host_.c_str(), port_);
-    close_socket();
+    int owned = connecting_fd_.exchange(-1);
+    if (owned >= 0) close(owned);
     return false;
   }
 
+  // Connection succeeded. Clear connecting_fd_ and expose as socket_fd_,
+  // unless stop() already closed it.
+  int owned = connecting_fd_.exchange(-1);
+  if (owned < 0) {
+    // stop() closed it already; fd is no longer valid
+    return false;
+  }
+  socket_fd_ = fd;
   return true;
 }
 

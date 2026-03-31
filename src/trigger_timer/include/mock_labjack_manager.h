@@ -48,6 +48,7 @@ private:
   std::string host_;
   int port_;
   int socket_fd_{-1};
+  std::atomic<int> connecting_fd_{-1};  // fd held during blocking connect()
 
   // Connection state
   std::atomic<bool> connected_{false};

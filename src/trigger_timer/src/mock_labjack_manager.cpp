@@ -115,13 +115,13 @@ void MockLabJackManager::attempt_connection() {
   // Measure how long the connection attempt takes
   auto start_time = high_resolution_clock::now();
 
+  // For mock purposes, always report as connected regardless of socket status
+  connected_.store(true);
+
   bool socket_connected = connect_socket();
 
   auto end_time = high_resolution_clock::now();
   auto duration = duration_cast<milliseconds>(end_time - start_time);
-
-  // For mock purposes, always report as connected regardless of socket status
-  connected_.store(true);
 
   if (socket_connected) {
     RCLCPP_INFO(logger_, "Successfully connected to neurone_simulator socket. Time taken: %ld ms", duration.count());

@@ -540,7 +540,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     request.processing_reason,
     this->event_queue,
     this->is_coil_at_target,
-    stage_name);
+    stage_name,
+    request.triggering_sample->pulse_count);
 
   /* Log and return early if the Python call failed. */
   if (!success) {

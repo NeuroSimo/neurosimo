@@ -588,6 +588,7 @@ bool DeciderWrapper::warm_up() {
         *periodic_emg,
         dummy_is_coil_at_target,
         "",
+        (uint64_t)0,  /* pulse_count */
         true  /* is_warm_up */
       );
       
@@ -881,7 +882,8 @@ std::tuple<
     ProcessingReason processing_reason,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
-    const std::string& stage_name) {
+    const std::string& stage_name,
+    uint64_t pulse_count) {
 
   std::shared_ptr<double_t> trigger_offset = nullptr;
   std::string coil_target;
@@ -934,7 +936,7 @@ std::tuple<
       case ProcessingReason::Periodic:
         set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
         /* Call periodic processor. */
-        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, false);
+        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count, false);
         break;
 
       case ProcessingReason::Pulse:
@@ -944,7 +946,7 @@ std::tuple<
           py_result = py::none();
           break;
         }
-        py_result = pulse_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name);
+        py_result = pulse_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
         break;
 
       case ProcessingReason::Event:
@@ -954,7 +956,7 @@ std::tuple<
           py_result = py::none();
           break;
         }
-        py_result = event_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name);
+        py_result = event_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
         break;
 
       default:

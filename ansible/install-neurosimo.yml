@@ -305,6 +305,11 @@
               if [ "${ROS_LOG_LEVEL+x}" = "x" ]; then
                   export ROS_LOG_LEVEL="${ROS_LOG_LEVEL}"
               fi
+
+              # Export ROS_AUTOMATIC_DISCOVERY_RANGE if set.
+              if [ "${ROS_AUTOMATIC_DISCOVERY_RANGE+x}" = "x" ]; then
+                  export ROS_AUTOMATIC_DISCOVERY_RANGE="${ROS_AUTOMATIC_DISCOVERY_RANGE}"
+              fi
           fi
 
     - name: Ensure ROS2 base installation is sourced in .bashrc

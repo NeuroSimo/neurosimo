@@ -69,7 +69,8 @@ ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml \
   --connection=local --become \
   --extra-vars "use_gpu=$USE_GPU"
 
-# Source environment to get ROS base installation
+# Source ROS base installation and environment
+source /opt/ros/jazzy/setup.bash
 source ~/.bash_neurosimo > /dev/null
 
 echo "Building ROS interfaces..."

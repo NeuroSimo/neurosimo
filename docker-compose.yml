@@ -8,6 +8,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
@@ -24,6 +25,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
@@ -39,6 +41,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -55,6 +58,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
@@ -74,6 +78,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
@@ -94,8 +99,10 @@ services:
       - .env
     environment:
       - USE_GPU=false
+      # ROS configuration
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
@@ -119,8 +126,10 @@ services:
     environment:
       - USE_GPU=true
       - NVIDIA_VISIBLE_DEVICES=all
+      # ROS configuration
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
@@ -145,6 +154,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -161,6 +171,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - './bundled_projects:/app/bundled_projects'
@@ -181,6 +192,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -213,6 +225,7 @@ services:
       # ROS environment
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     network_mode: host
     devices:
       # Provide access to sound devices
@@ -227,6 +240,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -242,6 +256,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -257,6 +272,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -272,6 +288,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       # Allow session manager to restart containers if they timeout during session finalization.
       - /var/run/docker.sock:/var/run/docker.sock
@@ -288,6 +305,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -304,6 +322,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '$PROJECTS_ROOT:/app/projects'
       - '/etc/localtime:/etc/localtime:ro'
@@ -319,6 +338,7 @@ services:
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
@@ -335,6 +355,7 @@ services:
       # ROS configuration
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
@@ -361,6 +382,7 @@ services:
       - ROSBRIDGE_PORT=9090
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'

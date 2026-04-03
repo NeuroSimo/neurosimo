@@ -231,17 +231,6 @@
       ignore_errors: yes
 
     ########################################################################
-    # Configure a cron job to clean old ROS logs
-    ########################################################################
-    - name: Ensure cron job to clean old ROS logs
-      cron:
-        name: "Clean ROS logs older than 7 days"
-        minute: "0"
-        hour: "0"
-        user: "{{ target_user }}"
-        job: "find {{ target_home }}/.ros/log -type f -mtime +7 -exec rm {} \\;"
-
-    ########################################################################
     # Configure PipeWire/PulseAudio over TCP
     ########################################################################
     - name: Create PipeWire TCP audio configuration directory
@@ -299,7 +288,7 @@
         mode: "0440"
 
     ########################################################################
-    # Create a projects directory for the user
+    # Create a projects directory
     ########################################################################
     - name: Create projects directory
       file:

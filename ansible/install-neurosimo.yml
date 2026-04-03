@@ -182,6 +182,55 @@
       shell: sysctl --system
 
     ########################################################################
+    # Disable automatic upgrades and unattended updates
+    ########################################################################
+    - name: Stop and disable apt-daily timers
+      systemd:
+        name: "{{ item }}"
+        enabled: no
+        state: stopped
+        masked: yes
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+        - apt-daily.service
+        - apt-daily-upgrade.service
+
+    - name: Disable unattended-upgrades service
+      systemd:
+        name: unattended-upgrades
+        enabled: no
+        state: stopped
+        masked: yes
+
+    - name: Configure APT periodic to disable all automatic updates
+      copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          APT::Periodic::Update-Package-Lists "0";
+          APT::Periodic::Unattended-Upgrade "0";
+          APT::Periodic::Download-Upgradeable-Packages "0";
+          APT::Periodic::AutocleanInterval "0";
+
+    - name: Disable unattended-upgrades in config
+      copy:
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades-override
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          Unattended-Upgrade::Allowed-Origins {};
+
+    - name: Remove update-notifier if installed
+      apt:
+        name: update-notifier
+        state: absent
+      ignore_errors: yes
+
+    ########################################################################
     # Configure a cron job to clean old ROS logs
     ########################################################################
     - name: Ensure cron job to clean old ROS logs

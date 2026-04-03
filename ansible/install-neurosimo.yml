@@ -77,35 +77,14 @@
         state: present
 
     ########################################################################
-    # Kernel tools
-    #
-    # Install extra kernel tools for monitoring/troubleshooting.
-    # RT variants (linux-*-realtime) are not always available, so
-    # only install if they are.
+    # Kernel tools for monitoring/troubleshooting
     ########################################################################
-    - name: Gather kernel tool candidates
-      set_fact:
-        kernel_tool_candidates:
-          - linux-tools-generic
-          - linux-cloud-tools-generic
-          - linux-tools-realtime
-          - linux-cloud-tools-realtime
-          - "linux-tools-{{ ansible_facts.kernel }}"
-          - "linux-cloud-tools-{{ ansible_facts.kernel }}"
-
-    - name: Check which kernel tool packages are available
-      command: "apt-cache show {{ item }}"
-      register: pkg_info
-      changed_when: false
-      failed_when: false
-      loop: "{{ kernel_tool_candidates }}"
-
-    - name: Install available kernel tool packages
+    - name: Install kernel tools
       apt:
-        name: "{{ item.item }}"
+        name:
+          - linux-tools-generic
+          - "linux-tools-{{ ansible_facts.kernel }}"
         state: present
-      loop: "{{ pkg_info.results }}"
-      when: item.rc == 0
 
     ########################################################################
     # Copy systemd service files & enable

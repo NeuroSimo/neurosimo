@@ -87,6 +87,30 @@
         state: present
 
     ########################################################################
+    # Configure log rotation
+    ########################################################################
+    - name: Ensure logrotate configuration has 'rotate 4'
+      ansible.builtin.lineinfile:
+        path: /etc/logrotate.d/rsyslog
+        regexp: '^\s*rotate\s+\d+'
+        line: '        rotate 4'
+        backup: yes
+
+    - name: Ensure logrotate configuration has 'daily'
+      ansible.builtin.lineinfile:
+        path: /etc/logrotate.d/rsyslog
+        regexp: '^\s*weekly'
+        line: '        daily'
+        backup: yes
+
+    - name: Ensure logrotate configuration has 'size 5G'
+      ansible.builtin.lineinfile:
+        path: /etc/logrotate.d/rsyslog
+        regexp: '^\s*size\s+\d+[KMG]?'
+        line: '        size 5G'
+        backup: yes
+
+    ########################################################################
     # Copy systemd service files & enable
     ########################################################################
     - name: Detect DISPLAY for target user

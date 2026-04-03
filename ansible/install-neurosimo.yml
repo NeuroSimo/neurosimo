@@ -38,7 +38,7 @@
         cache_valid_time: 3600 # in seconds
 
     ########################################################################
-    # Install Node.js 18 LTS from NodeSource
+    # Install Node.js 22 LTS from NodeSource
     ########################################################################
     - name: Remove old Node.js packages
       apt:
@@ -55,11 +55,10 @@
         path: /etc/apt/sources.list.d/nodesource.list
       register: nodesource_repo
 
-    - name: Download and run NodeSource setup script
-      shell: curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-      when: not nodesource_repo.stat.exists
+    - name: Download and run NodeSource setup script for Node.js 22
+      shell: curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 
-    - name: Install Node.js 18 from NodeSource
+    - name: Install Node.js 22 from NodeSource
       apt:
         name: nodejs
         state: present

@@ -30,7 +30,7 @@
         fail_msg: "This playbook is intended for Ubuntu 24.04 (noble). Detected {{ ansible_facts.distribution }} {{ ansible_facts.distribution_release }}"
 
     ########################################################################
-    # Update apt cache
+    # 1. Update apt cache
     ########################################################################
     - name: Update apt cache
       apt:
@@ -38,7 +38,7 @@
         cache_valid_time: 3600 # in seconds
 
     ########################################################################
-    # Install Node.js 22 LTS from NodeSource
+    # 2. Install Node.js 22 LTS from NodeSource
     ########################################################################
     - name: Remove old Node.js packages
       apt:
@@ -65,7 +65,7 @@
         update_cache: yes
 
     ########################################################################
-    # Install extra packages (net-tools, Wireshark, etc.)
+    # 3. Install extra packages (net-tools, Wireshark, etc.)
     ########################################################################
     - name: Install other tools, e.g., for troubleshooting
       apt:
@@ -77,7 +77,7 @@
         state: present
 
     ########################################################################
-    # Kernel tools for monitoring/troubleshooting
+    # 4. Kernel tools for monitoring/troubleshooting
     ########################################################################
     - name: Install kernel tools
       apt:
@@ -87,7 +87,7 @@
         state: present
 
     ########################################################################
-    # Configure log rotation
+    # 5. Configure log rotation
     ########################################################################
     - name: Ensure logrotate configuration has 'rotate 4'
       ansible.builtin.lineinfile:
@@ -111,7 +111,7 @@
         backup: yes
 
     ########################################################################
-    # Copy systemd service files & enable
+    # 6. Copy systemd service files & enable
     ########################################################################
     - name: Detect DISPLAY for target user
       shell: echo $DISPLAY
@@ -170,7 +170,7 @@
         state: restarted
 
     ########################################################################
-    # Copy sysctl configuration
+    # 7. Copy sysctl configuration
     ########################################################################
     - name: Copy 10-net-buffer-size.conf
       copy:
@@ -184,7 +184,7 @@
       shell: sysctl --system
 
     ########################################################################
-    # Disable automatic upgrades and unattended updates
+    # 8. Disable automatic upgrades and unattended updates
     ########################################################################
     - name: Stop and disable apt-daily timers
       systemd:
@@ -233,7 +233,7 @@
       ignore_errors: yes
 
     ########################################################################
-    # Configure PipeWire/PulseAudio over TCP
+    # 9. Configure PipeWire/PulseAudio over TCP
     ########################################################################
     - name: Create PipeWire TCP audio configuration directory
       file:
@@ -273,7 +273,7 @@
         XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.user_uid }}"
 
     ########################################################################
-    # Give the user passwordless sudo for specific commands
+    # 10. Give the user passwordless sudo for specific commands
     ########################################################################
     - name: Allow user to restart NeuroSimo without sudo password
       lineinfile:
@@ -290,7 +290,7 @@
         mode: "0440"
 
     ########################################################################
-    # Create a projects directory
+    # 11. Create a projects directory
     ########################################################################
     - name: Create projects directory
       file:
@@ -301,7 +301,7 @@
         mode: "0755"
 
     ########################################################################
-    # Create .bash_neurosimo from scratch
+    # 12. Create .bash_neurosimo from scratch
     ########################################################################
     - name: Create fresh .bash_neurosimo file
       copy:
@@ -367,7 +367,7 @@
         insertafter: EOF
     
     ########################################################################
-    # Set up the environment
+    # 13. Set up the environment
     ########################################################################
     - name: Check if .env exists
       stat:

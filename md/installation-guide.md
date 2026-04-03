@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Ubuntu 24.04.1 LTS installation media
+- Ubuntu 24.04.4 LTS installation media
 
 ## Table of contents
 
@@ -11,11 +11,11 @@
 
 ## Installing Ubuntu
 
-The following steps present one option for installing Ubuntu 24.04.1 LTS on a computer with an empty SSD drive.
+The following steps present one way to install Ubuntu 24.04.4 LTS on a computer with an empty SSD drive.
 
 1. Boot Setup
 
-   - Boot from Ubuntu 24.04.1 LTS installation media
+   - Boot from Ubuntu 24.04.4 LTS installation media
    - Select "Try or Install Ubuntu"
 
 2. Installation Configuration

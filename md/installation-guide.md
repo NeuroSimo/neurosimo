@@ -30,7 +30,7 @@ The following steps present one way to install Ubuntu 24.04.4 LTS on a computer 
 
    - Create root partition:
 
-     - Size: 120000 MB
+     - Size: 150000 MB
      - Type: Primary
      - Location: Beginning
      - File system: Ext4

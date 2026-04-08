@@ -44,11 +44,11 @@ RUN pip3 install -r requirements/science.txt
 COPY src/decider/requirements/mne.txt requirements/mne.txt
 RUN pip3 install -r requirements/mne.txt
 
-# mneflow pins tensorflow<=2.16.1 which conflicts with numpy>=2.0.
-# py_neuromodulation pulls transitive dependencies that conflict similarly.
-# Install both without deps since their runtime requirements are already met.
-RUN pip3 install --no-deps mneflow==0.5.10 py_neuromodulation==0.1.7 && \
-    pip3 install spectrum==0.9.0
+# --no-deps is required: mneflow pins mne<=1.7 (would downgrade our mne==1.12.0),
+# and py_neuromodulation forces scipy to backtrack to a version with no prebuilt
+# wheel, causing a source build that fails without a Fortran compiler.
+# All runtime requirements are satisfied by previously installed packages.
+RUN pip3 install --no-deps mneflow==0.5.10 py_neuromodulation==0.1.7
 
 # Copy ROS workspace and build packages
 

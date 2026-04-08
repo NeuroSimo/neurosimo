@@ -226,10 +226,18 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
+    group_add:
+      # Required for access to /dev/dri device nodes.
+      # Using numeric GIDs because these groups may not exist inside the container.
+      # On Debian/Ubuntu: video=44, render=109.
+      - "44"   # video
+      - "109"  # render
     network_mode: host
     devices:
       # Provide access to sound devices
       - "/dev/snd:/dev/snd"
+      # Provide access to GPU devices for Mesa/OpenGL (required by hardware drivers such as iris)
+      - "/dev/dri:/dev/dri"
 
   resource_monitor:
     build:

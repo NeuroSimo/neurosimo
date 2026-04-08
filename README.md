@@ -7,6 +7,7 @@ NeuroSimo is an open-source software platform for real-time EEG- and EMG-guided 
 Run this command to install NeuroSimo:
 
 ```bash
+sudo apt install curl
 curl -fsSL https://raw.githubusercontent.com/neurosimo/neurosimo/main/scripts/install.sh | bash
 ```
 

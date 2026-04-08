@@ -39,7 +39,9 @@ COPY src/decider/requirements/torch.txt requirements/torch.txt
 RUN pip3 install --timeout 900 --retries 3 -r requirements/torch.txt
 
 COPY src/decider/requirements/science.txt requirements/science.txt
-RUN pip3 install -r requirements/science.txt
+# --ignore-installed is needed because python3-pip (apt) ships a Debian-managed
+# numpy without a pip RECORD file, which prevents pip from upgrading it normally.
+RUN pip3 install --ignore-installed -r requirements/science.txt
 
 COPY src/decider/requirements/mne.txt requirements/mne.txt
 RUN pip3 install -r requirements/mne.txt

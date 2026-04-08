@@ -6,7 +6,7 @@ tqdm==4.67.3
 diffusers==0.36.0
 accelerate==1.12.0
 lovely-tensors==0.1.21
-numpy==1.26.4
+numpy==2.2.6
 scipy==1.17.1
 ema-pytorch==0.7.9
 scikit-learn==1.8.0
@@ -16,4 +16,4 @@ torchinfo==1.8.0
 joblib==1.5.3
 einops==0.8.2
 spectrum==0.9.0
-tensorflow==2.16.1
+tensorflow==2.21.0

@@ -79,10 +79,7 @@ echo "Building ROS interfaces..."
 # Source the environment again to pick up the newly built ROS workspace
 source ~/.bash_neurosimo > /dev/null
 
-# Create 'example' project
-echo "Creating 'example' project..."
-
-# Check if example project exists
+# Check if example project exists, create it if it doesn't
 if [ -d "$PROJECTS_ROOT/example" ]; then
     echo "Warning: Example project already exists, skipping creation"
 else

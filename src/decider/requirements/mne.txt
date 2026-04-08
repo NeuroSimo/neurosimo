@@ -1,3 +1,3 @@
-mne==1.7.0
+mne==1.12.0
 mne-realtime==0.3.0
 mne_icalabel==0.8.1

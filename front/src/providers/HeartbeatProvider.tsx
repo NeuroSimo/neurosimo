@@ -5,7 +5,7 @@ import { REQUIRED_NEUROSIMO_HEARTBEATS } from 'config/requiredHeartbeats'
 import { ros } from 'ros/ros'
 import { useRosConnection } from './RosConnectionProvider'
 
-const STALE_MS = 3000
+const DEFAULT_STALE_MS = 3000
 const TICK_MS = 200
 
 interface HeartbeatContextType {
@@ -38,7 +38,7 @@ export const HeartbeatProvider: React.FC<Props> = ({ children }) => {
     return REQUIRED_NEUROSIMO_HEARTBEATS.filter(h => {
       const last = lastByIdRef.current[h.id]
       const anchor = last ?? gateStart
-      return now - anchor > STALE_MS
+      return now - anchor > (h.staleMs ?? DEFAULT_STALE_MS)
     }).map(h => h.label)
   }, [isConnected])
 

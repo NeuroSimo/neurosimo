@@ -81,14 +81,17 @@ class SessionConfiguratorNode(Node):
         # Session config publisher
         self.session_config_publisher = self.create_publisher(SessionConfig, "/neurosimo/session_configurator/config", qos)
 
-        # Define directory watch configurations
+        # Define directory watch configurations.
+        # Each entry: (subdirectory, extensions, publisher, component_name, selection_param_name)
+        # selection_param_name is the session-config / ROS parameter whose value must be
+        # one of the entries in the published list; if not, it is reconciled.
         self.watch_configs = [
-            ("decider", [".py"], self.decider_list_publisher, "decider"),
-            ("preprocessor", [".py"], self.preprocessor_list_publisher, "preprocessor"),
-            ("presenter", [".py"], self.presenter_list_publisher, "presenter"),
-            ("protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol"),
-            ("eeg_simulator", [".json"], self.dataset_list_publisher, "dataset"),
-            ("recordings", [".json"], self.recordings_list_publisher, "recordings"),
+            ("decider", [".py"], self.decider_list_publisher, "decider", "decider.module"),
+            ("preprocessor", [".py"], self.preprocessor_list_publisher, "preprocessor", "preprocessor.module"),
+            ("presenter", [".py"], self.presenter_list_publisher, "presenter", "presenter.module"),
+            ("protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol", "experiment.protocol"),
+            ("eeg_simulator", [".json"], self.dataset_list_publisher, "dataset", "simulator.dataset_filename"),
+            ("recordings", [".json"], self.recordings_list_publisher, "recordings", "replay.bag_id"),
         ]
 
         # Add parameter change callback to save changes to session state
@@ -107,6 +110,21 @@ class SessionConfiguratorNode(Node):
         
         # Load session config for the new project
         session_config = self.storage_manager.get_session_config_for_project(project_name)
+
+        # Compute available filename lists for this project before setting parameters,
+        # so selections that no longer match available files can be reconciled first.
+        filename_lists = {
+            component_name: self.compute_filename_list(project_name, subdirectory, file_extensions, component_name)
+            for subdirectory, file_extensions, _, component_name, _ in self.watch_configs
+        }
+
+        # Reconcile stored selections against the available files.
+        for _, _, _, component_name, param_name in self.watch_configs:
+            self.reconcile_config_value(session_config, param_name, component_name, filename_lists[component_name])
+
+        # Persist any reconciliation so that parameter_change_callback, when it reloads
+        # from disk below, sees a consistent baseline.
+        self.storage_manager.save_session_config(project_name, session_config)
 
         self.set_parameters([
             rclpy.parameter.Parameter('notes', rclpy.parameter.Parameter.Type.STRING, session_config["notes"]),
@@ -129,7 +147,7 @@ class SessionConfiguratorNode(Node):
         self.publish_session_config(session_config)
 
         # Publish the lists of modules for the new project and setup watches
-        self.publish_and_watch_directories(project_name)
+        self.publish_and_watch_directories(project_name, filename_lists)
 
     def list_files(self, project_name, subdirectory, file_extensions):
         """List all files with specified extensions in the subdirectory of the specified project."""
@@ -156,40 +174,86 @@ class SessionConfiguratorNode(Node):
             self.logger.error(f"Error listing modules for project '{project_name}'/{subdirectory}: {e}")
             return []
 
-    def publish_filename_list(self, project_name, subdirectory, file_extensions, publisher, component_name):
-        """Publish the list of modules for the specified project and component."""
+    def compute_filename_list(self, project_name, subdirectory, file_extensions, component_name):
+        """Compute the list of filenames for the specified project and component."""
         modules = self.list_files(project_name, subdirectory, file_extensions)
 
-        # For recordings, publish bag_ids (base name without .json) instead of JSON filenames
+        # For recordings, expose bag_ids (base name without .json) instead of JSON filenames
         if component_name == "recordings":
             modules = [m.rsplit(".json", 1)[0] if m.endswith(".json") else m for m in modules]
 
-        # Create and publish FilenameList message
+        return modules
+
+    def publish_filename_list(self, project_name, publisher, component_name, modules):
+        """Publish a precomputed filename list for the specified component."""
         msg = FilenameList()
         msg.filenames = modules
         publisher.publish(msg)
 
         self.logger.info(f"Published {component_name} module list for project '{project_name}': {modules}")
-    
-    def publish_and_watch_directories(self, project_name):
+
+    def reconcile_config_value(self, session_config, param_name, component_name, filenames):
+        """In-place reconcile a stored selection against available filenames.
+
+        If the stored value is not in the list, fall back to the first available entry,
+        or to an empty string if the list is empty. Mutates session_config.
+        """
+        current = session_config.get(param_name, '')
+        if current in filenames:
+            return
+        new_value = filenames[0] if filenames else ''
+        if new_value == current:
+            return
+        self.logger.warning(
+            f"Stored {component_name} selection '{current}' is not in available list; "
+            f"reconciling '{param_name}' to '{new_value}'"
+        )
+        session_config[param_name] = new_value
+
+    def reconcile_parameter(self, param_name, component_name, filenames):
+        """Reconcile a live ROS parameter against an available filename list.
+
+        If the parameter's current value is not in the list, update it (which triggers
+        parameter_change_callback to persist the change and republish session config).
+        """
+        current = self.get_parameter(param_name).get_parameter_value().string_value
+        if current in filenames:
+            return
+        new_value = filenames[0] if filenames else ''
+        if new_value == current:
+            return
+        self.logger.warning(
+            f"Active {component_name} selection '{current}' is not in available list; "
+            f"updating '{param_name}' to '{new_value}'"
+        )
+        self.set_parameters([
+            rclpy.parameter.Parameter(param_name, rclpy.parameter.Parameter.Type.STRING, new_value)
+        ])
+
+    def publish_and_watch_directories(self, project_name, filename_lists):
         """Publish filename lists and setup file system watches for all directories."""
-        # Unwatch all previous directories
         self.directory_watcher.unwatch_all()
-        
-        # Publish initial lists and setup watches for each directory
-        for subdirectory, file_extensions, publisher, component_name in self.watch_configs:
-            # Publish initial filename list
-            self.publish_filename_list(project_name, subdirectory, file_extensions, publisher, component_name)
-            
-            # Setup watch for the directory
+
+        for subdirectory, file_extensions, publisher, component_name, param_name in self.watch_configs:
+            self.publish_filename_list(project_name, publisher, component_name, filename_lists[component_name])
+
             directory_path = os.path.join(self.storage_manager.PROJECTS_ROOT, project_name, subdirectory)
-            
-            # Create callback for this specific directory
-            def create_callback(proj, subdir, exts, pub, comp):
-                return lambda: self.publish_filename_list(proj, subdir, exts, pub, comp)
-            
-            callback = create_callback(project_name, subdirectory, file_extensions, publisher, component_name)
+
+            def create_callback(proj, subdir, exts, pub, comp, param):
+                return lambda: self.handle_directory_change(proj, subdir, exts, pub, comp, param)
+
+            callback = create_callback(project_name, subdirectory, file_extensions, publisher, component_name, param_name)
             self.directory_watcher.watch_directory(directory_path, file_extensions, callback)
+
+    def handle_directory_change(self, project_name, subdirectory, file_extensions, publisher, component_name, param_name):
+        """Callback invoked when a watched directory changes.
+
+        Recomputes and republishes the filename list, then reconciles the associated
+        parameter so the UI never displays a stale selection that is no longer available.
+        """
+        modules = self.compute_filename_list(project_name, subdirectory, file_extensions, component_name)
+        self.publish_filename_list(project_name, publisher, component_name, modules)
+        self.reconcile_parameter(param_name, component_name, modules)
 
     # Service callbacks
 

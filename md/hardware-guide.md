@@ -25,8 +25,8 @@ Here are the steps to configure the NeurOne:
 
 1. Go to the protocol settings of the NeurOne and select "Digital Out" settings.
 2. Set the Packet Frequency (Hz) equal to the sampling frequency of the EEG data.
-3. Set "Target IP Address" to 192.168.200.254 and "Target Port" to 25000.
-4. Enable "Send Triggers as Packets" and "Send Packets MeasurementStart and MeasurementEnd".
+3. Set "Target IP Address" to 192.168.200.254 and "Target Port" to 50000.
+4. Enable "Send Triggers as Channels" and "Send Packets MeasurementStart and MeasurementEnd".
 5. Click "Ok" to save the settings.
 
 Here are the steps to configure the computer:

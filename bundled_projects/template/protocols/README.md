@@ -8,7 +8,7 @@ Each protocol file should be a YAML file with the following structure:
 
 ```yaml
 name: "Protocol name"
-description: "Description of the protocol"
+description: "Description of the protocol"  # Optional
 
 stages:
   - stage:
@@ -55,6 +55,7 @@ A rest period where no stimuli are delivered. Can be defined in two ways:
 ## Validation
 
 The protocol loader will validate:
+- The protocol has at least one element
 - All stage names are unique
 - All `wait_until` anchors reference valid stage names
 - All stages have at least 1 trial

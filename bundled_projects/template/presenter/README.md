@@ -64,7 +64,7 @@ def process_<stimulus_type>(self, parameters: dict[str, Any]) -> bool:
 
 **Return Value:**
 - `True`: Stimulus was successfully processed and presented
-- `False`: Error occurred (logged by pipeline but doesn't stop execution)
+- `False`: Error occurred (the session will be aborted)
 
 ## Integration with Decider
 

@@ -6,7 +6,9 @@ The Preprocessor module handles real-time filtering, artifact removal, and signa
 
 ## Available Libraries
 
-No third-party libraries are currently available in the preprocessor environment.
+The following third-party libraries are currently available in the preprocessor environment:
+
+- numpy
 
 To add more libraries, modify `src/preprocessor/Dockerfile` and run `build-neurosimo` from the command line.
 
@@ -21,6 +23,29 @@ Initializes the preprocessor with device configuration parameters automatically 
 - `num_eeg_channels` (int): Number of EEG channels
 - `num_emg_channels` (int): Number of EMG channels
 - `sampling_frequency` (int): Sampling frequency in Hz
+
+### `get_configuration()`
+
+Called by the pipeline during initialization. Must return a dictionary with configuration parameters.
+
+**Return dictionary keys:**
+
+#### `sample_window` (list)
+Two-element list `[earliest_seconds, latest_seconds]` defining the buffer size relative to current sample, expressed in **seconds**.
+- Current sample is always at `0.0`
+- Earliest time is negative or zero
+- Values are in seconds; they are converted to samples using the provided sampling frequency
+
+**Examples:**
+- `[-0.005, 0.0]`: Keep last 5 ms + current sample
+- `[-1.0, 0.0]`: Keep last second (at any sampling rate)
+- `[0.0, 0.0]`: Keep only current sample
+- `[-0.005, 0.005]`: Look 5 ms back and 5 ms ahead (introduces 5 ms delay)
+
+**Delay implications:**
+- Positive latest_seconds values introduce processing delay
+- `[-0.005, 0.005]` means 5 ms delay for causal processing
+- Choose based on your filtering requirements vs. acceptable latency
 
 ### `process(reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given)`
 
@@ -67,59 +92,22 @@ Whether the current sample is valid for analysis. Invalid samples are typically:
 
 The decider receives this validity information and can choose to skip processing when samples are invalid.
 
-## Sample Window Configuration
-
-The `sample_window` configuration defines the buffer size available for preprocessing:
-
-- **Format**: `[earliest_seconds, latest_seconds]` relative to current sample, expressed in **seconds**
-- **Current sample**: Always at `reference_index` where `time_offsets[reference_index] == 0`
-- **Values**: Converted to samples using the provided sampling frequency
-
-**Examples:**
-- `[-0.005, 0.0]`: Keep last 5 ms + current sample
-- `[-1.0, 0.0]`: Keep last second (at any sampling rate)
-- `[0.0, 0.0]`: Keep only current sample
-- `[-0.005, 0.005]`: Look 5 ms back and 5 ms ahead (introduces 5 ms delay)
-
-**Delay implications:**
-- Positive latest_seconds values introduce processing delay
-- `[-0.005, 0.005]` means 5 ms delay for causal processing
-- Choose based on your filtering requirements vs. acceptable latency
-
 ## Common Preprocessing Tasks
 
 ### Artifact Detection
 ```python
-# Detect TMS pulse artifacts
 if pulse_given:
     self.ongoing_pulse_artifact = True
     self.samples_after_pulse = 0
 
-# Mark samples invalid for 1000 samples after pulse (artifact duration)
 if self.ongoing_pulse_artifact:
     self.samples_after_pulse += 1
     if self.samples_after_pulse == 1000:
         self.ongoing_pulse_artifact = False
 ```
 
-### Filtering
-```python
-# Apply high-pass filter to remove DC drift
-from scipy import signal
-if hasattr(self, 'filter_zi'):
-    eeg_filtered, self.filter_zi = signal.lfilter(
-        self.b, self.a, [eeg_buffer[reference_index, :]], 
-        zi=self.filter_zi
-    )
-else:
-    # Initialize filter state on first sample
-    self.b, self.a = signal.butter(4, 1.0/(self.sampling_frequency/2), 'high')
-    self.filter_zi = signal.lfilter_zi(self.b, self.a) * eeg_buffer[reference_index, :]
-```
-
 ### Amplitude-Based Artifact Rejection
 ```python
-# Reject samples exceeding amplitude thresholds
 amplitude_threshold = 100  # microvolts
 current_eeg = eeg_buffer[reference_index, :]
 valid = not np.any(np.abs(current_eeg) > amplitude_threshold)
@@ -127,7 +115,6 @@ valid = not np.any(np.abs(current_eeg) > amplitude_threshold)
 
 ### Movement Artifact Detection
 ```python
-# Use EMG channels to detect movement artifacts
 emg_power = np.mean(np.square(emg_buffer[reference_index, :]))
 movement_threshold = 50  # adjust based on your setup
 movement_detected = emg_power > movement_threshold
@@ -138,51 +125,62 @@ valid = not movement_detected
 
 ### Pass-Through Preprocessor
 ```python
+def get_configuration(self) -> dict[str, Any]:
+    return {
+        'sample_window': [0.0, 0.0],
+    }
+
 def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given):
-    # No actual preprocessing, just pass through
     return {
         'eeg_sample': eeg_buffer[reference_index, :],
-        'emg_sample': emg_buffer[reference_index, :], 
-        'valid': True
+        'emg_sample': emg_buffer[reference_index, :],
+        'valid': True,
     }
 ```
 
 ### Simple Artifact Rejection
 ```python
+def get_configuration(self) -> dict[str, Any]:
+    return {
+        'sample_window': [0.0, 0.0],
+    }
+
 def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given):
-    # Mark samples invalid for 1 second after pulse
     if pulse_given:
         self.samples_since_pulse = 0
-        
+
     valid = self.samples_since_pulse > self.sampling_frequency
     self.samples_since_pulse += 1
-    
+
     return {
         'eeg_sample': eeg_buffer[reference_index, :],
         'emg_sample': emg_buffer[reference_index, :],
-        'valid': valid
+        'valid': valid,
     }
 ```
 
 ### Real-Time Filtering
 ```python
+def get_configuration(self) -> dict[str, Any]:
+    return {
+        'sample_window': [-0.005, 0.0],  # 5 ms look-back
+    }
+
 def process(self, reference_time, reference_index, time_offsets, eeg_buffer, emg_buffer, pulse_given):
-    # Apply bandpass filter (1-30 Hz)
     current_eeg = eeg_buffer[reference_index, :]
-    
+
     if not hasattr(self, 'eeg_filtered_prev'):
         self.eeg_filtered_prev = current_eeg
         filtered_eeg = current_eeg
     else:
-        # Simple moving average (replace with proper filter)
         alpha = 0.1
         filtered_eeg = alpha * current_eeg + (1 - alpha) * self.eeg_filtered_prev
         self.eeg_filtered_prev = filtered_eeg
-    
+
     return {
         'eeg_sample': filtered_eeg,
         'emg_sample': emg_buffer[reference_index, :],
-        'valid': True
+        'valid': True,
     }
 ```
 

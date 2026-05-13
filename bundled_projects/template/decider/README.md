@@ -80,8 +80,8 @@ Two-element list `[earliest_seconds, latest_seconds]` defining the buffer size r
 - `[0.0, 0.0]`: Keep only current sample
 - `[-0.005, 0.005]`: Look 5 ms back and 5 ms ahead (introduces 5 ms delay)
 
-#### `pulse_lockout_duration` (float)
-Duration in seconds during which periodic processing is disabled after a pulse is delivered.
+#### `pulse_lockout_duration` (float, optional)
+Duration in seconds during which periodic processing is disabled after a pulse is delivered. Defaults to `0.0` if not specified.
 - Prevents new stimulation during the lockout period
 - Events and EEG triggers are still processed during lockout
 - Set to `0.0` to disable lockout
@@ -124,7 +124,7 @@ When a pulse event occurs, the pulse processor is called instead of the regular 
 ```python
 def process_pulse(
         self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process pulse-specific logic
@@ -159,7 +159,7 @@ When an event occurs, the event processor is called instead of the regular `proc
 ```python
 def process_event(
         self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
     """Process general events."""
     print(f"Event at {reference_time}")
     # Process event-specific logic
@@ -220,6 +220,9 @@ Whether the coil is currently positioned at the target location (for neuronaviga
 #### `stage_name` (str)
 Current protocol stage name from the experiment coordinator.
 
+#### `pulse_count` (int)
+Number of pulses delivered so far in the session.
+
 #### `is_warm_up` (bool)
 `True` when this call is a warm-up round with dummy data. Skip internal state updates in this case; return values are ignored.
 During warm-up calls, `stage_name` is an empty string (`""`).
@@ -229,7 +232,7 @@ During warm-up calls, `stage_name` is an empty string (`""`).
 The `process_periodic()` method can return a dictionary with the following optional keys:
 
 #### `trigger_offset` (float)
-Schedule a trigger pulse using an offset in seconds relative to `reference_time`. Uses LabJack T4 for triggering external devices like commercial TMS systems.
+Schedule a trigger pulse using an offset in seconds relative to `reference_time`. Uses LabJack T4 for triggering external devices like commercial TMS systems. Only allowed from `process_periodic()` — returning this from pulse or event processors will cause an error.
 
 **Example:**
 ```python
@@ -241,7 +244,7 @@ Publish targeted pulse requests to `/mtms/targeted_pulses` for external stimulat
 Do not return `trigger_offset` and `targeted_pulses` in the same result.
 
 Each list item must be a dictionary with:
-- `time` (float): Absolute pulse time in seconds since recording start
+- `time_offset` (float): Pulse time as an offset in seconds relative to `reference_time`
 - `displacement_x` (float): X-coordinate in millimeters
 - `displacement_y` (float): Y-coordinate in millimeters
 - `rotation_angle` (float): Rotation angle in degrees
@@ -252,14 +255,14 @@ Each list item must be a dictionary with:
 return {
     'targeted_pulses': [
         {
-            'time': reference_time + 0.010,
+            'time_offset': 0.010,
             'displacement_x': 0.0,
             'displacement_y': 0.0,
             'rotation_angle': 0.0,
             'intensity': 30.0,
         },
         {
-            'time': reference_time + 0.060,
+            'time_offset': 0.060,
             'displacement_x': 0.0,
             'displacement_y': 0.0,
             'rotation_angle': 0.0,
@@ -289,6 +292,26 @@ return {
 }
 ```
 
+#### `events` (list)
+Dynamically schedule new events by returning a list of event times (in seconds, relative to session start). These are added to the same event queue as `predefined_events` and will trigger the `event_processor` when reached.
+
+**Example:**
+```python
+return {
+    'events': [reference_time + 5.0, reference_time + 10.0]
+}
+```
+
+#### `coil_target` (str)
+Direct the neuronavigation system to a named coil target.
+
+**Example:**
+```python
+return {
+    'coil_target': 'target_1'
+}
+```
+
 ### Event Processor Methods
 
 Event processor methods (`process_pulse` and `process_event`) are called when events occur (configured via `pulse_processor` and `event_processor`). Each has the same signature as `process_periodic()` except without `is_warm_up` (they are never called during warm-up).
@@ -297,7 +320,7 @@ Event processor methods (`process_pulse` and `process_event`) are called when ev
 ```python
 def process_pulse(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     # Process event-specific logic
@@ -305,7 +328,7 @@ def process_pulse(
 
 def process_event(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
     """Process general events."""
     print(f"Event at {reference_time}")
     # Process event-specific logic
@@ -398,7 +421,7 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 ```python
 def process_periodic(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, is_warm_up):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count, is_warm_up):
     # Generate stimuli based on current time or data
     return {
         'sensory_stimuli': [
@@ -459,7 +482,7 @@ If your decider maintains internal state that depends on real EEG/EMG data patte
 ```python
 def process_periodic(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, is_warm_up):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count, is_warm_up):
     
     # Your processing logic here...
     processed_data = self.analyze_eeg(eeg_buffer)

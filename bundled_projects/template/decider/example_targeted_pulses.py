@@ -90,33 +90,4 @@ class Decider:
         """Process pulse event."""
         print(f"Pulse event received at time {reference_time}.")
         # Add your pulse event handling logic here
-
-        # Example: return a (paired) set of TargetedPulse dictionaries.
-        # The C++ wrapper (`decider_wrapper.cpp`) expects each targeted pulse dict to contain:
-        #   time_offset, displacement_x, displacement_y, rotation_angle, intensity
-        #
-        # paired_pulses = [
-        #     {
-        #         "time_offset": reference_time,      # seconds (see your pipeline conventions)
-        #         "displacement_x": 0.010,    # displacement along X
-        #         "displacement_y": 0.000,    # displacement along Y
-        #         "rotation_angle": 0.0,      # radians
-        #         "intensity": 1.0,           # intensity value per your system
-        #     },
-        #     {
-        #         "time_offset": reference_time,      # same time -> "paired" spatial targeting
-        #         "displacement_x": -0.010,
-        #         "displacement_y": 0.000,
-        #         "rotation_angle": 0.0,
-        #         "intensity": 1.0,
-        #     },
-        # ]
-        #
-        # return {
-        #     # Return targeted pulses via this key:
-        #     "targeted_pulses": paired_pulses,
-        #
-        #     # Optional (only if your pipeline uses it):
-        #     # "coil_target": "left_coil",
-        # }
         return None

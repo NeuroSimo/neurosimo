@@ -146,7 +146,7 @@ std::tuple<bool, neurosimo_project_interfaces::msg::DatasetInfo, std::vector<dou
         RCLCPP_INFO(node_->get_logger(), "Loaded %zu pulse times from %s", parsed_pulse_times.size(), pulse_file.c_str());
       }
     }
-    dataset_msg.pulse_count = parsed_pulse_times.size();
+    dataset_msg.trial_count = parsed_pulse_times.size();
 
     /* Get sample count from the data file and compute duration. */
     std::string data_file_path = directory_path + "/" + dataset_msg.data_filename;

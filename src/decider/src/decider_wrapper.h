@@ -84,7 +84,7 @@ public:
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t pulse_count);
+    uint64_t trial_count);
 
   std::size_t get_envelope_buffer_size() const;
   double get_periodic_processing_interval() const;

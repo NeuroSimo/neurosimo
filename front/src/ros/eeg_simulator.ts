@@ -10,7 +10,7 @@ export interface DatasetInfo extends ROSLIB.Message {
   num_emg_channels: number
   duration: number
   loop: boolean
-  pulse_count: number
+  trial_count: number
 }
 
 /* Get dataset info service */

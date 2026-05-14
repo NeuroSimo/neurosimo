@@ -539,7 +539,7 @@ bool DeciderWrapper::warm_up() {
         *periodic_emg,
         dummy_is_coil_at_target,
         "",
-        (uint64_t)0,  /* pulse_count */
+        (uint64_t)0,  /* trial_count */
         true  /* is_warm_up */
       );
       
@@ -834,7 +834,7 @@ std::tuple<
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t pulse_count) {
+    uint64_t trial_count) {
 
   std::shared_ptr<double_t> trigger_offset = nullptr;
   std::string coil_target;
@@ -887,7 +887,7 @@ std::tuple<
       case ProcessingReason::Periodic:
         set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
         /* Call periodic processor. */
-        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count, false);
+        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, trial_count, false);
         break;
 
       case ProcessingReason::Pulse:
@@ -896,7 +896,7 @@ std::tuple<
           py_result = py::none();
           break;
         }
-        py_result = decider_instance->attr("process_pulse")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
+        py_result = decider_instance->attr("process_pulse")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, trial_count);
         break;
 
       case ProcessingReason::Event:
@@ -905,7 +905,7 @@ std::tuple<
           py_result = py::none();
           break;
         }
-        py_result = decider_instance->attr("process_event")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
+        py_result = decider_instance->attr("process_event")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, trial_count);
         break;
 
       default:

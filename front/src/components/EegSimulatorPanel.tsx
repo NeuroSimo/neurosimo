@@ -161,7 +161,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         <ConfigValue>
           {selectedDatasetInfo?.loop
             ? 'Continuous'
-            : `${formatTime(selectedDatasetInfo?.duration)}${selectedDatasetInfo?.pulse_count ? `, ${selectedDatasetInfo.pulse_count} pulses` : ''}`}
+            : `${formatTime(selectedDatasetInfo?.duration)}${selectedDatasetInfo?.trial_count ? `, ${selectedDatasetInfo.trial_count} pulses` : ''}`}
         </ConfigValue>
       </CompactRow>
 

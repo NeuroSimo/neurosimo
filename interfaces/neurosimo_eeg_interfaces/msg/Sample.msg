@@ -27,7 +27,7 @@ float64 experiment_time         # Pause-adjusted experiment time (seconds)
 string stage_name               # Current stage name from protocol
 uint32 stage_index              # Current stage index (0-based)
 uint32 trial                    # Current trial within stage (0-based)
-uint64 pulse_count              # Total pulses delivered
+uint64 trial_count              # Total pulses delivered
 
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)

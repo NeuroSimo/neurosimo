@@ -104,9 +104,6 @@ class Decider:
             # Data configuration
             'sample_window': [-self.buffer_size_seconds, 0.0],
             'warm_up_rounds': 2,
-
-            # Periodic processing
-            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 
     def process_periodic(

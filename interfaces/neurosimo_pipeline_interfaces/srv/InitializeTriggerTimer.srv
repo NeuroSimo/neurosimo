@@ -8,5 +8,8 @@ float64 maximum_loopback_latency
 float64 trigger_to_pulse_delay
 bool enable_labjack
 string data_source
+
+# Safety configuration
+float64 minimum_trial_interval
 ---
 bool success

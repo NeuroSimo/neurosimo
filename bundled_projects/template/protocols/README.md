@@ -10,6 +10,9 @@ Each protocol file should be a YAML file with the following structure:
 name: "Protocol name"
 description: "Description of the protocol"  # Optional
 
+safety:
+  minimum_trial_interval: 2.0   # minimum seconds between consecutive trials (required)
+
 stages:
   - stage:
       name: "stage_name"
@@ -26,6 +29,12 @@ stages:
         offset: 900.0  # Seconds after that stage started
       notes: "Optional notes"
 ```
+
+## Safety
+
+The `safety` section is required and defines safety constraints for the protocol:
+
+- `minimum_trial_interval`: Minimum time in seconds between consecutive trials/pulses. Must be positive. This value is enforced by both the decider (which gates periodic processing after a pulse) and the trigger timer (which rejects triggers that arrive too soon after the previous one).
 
 ## Elements
 
@@ -55,6 +64,7 @@ A rest period where no stimuli are delivered. Can be defined in two ways:
 ## Validation
 
 The protocol loader will validate:
+- The `safety` section is present with a positive `minimum_trial_interval`
 - The protocol has at least one element
 - All stage names are unique
 - All `wait_until` anchors reference valid stage names

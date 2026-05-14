@@ -285,6 +285,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
 
   this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
   response->success = true;
+  response->minimum_trial_interval = this->protocol->minimum_trial_interval;
 }
 
 void ExperimentCoordinator::handle_finalize_protocol(

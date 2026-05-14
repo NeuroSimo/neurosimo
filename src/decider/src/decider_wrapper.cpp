@@ -145,11 +145,11 @@ bool DeciderWrapper::initialize_module(
   };
 
   /* Validate that only allowed keys are present */
-  std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_interval", "predefined_events", "pulse_lockout_duration", "pulse_sample_window", "event_sample_window"};
+  std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_interval", "predefined_events", "pulse_sample_window", "event_sample_window"};
   for (const auto& item : config) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      log_error("Unexpected key '" + key + "' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_interval', 'predefined_events', 'pulse_lockout_duration', 'pulse_sample_window', and 'event_sample_window' are allowed.");
+      log_error("Unexpected key '" + key + "' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_interval', 'predefined_events', 'pulse_sample_window', and 'event_sample_window' are allowed.");
       return false;
     }
   }
@@ -206,22 +206,6 @@ bool DeciderWrapper::initialize_module(
     }
   } else {
     this->warm_up_rounds = 0;
-  }
-
-  /* Extract pulse_lockout_duration (optional, defaults to 0.0). */
-  if (config.contains("pulse_lockout_duration")) {
-    try {
-      this->pulse_lockout_duration = config["pulse_lockout_duration"].cast<double>();
-      if (this->pulse_lockout_duration < 0.0) {
-        log_error("pulse_lockout_duration must be non-negative.");
-        return false;
-      }
-    } catch (const py::cast_error& e) {
-      log_error(std::string("pulse_lockout_duration must be a number: ") + e.what());
-      return false;
-    }
-  } else {
-    this->pulse_lockout_duration = 0.0;
   }
 
   /* Extract sample_window. */
@@ -425,9 +409,6 @@ bool DeciderWrapper::initialize_module(
                 bold_on.c_str(), event_sample_window_start_seconds, event_sample_window_end_seconds, bold_off.c_str());
   }
 
-  if (this->pulse_lockout_duration > 0.0) {
-    RCLCPP_INFO(*logger_ptr, "  - Pulse lockout duration: %s%.1f%s (s)", bold_on.c_str(), this->pulse_lockout_duration, bold_off.c_str());
-  }
   RCLCPP_INFO(*logger_ptr, " ");
 
   return true;
@@ -593,10 +574,6 @@ int DeciderWrapper::get_pulse_look_ahead_samples() const {
 
 int DeciderWrapper::get_event_look_ahead_samples() const {
   return std::max(this->event_sample_window_end, 0);
-}
-
-double DeciderWrapper::get_pulse_lockout_duration() const {
-  return this->pulse_lockout_duration;
 }
 
 bool DeciderWrapper::parse_sensory_stimulus_dict(

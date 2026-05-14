@@ -1,5 +1,6 @@
 #include <chrono>
 #include <thread>
+#include <cmath>
 
 #include "trigger_timer.h"
 #include "labjack_manager.h"
@@ -192,6 +193,16 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
   double_t trigger_time = desired_pulse_time - this->trigger_to_pulse_delay;
   double_t estimated_current_time = estimate_current_sample_time();
 
+  /* Check minimum trial interval. */
+  if (!std::isnan(this->last_trigger_time)) {
+    double_t time_since_last = desired_pulse_time - this->last_trigger_time;
+    if (time_since_last < this->minimum_trial_interval) {
+      RCLCPP_ERROR(logger, "Minimum trial interval (%.1f s) not met (%.3f s since last trigger), rejecting.",
+                   this->minimum_trial_interval, time_since_last);
+      return SchedulingResult::ERROR;
+    }
+  }
+
   if (estimated_current_time == 0.0) {
     RCLCPP_WARN(logger, "No sample time reference available yet, cannot estimate timing.");
     return SchedulingResult::ERROR;
@@ -256,6 +267,7 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
 
       if (labjack_manager && labjack_manager->trigger_output(tms_trigger_fio)) {
         status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_FIRED;
+        this->last_trigger_time = desired_pulse_time;
       } else {
         RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
       }
@@ -399,6 +411,9 @@ void TriggerTimer::reset_state() {
   /* Reset stored time tracking */
   this->stored_sample_time = 0.0;
   this->stored_system_time = std::chrono::high_resolution_clock::time_point();
+
+  /* Reset minimum trial interval tracking */
+  this->last_trigger_time = std::numeric_limits<double_t>::quiet_NaN();
 }
 
 void TriggerTimer::handle_initialize_trigger_timer(
@@ -418,6 +433,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   this->trigger_to_pulse_delay = request->trigger_to_pulse_delay;
   this->enable_labjack = request->enable_labjack;
   this->data_source = request->data_source;
+  this->minimum_trial_interval = request->minimum_trial_interval;
 
   /* If LabJack is not enabled, don't initialize trigger timer, but return success. */
   if (!request->enable_labjack) {
@@ -459,6 +475,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   RCLCPP_INFO(this->get_logger(), "  Timing tolerance (ms): %.1f", 1000 * this->maximum_timing_offset);
   RCLCPP_INFO(this->get_logger(), "  Maximum loopback latency (ms): %.1f", 1000 * this->maximum_loopback_latency);
   RCLCPP_INFO(this->get_logger(), "  Trigger to pulse delay (ms): %.1f", 1000 * this->trigger_to_pulse_delay);
+  RCLCPP_INFO(this->get_logger(), "  Minimum trial interval (s): %.1f", this->minimum_trial_interval);
   RCLCPP_INFO(this->get_logger(), "  LabJack enabled: %s", this->enable_labjack ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), " ");
 

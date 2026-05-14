@@ -11,7 +11,6 @@ interface GlobalConfigContextType {
   turbolinkEegChannelCount: number
   maximumDroppedSamples: number
   enableLabjack: boolean
-  minimumIntertrialInterval: number
   maximumLoopbackLatency: number
   maximumTimingOffset: number
   triggerToPulseDelay: number
@@ -35,7 +34,6 @@ const defaultGlobalConfigState: GlobalConfigContextType = {
   turbolinkEegChannelCount: 0,
   maximumDroppedSamples: 0,
   enableLabjack: false,
-  minimumIntertrialInterval: 0,
   maximumLoopbackLatency: 0,
   maximumTimingOffset: 0,
   triggerToPulseDelay: 0,
@@ -61,7 +59,6 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     turbolinkEegChannelCount: number
     maximumDroppedSamples: number
     enableLabjack: boolean
-    minimumIntertrialInterval: number
     maximumLoopbackLatency: number
     maximumTimingOffset: number
     triggerToPulseDelay: number
@@ -76,7 +73,6 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     turbolinkEegChannelCount: 0,
     maximumDroppedSamples: 0,
     enableLabjack: false,
-    minimumIntertrialInterval: 0,
     maximumLoopbackLatency: 0,
     maximumTimingOffset: 0,
     triggerToPulseDelay: 0,
@@ -104,7 +100,6 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         turbolinkEegChannelCount: msg.turbolink_eeg_channel_count,
         maximumDroppedSamples: msg.maximum_dropped_samples,
         enableLabjack: msg.enable_labjack,
-        minimumIntertrialInterval: msg.minimum_intertrial_interval,
         maximumLoopbackLatency: msg.maximum_loopback_latency,
         maximumTimingOffset: msg.maximum_timing_offset,
         triggerToPulseDelay: msg.trigger_to_pulse_delay,
@@ -143,7 +138,6 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     if (config.turbolinkEegChannelCount !== undefined) parameters.push({ name: 'turbolink_eeg_channel_count', value: config.turbolinkEegChannelCount })
     if (config.maximumDroppedSamples !== undefined) parameters.push({ name: 'maximum_dropped_samples', value: config.maximumDroppedSamples })
     if (config.enableLabjack !== undefined) parameters.push({ name: 'enable_labjack', value: config.enableLabjack })
-    if (config.minimumIntertrialInterval !== undefined) parameters.push({ name: 'minimum_intertrial_interval', value: config.minimumIntertrialInterval })
     if (config.maximumLoopbackLatency !== undefined) parameters.push({ name: 'maximum_loopback_latency', value: config.maximumLoopbackLatency })
     if (config.maximumTimingOffset !== undefined) parameters.push({ name: 'maximum_timing_offset', value: config.maximumTimingOffset })
     if (config.triggerToPulseDelay !== undefined) parameters.push({ name: 'trigger_to_pulse_delay', value: config.triggerToPulseDelay })
@@ -164,7 +158,6 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         turbolinkEegChannelCount: globalConfig.turbolinkEegChannelCount,
         maximumDroppedSamples: globalConfig.maximumDroppedSamples,
         enableLabjack: globalConfig.enableLabjack,
-        minimumIntertrialInterval: globalConfig.minimumIntertrialInterval,
         maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
         maximumTimingOffset: globalConfig.maximumTimingOffset,
         triggerToPulseDelay: globalConfig.triggerToPulseDelay,

@@ -62,16 +62,6 @@ Two-element list `[earliest_seconds, latest_seconds]` defining the buffer size r
 - `[0.0, 0.0]`: Keep only current sample
 - `[-0.005, 0.005]`: Look 5 ms back and 5 ms ahead (introduces 5 ms delay)
 
-#### `pulse_lockout_duration` (float, optional)
-Duration in seconds during which periodic processing is disabled after a pulse is delivered. Defaults to `0.0` if not specified.
-- Prevents new stimulation during the lockout period
-- Events and EEG triggers are still processed during lockout
-- Set to `0.0` to disable lockout
-
-**Examples:**
-- `2.0`: No periodic processing for 2 seconds after pulse
-- `0.0`: No lockout (periodic processing continues immediately)
-
 #### `predefined_events` (list, optional)
 List of event times (in seconds) for scheduled processing triggers. Can be omitted if no predefined events are needed.
 
@@ -294,7 +284,6 @@ def get_configuration(self):
     return {
         'sample_window': [-0.100, 0.0],  # Last 100 ms
         'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
-        'pulse_lockout_duration': 0.0,
     }
 ```
 
@@ -318,7 +307,6 @@ def process_event(self, reference_time, reference_index, time_offsets,
 def get_configuration(self):
     return {
         'sample_window': [-1.000, 0.0],  # Last second
-        'pulse_lockout_duration': 2.0,
         # periodic_processing_interval defaults to 0.1 (10 times per second)
     }
 ```

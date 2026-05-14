@@ -16,6 +16,6 @@ neurosimo_eeg_interfaces/StreamInfo stream_info
 string subject_id
 
 # Safety configuration
-float64 minimum_intertrial_interval
+float64 minimum_trial_interval
 ---
 bool success

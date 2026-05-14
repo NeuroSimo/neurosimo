@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.0.0-rc2] – 2026-05-14
+### Changed
+- Renamed `pulse_count` to `trial_count` in decider methods.
+- Do not allow defining custom names for pulse and event processing methods.
+
 ## [1.0.0-rc1] – 2026-04-08
 ### Added
 - Added session lifecycle management with explicit initialize/start/pause/stop/finalize flow and clearer session stage reporting in the UI.

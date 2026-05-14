@@ -88,7 +88,7 @@ public:
 
   std::size_t get_envelope_buffer_size() const;
   double get_periodic_processing_interval() const;
-  double get_first_periodic_processing_at() const;
+
   bool is_processing_interval_enabled() const;
   int get_periodic_look_ahead_samples() const;
   int get_pulse_look_ahead_samples() const;
@@ -160,7 +160,7 @@ private:
   uint16_t sampling_frequency = 0;
   bool periodic_processing_enabled = false;
   double periodic_processing_interval = 0.0;
-  double first_periodic_processing_at = 0.0;
+
   double pulse_lockout_duration = 0.0;
   uint16_t warm_up_rounds = 0;
 

@@ -145,11 +145,11 @@ bool DeciderWrapper::initialize_module(
   };
 
   /* Validate that only allowed keys are present */
-  std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_sample_window", "event_sample_window"};
+  std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "predefined_events", "pulse_lockout_duration", "pulse_sample_window", "event_sample_window"};
   for (const auto& item : config) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      log_error("Unexpected key '" + key + "' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_sample_window', and 'event_sample_window' are allowed.");
+      log_error("Unexpected key '" + key + "' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'predefined_events', 'pulse_lockout_duration', 'pulse_sample_window', and 'event_sample_window' are allowed.");
       return false;
     }
   }
@@ -200,23 +200,6 @@ bool DeciderWrapper::initialize_module(
   if (this->periodic_processing_enabled && !config.contains("periodic_processing_interval")) {
     log_error("periodic_processing_enabled is true but 'periodic_processing_interval' is not provided in configuration dictionary.");
     return false;
-  }
-
-  /* Extract first_periodic_processing_at (in seconds), defaulting to periodic_processing_interval. */
-  if (config.contains("first_periodic_processing_at")) {
-    try {
-      this->first_periodic_processing_at = config["first_periodic_processing_at"].cast<double>();
-      if (this->first_periodic_processing_at < 0.0) {
-        log_error("first_periodic_processing_at must be non-negative.");
-        return false;
-      }
-    } catch (const py::cast_error& e) {
-      log_error(std::string("first_periodic_processing_at must be a number: ") + e.what());
-      return false;
-    }
-  } else {
-    /* Default to same as periodic_processing_interval. */
-    this->first_periodic_processing_at = this->periodic_processing_interval;
   }
 
   /* Extract predefined_events (optional). */
@@ -617,10 +600,6 @@ std::size_t DeciderWrapper::get_envelope_buffer_size() const {
 
 double DeciderWrapper::get_periodic_processing_interval() const {
   return this->periodic_processing_interval;
-}
-
-double DeciderWrapper::get_first_periodic_processing_at() const {
-  return this->first_periodic_processing_at;
 }
 
 bool DeciderWrapper::is_processing_interval_enabled() const {

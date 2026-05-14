@@ -59,15 +59,6 @@ How frequently the `process_periodic()` method is called, in seconds. Required w
 
 **Validation:** When `periodic_processing_enabled` is `True`, this value must be greater than `0.0`.
 
-#### `first_periodic_processing_at` (float, optional)
-Time of the first periodic processing call in seconds (relative to session start). Defaults to `periodic_processing_interval` if not specified.
-
-**Examples:**
-- `1.0`: First processing at 1.0s, then every `periodic_processing_interval`
-- `0.5`: First processing at 0.5s (useful for offset timing)
-
-**Note:** Only relevant when `periodic_processing_enabled` is `True`. This parameter is optional and primarily exists for precise timing control. Most users should omit it and use the default behavior.
-
 #### `sample_window` (list)
 Two-element list `[earliest_seconds, latest_seconds]` defining the buffer size relative to current sample, expressed in **seconds**.
 - Current sample is always at `0.0`
@@ -294,15 +285,15 @@ def process_event(
 
 **Example Timeline:**
 ```
-With periodic_processing_interval=3.0 and first_periodic_processing_at=1.0:
-- 1.0s: Periodic processing scheduled, process_periodic() called
-- 2.0s: Pulse event occurs, process_pulse() called (not process_periodic())
-- 4.0s: Periodic processing scheduled, process_periodic() called
-- 5.0s: General event occurs, process_event() called (not process_periodic())
-- 7.0s: Periodic processing scheduled, process_periodic() called
+With periodic_processing_interval=3.0:
+- 3.0s: Periodic processing scheduled, process_periodic() called
+- 4.0s: Pulse event occurs, process_pulse() called (not process_periodic())
+- 6.0s: Periodic processing scheduled, process_periodic() called
+- 7.0s: General event occurs, process_event() called (not process_periodic())
+- 9.0s: Periodic processing scheduled, process_periodic() called
 ```
 
-In this example, even though events occurred at 2.0s and 5.0s, the periodic processing schedule (1.0s, 4.0s, 7.0s, ...) remains consistent and unaffected.
+In this example, even though events occurred at 4.0s and 7.0s, the periodic processing schedule (3.0s, 6.0s, 9.0s, ...) remains consistent and unaffected.
 
 ## Example Workflows
 

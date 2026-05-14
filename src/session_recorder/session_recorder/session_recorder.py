@@ -40,8 +40,11 @@ TOPICS_TO_RECORD = [
     '/neurosimo/session/state',
 
     # Decision traces
-    '/neurosimo/pipeline/decision_trace',        # Mostly for debugging
-    '/neurosimo/pipeline/decision_trace/final',
+    '/neurosimo/pipeline/decision_trace',        # All decisions (including negative) for diagnostics
+
+    # Trial traces
+    '/neurosimo/pipeline/trial_trace',           # Intermediate trial trace stream
+    '/neurosimo/pipeline/trial_trace/final',     # Finalized trial traces
 
     # Heartbeats (for debugging)
     '/neurosimo/eeg_bridge/heartbeat',

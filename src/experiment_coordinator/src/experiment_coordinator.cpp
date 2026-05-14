@@ -10,7 +10,7 @@ using namespace experiment_coordinator;
 
 const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
-const std::string DECISION_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/decision_trace/final";
+const std::string TRIAL_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/trial_trace/final";
 const std::string HEARTBEAT_TOPIC = "/neurosimo/experiment_coordinator/heartbeat";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -47,11 +47,11 @@ ExperimentCoordinator::ExperimentCoordinator()
     EEG_QUEUE_LENGTH,
     std::bind(&ExperimentCoordinator::handle_raw_sample, this, _1));
   
-  /* Subscriber for decision trace final events. */
-  this->decision_trace_final_subscriber = this->create_subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
-    DECISION_TRACE_FINAL_TOPIC,
+  /* Subscriber for trial trace final events. */
+  this->trial_trace_final_subscriber = this->create_subscription<neurosimo_pipeline_interfaces::msg::TrialTrace>(
+    TRIAL_TRACE_FINAL_TOPIC,
     100,
-    std::bind(&ExperimentCoordinator::handle_decision_trace_final, this, _1));
+    std::bind(&ExperimentCoordinator::handle_trial_trace_final, this, _1));
 
   /* Client for finishing the session. */
   this->finish_session_client = this->create_client<std_srvs::srv::Trigger>(
@@ -158,7 +158,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   this->enriched_eeg_publisher->publish(enriched);
 }
 
-void ExperimentCoordinator::handle_decision_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg) {
+void ExperimentCoordinator::handle_trial_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TrialTrace> msg) {
   /* Only process confirmed pulses. */
   if (!msg->pulse_confirmed) {
     return;

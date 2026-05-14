@@ -28,7 +28,7 @@ DATA_TYPE_TO_TOPIC = {
     ExportDataType.RAW_EEG: '/neurosimo/eeg/raw',
     ExportDataType.ENRICHED_EEG: '/neurosimo/eeg/enriched',
     ExportDataType.PREPROCESSED_EEG: '/neurosimo/eeg/preprocessed',
-    ExportDataType.STIMULATION_DECISIONS: '/neurosimo/pipeline/decision_trace/final',
+    ExportDataType.STIMULATION_DECISIONS: '/neurosimo/pipeline/trial_trace/final',
     ExportDataType.DECIDER_LOGS: '/neurosimo/pipeline/decider/log',
     ExportDataType.PREPROCESSOR_LOGS: '/neurosimo/pipeline/preprocessor/log',
     ExportDataType.PRESENTER_LOGS: '/neurosimo/pipeline/presenter/log',
@@ -79,20 +79,12 @@ TOPIC_TO_FIELDS = {
 }
 
 # Decision trace export fields
-DECISION_TRACE_FIELDS = [
-    'decision_id',
+TRIAL_TRACE_FIELDS = [
+    'trial_id',
     'status',
-    'reference_sample_time',
-    'reference_sample_index',
-    'stimulate',
     'requested_stimulation_time',
     'stimulation_horizon',
     'strict_stimulation_horizon',
-    'decider_duration',
-    'preprocessor_duration',
-    'decision_path_latency',
-    'system_time_decider_received',
-    'system_time_decider_finished',
     'system_time_trigger_timer_received',
     'system_time_trigger_timer_finished',
     'system_time_hardware_fired',
@@ -106,22 +98,37 @@ DECISION_TRACE_FIELDS = [
     'timing_offset',
     'pulse_confirmed',
     'pulse_confirmation_method',
+    # Embedded decision fields (flattened with decision_ prefix)
+    'decision_id',
+    'decision_status',
+    'decision_reference_sample_time',
+    'decision_reference_sample_index',
+    'decision_stimulate',
+    'decision_decider_duration',
+    'decision_preprocessor_duration',
+    'decision_path_latency',
+    'decision_system_time_decider_received',
+    'decision_system_time_decider_finished',
 ]
 
 # Status mapping for human-readable export
-DECISION_TRACE_STATUS_MAP = {
-    0: 'decided_no',
-    1: 'decided_yes',
-    2: 'scheduled',
-    3: 'rejected',
-    4: 'fired',
-    5: 'pulse_observed',
-    6: 'missed',
+TRIAL_TRACE_STATUS_MAP = {
+    1: 'scheduled',
+    2: 'fired',
+    3: 'pulse_observed',
+    4: 'missed',
+    5: 'loopback_latency_exceeded',
+    6: 'too_late',
     7: 'error',
 }
 
+DECISION_TRACE_STATUS_MAP = {
+    1: 'decided_no',
+    2: 'decided_yes',
+}
+
 # Pulse confirmation method mapping for human-readable export
-DECISION_TRACE_PULSE_CONFIRMATION_MAP = {
+TRIAL_TRACE_PULSE_CONFIRMATION_MAP = {
     0: 'none',
     1: 'eeg_trigger',
     2: 'trigger_timer_fire',
@@ -373,8 +380,8 @@ class SessionExporterNode(Node):
             
             if topic in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 writers[topic] = self._create_eeg_writer(output_file, topic)
-            elif topic == '/neurosimo/pipeline/decision_trace/final':
-                writers[topic] = self._create_decision_trace_writer(output_file)
+            elif topic == '/neurosimo/pipeline/trial_trace/final':
+                writers[topic] = self._create_trial_trace_writer(output_file)
             elif topic in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 writers[topic] = self._create_log_writer(output_file)
             elif topic == '/neurosimo/pipeline/sensory_stimulus':
@@ -428,8 +435,8 @@ class SessionExporterNode(Node):
             
             if topic_name in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 self._write_eeg_message(writer_info, timestamp, msg)
-            elif topic_name == '/neurosimo/pipeline/decision_trace/final':
-                self._write_decision_trace_message(writer_info, timestamp, msg)
+            elif topic_name == '/neurosimo/pipeline/trial_trace/final':
+                self._write_trial_trace_message(writer_info, timestamp, msg)
             elif topic_name in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 self._write_log_message(writer_info, timestamp, msg)
             elif topic_name == '/neurosimo/pipeline/sensory_stimulus':
@@ -496,10 +503,10 @@ class SessionExporterNode(Node):
         
         writer_info['writer'].writerow(row_data)
 
-    def _create_decision_trace_writer(self, output_file):
-        """Create a CSV writer for decision trace messages."""
+    def _create_trial_trace_writer(self, output_file):
+        """Create a CSV writer for trial trace messages."""
         f = open(output_file, 'w', newline='')
-        writer = csv.DictWriter(f, fieldnames=DECISION_TRACE_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=TRIAL_TRACE_FIELDS)
         writer.writeheader()
         return {
             'file': f,
@@ -507,22 +514,43 @@ class SessionExporterNode(Node):
             'path': output_file,
         }
 
-    def _write_decision_trace_message(self, writer_info, timestamp, msg):
-        """Write a single decision trace message to CSV."""
+    def _write_trial_trace_message(self, writer_info, timestamp, msg):
+        """Write a single trial trace message to CSV."""
         row_data = {}
-        for field in DECISION_TRACE_FIELDS:
-            value = getattr(msg, field)
-            # Convert session_id array to string representation
-            if field == 'session_id':
-                row_data[field] = ''.join(f'{b:02x}' for b in value)
-            # Convert status to human-readable text
-            elif field == 'status':
-                row_data[field] = DECISION_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
-            # Convert pulse_confirmation_method to human-readable text
-            elif field == 'pulse_confirmation_method':
-                row_data[field] = DECISION_TRACE_PULSE_CONFIRMATION_MAP.get(value, f'unknown_{value}')
+        for field in TRIAL_TRACE_FIELDS:
+            if field.startswith('decision_'):
+                # Embedded decision fields
+                decision = msg.decision
+                if field == 'decision_id':
+                    row_data[field] = decision.decision_id
+                elif field == 'decision_status':
+                    row_data[field] = DECISION_TRACE_STATUS_MAP.get(decision.status, f'unknown_{decision.status}')
+                elif field == 'decision_reference_sample_time':
+                    row_data[field] = decision.reference_sample_time
+                elif field == 'decision_reference_sample_index':
+                    row_data[field] = decision.reference_sample_index
+                elif field == 'decision_stimulate':
+                    row_data[field] = decision.stimulate
+                elif field == 'decision_decider_duration':
+                    row_data[field] = decision.decider_duration
+                elif field == 'decision_preprocessor_duration':
+                    row_data[field] = decision.preprocessor_duration
+                elif field == 'decision_path_latency':
+                    row_data[field] = decision.decision_path_latency
+                elif field == 'decision_system_time_decider_received':
+                    row_data[field] = decision.system_time_decider_received
+                elif field == 'decision_system_time_decider_finished':
+                    row_data[field] = decision.system_time_decider_finished
             else:
-                row_data[field] = value
+                value = getattr(msg, field)
+                if field == 'session_id':
+                    row_data[field] = ''.join(f'{b:02x}' for b in value)
+                elif field == 'status':
+                    row_data[field] = TRIAL_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
+                elif field == 'pulse_confirmation_method':
+                    row_data[field] = TRIAL_TRACE_PULSE_CONFIRMATION_MAP.get(value, f'unknown_{value}')
+                else:
+                    row_data[field] = value
         writer_info['writer'].writerow(row_data)
 
     def _create_log_writer(self, output_file):

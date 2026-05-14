@@ -33,6 +33,7 @@
 
 #include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/trial_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_message.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_messages.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_decider.hpp"
@@ -135,6 +136,7 @@ private:
   rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TrialTrace>::SharedPtr trial_trace_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<shared_stimulation_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
   rclcpp::Publisher<shared_stimulation_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
@@ -159,6 +161,7 @@ private:
   /* Session and decision tracking */
   std::array<uint8_t, 16> session_id = {};
   uint64_t decision_id = 0;
+  uint64_t trial_id = 0;
   uint64_t targeted_pulses_sequence_number = 0;
   uint64_t decision_fingerprint = 0;
 

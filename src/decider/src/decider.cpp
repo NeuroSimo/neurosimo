@@ -77,6 +77,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/neurosimo/pipeline/decision_trace",
     10);
 
+  /* Publisher for trial trace. */
+  this->trial_trace_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::TrialTrace>(
+    "/neurosimo/pipeline/trial_trace",
+    10);
+
   /* Publisher for sensory stimulus. */
 
   // Messages can be sent in bursts so keep all messages in the queue.
@@ -626,34 +631,38 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* Calculate the latency of the decision path. */
   auto decision_path_latency = (system_time_decider_finished - request.triggering_sample->system_time_data_source_published) / 1e9;  // Convert nanoseconds to seconds
 
-  /* Publish decision trace. */
+  /* Publish decision trace (on every decision, including negative). */
   auto decision_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
 
-  // Metadata (filled by Decider)
-  decision_trace.session_id = this->session_id;
-  decision_trace.decision_id = ++this->decision_id;  // Increment decision ID
+  decision_trace.decision_id = ++this->decision_id;
 
-  // Status (filled by each stage) - initially set by Decider
   bool decided_yes = request_timed_trigger || !targeted_pulses.empty();
   decision_trace.status = decided_yes ? neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
                                       : neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
 
-  // Decision info
   decision_trace.reference_sample_time = sample_time;
   decision_trace.reference_sample_index = request.triggering_sample->sample_index;
   decision_trace.stimulate = decided_yes;
-  decision_trace.requested_stimulation_time = decided_yes ? requested_stimulation_time : 0.0;
 
-  // Decider / preprocessing timing
   decision_trace.decider_duration = decider_duration;
   decision_trace.preprocessor_duration = request.triggering_sample->preprocessor_duration;
   decision_trace.decision_path_latency = decision_path_latency;
 
-  // System timing
   decision_trace.system_time_decider_received = system_time_decider_received;
   decision_trace.system_time_decider_finished = system_time_decider_finished;
 
   this->decision_trace_publisher->publish(decision_trace);
+
+  /* For positive decisions, also publish a trial trace. */
+  if (decided_yes) {
+    auto trial_trace = neurosimo_pipeline_interfaces::msg::TrialTrace();
+    trial_trace.session_id = this->session_id;
+    trial_trace.trial_id = ++this->trial_id;
+    trial_trace.requested_stimulation_time = requested_stimulation_time;
+    trial_trace.decision = decision_trace;
+
+    this->trial_trace_publisher->publish(trial_trace);
+  }
 
   /* If timed triggers are requested, send them. */
   if (request_timed_trigger) {
@@ -668,7 +677,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
       auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
       request_msg->trigger_offset = *trigger_offset;
       request_msg->session_id = this->session_id;
-      request_msg->decision_id = this->decision_id;
+      request_msg->trial_id = this->trial_id;
       request_msg->reference_sample_time = sample_time;
       this->request_timed_trigger(request_msg);
 

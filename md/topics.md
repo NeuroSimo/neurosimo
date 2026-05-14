@@ -52,8 +52,9 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 - `/neurosimo/experiment_coordinator/health` - Coordinator health/status.
 - `/neurosimo/trigger_timer/heartbeat` - Trigger timer liveness heartbeat.
 - `/neurosimo/trigger_timer/health` - Trigger timer health/status.
-- `/neurosimo/pipeline/decision_trace` - Detailed decision trace stream.
-- `/neurosimo/pipeline/decision_trace/final` - Finalized decision trace output.
+- `/neurosimo/pipeline/decision_trace` - Decision trace stream (all decisions, including negative).
+- `/neurosimo/pipeline/trial_trace` - Trial trace stream (intermediate, enriched by pipeline stages).
+- `/neurosimo/pipeline/trial_trace/final` - Finalized trial trace output.
 - `/neurosimo/pipeline/experiment_state` - Experiment runtime state.
 - `/neurosimo/pipeline/sensory_stimulus` - Sensory stimulus events.
 - `/neurosimo/pipeline/latency/loopback` - Loopback latency telemetry.

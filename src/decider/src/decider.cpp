@@ -853,10 +853,8 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   }
 
   /* Check if minimum trial interval has passed since last trigger. */
-  bool minimum_trial_interval_passed = false;
-  if (!std::isnan(this->previous_stimulation_time) && sample_time >= this->previous_stimulation_time + this->minimum_trial_interval) {
-    minimum_trial_interval_passed = true;
-  }
+  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                       sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
 
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   bool backpressure_detected = detect_backpressure(msg);

@@ -14,4 +14,4 @@ float64 duration
 bool loop
 
 # Number of pulses defined in the dataset
-uint32 pulse_count
+uint32 trial_count

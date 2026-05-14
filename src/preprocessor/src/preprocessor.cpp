@@ -355,7 +355,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   preprocessed_sample.stage_name = triggering_sample->stage_name;
   preprocessed_sample.stage_index = triggering_sample->stage_index;
   preprocessed_sample.trial = triggering_sample->trial;
-  preprocessed_sample.pulse_count = triggering_sample->pulse_count;
+  preprocessed_sample.trial_count = triggering_sample->trial_count;
 
   /* Carry forward any pending session start marker. */
   preprocessed_sample.is_session_start = this->pending_session_start;

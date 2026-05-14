@@ -139,7 +139,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
   enriched.trial = state.trial;
-  enriched.pulse_count = state.total_pulses;
+  enriched.trial_count = state.total_pulses;
 
   /* Add stage information. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {

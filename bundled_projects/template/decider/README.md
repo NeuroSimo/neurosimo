@@ -95,75 +95,27 @@ List of event times (in seconds) for scheduled processing triggers. Can be omitt
 
 **Format:**
 - Simple list of floats representing event times relative to session start
-- When an event time is reached, the `event_processor` (if configured) is called
+- When an event time is reached, `process_event()` is called (if the method is defined)
 
 **Example:**
 ```python
 'predefined_events': [5.0, 10.0, 15.0]  # Events at 5s, 10s, and 15s
 ```
 
-#### `pulse_processor` (callable or dict, optional)
-Processor method called when a pulse event occurs. Can be omitted if pulse events are not needed.
+#### `pulse_sample_window` (list, optional)
+Custom sample window for `process_pulse()` calls, as a two-element list `[earliest_seconds, latest_seconds]`. If omitted, the default `sample_window` is used.
 
-**Simple format:**
+**Example:**
 ```python
-'pulse_processor': self.process_pulse,
+'pulse_sample_window': [-0.500, 0.100],
 ```
 
-**Advanced format with custom sample window:**
+#### `event_sample_window` (list, optional)
+Custom sample window for `process_event()` calls, as a two-element list `[earliest_seconds, latest_seconds]`. If omitted, the default `sample_window` is used.
+
+**Example:**
 ```python
-'pulse_processor': {
-    'processor': self.process_pulse,
-    'sample_window': [-0.500, 0.100],  # Custom window just for pulse events (seconds)
-}
-```
-
-When a pulse event occurs, the pulse processor is called instead of the regular `process_periodic()` method.
-
-**Example processor method:**
-```python
-def process_pulse(
-        self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
-    """Process pulse events."""
-    print(f"Pulse event at {reference_time}")
-    # Process pulse-specific logic
-    return None
-```
-
-#### `event_processor` (callable or dict, optional)
-Processor method called when a general event occurs (from `predefined_events`). Can be omitted if events are not needed.
-
-**Simple format:**
-```python
-'event_processor': self.process_event,
-```
-
-**Advanced format with custom sample window:**
-```python
-'event_processor': {
-    'processor': self.process_event,
-    'sample_window': [-1.5, 0.3],  # Custom window for events (seconds)
-}
-```
-
-When an event occurs, the event processor is called instead of the regular `process_periodic()` method.
-
-**Custom sample windows:**
-- By default, processors use the same `sample_window` as periodic processing
-- You can optionally specify a different window for pulse or event processors
-- Custom windows can be smaller or larger, overlapping or non-overlapping
-- The system automatically manages buffer sizing to accommodate all windows
-
-**Example processor method:**
-```python
-def process_event(
-        self, reference_time, reference_index, time_offsets, 
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
-    """Process general events."""
-    print(f"Event at {reference_time}")
-    # Process event-specific logic
-    return None
+'event_sample_window': [-1.5, 0.3],
 ```
 
 #### `predefined_sensory_stimuli` (list, optional)
@@ -293,7 +245,7 @@ return {
 ```
 
 #### `events` (list)
-Dynamically schedule new events by returning a list of event times (in seconds, relative to session start). These are added to the same event queue as `predefined_events` and will trigger the `event_processor` when reached.
+Dynamically schedule new events by returning a list of event times (in seconds, relative to session start). These are added to the same event queue as `predefined_events` and will trigger `process_event()` when reached.
 
 **Example:**
 ```python
@@ -312,9 +264,9 @@ return {
 }
 ```
 
-### Event Processor Methods
+### `process_pulse(...)`
 
-Event processor methods (`process_pulse` and `process_event`) are called when events occur (configured via `pulse_processor` and `event_processor`). Each has the same signature as `process_periodic()` except without `is_warm_up` (they are never called during warm-up).
+Called when a pulse event occurs, if the method is defined on the `Decider` class. Same signature as `process_periodic()` except without `is_warm_up` (never called during warm-up).
 
 **Example:**
 ```python
@@ -323,19 +275,22 @@ def process_pulse(
         eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
-    # Process event-specific logic
-    return {'sensory_stimuli': [...]}  # Or None
+    return None
+```
 
+### `process_event(...)`
+
+Called when a general event occurs (from `predefined_events` or dynamically scheduled events), if the method is defined on the `Decider` class. Same signature as `process_periodic()` except without `is_warm_up` (never called during warm-up).
+
+**Example:**
+```python
 def process_event(
         self, reference_time, reference_index, time_offsets,
         eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
     """Process general events."""
     print(f"Event at {reference_time}")
-    # Process event-specific logic
     return None
 ```
-
-**Processor naming:** Processor method names are arbitrary - they are explicitly mapped in the configuration via `pulse_processor` and `event_processor` keys.
 
 **Example Timeline:**
 ```
@@ -369,8 +324,12 @@ def get_configuration(self):
         'sample_window': [-0.500, 0.0],
         'periodic_processing_enabled': False,  # No periodic processing
         'predefined_events': [10.0],  # Event at 10 seconds
-        'event_processor': self.handle_trial_start,
     }
+
+def process_event(self, reference_time, reference_index, time_offsets,
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, pulse_count):
+    """Handle trial start event."""
+    # ...
 ```
 
 ### Regular Interval Processing

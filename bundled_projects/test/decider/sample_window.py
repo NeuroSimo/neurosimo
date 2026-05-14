@@ -67,20 +67,9 @@ class Decider:
             'periodic_processing_interval': 1.0,  # Process once per second
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
 
-            # Event system
-            # Simple format: just the processor function (uses default sample_window)
-            'pulse_processor': self.process_pulse,
-            'event_processor': self.process_event,
-            
-            # Alternative format with custom sample windows:
-            'pulse_processor': {
-                'processor': self.process_pulse,
-                'sample_window': [0.2, 0.6]  # Custom window for pulse events
-            },
-            'event_processor': {
-                'processor': self.process_event,
-                'sample_window': [0.0, 1.0]  # Custom window for other events
-            },
+            # Custom sample windows for pulse/event processing
+            'pulse_sample_window': [0.2, 0.6],
+            'event_sample_window': [0.0, 1.0],
         }
 
     def process_periodic(
@@ -105,7 +94,7 @@ class Decider:
 
         # Get sample window from configuration
         config = self.get_configuration()
-        sample_window = config['event_processor']['sample_window']
+        sample_window = config['event_sample_window']
 
         # Test sample window coverage
         self.test_sample_window_coverage(time_offsets, eeg_buffer, emg_buffer, sample_window, reference_time, "Event processing")
@@ -121,7 +110,7 @@ class Decider:
 
         # Get sample window from configuration
         config = self.get_configuration()
-        sample_window = config['pulse_processor']['sample_window']
+        sample_window = config['pulse_sample_window']
 
         # Test sample window coverage
         self.test_sample_window_coverage(time_offsets, eeg_buffer, emg_buffer, sample_window, reference_time, "Pulse processing")

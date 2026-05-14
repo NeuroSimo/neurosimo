@@ -22,9 +22,6 @@ class Decider:
             'periodic_processing_enabled': True,
             'periodic_processing_interval': 2.0,  # Process every 2 seconds
             
-            # Event system
-            'pulse_processor': self.process_pulse,
-            
             # Predefined sensory stimuli (sent at session start)
             'predefined_sensory_stimuli': [
                 # Welcome message at session start

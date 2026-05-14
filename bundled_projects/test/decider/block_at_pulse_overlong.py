@@ -26,9 +26,6 @@ class Decider:
             'periodic_processing_enabled': True,
             'periodic_processing_interval': 1.0,
             'pulse_lockout_duration': 2.0,
-
-            # Event system
-            'pulse_processor': self.process_pulse,
         }
 
     def process_periodic(

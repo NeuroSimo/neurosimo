@@ -30,20 +30,10 @@ class Decider:
             'periodic_processing_interval': 1.0,  # Process once per second
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
 
-            # Event system
-            # Simple format: just the processor function (uses default sample_window)
-            'pulse_processor': self.process_pulse,
-            'event_processor': self.process_event,
-            
-            # Alternative format with custom sample windows:
-            # 'pulse_processor': {
-            #     'processor': self.process_pulse,
-            #     'sample_window': [-2.0, 0.5]  # Custom window for pulse events
-            # },
-            # 'event_processor': {
-            #     'processor': self.process_event,
-            #     'sample_window': [-1.5, 0.3]  # Custom window for other events
-            # },
+            # Optional: custom sample windows for pulse/event processing
+            # (defaults to sample_window if omitted)
+            # 'pulse_sample_window': [-2.0, 0.5],
+            # 'event_sample_window': [-1.5, 0.3],
         }
 
     def process_periodic(

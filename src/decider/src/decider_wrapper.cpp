@@ -145,11 +145,11 @@ bool DeciderWrapper::initialize_module(
   };
 
   /* Validate that only allowed keys are present */
-  std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_processor", "event_processor"};
+  std::vector<std::string> allowed_keys = {"sample_window", "warm_up_rounds", "predefined_sensory_stimuli", "periodic_processing_enabled", "periodic_processing_interval", "first_periodic_processing_at", "predefined_events", "pulse_lockout_duration", "pulse_sample_window", "event_sample_window"};
   for (const auto& item : config) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      log_error("Unexpected key '" + key + "' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_processor', and 'event_processor' are allowed.");
+      log_error("Unexpected key '" + key + "' in configuration dictionary. Only 'sample_window', 'warm_up_rounds', 'predefined_sensory_stimuli', 'periodic_processing_enabled', 'periodic_processing_interval', 'first_periodic_processing_at', 'predefined_events', 'pulse_lockout_duration', 'pulse_sample_window', and 'event_sample_window' are allowed.");
       return false;
     }
   }
@@ -288,47 +288,32 @@ bool DeciderWrapper::initialize_module(
     return false;
   }
 
-  /* Extract pulse_processor (optional). */
+  /* Detect process_pulse method by convention. */
   double pulse_sample_window_start_seconds = 0.0;
   double pulse_sample_window_end_seconds = 0.0;
 
-  if (config.contains("pulse_processor")) {
-    py::object value = config["pulse_processor"].cast<py::object>();
-    
-    /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
-    if (py::isinstance<py::dict>(value)) {
-      py::dict processor_config = value.cast<py::dict>();
-      
-      /* Extract processor */
-      if (!processor_config.contains("processor")) {
-        log_error("pulse_processor config must contain 'processor' key.");
+  if (py::hasattr(*decider_instance, "process_pulse")) {
+    this->has_pulse_processor = true;
+
+    /* Extract optional pulse_sample_window (flat key). */
+    if (config.contains("pulse_sample_window")) {
+      py::list sample_window = config["pulse_sample_window"].cast<py::list>();
+      if (sample_window.size() != 2) {
+        log_error("pulse_sample_window must have 2 elements.");
         return false;
       }
-      this->pulse_processor = processor_config["processor"].cast<py::object>();
-      
-      /* Extract optional sample_window */
-      if (processor_config.contains("sample_window")) {
-        py::list sample_window = processor_config["sample_window"].cast<py::list>();
-        if (sample_window.size() != 2) {
-          log_error("sample_window for pulse_processor must have 2 elements.");
-          return false;
-        }
-        pulse_sample_window_start_seconds = sample_window[0].cast<double>();
-        pulse_sample_window_end_seconds = sample_window[1].cast<double>();
-        if (pulse_sample_window_start_seconds > pulse_sample_window_end_seconds) {
-          log_error(
-            "Invalid sample_window for pulse_processor: start (" + std::to_string(pulse_sample_window_start_seconds) +
-            " s) must be <= end (" + std::to_string(pulse_sample_window_end_seconds) + " s).");
-          return false;
-        }
-
-        this->pulse_sample_window_start = to_samples(pulse_sample_window_start_seconds);
-        this->pulse_sample_window_end = to_samples(pulse_sample_window_end_seconds);
+      pulse_sample_window_start_seconds = sample_window[0].cast<double>();
+      pulse_sample_window_end_seconds = sample_window[1].cast<double>();
+      if (pulse_sample_window_start_seconds > pulse_sample_window_end_seconds) {
+        log_error(
+          "Invalid pulse_sample_window: start (" + std::to_string(pulse_sample_window_start_seconds) +
+          " s) must be <= end (" + std::to_string(pulse_sample_window_end_seconds) + " s).");
+        return false;
       }
-    } else {
-      /* Simple format: value is the processor directly */
-      this->pulse_processor = value;
 
+      this->pulse_sample_window_start = to_samples(pulse_sample_window_start_seconds);
+      this->pulse_sample_window_end = to_samples(pulse_sample_window_end_seconds);
+    } else {
       /* Use the same sample window as periodic processing. */
       this->pulse_sample_window_start = this->periodic_sample_window_start;
       this->pulse_sample_window_end = this->periodic_sample_window_end;
@@ -336,55 +321,35 @@ bool DeciderWrapper::initialize_module(
       pulse_sample_window_start_seconds = default_sample_window_start_seconds;
       pulse_sample_window_end_seconds = default_sample_window_end_seconds;
     }
-    
-    if (!py::hasattr(this->pulse_processor, "__call__")) {
-      log_error("pulse_processor is not callable.");
-      return false;
-    }
-    RCLCPP_DEBUG(*logger_ptr, "Registered pulse processor");
+    RCLCPP_DEBUG(*logger_ptr, "Registered pulse processor (process_pulse)");
   }
 
-  /* Extract event_processor (optional). */
+  /* Detect process_event method by convention. */
   double event_sample_window_start_seconds = 0.0;
   double event_sample_window_end_seconds = 0.0;
 
-  if (config.contains("event_processor")) {
-    py::object value = config["event_processor"].cast<py::object>();
-    
-    /* Check if value is a dict (with 'processor' and optional 'sample_window') or a callable */
-    if (py::isinstance<py::dict>(value)) {
-      py::dict processor_config = value.cast<py::dict>();
-      
-      /* Extract processor */
-      if (!processor_config.contains("processor")) {
-        log_error("event_processor config must contain 'processor' key.");
+  if (py::hasattr(*decider_instance, "process_event")) {
+    this->has_event_processor = true;
+
+    /* Extract optional event_sample_window (flat key). */
+    if (config.contains("event_sample_window")) {
+      py::list sample_window = config["event_sample_window"].cast<py::list>();
+      if (sample_window.size() != 2) {
+        log_error("event_sample_window must have 2 elements.");
         return false;
       }
-      this->event_processor = processor_config["processor"].cast<py::object>();
-      
-      /* Extract optional sample_window */
-      if (processor_config.contains("sample_window")) {
-        py::list sample_window = processor_config["sample_window"].cast<py::list>();
-        if (sample_window.size() != 2) {
-          log_error("sample_window for event_processor must have 2 elements.");
-          return false;
-        }
-        event_sample_window_start_seconds = sample_window[0].cast<double>();
-        event_sample_window_end_seconds = sample_window[1].cast<double>();
-        if (event_sample_window_start_seconds > event_sample_window_end_seconds) {
-          log_error(
-            "Invalid sample_window for event_processor: start (" + std::to_string(event_sample_window_start_seconds) +
-            " s) must be <= end (" + std::to_string(event_sample_window_end_seconds) + " s).");
-          return false;
-        }
-
-        this->event_sample_window_start = to_samples(event_sample_window_start_seconds);
-        this->event_sample_window_end = to_samples(event_sample_window_end_seconds);
+      event_sample_window_start_seconds = sample_window[0].cast<double>();
+      event_sample_window_end_seconds = sample_window[1].cast<double>();
+      if (event_sample_window_start_seconds > event_sample_window_end_seconds) {
+        log_error(
+          "Invalid event_sample_window: start (" + std::to_string(event_sample_window_start_seconds) +
+          " s) must be <= end (" + std::to_string(event_sample_window_end_seconds) + " s).");
+        return false;
       }
-    } else {
-      /* Simple format: value is the processor directly */
-      this->event_processor = value;
 
+      this->event_sample_window_start = to_samples(event_sample_window_start_seconds);
+      this->event_sample_window_end = to_samples(event_sample_window_end_seconds);
+    } else {
       /* Use the same sample window as periodic processing. */
       this->event_sample_window_start = this->periodic_sample_window_start;
       this->event_sample_window_end = this->periodic_sample_window_end;
@@ -392,12 +357,7 @@ bool DeciderWrapper::initialize_module(
       event_sample_window_start_seconds = default_sample_window_start_seconds;
       event_sample_window_end_seconds = default_sample_window_end_seconds;
     }
-    
-    if (!py::hasattr(this->event_processor, "__call__")) {
-      log_error("event_processor is not callable.");
-      return false;
-    }
-    RCLCPP_DEBUG(*logger_ptr, "Registered event processor");
+    RCLCPP_DEBUG(*logger_ptr, "Registered event processor (process_event)");
   }
 
   /* TODO: The logic below works but is too complex just to cover the case where the sample window is fully in the past. It should be simplified. */
@@ -489,16 +449,16 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_INFO(*logger_ptr, "  - Periodic processing: %sEnabled%s (interval: %.3f s)", bold_on.c_str(), bold_off.c_str(), this->periodic_processing_interval);
   }
             
-  if (this->pulse_processor.is_none()) {
-    RCLCPP_INFO(*logger_ptr, "  - Pulse processor: %sDisabled%s", bold_on.c_str(), bold_off.c_str());
+  if (!this->has_pulse_processor) {
+    RCLCPP_INFO(*logger_ptr, "  - Pulse processor: %sDisabled%s (no process_pulse method)", bold_on.c_str(), bold_off.c_str());
   } else {
     RCLCPP_INFO(*logger_ptr, "  - Pulse processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
     RCLCPP_INFO(*logger_ptr, "    - Pulse processor window: %s[%.3f s, %.3f s]%s",
                 bold_on.c_str(), pulse_sample_window_start_seconds, pulse_sample_window_end_seconds, bold_off.c_str());
   }
 
-  if (this->event_processor.is_none()) {
-    RCLCPP_INFO(*logger_ptr, "  - Event processor: %sDisabled%s", bold_on.c_str(), bold_off.c_str());
+  if (!this->has_event_processor) {
+    RCLCPP_INFO(*logger_ptr, "  - Event processor: %sDisabled%s (no process_event method)", bold_on.c_str(), bold_off.c_str());
   } else {
     RCLCPP_INFO(*logger_ptr, "  - Event processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
     RCLCPP_INFO(*logger_ptr, "    - Event processor window: %s[%.3f s, %.3f s]%s",
@@ -514,15 +474,6 @@ bool DeciderWrapper::initialize_module(
 }
 
 void DeciderWrapper::destroy_instance() {
-  /* Initially, there are a maximum of three references to the decider instance:
-     - the decider_instance
-     - the pulse_processor
-     - the event_processor
-
-    Release these references one by one; once the reference count reaches 0, __del__ will be
-    triggered synchronously. */
-  pulse_processor = py::none();
-  event_processor = py::none();
   decider_instance = nullptr;
 }
 
@@ -681,8 +632,8 @@ int DeciderWrapper::get_periodic_look_ahead_samples() const {
 }
 
 int DeciderWrapper::get_pulse_look_ahead_samples() const {
-  /* If no pulse processor is configured, pulses should be processed immediately. */
-  if (this->pulse_processor.is_none()) {
+  /* If no pulse processor is defined, pulses should be processed immediately. */
+  if (!this->has_pulse_processor) {
     return 0;
   }
   return std::max(this->pulse_sample_window_end, 0);
@@ -941,22 +892,20 @@ std::tuple<
 
       case ProcessingReason::Pulse:
         set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
-        /* Call pulse processor if registered. */
-        if (pulse_processor.is_none()) {
+        if (!has_pulse_processor) {
           py_result = py::none();
           break;
         }
-        py_result = pulse_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
+        py_result = decider_instance->attr("process_pulse")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
         break;
 
       case ProcessingReason::Event:
         set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
-        /* Call event processor if registered. */
-        if (event_processor.is_none()) {
+        if (!has_event_processor) {
           py_result = py::none();
           break;
         }
-        py_result = event_processor(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
+        py_result = decider_instance->attr("process_event")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, pulse_count);
         break;
 
       default:

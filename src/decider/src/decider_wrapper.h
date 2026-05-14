@@ -136,9 +136,9 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
 
-  /* Processor functions */
-  py::object pulse_processor;
-  py::object event_processor;
+  /* Whether the decider defines process_pulse / process_event methods */
+  bool has_pulse_processor = false;
+  bool has_event_processor = false;
 
   /* Preallocated numpy arrays for periodic processor */
   std::unique_ptr<py::array_t<double>> periodic_time_offsets;
@@ -170,13 +170,11 @@ private:
   std::size_t periodic_window_start_offset_in_envelope = 0;
 
   /* Window parameters for pulse processor */
-  bool has_custom_pulse_window = false;
   int pulse_sample_window_start = 0;
   int pulse_sample_window_end = 0;
   std::size_t pulse_window_start_offset_in_envelope = 0;
 
   /* Window parameters for event processor */
-  bool has_custom_event_window = false;
   int event_sample_window_start = 0;
   int event_sample_window_end = 0;
   std::size_t event_window_start_offset_in_envelope = 0;

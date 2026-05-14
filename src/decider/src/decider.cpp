@@ -846,7 +846,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   if (this->decider_wrapper->is_processing_interval_enabled()) {
     // Initialize next periodic processing time if not already set.
     if (std::isnan(this->next_periodic_processing_time)) {
-      this->next_periodic_processing_time = this->decider_wrapper->get_first_periodic_processing_at();
+      this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
     }
 
     // Check if it's time to trigger periodic processing.

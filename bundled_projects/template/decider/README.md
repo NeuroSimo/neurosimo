@@ -42,22 +42,13 @@ Called by the pipeline during initialization. Must return a dictionary with conf
 
 **Return dictionary keys:**
 
-#### `periodic_processing_enabled` (bool)
-Whether periodic processing is enabled. When `False`, the `process_periodic()` method is never called periodically (only events and EEG triggers are processed).
-
-**Examples:**
-- `True`: Enable periodic processing
-- `False`: Disable periodic processing (event-driven only)
-
-#### `periodic_processing_interval` (float, optional when disabled)
-How frequently the `process_periodic()` method is called, in seconds. Required when `periodic_processing_enabled` is `True`, optional (defaults to `0.0`) when `False`.
+#### `periodic_processing_interval` (float)
+How frequently the `process_periodic()` method is called, in seconds. Must be greater than `0.0`.
 
 **Examples:**
 - `1.0`: Process once per second
 - `0.1`: Process 10 times per second
 - `0.01`: Process 100 times per second
-
-**Validation:** When `periodic_processing_enabled` is `True`, this value must be greater than `0.0`.
 
 #### `sample_window` (list)
 Two-element list `[earliest_seconds, latest_seconds]` defining the buffer size relative to current sample, expressed in **seconds**.
@@ -302,7 +293,6 @@ In this example, even though events occurred at 4.0s and 7.0s, the periodic proc
 def get_configuration(self):
     return {
         'sample_window': [-0.100, 0.0],  # Last 100 ms
-        'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.001,  # Every sample (1ms at 1kHz)
         'pulse_lockout_duration': 0.0,
     }
@@ -313,7 +303,7 @@ def get_configuration(self):
 def get_configuration(self):
     return {
         'sample_window': [-0.500, 0.0],
-        'periodic_processing_enabled': False,  # No periodic processing
+        'periodic_processing_interval': 10.0,  # Infrequent periodic processing
         'predefined_events': [10.0],  # Event at 10 seconds
     }
 
@@ -328,7 +318,6 @@ def process_event(self, reference_time, reference_index, time_offsets,
 def get_configuration(self):
     return {
         'sample_window': [-1.000, 0.0],  # Last second
-        'periodic_processing_enabled': True,
         'periodic_processing_interval': 0.1,  # 10 times per second
         'pulse_lockout_duration': 2.0,
     }

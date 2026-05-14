@@ -843,18 +843,17 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Check if periodic processing should trigger based on time comparison. */
   bool periodic_processing_triggered = false;
-  if (this->decider_wrapper->is_processing_interval_enabled()) {
-    // Initialize next periodic processing time if not already set.
-    if (std::isnan(this->next_periodic_processing_time)) {
-      this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
-    }
 
-    // Check if it's time to trigger periodic processing.
-    if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
-      /* Move to next processing time and mark that periodic processing should occur. */
-      this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
-      periodic_processing_triggered = true;
-    }
+  // Initialize next periodic processing time if not already set.
+  if (std::isnan(this->next_periodic_processing_time)) {
+    this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
+  }
+
+  // Check if it's time to trigger periodic processing.
+  if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
+    /* Move to next processing time and mark that periodic processing should occur. */
+    this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
+    periodic_processing_triggered = true;
   }
 
   /* Check if we're in the pulse lockout period. */

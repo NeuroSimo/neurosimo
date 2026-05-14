@@ -19,7 +19,6 @@ class Decider:
             'warm_up_rounds': 2,  # Number of warm-up rounds to perform (0 to disable)
 
             # Periodic processing
-            'periodic_processing_enabled': True,
             'periodic_processing_interval': 2.0,  # Process every 2 seconds
             
             # Predefined sensory stimuli (sent at session start)

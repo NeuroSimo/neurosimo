@@ -107,7 +107,6 @@ class Decider:
             'warm_up_rounds': 2,
 
             # Periodic processing
-            'periodic_processing_enabled': True,
             'periodic_processing_interval': 0.1,  # Process every 0.1 seconds
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }

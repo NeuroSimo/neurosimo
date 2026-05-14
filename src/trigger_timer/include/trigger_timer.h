@@ -7,6 +7,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include <memory>
+#include <limits>
 
 #include "labjack_interface.h"
 
@@ -63,8 +64,12 @@ private:
   double_t maximum_timing_offset = 0.0;
   double_t maximum_loopback_latency = 0.0;
   double_t trigger_to_pulse_delay = 0.0;
+  double_t minimum_trial_interval = 0.0;
   bool enable_labjack = false;
   std::string data_source;
+
+  // Timing state for minimum trial interval enforcement
+  double_t last_trigger_time = std::numeric_limits<double_t>::quiet_NaN();
 
   // Loopback monitoring flags
   bool session_started = false;

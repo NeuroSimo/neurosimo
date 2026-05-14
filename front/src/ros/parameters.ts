@@ -11,7 +11,6 @@ interface Parameter {
 
 // Parameters that should always be sent as DOUBLE type, even if they are whole numbers
 const ALWAYS_DOUBLE_PARAMS = new Set([
-  'minimum_intertrial_interval',
   'maximum_loopback_latency',
   'maximum_timing_offset',
   'trigger_to_pulse_delay',

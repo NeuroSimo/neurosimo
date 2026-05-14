@@ -1,6 +1,9 @@
 name: "Example protocol"
 description: "An example protocol consisting of 10 trials in a single stage"
 
+safety:
+  minimum_trial_interval: 2.0   # minimum seconds between consecutive trials
+
 stages:
   - stage:
       name: "example_stage"

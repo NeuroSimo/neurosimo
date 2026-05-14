@@ -174,7 +174,7 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Used for pulse lockout: tracks when the lockout period ends (time when processing can resume). */
+  /* Used for pulse lockout: tracks when the lockout period ends (time when periodic processing can resume). */
   double_t pulse_lockout_end_time = UNSET_TIME;
 
   StreamInfo stream_info;
@@ -198,7 +198,7 @@ private:
   bool is_coil_at_target = false;
 
   /* ROS parameters */
-  double_t minimum_intertrial_interval = UNSET_TIME;
+  double_t minimum_trial_interval = UNSET_TIME;
 
   /* Event queue for storing events from the Python module. */
   std::priority_queue<double, std::vector<double>, std::greater<double>> event_queue;

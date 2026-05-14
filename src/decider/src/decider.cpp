@@ -197,11 +197,11 @@ void EegDecider::handle_initialize_decider(
   }
 
   // Set safety configuration from request
-  this->minimum_intertrial_interval = request->minimum_intertrial_interval;
+  this->minimum_trial_interval = request->minimum_trial_interval;
 
-  // Validate the minimum pulse interval
-  if (this->minimum_intertrial_interval <= 0) {
-    RCLCPP_ERROR(this->get_logger(), "Invalid minimum intertrial interval: %.1f (s)", this->minimum_intertrial_interval);
+  // Validate the minimum trial interval
+  if (this->minimum_trial_interval <= 0) {
+    RCLCPP_ERROR(this->get_logger(), "Invalid minimum trial interval: %.1f (s)", this->minimum_trial_interval);
     response->success = false;
 
     // Shutdown the node to get a clean state after the error.
@@ -209,8 +209,8 @@ void EegDecider::handle_initialize_decider(
     return;
   }
 
-  if (this->minimum_intertrial_interval < 0.5) {
-    RCLCPP_WARN(this->get_logger(), "Note: Minimum intertrial interval is very low: %.1f (s)", this->minimum_intertrial_interval);
+  if (this->minimum_trial_interval < 0.5) {
+    RCLCPP_WARN(this->get_logger(), "Note: Minimum trial interval is very low: %.1f (s)", this->minimum_trial_interval);
   }
 
   // Change to project working directory
@@ -306,7 +306,7 @@ void EegDecider::handle_initialize_decider(
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Safety configuration:");
   RCLCPP_INFO(this->get_logger(), " ");
-  RCLCPP_INFO(this->get_logger(), "  - Minimum intertrial interval: %s%.1f%s (s)", bold_on.c_str(), this->minimum_intertrial_interval, bold_off.c_str());
+  RCLCPP_INFO(this->get_logger(), "  - Minimum trial interval: %s%.1f%s (s)", bold_on.c_str(), this->minimum_trial_interval, bold_off.c_str());
   RCLCPP_INFO(this->get_logger(), " ");
 
   /* Perform warm-up if requested by the Python module */
@@ -657,12 +657,12 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   /* If timed triggers are requested, send them. */
   if (request_timed_trigger) {
-    /* Check that the minimum intertrial interval has passed. */
+    /* Check that the minimum trial interval has passed. */
     auto time_since_previous_trial = requested_stimulation_time - this->previous_stimulation_time;
-    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
+    auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                             time_since_previous_trial >= this->minimum_trial_interval;
 
-    if (has_minimum_intertrial_interval_passed) {
+    if (has_minimum_trial_interval_passed) {
       RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", requested_stimulation_time);
 
       auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
@@ -675,11 +675,11 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
       /* Update the previous stimulation time. */
       this->previous_stimulation_time = requested_stimulation_time;
       
-      /* Set the pulse lockout end time. */
-      this->pulse_lockout_end_time = requested_stimulation_time + this->decider_wrapper->get_pulse_lockout_duration();
+      /* Set the pulse lockout end time based on protocol minimum_trial_interval. */
+      this->pulse_lockout_end_time = requested_stimulation_time + this->minimum_trial_interval;
     } else {
-      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum intertrial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
-      this->minimum_intertrial_interval,
+      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
+      this->minimum_trial_interval,
       time_since_previous_trial);
     }
   }
@@ -687,7 +687,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   /* If targeted pulses are requested, send them. */
   if (!targeted_pulses.empty()) {
 
-    /* Enforce minimum intertrial interval for targeted pulse requests. */
+    /* Enforce minimum trial interval for targeted pulse requests. */
     double_t first_target_time = sample_time + targeted_pulses.front().time_offset;
     double_t last_target_time = sample_time + targeted_pulses.front().time_offset;
     for (const auto& pulse : targeted_pulses) {
@@ -696,10 +696,10 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
     }
 
     auto time_since_previous_trial = first_target_time - this->previous_stimulation_time;
-    auto has_minimum_intertrial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                                  time_since_previous_trial >= this->minimum_intertrial_interval;
+    auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                             time_since_previous_trial >= this->minimum_trial_interval;
 
-    if (has_minimum_intertrial_interval_passed) {
+    if (has_minimum_trial_interval_passed) {
       auto targeted_pulses_msg = shared_stimulation_interfaces::msg::TargetedPulses();
       targeted_pulses_msg.session_id = this->session_id;
       targeted_pulses_msg.reference_eeg_device_timestamp = request.triggering_sample->eeg_device_timestamp;
@@ -717,12 +717,12 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
       /* Track last pulse timing for safety and lockout handling. */
       this->previous_stimulation_time = last_target_time;
-      this->pulse_lockout_end_time = last_target_time + this->decider_wrapper->get_pulse_lockout_duration();
+      this->pulse_lockout_end_time = last_target_time + this->minimum_trial_interval;
     } else {
       RCLCPP_ERROR(
         this->get_logger(),
-        "Targeted pulses requested but minimum intertrial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
-        this->minimum_intertrial_interval,
+        "Targeted pulses requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
+        this->minimum_trial_interval,
         time_since_previous_trial);
     }
   }

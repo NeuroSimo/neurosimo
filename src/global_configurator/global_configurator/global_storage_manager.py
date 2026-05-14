@@ -50,8 +50,7 @@ class GlobalStorageManager:
             "maximum_dropped_samples": 2,
             # LabJack Configuration
             "enable_labjack": True,
-            # Safety Configuration
-            "minimum_intertrial_interval": 2.0,
+            # Timing Configuration
             "maximum_loopback_latency": 0.005,
             "maximum_timing_offset": 0.0,
             "trigger_to_pulse_delay": 0.0,
@@ -71,7 +70,7 @@ class GlobalStorageManager:
             "turbolink_sampling_frequency", "turbolink_eeg_channel_count",
             "maximum_dropped_samples",
             "enable_labjack",
-            "minimum_intertrial_interval", "maximum_loopback_latency",
+            "maximum_loopback_latency",
             "maximum_timing_offset", "trigger_to_pulse_delay",
             "disk_warning_threshold", "disk_error_threshold",
             "locale"

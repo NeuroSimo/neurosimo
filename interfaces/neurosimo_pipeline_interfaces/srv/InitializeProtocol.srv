@@ -4,3 +4,4 @@ string project_name
 string protocol_filename
 ---
 bool success
+float64 minimum_trial_interval

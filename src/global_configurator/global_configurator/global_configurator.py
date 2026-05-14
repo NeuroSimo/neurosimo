@@ -37,9 +37,6 @@ class GlobalConfiguratorNode(Node):
         
         # LabJack Configuration
         self.declare_parameter('enable_labjack', global_config['enable_labjack'])
-        
-        # Safety Configuration
-        self.declare_parameter('minimum_intertrial_interval', global_config['minimum_intertrial_interval'])
 
         # Timing Configuration
         self.declare_parameter('maximum_loopback_latency', global_config['maximum_loopback_latency'])
@@ -96,9 +93,6 @@ class GlobalConfiguratorNode(Node):
         
         # LabJack Configuration
         config.enable_labjack = global_config.get('enable_labjack', False)
-        
-        # Safety Configuration
-        config.minimum_intertrial_interval = global_config.get('minimum_intertrial_interval', 2.0)
 
         # Timing Configuration
         config.maximum_loopback_latency = global_config.get('maximum_loopback_latency', 0.005)

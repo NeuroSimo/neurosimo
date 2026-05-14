@@ -291,10 +291,12 @@ class SessionManagerNode(Node):
         }
 
         # Initialize protocol
-        if not self.initialize_protocol(session_id, global_config, session_config):
+        minimum_trial_interval = self.initialize_protocol(session_id, global_config, session_config)
+        if minimum_trial_interval is None:
             self.logger.error('Protocol initialization failed')
             return initialized
         initialized['protocol'] = True
+        self._minimum_trial_interval = minimum_trial_interval
 
         # Initialize presenter (must be before decider)
         if not self.initialize_presenter(global_config, session_config, session_id, stream_info):
@@ -303,7 +305,7 @@ class SessionManagerNode(Node):
         initialized['presenter'] = True
 
         # Initialize decider
-        if not self.initialize_decider(global_config, session_config, session_id, stream_info):
+        if not self.initialize_decider(global_config, session_config, session_id, stream_info, self._minimum_trial_interval):
             self.logger.error('Decider initialization failed')
             return initialized
         initialized['decider'] = True
@@ -321,7 +323,7 @@ class SessionManagerNode(Node):
         initialized['stimulation_tracer'] = True
 
         # Initialize trigger timer
-        if not self.initialize_trigger_timer(session_id, global_config, session_config):
+        if not self.initialize_trigger_timer(session_id, global_config, session_config, self._minimum_trial_interval):
             self.logger.error('TriggerTimer initialization failed')
             return initialized
         initialized['trigger_timer'] = True
@@ -538,7 +540,7 @@ class SessionManagerNode(Node):
         self.logger.info(f'Stream initialized successfully. Stream info: {stream_info.sampling_frequency}Hz, {stream_info.num_eeg_channels} EEG channels')
         return stream_info
 
-    def initialize_decider(self, global_config, session_config, session_id, stream_info):
+    def initialize_decider(self, global_config, session_config, session_id, stream_info, minimum_trial_interval):
         """Initialize the decider component."""
         request = InitializeDecider.Request()
         request.session_id = session_id
@@ -552,8 +554,8 @@ class SessionManagerNode(Node):
 
         request.preprocessor_enabled = session_config.preprocessor_enabled
 
-        # Safety configuration from global config
-        request.minimum_intertrial_interval = global_config.minimum_intertrial_interval
+        # Safety configuration from protocol
+        request.minimum_trial_interval = minimum_trial_interval
 
         response = self.call_service(self.decider_init_client, request, '/neurosimo/pipeline/decider/initialize')
 
@@ -616,7 +618,7 @@ class SessionManagerNode(Node):
         self.logger.info('StimulationTracer initialized successfully')
         return True
 
-    def initialize_trigger_timer(self, session_id, global_config, session_config):
+    def initialize_trigger_timer(self, session_id, global_config, session_config, minimum_trial_interval):
         """Initialize the trigger timer component."""
         request = InitializeTriggerTimer.Request()
         request.session_id = session_id
@@ -630,6 +632,9 @@ class SessionManagerNode(Node):
         # Set the data source
         request.data_source = session_config.data_source
 
+        # Safety configuration from protocol
+        request.minimum_trial_interval = minimum_trial_interval
+
         response = self.call_service(self.trigger_timer_init_client, request, '/neurosimo/pipeline/trigger_timer/initialize')
 
         if response is None or not response.success:
@@ -639,6 +644,7 @@ class SessionManagerNode(Node):
         return True
 
     def initialize_protocol(self, session_id, global_config, session_config):
+        """Initialize protocol. Returns minimum_trial_interval on success, None on failure."""
         protocol_filename = session_config.protocol_filename
         project_name = global_config.active_project
 
@@ -650,10 +656,10 @@ class SessionManagerNode(Node):
         response = self.call_service(self.protocol_init_client, request, '/neurosimo/pipeline/protocol/initialize')
 
         if response is None or not response.success:
-            return False
+            return None
 
-        self.logger.info(f'Protocol initialized successfully')
-        return True
+        self.logger.info(f'Protocol initialized successfully (minimum_trial_interval={response.minimum_trial_interval}s)')
+        return response.minimum_trial_interval
 
     def restart_container(self, container_name):
         """Restart Docker containers matching the given name filter using Docker SDK."""

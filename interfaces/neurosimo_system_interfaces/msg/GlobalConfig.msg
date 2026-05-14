@@ -11,9 +11,6 @@ int32 maximum_dropped_samples
 # LabJack Configuration
 bool enable_labjack
 
-# Safety Configuration
-float64 minimum_intertrial_interval
-
 # Timing Configuration
 float64 maximum_loopback_latency
 float64 maximum_timing_offset

@@ -93,7 +93,6 @@ public:
   int get_periodic_look_ahead_samples() const;
   int get_pulse_look_ahead_samples() const;
   int get_event_look_ahead_samples() const;
-  double get_pulse_lockout_duration() const;
 
   void setup_custom_print();
 
@@ -160,7 +159,6 @@ private:
   uint16_t sampling_frequency = 0;
   double periodic_processing_interval = 0.0;
 
-  double pulse_lockout_duration = 0.0;
   uint16_t warm_up_rounds = 0;
 
   /* Window parameters for periodic processing */

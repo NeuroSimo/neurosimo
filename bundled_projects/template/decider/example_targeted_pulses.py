@@ -25,9 +25,6 @@ class Decider:
             'sample_window': [-1.0, 0.0],
             'warm_up_rounds': 2,  # Number of warm-up rounds to perform (0 to disable)
 
-            # Periodic processing
-            'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
-
             # Optional: custom sample windows for pulse/event processing
             # (defaults to sample_window if omitted)
             # 'pulse_sample_window': [-2.0, 0.5],

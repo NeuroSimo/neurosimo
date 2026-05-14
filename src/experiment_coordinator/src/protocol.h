@@ -69,6 +69,7 @@ struct ProtocolElement {
 struct Protocol {
   std::string name;
   std::string description;
+  double minimum_trial_interval;
   std::vector<ProtocolElement> elements;
 };
 

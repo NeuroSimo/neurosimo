@@ -245,9 +245,6 @@ interface GlobalConfigValues {
   
   // LabJack Configuration
   enableLabjack: boolean
-  
-  // Safety Configuration
-  minimumIntertrialInterval: number
 
   // Timing Configuration
   maximumLoopbackLatency: number
@@ -272,9 +269,6 @@ const emptyConfig: GlobalConfigValues = {
   
   // LabJack Configuration
   enableLabjack: false,
-  
-  // Safety Configuration
-  minimumIntertrialInterval: 0,
 
   // Timing Configuration
   maximumLoopbackLatency: 0,
@@ -289,7 +283,7 @@ const emptyConfig: GlobalConfigValues = {
   locale: '',
 }
 
-type TabType = 'eeg' | 'labjack' | 'timing' | 'safety' | 'system'
+type TabType = 'eeg' | 'labjack' | 'timing' | 'system'
 
 const COMMON_LOCALES = [
   { value: 'zh-CN', label: 'Chinese Simplified (简体中文)' },
@@ -341,7 +335,6 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
         turbolinkEegChannelCount: globalConfig.turbolinkEegChannelCount,
         maximumDroppedSamples: globalConfig.maximumDroppedSamples,
         enableLabjack: globalConfig.enableLabjack,
-        minimumIntertrialInterval: globalConfig.minimumIntertrialInterval,
         maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
         maximumTimingOffset: globalConfig.maximumTimingOffset,
         triggerToPulseDelay: globalConfig.triggerToPulseDelay,
@@ -385,7 +378,6 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
       turbolinkEegChannelCount: config.turbolinkEegChannelCount,
       maximumDroppedSamples: config.maximumDroppedSamples,
       enableLabjack: config.enableLabjack,
-      minimumIntertrialInterval: config.minimumIntertrialInterval,
       maximumLoopbackLatency: config.maximumLoopbackLatency,
       maximumTimingOffset: config.maximumTimingOffset,
       triggerToPulseDelay: config.triggerToPulseDelay,
@@ -466,9 +458,6 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
           </Tab>
           <Tab active={activeTab === 'labjack'} onClick={() => setActiveTab('labjack')} type="button">
             LabJack
-          </Tab>
-          <Tab active={activeTab === 'safety'} onClick={() => setActiveTab('safety')} type="button">
-            Safety
           </Tab>
           <Tab active={activeTab === 'timing'} onClick={() => setActiveTab('timing')} type="button">
             Timing
@@ -604,25 +593,6 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
                 onChange={(val) => updateConfig('triggerToPulseDelay', val)}
                 formatValue={(val) => formatDecimal(val * 1000)}
                 parseValue={(str) => parseFloat(str) / 1000}
-                min={0}
-                step={0.1}
-              />
-            </InputGroup>
-              </Section>
-            )}
-
-            {activeTab === 'safety' && (
-              <Section>
-            
-            <InputGroup>
-              <LabelRow>
-                <Label htmlFor="minimumIntertrialInterval">Minimum Intertrial Interval (seconds):</Label>
-                <InfoTooltip text="Minimum time between consecutive TMS trials (e.g., 2.5, 2.0, or 2)" />
-              </LabelRow>
-              <ValidatedInput
-                value={config.minimumIntertrialInterval}
-                onChange={(val) => updateConfig('minimumIntertrialInterval', val)}
-                formatValue={formatDecimal}
                 min={0}
                 step={0.1}
               />

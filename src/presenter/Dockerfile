@@ -53,8 +53,7 @@ COPY interfaces/neurosimo_eeg_interfaces interfaces/neurosimo_eeg_interfaces/
 COPY src/realtime src/realtime/
 COPY src/filesystem_utils src/filesystem_utils/
 
-RUN source /opt/ros/jazzy/setup.bash && \
-    colcon build --event-handlers console_direct+
+RUN source /opt/ros/jazzy/setup.bash && colcon build
 
 # ROS node
 COPY src/common src/common/
@@ -64,7 +63,6 @@ COPY src/presenter src/presenter/
 RUN source /opt/ros/jazzy/setup.bash && \
     source install/setup.bash && \
     colcon build --symlink-install --packages-select presenter \
-      --event-handlers console_direct+ \
       --cmake-force-configure \
       --cmake-args \
         -DPYBIND11_FINDPYTHON=ON \

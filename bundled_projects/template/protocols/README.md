@@ -16,13 +16,13 @@ safety:
 stages:
   - stage:
       name: "stage_name"
-      trials: 100
+      trials: 100               # shorthand: 100 periodic trials
       notes: "Optional notes about this stage"
-  
+
   - rest:
       duration: 30.0  # Duration in seconds
       notes: "Optional notes"
-  
+
   - rest:
       wait_until:
         anchor: "stage_name"  # Reference to a previous stage
@@ -41,8 +41,31 @@ The `safety` section is required and defines safety constraints for the protocol
 ### Stage
 A stage represents a period where stimuli are delivered. Each stage has:
 - `name`: Unique identifier for the stage
-- `trials`: Number of trials (pulse events) in this stage
+- `trials`: Specifies the trials in the stage. Two forms are supported:
+  - **Shorthand** — a plain integer, equivalent to a single periodic trial group:
+    ```yaml
+    trials: 100
+    ```
+  - **List form** — one or more trial groups, each with:
+    - `count` (required): Number of trials in the group
+    - `timing` (optional): `periodic` (default) or `predetermined`
+    - `type` (optional): An arbitrary string identifying the trial type, passed to the decider's `process_predetermined` method (only meaningful for `predetermined` trials)
+    ```yaml
+    trials:
+      - { count: 150 }                                           # periodic (default)
+      - { count: 50, timing: predetermined, type: low_iti }      # predetermined
+    ```
+- `order` (optional): When using the list form, set to `"random"` to shuffle the individual trials across all groups randomly. The shuffle is seeded by the subject ID for reproducibility.
 - `notes`: Optional description
+
+#### Trial timing modes
+
+| Mode | How it works |
+|------|-------------|
+| `periodic` | The decider's `process_periodic` is called on every decider cycle. On each call it decides whether to trigger a pulse or not. |
+| `predetermined` | The decider's `process_predetermined` is called once per trial with `(reference_time, stage_name, trial, trial_type)`. It returns the `trigger_offset` for that trial upfront, and the trigger is scheduled accordingly. |
+
+For an example decider implementing `process_predetermined`, see `decider/example_predetermined.py`.
 
 ### Rest
 A rest period where no stimuli are delivered. Can be defined in two ways:
@@ -77,4 +100,5 @@ The protocol loader will validate:
 
 - `example.yaml`: Simple protocol with a single stage
 - `example_stages.yaml`: Complete protocol demonstrating stages, duration-based rest, and wait-until-based rest
+- `example_predetermined.yaml`: Protocol mixing periodic and predetermined trial timings, with randomized order
 

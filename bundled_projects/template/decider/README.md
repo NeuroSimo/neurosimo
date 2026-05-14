@@ -9,6 +9,7 @@ The Decider module processes real-time EEG/EMG data and makes decisions about wh
 The `project_template/decider/` directory contains several example decider modules:
 
 - **`example.py`**: Basic periodic processing with event handling
+- **`example_predetermined.py`**: Demonstrates predetermined trial timing with per-trial ITI scheduling
 - **`example_sensory_stimuli.py`**: Demonstrates both predefined and dynamic sensory stimuli
 - **`phastimate.py`**: Real-time phase estimation for brain state-dependent stimulation
 
@@ -276,7 +277,60 @@ With periodic_processing_interval=3.0:
 
 In this example, even though events occurred at 4.0s and 7.0s, the periodic processing schedule (3.0s, 6.0s, 9.0s, ...) remains consistent and unaffected.
 
+### `process_predetermined(reference_time, stage_name, trial, trial_type)`
+
+Called once per **predetermined** trial (protocol stages with `timing: predetermined`) when the trial counter advances. The method must return the trigger schedule for that trial upfront; the pipeline then schedules the trigger accordingly without waiting for the next periodic cycle.
+
+Not called during warm-up rounds.
+
+**Parameters:**
+
+#### `reference_time` (float)
+Current sample time in seconds since recording start. Use this as the base time when computing the trigger offset.
+
+#### `stage_name` (str)
+Name of the current protocol stage.
+
+#### `trial` (int)
+Zero-based index of the current trial within the stage.
+
+#### `trial_type` (str)
+The `type` string from the protocol entry that owns this trial (e.g. `"low_iti"`, `"open_loop_fast"`). An empty string if no `type` was specified in the protocol.
+
+**Return value:** Same format as `process_periodic()` — a dictionary with `trigger_offset` or `targeted_pulses`. Returning `None` skips the trial.
+
+**Example:**
+```python
+def process_predetermined(
+        self, reference_time: float, stage_name: str, trial: int, trial_type: str) -> dict[str, Any] | None:
+    if trial_type == 'low_iti':
+        iti = self.rng.uniform(3.0, 5.0)
+    elif trial_type == 'high_iti':
+        iti = self.rng.uniform(5.0, 7.0)
+    else:
+        assert False, f"Unknown trial type: {trial_type}"
+
+    return {'trigger_offset': iti}
+```
+
 ## Example Workflows
+
+### Predetermined Trial Timing
+```python
+def get_configuration(self):
+    return {
+        'sample_window': [-1.0, 0.0],
+        'warm_up_rounds': 2,
+    }
+
+def process_predetermined(
+        self, reference_time: float, stage_name: str, trial: int, trial_type: str):
+    """Called once per predetermined trial to schedule its trigger upfront."""
+    iti = self.rng.uniform(3.0, 5.0)
+    return {'trigger_offset': iti}
+```
+
+For a complete example, see `example_predetermined.py`.
 
 ### Continuous Monitoring
 ```python

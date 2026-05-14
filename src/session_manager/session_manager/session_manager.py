@@ -652,6 +652,7 @@ class SessionManagerNode(Node):
         request.session_id = session_id
         request.project_name = project_name
         request.protocol_filename = protocol_filename
+        request.subject_id = session_config.subject_id
 
         response = self.call_service(self.protocol_init_client, request, '/neurosimo/pipeline/protocol/initialize')
 

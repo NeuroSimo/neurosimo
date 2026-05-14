@@ -120,6 +120,8 @@ private:
   void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
   void process_ready_deferred_requests(double_t current_sample_time);
 
+  void handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time);
+
   rclcpp::Logger logger;
 
   std::thread heartbeat_thread;
@@ -176,6 +178,11 @@ private:
 
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
+
+  /* Predetermined trial tracking: detect when trial number changes to trigger process_predetermined. */
+  uint32_t previous_trial = 0;
+  std::string previous_stage_name;
+  bool predetermined_trial_pending = false;
 
   StreamInfo stream_info;
 

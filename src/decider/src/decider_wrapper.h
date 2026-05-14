@@ -86,6 +86,21 @@ public:
     const std::string& stage_name,
     uint64_t trial_count);
 
+  /* Call Python process_predetermined for predetermined trials. */
+  std::tuple<
+    bool,
+    std::shared_ptr<double_t>,
+    std::string,
+    std::vector<shared_stimulation_interfaces::msg::TargetedPulse>> process_predetermined(
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
+    double_t reference_time,
+    const std::string& stage_name,
+    uint32_t trial,
+    const std::string& trial_type);
+
+  bool has_predetermined_processor() const;
+
   std::size_t get_envelope_buffer_size() const;
   double get_periodic_processing_interval() const;
 
@@ -135,9 +150,10 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
 
-  /* Whether the decider defines process_pulse / process_event methods */
+  /* Whether the decider defines process_pulse / process_event / process_predetermined methods */
   bool has_pulse_processor = false;
   bool has_event_processor = false;
+  bool has_predetermined_processor_ = false;
 
   /* Preallocated numpy arrays for periodic processor */
   std::unique_ptr<py::array_t<double>> periodic_time_offsets;

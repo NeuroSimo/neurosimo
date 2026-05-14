@@ -141,11 +141,20 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.trial = state.trial;
   enriched.trial_count = state.total_pulses;
 
-  /* Add stage information. */
+  /* Add stage information and trial timing/type. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
     const auto& element = protocol->elements[state.current_element_index];
     if (element.type == ProtocolElement::Type::STAGE) {
-      enriched.stage_name = element.stage->name;
+      const auto& stage = element.stage.value();
+      enriched.stage_name = stage.name;
+
+      /* Look up the trial timing/type from the precomputed trial_order. */
+      if (state.trial < stage.trial_order.size()) {
+        size_t type_idx = stage.trial_order[state.trial];
+        const auto& trial_entry = stage.trial_types[type_idx];
+        enriched.trial_timing = static_cast<uint8_t>(trial_entry.timing);
+        enriched.trial_type = trial_entry.type;
+      }
     }
   }
 
@@ -263,7 +272,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
     request->project_name.c_str(), request->protocol_filename.c_str());
 
   LoadResult result = this->protocol_loader.load_from_project(
-    PROJECTS_DIRECTORY, request->project_name, request->protocol_filename);
+    PROJECTS_DIRECTORY, request->project_name, request->protocol_filename, request->subject_id);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s",

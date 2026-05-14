@@ -3,12 +3,37 @@
 #include <fstream>
 #include <filesystem>
 #include <set>
+#include <algorithm>
+#include <random>
+#include <functional>
+#include <numeric>
 
 namespace experiment_coordinator {
 
 ProtocolLoader::ProtocolLoader(rclcpp::Logger logger) : logger(logger) {}
 
-LoadResult ProtocolLoader::load_from_file(const std::string& filepath) {
+/**
+ * @brief Build the flat trial_order array from trial_types and optionally shuffle it.
+ */
+static void build_trial_order(Stage& stage, const std::string& subject_id) {
+  stage.trial_order.clear();
+  stage.trial_order.reserve(stage.trials);
+
+  for (size_t type_idx = 0; type_idx < stage.trial_types.size(); ++type_idx) {
+    for (uint32_t j = 0; j < stage.trial_types[type_idx].count; ++j) {
+      stage.trial_order.push_back(type_idx);
+    }
+  }
+
+  if (stage.order == "random") {
+    /* Seed from subject_id using std::hash so the order is reproducible per subject. */
+    size_t seed = std::hash<std::string>{}(subject_id);
+    std::mt19937 rng(seed);
+    std::shuffle(stage.trial_order.begin(), stage.trial_order.end(), rng);
+  }
+}
+
+LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std::string& subject_id) {
   LoadResult result;
   result.success = false;
   
@@ -71,12 +96,83 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath) {
           return result;
         }
         stage.name = stage_node["name"].as<std::string>();
-        
+
         if (!stage_node["trials"]) {
           result.error_message = "Stage '" + stage.name + "' missing 'trials'";
           return result;
         }
-        stage.trials = stage_node["trials"].as<uint32_t>();
+
+        const YAML::Node& trials_node = stage_node["trials"];
+
+        if (trials_node.IsScalar()) {
+          /* Shorthand: trials: N  → N periodic trials. */
+          stage.trials = trials_node.as<uint32_t>();
+          TrialTypeEntry entry;
+          entry.timing = TrialTiming::PERIODIC;
+          entry.count = stage.trials;
+          stage.trial_types.push_back(entry);
+
+        } else if (trials_node.IsSequence()) {
+          /* Extended: trials is a list of {count, timing?, type?} dicts. */
+          uint32_t total = 0;
+          for (size_t j = 0; j < trials_node.size(); ++j) {
+            const YAML::Node& entry_node = trials_node[j];
+
+            if (!entry_node["count"]) {
+              result.error_message = "Stage '" + stage.name + "' trial entry " + std::to_string(j) + " missing 'count'";
+              return result;
+            }
+
+            TrialTypeEntry entry;
+            entry.count = entry_node["count"].as<uint32_t>();
+            if (entry.count == 0) {
+              result.error_message = "Stage '" + stage.name + "' trial entry " + std::to_string(j) + " count must be > 0";
+              return result;
+            }
+
+            /* Parse timing (defaults to periodic). */
+            if (entry_node["timing"]) {
+              std::string timing_str = entry_node["timing"].as<std::string>();
+              if (timing_str == "periodic") {
+                entry.timing = TrialTiming::PERIODIC;
+              } else if (timing_str == "predetermined") {
+                entry.timing = TrialTiming::PREDETERMINED;
+              } else {
+                result.error_message = "Stage '" + stage.name + "' trial entry " + std::to_string(j) + " has invalid timing '" + timing_str + "' (must be 'periodic' or 'predetermined')";
+                return result;
+              }
+            }
+
+            /* Parse type (required for predetermined). */
+            if (entry_node["type"]) {
+              entry.type = entry_node["type"].as<std::string>();
+            }
+            if (entry.timing == TrialTiming::PREDETERMINED && entry.type.empty()) {
+              result.error_message = "Stage '" + stage.name + "' trial entry " + std::to_string(j) + ": 'type' is required when timing is 'predetermined'";
+              return result;
+            }
+
+            total += entry.count;
+            stage.trial_types.push_back(entry);
+          }
+          stage.trials = total;
+
+        } else {
+          result.error_message = "Stage '" + stage.name + "' 'trials' must be a number or a list";
+          return result;
+        }
+
+        /* Parse order (defaults to sequential). */
+        if (stage_node["order"]) {
+          stage.order = stage_node["order"].as<std::string>();
+          if (stage.order != "sequential" && stage.order != "random") {
+            result.error_message = "Stage '" + stage.name + "' has invalid order '" + stage.order + "' (must be 'sequential' or 'random')";
+            return result;
+          }
+        }
+
+        /* Build trial_order array. */
+        build_trial_order(stage, subject_id);
         
         if (stage_node["notes"]) {
           stage.notes = stage_node["notes"].as<std::string>();
@@ -219,7 +315,8 @@ bool ProtocolLoader::validate_protocol(const Protocol& protocol, std::string& er
 LoadResult ProtocolLoader::load_from_project(
     const std::string& projects_directory,
     const std::string& project_name,
-    const std::string& protocol_filename) {
+    const std::string& protocol_filename,
+    const std::string& subject_id) {
   
   LoadResult result;
   result.success = false;
@@ -235,7 +332,7 @@ LoadResult ProtocolLoader::load_from_project(
   }
   
   /* Load the protocol using existing method. */
-  return load_from_file(filepath);
+  return load_from_file(filepath, subject_id);
 }
 
 ProtocolInfoResult ProtocolLoader::get_protocol_info(

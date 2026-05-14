@@ -398,14 +398,18 @@ class NeurOneSimulator:
         self.send_measurement_start_packet()
         time.sleep(0.1)  # Brief pause
 
-        # Calculate sleep time between samples
-        sleep_time = 1.0 / self.sampling_rate
+        sample_interval = 1.0 / self.sampling_rate
 
         start_time = time.time()
-        last_sample_time = start_time
-
+        next_sample_time = time.time()
         try:
             while self.running:
+                # Sleep until it is time to send the next sample.  If we are
+                # already late, proceed immediately - no catch-up bursts.
+                sleep_duration = next_sample_time - time.time()
+                if sleep_duration > 0:
+                    time.sleep(sleep_duration)
+
                 current_time = time.time()
 
                 if self.should_drop_current_sample(current_time):
@@ -413,19 +417,16 @@ class NeurOneSimulator:
                     # so the receiver observes gaps in sample indices.
                     self.sample_index += 1
                 else:
-                    # Send sample packet
                     self.send_sample_packet()
 
                 # Check if we should stop after duration
                 if duration_seconds and (current_time - start_time) >= duration_seconds:
                     break
 
-                # Sleep to maintain sampling rate (accounting for processing time)
-                processing_time = current_time - last_sample_time
-                sleep_duration = max(0, sleep_time - processing_time)
-                time.sleep(sleep_duration)
-
-                last_sample_time = time.time()
+                # Advance the ideal clock by one interval so that transient
+                # sleep overshoots are absorbed by a shorter sleep next time,
+                # keeping the average rate at the target sampling rate.
+                next_sample_time += sample_interval
 
         except KeyboardInterrupt:
             print("\nInterrupted by user")

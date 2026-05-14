@@ -174,9 +174,6 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Used for pulse lockout: tracks when the lockout period ends (time when periodic processing can resume). */
-  double_t pulse_lockout_end_time = UNSET_TIME;
-
   StreamInfo stream_info;
 
   RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>> sample_buffer;

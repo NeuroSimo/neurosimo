@@ -674,9 +674,6 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
       /* Update the previous stimulation time. */
       this->previous_stimulation_time = requested_stimulation_time;
-      
-      /* Set the pulse lockout end time based on protocol minimum_trial_interval. */
-      this->pulse_lockout_end_time = requested_stimulation_time + this->minimum_trial_interval;
     } else {
       RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
       this->minimum_trial_interval,
@@ -715,9 +712,8 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
         sample_time);
       this->targeted_pulses_publisher->publish(targeted_pulses_msg);
 
-      /* Track last pulse timing for safety and lockout handling. */
+      /* Update the previous stimulation time. */
       this->previous_stimulation_time = last_target_time;
-      this->pulse_lockout_end_time = last_target_time + this->minimum_trial_interval;
     } else {
       RCLCPP_ERROR(
         this->get_logger(),
@@ -856,17 +852,17 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     periodic_processing_triggered = true;
   }
 
-  /* Check if we're in the pulse lockout period. */
-  bool in_lockout_period = false;
-  if (!std::isnan(this->pulse_lockout_end_time) && sample_time < this->pulse_lockout_end_time) {
-    in_lockout_period = true;
+  /* Check if minimum trial interval has passed since last trigger. */
+  bool minimum_trial_interval_passed = false;
+  if (!std::isnan(this->previous_stimulation_time) && sample_time >= this->previous_stimulation_time + this->minimum_trial_interval) {
+    minimum_trial_interval_passed = true;
   }
 
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   bool backpressure_detected = detect_backpressure(msg);
 
   /* Check if periodic processing should trigger (skip if backpressure detected). */
-  if (periodic_processing_triggered && !in_lockout_period && !backpressure_detected) {
+  if (periodic_processing_triggered && minimum_trial_interval_passed && !backpressure_detected) {
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
   }
 

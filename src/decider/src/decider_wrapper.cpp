@@ -167,21 +167,20 @@ bool DeciderWrapper::initialize_module(
     }
   }
 
-  /* Extract periodic_processing_interval (mandatory). */
-  if (!config.contains("periodic_processing_interval")) {
-    log_error("'periodic_processing_interval' key not found in configuration dictionary.");
-    return false;
-  }
-
-  try {
-    this->periodic_processing_interval = config["periodic_processing_interval"].cast<double>();
-    if (this->periodic_processing_interval <= 0.0) {
-      log_error("periodic_processing_interval must be a positive number (got " + std::to_string(this->periodic_processing_interval) + ").");
+  /* Extract periodic_processing_interval (optional, defaults to 0.1). */
+  if (config.contains("periodic_processing_interval")) {
+    try {
+      this->periodic_processing_interval = config["periodic_processing_interval"].cast<double>();
+      if (this->periodic_processing_interval <= 0.0) {
+        log_error("periodic_processing_interval must be a positive number (got " + std::to_string(this->periodic_processing_interval) + ").");
+        return false;
+      }
+    } catch (const py::cast_error& e) {
+      log_error(std::string("periodic_processing_interval must be a number: ") + e.what());
       return false;
     }
-  } catch (const py::cast_error& e) {
-    log_error(std::string("periodic_processing_interval must be a number: ") + e.what());
-    return false;
+  } else {
+    this->periodic_processing_interval = 0.1;
   }
 
   /* Extract predefined_events (optional). */

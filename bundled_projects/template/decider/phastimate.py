@@ -48,7 +48,7 @@ DEFAULT_AR_MODEL_ORDER = 15
 DEFAULT_DOWNSAMPLE_RATIO = 10
 
 # Processing timing constants
-DEFAULT_PROCESSING_INTERVAL_SECONDS = 0.1
+
 DEFAULT_BUFFER_SIZE_SECONDS = 1.0
 
 class Decider:
@@ -79,7 +79,6 @@ class Decider:
         self.downsample_ratio = DEFAULT_DOWNSAMPLE_RATIO
 
         # Processing timing parameters
-        self.periodic_processing_interval = DEFAULT_PROCESSING_INTERVAL_SECONDS
         self.buffer_size_seconds = DEFAULT_BUFFER_SIZE_SECONDS
 
         # Filter coefficients
@@ -107,7 +106,6 @@ class Decider:
             'warm_up_rounds': 2,
 
             # Periodic processing
-            'periodic_processing_interval': 0.1,  # Process every 0.1 seconds
             'pulse_lockout_duration': 2.0,  # Prevent periodic processing for 2.0 seconds after pulse
         }
 

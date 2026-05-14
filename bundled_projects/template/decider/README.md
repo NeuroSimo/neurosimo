@@ -42,12 +42,12 @@ Called by the pipeline during initialization. Must return a dictionary with conf
 
 **Return dictionary keys:**
 
-#### `periodic_processing_interval` (float)
-How frequently the `process_periodic()` method is called, in seconds. Must be greater than `0.0`.
+#### `periodic_processing_interval` (float, optional)
+How frequently the `process_periodic()` method is called, in seconds. Must be greater than `0.0`. Defaults to `0.1` (10 times per second) if not specified.
 
 **Examples:**
+- `0.1`: Process 10 times per second (default)
 - `1.0`: Process once per second
-- `0.1`: Process 10 times per second
 - `0.01`: Process 100 times per second
 
 #### `sample_window` (list)
@@ -318,8 +318,8 @@ def process_event(self, reference_time, reference_index, time_offsets,
 def get_configuration(self):
     return {
         'sample_window': [-1.000, 0.0],  # Last second
-        'periodic_processing_interval': 0.1,  # 10 times per second
         'pulse_lockout_duration': 2.0,
+        # periodic_processing_interval defaults to 0.1 (10 times per second)
     }
 ```
 
@@ -394,7 +394,7 @@ def get_configuration(self) -> dict[str, Any]:
     return {
         'sample_window': [-1.0, 0.0],
         'warm_up_rounds': 2,  # Recommended: 2-3 rounds
-        # ... other configuration ...
+        # periodic_processing_interval defaults to 0.1 s if omitted
     }
 ```
 

@@ -26,6 +26,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Latency.msg"
   "msg/DecisionTrace.msg"
+  "msg/TrialTrace.msg"
   "msg/SensoryStimulus.msg"
   "msg/LogMessage.msg"
   "msg/LogMessages.msg"

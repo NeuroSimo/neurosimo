@@ -29,6 +29,12 @@ uint32 stage_index              # Current stage index (0-based)
 uint32 trial                    # Current trial within stage (0-based)
 uint64 trial_count              # Total pulses delivered
 
+# Trial timing and type
+uint8 TRIAL_TIMING_PERIODIC=0
+uint8 TRIAL_TIMING_PREDETERMINED=1
+uint8 trial_timing              # How the trial is triggered
+string trial_type               # Trial type (e.g. "low_iti"), empty for periodic
+
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)
 # ============================================================================

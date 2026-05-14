@@ -6,16 +6,37 @@
 #include <optional>
 #include <memory>
 #include <map>
+#include <cstdint>
 
 namespace experiment_coordinator {
+
+/**
+ * @brief Trial timing modes
+ */
+enum class TrialTiming : uint8_t {
+  PERIODIC = 0,
+  PREDETERMINED = 1,
+};
+
+/**
+ * @brief Describes one group of trials within a stage
+ */
+struct TrialTypeEntry {
+  TrialTiming timing = TrialTiming::PERIODIC;
+  std::string type;        // e.g. "low_iti", empty for periodic
+  uint32_t count = 0;
+};
 
 /**
  * @brief Represents a stage with trials in the protocol
  */
 struct Stage {
   std::string name;
-  uint32_t trials;
+  uint32_t trials;                              // total trial count (sum of all trial_types counts)
   std::string notes;
+  std::vector<TrialTypeEntry> trial_types;      // breakdown by timing/type
+  std::string order = "sequential";             // "sequential" or "random"
+  std::vector<size_t> trial_order;              // indices into trial_types, length == trials
 };
 
 /**

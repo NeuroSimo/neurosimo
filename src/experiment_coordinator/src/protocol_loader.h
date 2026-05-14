@@ -39,19 +39,21 @@ public:
    * @param filepath Path to the YAML file
    * @return LoadResult containing protocol or error
    */
-  LoadResult load_from_file(const std::string& filepath);
-  
+  LoadResult load_from_file(const std::string& filepath, const std::string& subject_id = "");
+
   /**
    * @brief Load protocol from project directory
    * @param projects_directory Base projects directory path
    * @param project_name Name of the project
    * @param protocol_filename YAML filename of the protocol
+   * @param subject_id Subject ID used as seed for trial order randomization
    * @return LoadResult containing protocol or error
    */
   LoadResult load_from_project(
     const std::string& projects_directory,
     const std::string& project_name,
-    const std::string& protocol_filename);
+    const std::string& protocol_filename,
+    const std::string& subject_id = "");
   
   /**
    * @brief Get protocol info as ROS message

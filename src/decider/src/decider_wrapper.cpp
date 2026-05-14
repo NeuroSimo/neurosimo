@@ -308,6 +308,12 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_DEBUG(*logger_ptr, "Registered event processor (process_event)");
   }
 
+  /* Detect process_predetermined method by convention. */
+  if (py::hasattr(*decider_instance, "process_predetermined")) {
+    this->has_predetermined_processor_ = true;
+    RCLCPP_DEBUG(*logger_ptr, "Registered predetermined processor (process_predetermined)");
+  }
+
   /* TODO: The logic below works but is too complex just to cover the case where the sample window is fully in the past. It should be simplified. */
 
   /* Calculate maximum buffer size needed to cover all windows.
@@ -407,6 +413,12 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_INFO(*logger_ptr, "  - Event processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
     RCLCPP_INFO(*logger_ptr, "    - Event processor window: %s[%.3f s, %.3f s]%s",
                 bold_on.c_str(), event_sample_window_start_seconds, event_sample_window_end_seconds, bold_off.c_str());
+  }
+
+  if (!this->has_predetermined_processor_) {
+    RCLCPP_INFO(*logger_ptr, "  - Deterministic processor: %sDisabled%s (no process_predetermined method)", bold_on.c_str(), bold_off.c_str());
+  } else {
+    RCLCPP_INFO(*logger_ptr, "  - Deterministic processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
   }
 
   RCLCPP_INFO(*logger_ptr, " ");
@@ -952,3 +964,125 @@ std::tuple<
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
 std::vector<LogEntry> DeciderWrapper::log_buffer;
 uint8_t DeciderWrapper::current_processing_path;
+
+bool DeciderWrapper::has_predetermined_processor() const {
+  return this->has_predetermined_processor_;
+}
+
+std::tuple<
+  bool,
+  std::shared_ptr<double_t>,
+  std::string,
+  std::vector<shared_stimulation_interfaces::msg::TargetedPulse>> DeciderWrapper::process_predetermined(
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
+    double_t reference_time,
+    const std::string& stage_name,
+    uint32_t trial,
+    const std::string& trial_type) {
+
+  std::shared_ptr<double_t> trigger_offset = nullptr;
+  std::string coil_target;
+  std::vector<shared_stimulation_interfaces::msg::TargetedPulse> targeted_pulses;
+
+  if (!has_predetermined_processor_) {
+    log_error("process_predetermined called but Python Decider has no process_predetermined method.");
+    return {false, trigger_offset, coil_target, targeted_pulses};
+  }
+
+  py::object py_result;
+  try {
+    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
+    py_result = decider_instance->attr("process_predetermined")(
+      reference_time, stage_name, trial, trial_type);
+
+  } catch(const py::error_already_set& e) {
+    std::string error_msg = std::string("Python error in process_predetermined: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return {false, trigger_offset, coil_target, targeted_pulses};
+
+  } catch(const std::exception& e) {
+    std::string error_msg = std::string("C++ error in process_predetermined: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return {false, trigger_offset, coil_target, targeted_pulses};
+  }
+
+  /* If the return value is None, return early but mark it as successful. */
+  if (py_result.is_none()) {
+    return {true, trigger_offset, coil_target, targeted_pulses};
+  }
+
+  if (!py::isinstance<py::dict>(py_result)) {
+    log_error("process_predetermined must return a dictionary or None.");
+    return {false, trigger_offset, coil_target, targeted_pulses};
+  }
+
+  py::dict dict_result = py_result.cast<py::dict>();
+
+  /* Validate keys. */
+  std::vector<std::string> allowed_keys = {
+    "trigger_offset",
+    "targeted_pulses",
+    "sensory_stimuli",
+    "events",
+    "coil_target"
+  };
+  for (const auto& item : dict_result) {
+    std::string key = py::str(item.first).cast<std::string>();
+    if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
+      log_error("Unexpected key '" + key + "' in process_predetermined return value.");
+      return {false, trigger_offset, coil_target, targeted_pulses};
+    }
+  }
+
+  if (dict_result.contains("coil_target")) {
+    coil_target = dict_result["coil_target"].cast<std::string>();
+  }
+
+  if (dict_result.contains("trigger_offset")) {
+    trigger_offset = std::make_shared<double_t>(dict_result["trigger_offset"].cast<double_t>());
+  }
+
+  if (dict_result.contains("targeted_pulses")) {
+    if (!py::isinstance<py::list>(dict_result["targeted_pulses"])) {
+      log_error("targeted_pulses must be a list.");
+      return {false, trigger_offset, coil_target, targeted_pulses};
+    }
+    py::list py_targeted_pulses = dict_result["targeted_pulses"].cast<py::list>();
+    if (!process_targeted_pulses_list(py_targeted_pulses, targeted_pulses)) {
+      return {false, trigger_offset, coil_target, targeted_pulses};
+    }
+  }
+
+  if (trigger_offset != nullptr && !targeted_pulses.empty()) {
+    log_error("process_predetermined return value cannot include both 'trigger_offset' and 'targeted_pulses'.");
+    return {false, trigger_offset, coil_target, targeted_pulses};
+  }
+
+  if (dict_result.contains("sensory_stimuli")) {
+    if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
+      log_error("sensory_stimuli must be a list.");
+      return {false, trigger_offset, coil_target, targeted_pulses};
+    }
+    py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
+    if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
+      return {false, trigger_offset, coil_target, targeted_pulses};
+    }
+  }
+
+  if (dict_result.contains("events")) {
+    if (!py::isinstance<py::list>(dict_result["events"])) {
+      log_error("events must be a list.");
+      return {false, trigger_offset, coil_target, targeted_pulses};
+    }
+    py::list events = dict_result["events"].cast<py::list>();
+    for (const auto& event : events) {
+      double event_time = event.cast<double>();
+      event_queue.push(event_time);
+    }
+  }
+
+  return {true, trigger_offset, coil_target, targeted_pulses};
+}

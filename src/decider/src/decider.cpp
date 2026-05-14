@@ -846,31 +846,39 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* Check if periodic processing should trigger based on time comparison. */
-  bool periodic_processing_triggered = false;
+  /* Determine trial timing from the enriched sample. */
+  bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
 
-  // Initialize next periodic processing time if not already set.
-  if (std::isnan(this->next_periodic_processing_time)) {
-    this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
-  }
+  if (is_predetermined) {
+    /* Predetermined timing: skip periodic processing, call process_predetermined on trial change. */
+    handle_predetermined_trial(msg, sample_time);
+  } else {
+    /* Periodic timing (default): trigger periodic processing at regular intervals. */
+    bool periodic_processing_triggered = false;
 
-  // Check if it's time to trigger periodic processing.
-  if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
-    /* Move to next processing time and mark that periodic processing should occur. */
-    this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
-    periodic_processing_triggered = true;
-  }
+    // Initialize next periodic processing time if not already set.
+    if (std::isnan(this->next_periodic_processing_time)) {
+      this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
+    }
 
-  /* Check if minimum trial interval has passed since last trigger. */
-  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                       sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
+    // Check if it's time to trigger periodic processing.
+    if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
+      /* Move to next processing time and mark that periodic processing should occur. */
+      this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
+      periodic_processing_triggered = true;
+    }
 
-  /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
-  bool backpressure_detected = detect_backpressure(msg);
+    /* Check if minimum trial interval has passed since last trigger. */
+    bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                         sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
 
-  /* Check if periodic processing should trigger (skip if backpressure detected). */
-  if (periodic_processing_triggered && minimum_trial_interval_passed && !backpressure_detected) {
-    enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
+    /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
+    bool backpressure_detected = detect_backpressure(msg);
+
+    /* Check if periodic processing should trigger (skip if backpressure detected). */
+    if (periodic_processing_triggered && minimum_trial_interval_passed && !backpressure_detected) {
+      enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
+    }
   }
 
   /* Check if any decider-defined events occur at the current sample. */
@@ -888,6 +896,134 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
+}
+
+void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time) {
+  /* Detect trial change: either a new stage or trial number incremented. */
+  bool stage_changed = (msg->stage_name != this->previous_stage_name);
+  bool trial_changed = (msg->trial != this->previous_trial);
+
+  if (stage_changed || trial_changed || !this->predetermined_trial_pending) {
+    this->previous_stage_name = msg->stage_name;
+    this->previous_trial = msg->trial;
+
+    /* Only trigger if the predetermined trial has NOT already been handled. */
+    this->predetermined_trial_pending = true;
+  }
+
+  if (!this->predetermined_trial_pending) {
+    return;
+  }
+
+  /* Check minimum trial interval. */
+  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                       sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
+  if (!minimum_trial_interval_passed) {
+    return;
+  }
+
+  /* Check for backpressure. */
+  if (detect_backpressure(msg)) {
+    return;
+  }
+
+  this->predetermined_trial_pending = false;
+
+  RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
+    msg->trial, msg->stage_name.c_str(), msg->trial_type.c_str(), sample_time);
+
+  /* Call process_predetermined on the Python side. */
+  auto [success, trigger_offset, coil_target, targeted_pulses] = this->decider_wrapper->process_predetermined(
+    this->sensory_stimuli,
+    this->event_queue,
+    sample_time,
+    msg->stage_name,
+    msg->trial,
+    msg->trial_type);
+
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "process_predetermined failed at time %.3f (s).", sample_time);
+    this->error_occurred = true;
+    this->abort_session("Decider process_predetermined error");
+    return;
+  }
+
+  /* Publish sensory stimuli if any. */
+  if (!this->sensory_stimuli.empty()) {
+    for (const auto& sensory_stimulus : this->sensory_stimuli) {
+      this->sensory_stimulus_publisher->publish(sensory_stimulus);
+    }
+    this->sensory_stimuli.clear();
+  }
+
+  /* Publish coil target if set. */
+  if (!coil_target.empty()) {
+    auto coil_target_msg = shared_stimulation_interfaces::msg::CoilTarget();
+    coil_target_msg.target_name = coil_target;
+    this->coil_target_publisher->publish(coil_target_msg);
+  }
+
+  bool request_timed_trigger = trigger_offset != nullptr;
+  bool decided_yes = request_timed_trigger || !targeted_pulses.empty();
+
+  if (!decided_yes) {
+    return;
+  }
+
+  double_t requested_stimulation_time = std::numeric_limits<double_t>::quiet_NaN();
+  if (request_timed_trigger) {
+    requested_stimulation_time = sample_time + *trigger_offset;
+  }
+  if (!targeted_pulses.empty()) {
+    requested_stimulation_time = sample_time + targeted_pulses.front().time_offset;
+  }
+
+  /* Publish decision trace. */
+  auto decision_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
+  decision_trace.decision_id = ++this->decision_id;
+  decision_trace.status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES;
+  decision_trace.reference_sample_time = sample_time;
+  decision_trace.reference_sample_index = msg->sample_index;
+  decision_trace.stimulate = true;
+  this->decision_trace_publisher->publish(decision_trace);
+
+  /* Publish trial trace. */
+  auto trial_trace = neurosimo_pipeline_interfaces::msg::TrialTrace();
+  trial_trace.session_id = this->session_id;
+  trial_trace.trial_id = ++this->trial_id;
+  trial_trace.requested_stimulation_time = requested_stimulation_time;
+  trial_trace.decision = decision_trace;
+  this->trial_trace_publisher->publish(trial_trace);
+
+  /* Send timed trigger. */
+  if (request_timed_trigger) {
+    RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s) [predetermined].", requested_stimulation_time);
+
+    auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
+    request_msg->trigger_offset = *trigger_offset;
+    request_msg->session_id = this->session_id;
+    request_msg->trial_id = this->trial_id;
+    request_msg->reference_sample_time = sample_time;
+    this->request_timed_trigger(request_msg);
+
+    this->previous_stimulation_time = requested_stimulation_time;
+  }
+
+  /* Send targeted pulses. */
+  if (!targeted_pulses.empty()) {
+    auto targeted_pulses_msg = shared_stimulation_interfaces::msg::TargetedPulses();
+    targeted_pulses_msg.session_id = this->session_id;
+    targeted_pulses_msg.reference_eeg_device_timestamp = msg->eeg_device_timestamp;
+    targeted_pulses_msg.sequence_number = this->targeted_pulses_sequence_number++;
+
+    targeted_pulses_msg.pulses = targeted_pulses;
+    RCLCPP_INFO(this->get_logger(), "Publishing %zu targeted pulse(s) at time %.3f (s) [predetermined].",
+      targeted_pulses_msg.pulses.size(), sample_time);
+    this->targeted_pulses_publisher->publish(targeted_pulses_msg);
+
+    double_t last_target_time = sample_time + targeted_pulses.back().time_offset;
+    this->previous_stimulation_time = last_target_time;
+  }
 }
 
 bool EegDecider::detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {

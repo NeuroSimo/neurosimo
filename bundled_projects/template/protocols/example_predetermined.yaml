@@ -1,0 +1,23 @@
+name: "Example protocol with predetermined trials"
+description: "Demonstrates mixing periodic and predetermined trial timings"
+
+safety:
+  minimum_trial_interval: 2.0
+
+stages:
+  - stage:
+      name: "predetermined_only"
+      trials:
+        - { count: 10, timing: predetermined, type: high_iti }
+      notes: "All predetermined trials"
+
+  - rest:
+      duration: 10.0
+
+  - stage:
+      name: "mixed_block"
+      trials:
+        - { count: 5 }
+        - { count: 5, timing: predetermined, type: low_iti }
+      order: "random"
+      notes: "50% periodic, 50% predetermined (randomized order)"

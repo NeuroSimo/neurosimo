@@ -554,7 +554,7 @@ void EegDecider::handle_stimulation_request(
   /* Publish trial trace. */
   auto trial_trace = neurosimo_pipeline_interfaces::msg::TrialTrace();
   trial_trace.session_id = this->session_id;
-  trial_trace.trial_id = ++this->trial_id;
+  trial_trace.trial_id = this->current_trial;
   trial_trace.requested_stimulation_time = earliest_pulse_time;
   this->trial_trace_publisher->publish(trial_trace);
 
@@ -580,7 +580,7 @@ void EegDecider::handle_stimulation_request(
     auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
     request_msg->trigger_offset = *result.trigger_offset;
     request_msg->session_id = this->session_id;
-    request_msg->trial_id = this->trial_id;
+    request_msg->trial_id = this->current_trial;
     request_msg->reference_sample_time = reference_time;
     this->request_timed_trigger(request_msg);
   }

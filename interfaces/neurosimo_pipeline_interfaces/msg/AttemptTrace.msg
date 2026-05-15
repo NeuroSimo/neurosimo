@@ -27,9 +27,14 @@ uint8 STATUS_ERROR=7                      # error (e.g. LabJack not connected, t
 uint8 status
 
 # ----------------------------------------------------------------------------
-# Requested stimulation (filled by Decider or scheduler)
+# Requested stimulation (filled by Decider)
 # ----------------------------------------------------------------------------
 float64 requested_stimulation_time        # seconds since recording start
+
+# ----------------------------------------------------------------------------
+# Timing reference (filled by Decider)
+# ----------------------------------------------------------------------------
+float64 reference_time                    # The reference time used for this attempt's pulse (seconds since recording start)
 
 # ----------------------------------------------------------------------------
 # TriggerTimer configuration (filled by TriggerTimer)

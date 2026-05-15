@@ -275,7 +275,7 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
       /* Publish AttemptTrace (fired). */
       auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
       attempt_trace.session_id = request->session_id;
-      attempt_trace.attempt_id = request->attempt_id;
+      attempt_trace.attempt_in_session = request->attempt_in_session;
       attempt_trace.status = status;
       attempt_trace.system_time_hardware_fired = system_time_hardware_fired;
       attempt_trace.latency_corrected_time_at_firing = estimated_current_time;
@@ -345,7 +345,7 @@ void TriggerTimer::handle_request_timed_trigger(
   /* Publish AttemptTrace (scheduled or rejected). */
   auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   attempt_trace.session_id = request->session_id;
-  attempt_trace.attempt_id = request->attempt_id;
+  attempt_trace.attempt_in_session = request->attempt_in_session;
   attempt_trace.status = status;
   attempt_trace.stimulation_horizon = stimulation_horizon;
   attempt_trace.strict_stimulation_horizon = strict_stimulation_horizon;

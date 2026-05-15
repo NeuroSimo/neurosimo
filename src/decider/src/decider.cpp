@@ -552,10 +552,9 @@ void EegDecider::handle_stimulation_request(
   }
 
   /* Publish attempt trace. */
-  this->next_attempt_id++;
   auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   attempt_trace.session_id = this->session_id;
-  attempt_trace.attempt_id = this->next_attempt_id;
+  attempt_trace.attempt_in_session = this->current_attempt_in_session;
   attempt_trace.requested_stimulation_time = earliest_pulse_time;
   this->attempt_trace_publisher->publish(attempt_trace);
 
@@ -581,7 +580,7 @@ void EegDecider::handle_stimulation_request(
     auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
     request_msg->trigger_offset = *result.trigger_offset;
     request_msg->session_id = this->session_id;
-    request_msg->attempt_id = this->next_attempt_id;
+    request_msg->attempt_in_session = this->next_attempt_in_session;
     request_msg->reference_sample_time = reference_time;
     this->request_timed_trigger(request_msg);
   }
@@ -617,7 +616,7 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   auto result = this->decider_wrapper->process_pulse(
     this->sensory_stimuli, this->sample_buffer, sample_time,
     this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trials_completed);
+    request.triggering_sample->trial_in_session);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during pulse processing at time %.3f (s).", sample_time);
@@ -669,7 +668,7 @@ void EegDecider::process_event_request(const DeferredProcessingRequest& request)
   auto result = this->decider_wrapper->process_event(
     this->sensory_stimuli, this->sample_buffer, sample_time,
     this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trials_completed);
+    request.triggering_sample->trial_in_session);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during event processing at time %.3f (s).", sample_time);
@@ -720,7 +719,7 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
   auto result = this->decider_wrapper->process_periodic(
     this->sensory_stimuli, this->sample_buffer, reference_time,
     this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trials_completed);
+    request.triggering_sample->trial_in_session);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during periodic processing at time %.3f (s).", reference_time);
@@ -911,9 +910,9 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     return;
   }
 
-  /* Detect trial change. */
-  bool trial_changed = (msg->trial_in_stage != this->current_trial_in_stage);
-  this->current_trial_in_stage = msg->trial_in_stage;
+  /* Detect new attempt. */
+  bool attempt_changed = (msg->attempt_in_session != this->current_attempt_in_session);
+  this->current_attempt_in_session = msg->attempt_in_session;
 
   /* Check for sample index discontinuity and handle gaps. */
   detect_and_handle_sample_gap(msg);
@@ -932,7 +931,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Handle predetermined trials. */
   bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
-  if (is_predetermined && trial_changed) {
+  if (is_predetermined && attempt_changed) {
     handle_predetermined_trial(msg);
   }
 

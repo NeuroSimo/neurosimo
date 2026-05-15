@@ -45,7 +45,7 @@ export interface DecisionTrace extends ROSLIB.Message {
 
 export interface AttemptTrace extends ROSLIB.Message {
   session_id: number[]
-  attempt_id: number
+  attempt_in_session: number
   status: number
   requested_stimulation_time: number
   stimulation_horizon: number

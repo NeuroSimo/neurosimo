@@ -27,8 +27,8 @@ float64 experiment_time         # Pause-adjusted experiment time (seconds)
 string stage_name               # Current stage name from protocol
 uint32 stage_index              # Current stage index (0-based)
 uint32 trial_in_stage           # Current trial slot within stage (0-based), advances on success
-uint64 trials_completed         # Total successful trials in session
-uint64 attempts_in_session      # Total attempts in session (advances every trigger)
+uint64 trial_in_session         # Total successful trials in session
+uint64 attempt_in_session       # Total attempts in session (advances every trigger)
 
 # Trial timing and type
 uint8 TRIAL_TIMING_PERIODIC=0

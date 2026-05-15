@@ -127,8 +127,8 @@ private:
     double_t reference_time,
     double_t reference_eeg_device_timestamp);
     
-  void handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time);
-  void handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time);
+  void handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
+  void handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
 
   rclcpp::Logger logger;
 
@@ -180,6 +180,7 @@ private:
   /* Used for keeping track of the time of the previous trigger time to ensure that the minimum pulse
      interval is respected. */
   double_t previous_stimulation_time = UNSET_TIME;
+  double_t previous_stimulation_eeg_device_timestamp = UNSET_TIME;
 
   /* Used for publishing logs from the previous sample at the beginning of the current sample. */
   double_t previous_sample_time = UNSET_TIME;

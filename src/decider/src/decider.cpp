@@ -539,19 +539,15 @@ void EegDecider::handle_stimulation_request(
   bool request_targeted_pulses = !result.targeted_pulses.empty();
 
   double_t earliest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
-  double_t latest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
 
   if (request_timed_trigger) {
     earliest_pulse_time = reference_time + *result.trigger_offset;
-    latest_pulse_time = earliest_pulse_time;
   }
 
   if (request_targeted_pulses) {
     earliest_pulse_time = reference_time + result.targeted_pulses.front().time_offset;
-    latest_pulse_time = earliest_pulse_time;
     for (const auto& pulse : result.targeted_pulses) {
       earliest_pulse_time = std::min(earliest_pulse_time, reference_time + pulse.time_offset);
-      latest_pulse_time = std::max(latest_pulse_time, reference_time + pulse.time_offset);
     }
   }
 
@@ -605,9 +601,6 @@ void EegDecider::handle_stimulation_request(
 
     this->targeted_pulses_publisher->publish(targeted_pulses_msg);
   }
-
-  /* Update the previous stimulation time. */
-  this->previous_stimulation_time = latest_pulse_time;
 }
 
 void EegDecider::process_pulse_request(const DeferredProcessingRequest& request) {
@@ -929,13 +922,13 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Handle periodic trials. */
   bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
   if (is_periodic) {
-    handle_periodic_trial(msg, sample_time);
+    handle_periodic_trial(msg);
   }
 
   /* Handle predetermined trials. */
   bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
   if (is_predetermined) {
-    handle_predetermined_trial(msg, sample_time);
+    handle_predetermined_trial(msg);
   }
 
   /* Check if any decider-defined events occur at the current sample. */
@@ -949,13 +942,19 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   if (msg->pulse_trigger) {
     RCLCPP_INFO(this->get_logger(), "Received pulse trigger at time %.4f (s)", sample_time);
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Pulse);
+
+    /* Update the previous stimulation time. */
+    this->previous_stimulation_time = sample_time;
+    this->previous_stimulation_eeg_device_timestamp = msg->eeg_device_timestamp;
   }
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
 }
 
-void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time) {
+void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
+  auto sample_time = msg->time;
+
   bool periodic_processing_triggered = false;
 
   // Initialize next periodic processing time if not already set.
@@ -983,7 +982,7 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   }
 }
 
-void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time) {
+void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Detect trial change. */
   bool trial_changed = (msg->trial != this->previous_trial);
   if (!trial_changed) {
@@ -992,19 +991,23 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   this->previous_trial = msg->trial;
 
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
-    msg->trial, msg->stage_name.c_str(), msg->trial_type.c_str(), sample_time);
+    msg->trial, msg->stage_name.c_str(), msg->trial_type.c_str(), msg->time);
+
+  /* Use the time of the previous stimulation as the reference time. */
+  auto reference_time = this->previous_stimulation_time;
+  auto reference_eeg_device_timestamp = this->previous_stimulation_eeg_device_timestamp;
 
   /* Call process_predetermined on the Python side. */
   auto result = this->decider_wrapper->process_predetermined(
     this->sensory_stimuli,
     this->event_queue,
-    sample_time,
+    reference_time,
     msg->stage_name,
     msg->trial,
     msg->trial_type);
 
   if (!result.success) {
-    RCLCPP_ERROR(this->get_logger(), "process_predetermined failed at time %.3f (s).", sample_time);
+    RCLCPP_ERROR(this->get_logger(), "process_predetermined failed at time %.3f (s).", msg->time);
     this->error_occurred = true;
     this->abort_session("Error in process_predetermined method");
     return;
@@ -1028,13 +1031,13 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   bool stimulation_requested = result.trigger_offset != nullptr || !result.targeted_pulses.empty();
 
   if (!stimulation_requested) {
-    RCLCPP_ERROR(this->get_logger(), "No stimulation requested for predetermined trial at time %.3f (s).", sample_time);
+    RCLCPP_ERROR(this->get_logger(), "No stimulation requested for predetermined trial at time %.3f (s).", msg->time);
     this->error_occurred = true;
     this->abort_session("No stimulation requested for predetermined trial");
     return;
   }
 
-  handle_stimulation_request(result, sample_time, msg->eeg_device_timestamp);
+  handle_stimulation_request(result, reference_time, reference_eeg_device_timestamp);
 }
 
 bool EegDecider::detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {

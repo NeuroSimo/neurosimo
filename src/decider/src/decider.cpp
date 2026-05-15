@@ -560,6 +560,7 @@ void EegDecider::handle_stimulation_request(
   attempt_trace.session_id = this->session_id;
   attempt_trace.attempt_in_session = this->current_attempt_in_session;
   attempt_trace.requested_stimulation_time = earliest_pulse_time;
+  attempt_trace.reference_time = reference_time;
   this->attempt_trace_publisher->publish(attempt_trace);
 
   /* Check that the minimum trial interval has passed. */
@@ -994,9 +995,15 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
     msg->trial_in_stage, msg->stage_name.c_str(), msg->trial_type.c_str(), msg->time);
 
-  // TODO: Add reference time and eeg device timestamp to the sample - this should come from the experiment coordinator.
-  double_t reference_time = UNSET_TIME;
-  double_t reference_eeg_device_timestamp = UNSET_TIME;
+  double_t reference_time = msg->reference_time;
+  double_t reference_eeg_device_timestamp = msg->reference_eeg_device_timestamp;
+
+  if (std::isnan(reference_time)) {
+    RCLCPP_ERROR(this->get_logger(), "No reference time provided for predetermined trial at time %.3f (s).", msg->time);
+    this->error_occurred = true;
+    this->abort_session("Missing reference time for predetermined trial");
+    return;
+  }
 
   /* Call process_predetermined on the Python side. */
   auto result = this->decider_wrapper->process_predetermined(

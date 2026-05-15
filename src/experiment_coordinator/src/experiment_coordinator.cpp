@@ -3,6 +3,7 @@
 #include "realtime_utils/utils.h"
 #include <chrono>
 #include <algorithm>
+#include <cmath>
 
 using namespace std::chrono;
 using namespace std::placeholders;
@@ -128,8 +129,23 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   /* Track the most recent sample time. */
   state.last_sample_time = sample_time;
 
+  bool was_in_rest = state.in_rest;
+
   /* Update experiment state based on sample time. */
   update_experiment_state(sample_time);
+
+  /* Update timing reference for subsequent predetermined trials.
+     Always overwrite with the most recent relevant event — last writer wins:
+     session start < pulse trigger < rest end (if both happen on the same sample). */
+  if (msg->is_session_start) {
+    state.pending_reference = {msg->time, msg->eeg_device_timestamp};
+  }
+  if (msg->pulse_trigger) {
+    state.pending_reference = {msg->time, msg->eeg_device_timestamp};
+  }
+  if (was_in_rest && !state.in_rest) {
+    state.pending_reference = {msg->time, msg->eeg_device_timestamp};
+  }
 
   /* Create enriched sample. */
   auto enriched = *msg;
@@ -141,6 +157,10 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.trial_in_stage = state.trial_in_stage;
   enriched.trial_in_session = state.trial_in_session;
   enriched.attempt_in_session = state.attempt_in_session;
+
+  /* Initialize reference fields to NaN (set below for predetermined trials). */
+  enriched.reference_time = std::numeric_limits<double>::quiet_NaN();
+  enriched.reference_eeg_device_timestamp = std::numeric_limits<double>::quiet_NaN();
 
   /* Copy and consume pending event flags (true on exactly one sample per transition). */
   enriched.is_new_stage = state.is_new_stage_pending;
@@ -161,6 +181,17 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
         const auto& trial_entry = stage.trial_types[type_idx];
         enriched.trial_timing = static_cast<uint8_t>(trial_entry.timing);
         enriched.trial_type = trial_entry.type;
+      }
+
+      /* For predetermined trials starting a new attempt, attach the timing reference. */
+      if (enriched.is_new_attempt &&
+          enriched.trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED) {
+
+        enriched.reference_time = state.pending_reference.time;
+        enriched.reference_eeg_device_timestamp = state.pending_reference.eeg_device_timestamp;
+
+        RCLCPP_INFO(this->get_logger(), "Predetermined trial reference: %.3f s",
+          state.pending_reference.time);
       }
     }
   }
@@ -439,7 +470,7 @@ void ExperimentCoordinator::start_rest(const Rest& rest, double current_time) {
 void ExperimentCoordinator::end_rest() {
   double rest_duration = get_experiment_time(state.last_sample_time) - state.rest_start_time;
   RCLCPP_INFO(this->get_logger(), "Rest ended (duration: %.1f s)", rest_duration);
-  
+
   state.in_rest = false;
   state.rest_target_time.reset();
 }

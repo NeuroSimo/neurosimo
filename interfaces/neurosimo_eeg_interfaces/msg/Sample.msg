@@ -38,6 +38,13 @@ uint8 TRIAL_TIMING_PREDETERMINED=1
 uint8 trial_timing              # How the trial is triggered
 string trial_type               # Trial type (e.g. "low_iti"), empty for periodic
 
+# Reference time for predetermined trials
+# The timing reference from which the next pulse offset is calculated.
+# Filled by ExperimentCoordinator on the is_new_attempt sample for predetermined trials;
+# NaN if not set (i.e. for all other samples).
+float64 reference_time                  # Reference time (seconds since recording start)
+float64 reference_eeg_device_timestamp  # EEG device timestamp corresponding to reference_time
+
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)
 # ============================================================================

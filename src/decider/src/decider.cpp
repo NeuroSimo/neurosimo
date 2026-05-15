@@ -858,13 +858,10 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* Determine trial timing from the enriched sample. */
-  bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
+  /* Handle periodic trials. */
+  bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
 
-  if (is_predetermined) {
-    /* Predetermined timing: skip periodic processing, call process_predetermined on trial change. */
-    handle_predetermined_trial(msg, sample_time);
-  } else {
+  if (is_periodic) {
     /* Periodic timing (default): trigger periodic processing at regular intervals. */
     bool periodic_processing_triggered = false;
 
@@ -893,6 +890,12 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     }
   }
 
+  /* Handle predetermined trials. */
+  bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
+  if (is_predetermined) {
+    handle_predetermined_trial(msg, sample_time);
+  }
+
   /* Check if any decider-defined events occur at the current sample. */
   auto [has_event, event_time] = consume_next_event(sample_time);
   if (has_event) {
@@ -911,35 +914,12 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 }
 
 void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time) {
-  /* Detect trial change: either a new stage or trial number incremented. */
-  bool stage_changed = (msg->stage_name != this->previous_stage_name);
+  /* Detect trial change. */
   bool trial_changed = (msg->trial != this->previous_trial);
-
-  if (stage_changed || trial_changed || !this->predetermined_trial_pending) {
-    this->previous_stage_name = msg->stage_name;
-    this->previous_trial = msg->trial;
-
-    /* Only trigger if the predetermined trial has NOT already been handled. */
-    this->predetermined_trial_pending = true;
-  }
-
-  if (!this->predetermined_trial_pending) {
+  if (!trial_changed) {
     return;
   }
-
-  /* Check minimum trial interval. */
-  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                       sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
-  if (!minimum_trial_interval_passed) {
-    return;
-  }
-
-  /* Check for backpressure. */
-  if (detect_backpressure(msg)) {
-    return;
-  }
-
-  this->predetermined_trial_pending = false;
+  this->previous_trial = msg->trial;
 
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
     msg->trial, msg->stage_name.c_str(), msg->trial_type.c_str(), sample_time);
@@ -956,7 +936,7 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "process_predetermined failed at time %.3f (s).", sample_time);
     this->error_occurred = true;
-    this->abort_session("Decider process_predetermined error");
+    this->abort_session("Error in process_predetermined method");
     return;
   }
 
@@ -976,9 +956,12 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   }
 
   bool request_timed_trigger = result.trigger_offset != nullptr;
-  bool decided_yes = request_timed_trigger || !result.targeted_pulses.empty();
+  bool request_targeted_pulses = !result.targeted_pulses.empty();
 
-  if (!decided_yes) {
+  if (!request_timed_trigger && !request_targeted_pulses) {
+    RCLCPP_ERROR(this->get_logger(), "No stimulation requested for predetermined trial at time %.3f (s).", sample_time);
+    this->error_occurred = true;
+    this->abort_session("No stimulation requested for predetermined trial");
     return;
   }
 
@@ -986,25 +969,15 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   if (request_timed_trigger) {
     requested_stimulation_time = sample_time + *result.trigger_offset;
   }
-  if (!result.targeted_pulses.empty()) {
+  if (request_targeted_pulses) {
     requested_stimulation_time = sample_time + result.targeted_pulses.front().time_offset;
   }
-
-  /* Publish decision trace. */
-  auto decision_trace = neurosimo_pipeline_interfaces::msg::DecisionTrace();
-  decision_trace.decision_id = ++this->decision_id;
-  decision_trace.status = neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES;
-  decision_trace.reference_sample_time = sample_time;
-  decision_trace.reference_sample_index = msg->sample_index;
-  decision_trace.stimulate = true;
-  this->decision_trace_publisher->publish(decision_trace);
 
   /* Publish trial trace. */
   auto trial_trace = neurosimo_pipeline_interfaces::msg::TrialTrace();
   trial_trace.session_id = this->session_id;
   trial_trace.trial_id = ++this->trial_id;
   trial_trace.requested_stimulation_time = requested_stimulation_time;
-  trial_trace.decision = decision_trace;
   this->trial_trace_publisher->publish(trial_trace);
 
   /* Send timed trigger. */

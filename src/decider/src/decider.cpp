@@ -957,12 +957,16 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
 void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   auto sample_time = msg->time;
-
   bool periodic_processing_triggered = false;
 
   // Initialize next periodic processing time if not already set.
   if (std::isnan(this->next_periodic_processing_time)) {
     this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
+  }
+
+  /* Reset periodic processing time at the start of a new attempt to ensure alignment with attempt start. */
+  if (msg->is_new_attempt) {
+    this->next_periodic_processing_time = sample_time + this->decider_wrapper->get_periodic_processing_interval();
   }
 
   // Check if it's time to trigger periodic processing.

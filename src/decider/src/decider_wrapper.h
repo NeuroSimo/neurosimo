@@ -89,7 +89,7 @@ public:
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t trial_in_session);
+    uint64_t trial_in_stage);
 
   ProcessResult process_pulse(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
@@ -98,7 +98,7 @@ public:
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t trial_in_session);
+    uint64_t trial_in_stage);
 
   ProcessResult process_event(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
@@ -107,7 +107,7 @@ public:
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t trial_in_session);
+    uint64_t trial_in_stage);
 
   /* Call Python process_predetermined for predetermined trials. */
   ProcessResult process_predetermined(

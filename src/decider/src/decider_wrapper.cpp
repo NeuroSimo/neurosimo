@@ -1003,7 +1003,7 @@ ProcessResult DeciderWrapper::process_predetermined(
 
   py::object py_result;
   try {
-    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
+    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PREDETERMINED);
     py_result = decider_instance->attr("process_predetermined")(
       reference_time, stage_name, trial, trial_type);
 

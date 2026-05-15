@@ -121,6 +121,7 @@ private:
   void process_ready_deferred_requests(double_t current_sample_time);
 
   void handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time);
+  void handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time);
 
   rclcpp::Logger logger;
 

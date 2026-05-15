@@ -860,34 +860,8 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Handle periodic trials. */
   bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
-
   if (is_periodic) {
-    /* Periodic timing (default): trigger periodic processing at regular intervals. */
-    bool periodic_processing_triggered = false;
-
-    // Initialize next periodic processing time if not already set.
-    if (std::isnan(this->next_periodic_processing_time)) {
-      this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
-    }
-
-    // Check if it's time to trigger periodic processing.
-    if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
-      /* Move to next processing time and mark that periodic processing should occur. */
-      this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
-      periodic_processing_triggered = true;
-    }
-
-    /* Check if minimum trial interval has passed since last trigger. */
-    bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                         sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
-
-    /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
-    bool backpressure_detected = detect_backpressure(msg);
-
-    /* Check if periodic processing should trigger (skip if backpressure detected). */
-    if (periodic_processing_triggered && minimum_trial_interval_passed && !backpressure_detected) {
-      enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
-    }
+    handle_periodic_trial(msg, sample_time);
   }
 
   /* Handle predetermined trials. */
@@ -911,6 +885,34 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
+}
+
+void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time) {
+  bool periodic_processing_triggered = false;
+
+  // Initialize next periodic processing time if not already set.
+  if (std::isnan(this->next_periodic_processing_time)) {
+    this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
+  }
+
+  // Check if it's time to trigger periodic processing.
+  if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
+    /* Move to next processing time and mark that periodic processing should occur. */
+    this->next_periodic_processing_time += this->decider_wrapper->get_periodic_processing_interval();
+    periodic_processing_triggered = true;
+  }
+
+  /* Check if minimum trial interval has passed since last trigger. */
+  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                        sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
+
+  /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
+  bool backpressure_detected = detect_backpressure(msg);
+
+  /* Check if periodic processing should trigger (skip if backpressure detected). */
+  if (periodic_processing_triggered && minimum_trial_interval_passed && !backpressure_detected) {
+    enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
+  }
 }
 
 void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time) {

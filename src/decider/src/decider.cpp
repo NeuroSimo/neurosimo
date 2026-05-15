@@ -910,6 +910,10 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     return;
   }
 
+  /* Detect trial change. */
+  bool trial_changed = (msg->trial != this->current_trial);
+  this->current_trial = msg->trial;
+
   /* Check for sample index discontinuity and handle gaps. */
   detect_and_handle_sample_gap(msg);
 
@@ -927,7 +931,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Handle predetermined trials. */
   bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
-  if (is_predetermined) {
+  if (is_predetermined && trial_changed) {
     handle_predetermined_trial(msg);
   }
 
@@ -983,13 +987,6 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
 }
 
 void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
-  /* Detect trial change. */
-  bool trial_changed = (msg->trial != this->previous_trial);
-  if (!trial_changed) {
-    return;
-  }
-  this->previous_trial = msg->trial;
-
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
     msg->trial, msg->stage_name.c_str(), msg->trial_type.c_str(), msg->time);
 

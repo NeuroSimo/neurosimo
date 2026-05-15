@@ -537,19 +537,31 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   double_t sample_time = request.triggering_sample->time;
   std::string stage_name = request.triggering_sample->stage_name;
 
-  /* Process the sample. */
-  auto [success, trigger_offset, coil_target, targeted_pulses] = this->decider_wrapper->process(
-    this->sensory_stimuli,
-    this->sample_buffer,
-    sample_time,
-    request.processing_reason,
-    this->event_queue,
-    this->is_coil_at_target,
-    stage_name,
-    request.triggering_sample->trial_count);
+  /* Process the sample by dispatching to the appropriate method. */
+  ProcessResult result;
+  switch (request.processing_reason) {
+    case ProcessingReason::Periodic:
+      result = this->decider_wrapper->process_periodic(
+        this->sensory_stimuli, this->sample_buffer, sample_time,
+        this->event_queue, this->is_coil_at_target, stage_name,
+        request.triggering_sample->trial_count);
+      break;
+    case ProcessingReason::Pulse:
+      result = this->decider_wrapper->process_pulse(
+        this->sensory_stimuli, this->sample_buffer, sample_time,
+        this->event_queue, this->is_coil_at_target, stage_name,
+        request.triggering_sample->trial_count);
+      break;
+    case ProcessingReason::Event:
+      result = this->decider_wrapper->process_event(
+        this->sensory_stimuli, this->sample_buffer, sample_time,
+        this->event_queue, this->is_coil_at_target, stage_name,
+        request.triggering_sample->trial_count);
+      break;
+  }
 
   /* Log and return early if the Python call failed. */
-  if (!success) {
+  if (!result.success) {
     RCLCPP_ERROR(this->get_logger(),
                  "Python call failed, not processing EEG sample at time %.3f (s).",
                  sample_time);
@@ -570,9 +582,9 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
   
   /* Publish coil target if it is set. */
-  if (!coil_target.empty()) {
+  if (!result.coil_target.empty()) {
     auto coil_target_msg = shared_stimulation_interfaces::msg::CoilTarget();
-    coil_target_msg.target_name = coil_target;
+    coil_target_msg.target_name = result.coil_target;
     RCLCPP_INFO(this->get_logger(), "Sending coil target %s to neuronavigation at time %.3f (s).", coil_target_msg.target_name.c_str(), sample_time);
     this->coil_target_publisher->publish(coil_target_msg);
   }
@@ -607,14 +619,14 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
 
   /* Check if timed triggers are requested. */
-  bool request_timed_trigger = trigger_offset != nullptr;
+  bool request_timed_trigger = result.trigger_offset != nullptr;
 
   double_t requested_stimulation_time = std::numeric_limits<double_t>::quiet_NaN();
   if (request_timed_trigger) {
-    requested_stimulation_time = sample_time + *trigger_offset;
+    requested_stimulation_time = sample_time + *result.trigger_offset;
   }
-  if (!targeted_pulses.empty()) {
-    requested_stimulation_time = sample_time + targeted_pulses.front().time_offset;
+  if (!result.targeted_pulses.empty()) {
+    requested_stimulation_time = sample_time + result.targeted_pulses.front().time_offset;
   }
 
   /* Update decision fingerprint with evaluation info. */
@@ -636,7 +648,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
 
   decision_trace.decision_id = ++this->decision_id;
 
-  bool decided_yes = request_timed_trigger || !targeted_pulses.empty();
+  bool decided_yes = request_timed_trigger || !result.targeted_pulses.empty();
   decision_trace.status = decided_yes ? neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_YES
                                       : neurosimo_pipeline_interfaces::msg::DecisionTrace::STATUS_DECIDED_NO;
 
@@ -675,7 +687,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
       RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", requested_stimulation_time);
 
       auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
-      request_msg->trigger_offset = *trigger_offset;
+      request_msg->trigger_offset = *result.trigger_offset;
       request_msg->session_id = this->session_id;
       request_msg->trial_id = this->trial_id;
       request_msg->reference_sample_time = sample_time;
@@ -691,12 +703,12 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
   }
 
   /* If targeted pulses are requested, send them. */
-  if (!targeted_pulses.empty()) {
+  if (!result.targeted_pulses.empty()) {
 
     /* Enforce minimum trial interval for targeted pulse requests. */
-    double_t first_target_time = sample_time + targeted_pulses.front().time_offset;
-    double_t last_target_time = sample_time + targeted_pulses.front().time_offset;
-    for (const auto& pulse : targeted_pulses) {
+    double_t first_target_time = sample_time + result.targeted_pulses.front().time_offset;
+    double_t last_target_time = sample_time + result.targeted_pulses.front().time_offset;
+    for (const auto& pulse : result.targeted_pulses) {
       first_target_time = std::min(first_target_time, sample_time + pulse.time_offset);
       last_target_time = std::max(last_target_time, sample_time + pulse.time_offset);
     }
@@ -710,7 +722,7 @@ void EegDecider::process_deferred_request(const DeferredProcessingRequest& reque
       targeted_pulses_msg.session_id = this->session_id;
       targeted_pulses_msg.reference_eeg_device_timestamp = request.triggering_sample->eeg_device_timestamp;
       targeted_pulses_msg.sequence_number = this->targeted_pulses_sequence_number;
-      targeted_pulses_msg.pulses = targeted_pulses;
+      targeted_pulses_msg.pulses = result.targeted_pulses;
 
       this->targeted_pulses_sequence_number++;
 
@@ -933,7 +945,7 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
     msg->trial, msg->stage_name.c_str(), msg->trial_type.c_str(), sample_time);
 
   /* Call process_predetermined on the Python side. */
-  auto [success, trigger_offset, coil_target, targeted_pulses] = this->decider_wrapper->process_predetermined(
+  auto result = this->decider_wrapper->process_predetermined(
     this->sensory_stimuli,
     this->event_queue,
     sample_time,
@@ -941,7 +953,7 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
     msg->trial,
     msg->trial_type);
 
-  if (!success) {
+  if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "process_predetermined failed at time %.3f (s).", sample_time);
     this->error_occurred = true;
     this->abort_session("Decider process_predetermined error");
@@ -957,14 +969,14 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   }
 
   /* Publish coil target if set. */
-  if (!coil_target.empty()) {
+  if (!result.coil_target.empty()) {
     auto coil_target_msg = shared_stimulation_interfaces::msg::CoilTarget();
-    coil_target_msg.target_name = coil_target;
+    coil_target_msg.target_name = result.coil_target;
     this->coil_target_publisher->publish(coil_target_msg);
   }
 
-  bool request_timed_trigger = trigger_offset != nullptr;
-  bool decided_yes = request_timed_trigger || !targeted_pulses.empty();
+  bool request_timed_trigger = result.trigger_offset != nullptr;
+  bool decided_yes = request_timed_trigger || !result.targeted_pulses.empty();
 
   if (!decided_yes) {
     return;
@@ -972,10 +984,10 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
 
   double_t requested_stimulation_time = std::numeric_limits<double_t>::quiet_NaN();
   if (request_timed_trigger) {
-    requested_stimulation_time = sample_time + *trigger_offset;
+    requested_stimulation_time = sample_time + *result.trigger_offset;
   }
-  if (!targeted_pulses.empty()) {
-    requested_stimulation_time = sample_time + targeted_pulses.front().time_offset;
+  if (!result.targeted_pulses.empty()) {
+    requested_stimulation_time = sample_time + result.targeted_pulses.front().time_offset;
   }
 
   /* Publish decision trace. */
@@ -1000,7 +1012,7 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
     RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s) [predetermined].", requested_stimulation_time);
 
     auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
-    request_msg->trigger_offset = *trigger_offset;
+    request_msg->trigger_offset = *result.trigger_offset;
     request_msg->session_id = this->session_id;
     request_msg->trial_id = this->trial_id;
     request_msg->reference_sample_time = sample_time;
@@ -1010,18 +1022,18 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   }
 
   /* Send targeted pulses. */
-  if (!targeted_pulses.empty()) {
+  if (!result.targeted_pulses.empty()) {
     auto targeted_pulses_msg = shared_stimulation_interfaces::msg::TargetedPulses();
     targeted_pulses_msg.session_id = this->session_id;
     targeted_pulses_msg.reference_eeg_device_timestamp = msg->eeg_device_timestamp;
     targeted_pulses_msg.sequence_number = this->targeted_pulses_sequence_number++;
 
-    targeted_pulses_msg.pulses = targeted_pulses;
+    targeted_pulses_msg.pulses = result.targeted_pulses;
     RCLCPP_INFO(this->get_logger(), "Publishing %zu targeted pulse(s) at time %.3f (s) [predetermined].",
       targeted_pulses_msg.pulses.size(), sample_time);
     this->targeted_pulses_publisher->publish(targeted_pulses_msg);
 
-    double_t last_target_time = sample_time + targeted_pulses.back().time_offset;
+    double_t last_target_time = sample_time + result.targeted_pulses.back().time_offset;
     this->previous_stimulation_time = last_target_time;
   }
 }

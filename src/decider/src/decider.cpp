@@ -538,95 +538,76 @@ void EegDecider::handle_stimulation_request(
   bool request_timed_trigger = result.trigger_offset != nullptr;
   bool request_targeted_pulses = !result.targeted_pulses.empty();
 
-  double_t requested_stimulation_time = std::numeric_limits<double_t>::quiet_NaN();
+  double_t earliest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
+  double_t latest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
+
   if (request_timed_trigger) {
-    requested_stimulation_time = sample_time + *result.trigger_offset;
+    earliest_pulse_time = sample_time + *result.trigger_offset;
+    latest_pulse_time = earliest_pulse_time;
   }
+
   if (request_targeted_pulses) {
-    requested_stimulation_time = sample_time + result.targeted_pulses.front().time_offset;
+    earliest_pulse_time = sample_time + result.targeted_pulses.front().time_offset;
+    latest_pulse_time = earliest_pulse_time;
+    for (const auto& pulse : result.targeted_pulses) {
+      earliest_pulse_time = std::min(earliest_pulse_time, sample_time + pulse.time_offset);
+      latest_pulse_time = std::max(latest_pulse_time, sample_time + pulse.time_offset);
+    }
   }
 
   /* Publish trial trace. */
   auto trial_trace = neurosimo_pipeline_interfaces::msg::TrialTrace();
   trial_trace.session_id = this->session_id;
   trial_trace.trial_id = ++this->trial_id;
-  trial_trace.requested_stimulation_time = requested_stimulation_time;
+  trial_trace.requested_stimulation_time = earliest_pulse_time;
   this->trial_trace_publisher->publish(trial_trace);
+
+  /* Check that the minimum trial interval has passed. */
+  auto time_since_previous_trial = earliest_pulse_time - this->previous_stimulation_time;
+  auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                            time_since_previous_trial >= this->minimum_trial_interval;
+
+  if (!has_minimum_trial_interval_passed) {
+    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s).",
+      this->minimum_trial_interval,
+      time_since_previous_trial);
+
+    this->error_occurred = true;
+    this->abort_session("Minimum trial interval not passed");
+    return;
+  }
 
   /* If timed triggers are requested, send them. */
   if (request_timed_trigger) {
-    /* Check that the minimum trial interval has passed. */
-    auto time_since_previous_trial = requested_stimulation_time - this->previous_stimulation_time;
-    auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                             time_since_previous_trial >= this->minimum_trial_interval;
+    RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", earliest_pulse_time);
 
-    if (has_minimum_trial_interval_passed) {
-      RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", requested_stimulation_time);
-
-      auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
-      request_msg->trigger_offset = *result.trigger_offset;
-      request_msg->session_id = this->session_id;
-      request_msg->trial_id = this->trial_id;
-      request_msg->reference_sample_time = sample_time;
-      this->request_timed_trigger(request_msg);
-
-      /* Update the previous stimulation time. */
-      this->previous_stimulation_time = requested_stimulation_time;
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
-        this->minimum_trial_interval,
-        time_since_previous_trial);
-      
-      this->error_occurred = true;
-      this->abort_session("Minimum trial interval not passed");
-      return;
-    }
+    auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
+    request_msg->trigger_offset = *result.trigger_offset;
+    request_msg->session_id = this->session_id;
+    request_msg->trial_id = this->trial_id;
+    request_msg->reference_sample_time = sample_time;
+    this->request_timed_trigger(request_msg);
   }
 
   /* If targeted pulses are requested, send them. */
   if (request_targeted_pulses) {
-    /* Enforce minimum trial interval for targeted pulse requests. */
-    double_t first_target_time = sample_time + result.targeted_pulses.front().time_offset;
-    double_t last_target_time = sample_time + result.targeted_pulses.front().time_offset;
-    for (const auto& pulse : result.targeted_pulses) {
-      first_target_time = std::min(first_target_time, sample_time + pulse.time_offset);
-      last_target_time = std::max(last_target_time, sample_time + pulse.time_offset);
-    }
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Publishing %zu targeted pulse(s) at time %.3f (s).",
+      result.targeted_pulses.size(),
+      sample_time);
 
-    auto time_since_previous_trial = first_target_time - this->previous_stimulation_time;
-    auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                             time_since_previous_trial >= this->minimum_trial_interval;
+    auto targeted_pulses_msg = shared_stimulation_interfaces::msg::TargetedPulses();
+    targeted_pulses_msg.session_id = this->session_id;
+    targeted_pulses_msg.reference_eeg_device_timestamp = triggering_sample->eeg_device_timestamp;
+    targeted_pulses_msg.sequence_number = ++this->targeted_pulses_sequence_number;
+    targeted_pulses_msg.pulses = result.targeted_pulses;
 
-    if (has_minimum_trial_interval_passed) {
-      auto targeted_pulses_msg = shared_stimulation_interfaces::msg::TargetedPulses();
-      targeted_pulses_msg.session_id = this->session_id;
-      targeted_pulses_msg.reference_eeg_device_timestamp = triggering_sample->eeg_device_timestamp;
-      targeted_pulses_msg.sequence_number = this->targeted_pulses_sequence_number;
-      targeted_pulses_msg.pulses = result.targeted_pulses;
-
-      this->targeted_pulses_sequence_number++;
-
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Publishing %zu targeted pulse(s) at time %.3f (s).",
-        targeted_pulses_msg.pulses.size(),
-        sample_time);
-      this->targeted_pulses_publisher->publish(targeted_pulses_msg);
-
-      /* Update the previous stimulation time. */
-      this->previous_stimulation_time = last_target_time;
-    } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Targeted pulses requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s), ignoring request.",
-        this->minimum_trial_interval,
-        time_since_previous_trial);
-
-      this->error_occurred = true;
-      this->abort_session("Minimum trial interval not passed");
-      return;
-    }
+    this->targeted_pulses_publisher->publish(targeted_pulses_msg);
   }
+
+  /* Update the previous stimulation time. */
+  this->previous_stimulation_time = latest_pulse_time;
 }
 
 void EegDecider::process_pulse_request(const DeferredProcessingRequest& request) {

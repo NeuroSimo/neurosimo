@@ -12,7 +12,7 @@ import {
   DASHBOARD_PANEL_HEIGHT,
 } from 'styles/General'
 
-import { SessionStatisticsContext, getStatusLabel, TrialTrace } from 'providers/SessionStatisticsProvider'
+import { SessionStatisticsContext, getStatusLabel, AttemptTrace } from 'providers/SessionStatisticsProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 
 const StimulationPanelTitle = styled.div`
@@ -36,28 +36,28 @@ const StimulationPanel = styled(StyledPanel)`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { loopbackLatency, pulseProcessingLatency, eventProcessingLatency, decisionTrace, trialTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
+  const { loopbackLatency, pulseProcessingLatency, eventProcessingLatency, decisionTrace, attemptTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
   const { sessionState } = useSession()
-  const [latestTrialTrace, setLatestTrialTrace] = useState<TrialTrace | null>(null)
+  const [latestAttemptTrace, setLatestAttemptTrace] = useState<AttemptTrace | null>(null)
   const [previousSessionState, setPreviousSessionState] = useState<SessionStateValue>(SessionStateValue.STOPPED)
 
   // Reset traces when session starts
   useEffect(() => {
     if (previousSessionState === SessionStateValue.STOPPED &&
         (sessionState.state === SessionStateValue.INITIALIZING || sessionState.state === SessionStateValue.RUNNING)) {
-      setLatestTrialTrace(null)
+      setLatestAttemptTrace(null)
       setPulseProcessingLatency(null)
       setEventProcessingLatency(null)
     }
     setPreviousSessionState(sessionState.state)
   }, [sessionState.state, previousSessionState, setPulseProcessingLatency, setEventProcessingLatency])
 
-  // Update latest trial trace from context
+  // Update latest attempt trace from context
   useEffect(() => {
-    if (trialTrace) {
-      setLatestTrialTrace(trialTrace)
+    if (attemptTrace) {
+      setLatestAttemptTrace(attemptTrace)
     }
-  }, [trialTrace])
+  }, [attemptTrace])
 
   // Decision latency comes from the live decision trace stream
   const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
@@ -73,33 +73,33 @@ export const StimulationDisplay: React.FC = () => {
     ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  // Pulse info comes from the trial trace (with embedded decision for reference time)
-  const trialDecision = latestTrialTrace?.decision
+  // Pulse info comes from the attempt trace (with embedded decision for reference time)
+  const trialDecision = latestAttemptTrace?.decision
   const isReactiveMode =
-    latestTrialTrace?.requested_stimulation_time !== undefined &&
+    latestAttemptTrace?.requested_stimulation_time !== undefined &&
     trialDecision?.reference_sample_time !== undefined &&
-    Math.abs(latestTrialTrace.requested_stimulation_time - trialDecision.reference_sample_time) <= 0.001
+    Math.abs(latestAttemptTrace.requested_stimulation_time - trialDecision.reference_sample_time) <= 0.001
 
   const formattedReferenceSampleTime = trialDecision?.reference_sample_time
     ? trialDecision.reference_sample_time.toFixed(3).replace(/\.?0+$/, '') + ' s'
     : '\u2013'
   const formattedRequestedStimulationOffset =
-    latestTrialTrace?.requested_stimulation_time !== undefined && trialDecision?.reference_sample_time !== undefined
-    ? '+' + ((latestTrialTrace.requested_stimulation_time - trialDecision.reference_sample_time) * 1000).toFixed(1) + ' ms'
+    latestAttemptTrace?.requested_stimulation_time !== undefined && trialDecision?.reference_sample_time !== undefined
+    ? '+' + ((latestAttemptTrace.requested_stimulation_time - trialDecision.reference_sample_time) * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const stimulationHorizonMs =
-    latestTrialTrace?.stimulation_horizon !== undefined ? latestTrialTrace.stimulation_horizon * 1000 : undefined
+    latestAttemptTrace?.stimulation_horizon !== undefined ? latestAttemptTrace.stimulation_horizon * 1000 : undefined
   const formattedStimulationHorizon =
     stimulationHorizonMs !== undefined ? '>' + stimulationHorizonMs.toFixed(1) + ' ms' : '\u2013'
-  const formattedStrictHorizon = latestTrialTrace?.strict_stimulation_horizon !== undefined
-    ? '>' + (latestTrialTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
+  const formattedStrictHorizon = latestAttemptTrace?.strict_stimulation_horizon !== undefined
+    ? '>' + (latestAttemptTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const formattedTimingOffset = latestTrialTrace?.timing_offset !== undefined && latestTrialTrace.timing_offset !== 0
-    ? (latestTrialTrace.timing_offset * 1000).toFixed(1) + ' ms'
+  const formattedTimingOffset = latestAttemptTrace?.timing_offset !== undefined && latestAttemptTrace.timing_offset !== 0
+    ? (latestAttemptTrace.timing_offset * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const baseStatus = latestTrialTrace?.status !== undefined ? getStatusLabel(latestTrialTrace.status) : '\u2013'
+  const baseStatus = latestAttemptTrace?.status !== undefined ? getStatusLabel(latestAttemptTrace.status) : '\u2013'
   const reactiveTooLateStatus =
-    isReactiveMode && latestTrialTrace?.status === 8 && stimulationHorizonMs !== undefined
+    isReactiveMode && latestAttemptTrace?.status === 8 && stimulationHorizonMs !== undefined
       ? `Too late (+${stimulationHorizonMs.toFixed(1)} ms)`
       : null
   const formattedStatus = reactiveTooLateStatus ?? baseStatus

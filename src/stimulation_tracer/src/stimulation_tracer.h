@@ -15,7 +15,7 @@
 #include "std_msgs/msg/empty.hpp"
 #include "neurosimo_eeg_interfaces/msg/sample.hpp"
 #include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
-#include "neurosimo_pipeline_interfaces/msg/trial_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_stimulation_tracer.hpp"
 #include "neurosimo_pipeline_interfaces/srv/finalize_stimulation_tracer.hpp"
 
@@ -29,9 +29,9 @@ private:
 
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_sample_subscriber;
   rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_subscriber;
-  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::TrialTrace>::SharedPtr trial_trace_subscriber;
-  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TrialTrace>::SharedPtr trial_trace_publisher;
-  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TrialTrace>::SharedPtr trial_trace_final_publisher;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_subscriber;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_final_publisher;
 
   /* Service servers for initialization and finalization */
   rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeStimulationTracer>::SharedPtr initialize_service_server;
@@ -42,8 +42,8 @@ private:
   std::array<uint8_t, 16> current_session_id = {};
   std::string data_source = "";
 
-  /* Storage for trial traces keyed by trial_id */
-  std::map<uint64_t, std::vector<neurosimo_pipeline_interfaces::msg::TrialTrace>> trial_traces;
+  /* Storage for attempt traces keyed by attempt_id */
+  std::map<uint64_t, std::vector<neurosimo_pipeline_interfaces::msg::AttemptTrace>> attempt_traces;
 
   /* Storage for decision traces, used to match decisions to trials */
   std::vector<neurosimo_pipeline_interfaces::msg::DecisionTrace> decision_traces;
@@ -61,7 +61,7 @@ private:
 
   void handle_eeg_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   void handle_decision_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg);
-  void handle_trial_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TrialTrace> msg);
+  void handle_attempt_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg);
   void handle_pulse_processed(const std_msgs::msg::Empty::SharedPtr msg);
 
   void handle_initialize_stimulation_tracer(
@@ -72,11 +72,11 @@ private:
     const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer::Request> request,
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeStimulationTracer::Response> response);
 
-  /* Find the matching trial trace for a pulse trigger */
-  neurosimo_pipeline_interfaces::msg::TrialTrace* find_matching_trial(uint64_t pulse_system_time);
+  /* Find the matching attempt trace for a pulse trigger */
+  neurosimo_pipeline_interfaces::msg::AttemptTrace* find_matching_attempt(uint64_t pulse_system_time);
 
-  /* Merge all trial traces for a given key and publish final */
-  void finalize_trial(uint64_t trial_id);
+  /* Merge all attempt traces for a given key and publish final */
+  void finalize_attempt(uint64_t attempt_id);
 
   /* Check if a trial trace is terminal (finalized) */
   bool is_terminal_status(uint8_t status);

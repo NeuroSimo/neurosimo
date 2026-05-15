@@ -42,9 +42,9 @@ TOPICS_TO_RECORD = [
     # Decision traces
     '/neurosimo/pipeline/decision_trace',        # All decisions (including negative) for diagnostics
 
-    # Trial traces
-    '/neurosimo/pipeline/trial_trace',           # Intermediate trial trace stream
-    '/neurosimo/pipeline/trial_trace/final',     # Finalized trial traces
+    # Attempt traces
+    '/neurosimo/pipeline/attempt_trace',           # Intermediate attempt trace stream
+    '/neurosimo/pipeline/attempt_trace/final',     # Finalized attempt traces
 
     # Heartbeats (for debugging)
     '/neurosimo/eeg_bridge/heartbeat',

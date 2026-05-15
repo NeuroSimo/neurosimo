@@ -4,7 +4,7 @@ uint32 stage_index
 uint32 total_stages
 
 # Trial progress
-uint32 trial
+uint32 trial_in_stage
 uint32 total_trials_in_stage
 
 # State flags

@@ -123,7 +123,7 @@ export const ExperimentStatePanel: React.FC = () => {
         <StateRow>
           <StateTitle>Trial</StateTitle>
           <StateValue>
-            {experimentState ? (experimentState.in_rest ? '—' : `${experimentState.trial}/${experimentState.total_trials_in_stage || 0}`) : '—'}
+            {experimentState ? (experimentState.in_rest ? '—' : `${experimentState.trial_in_stage}/${experimentState.total_trials_in_stage || 0}`) : '—'}
           </StateValue>
         </StateRow>
         <br />

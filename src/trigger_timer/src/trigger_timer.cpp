@@ -55,9 +55,9 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     "/neurosimo/pipeline/trigger_timer/finalize",
     std::bind(&TriggerTimer::handle_finalize_trigger_timer, this, _1, _2));
 
-  /* Publisher for trial trace. */
-  this->trial_trace_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::TrialTrace>(
-    "/neurosimo/pipeline/trial_trace",
+  /* Publisher for attempt trace. */
+  this->attempt_trace_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>(
+    "/neurosimo/pipeline/attempt_trace",
     10);
 
   /* Publisher for timing latency. */
@@ -255,7 +255,7 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
       double_t estimated_current_time = estimate_current_sample_time();
       double_t error = estimated_current_time - trigger_time;
 
-      uint8_t status = neurosimo_pipeline_interfaces::msg::TrialTrace::STATUS_ERROR;
+      uint8_t status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
 
       /* Capture timing when hardware trigger is fired. */
       auto now = std::chrono::high_resolution_clock::now();
@@ -266,21 +266,21 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
                   trigger_time, desired_pulse_time, estimated_current_time, error);
 
       if (labjack_manager && labjack_manager->trigger_output(tms_trigger_fio)) {
-        status = neurosimo_pipeline_interfaces::msg::TrialTrace::STATUS_FIRED;
+        status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_FIRED;
         this->last_trigger_time = desired_pulse_time;
       } else {
         RCLCPP_ERROR(logger, "Failed to trigger TMS trigger.");
       }
 
-      /* Publish TrialTrace (fired). */
-      auto trial_trace = neurosimo_pipeline_interfaces::msg::TrialTrace();
-      trial_trace.session_id = request->session_id;
-      trial_trace.trial_id = request->trial_id;
-      trial_trace.status = status;
-      trial_trace.system_time_hardware_fired = system_time_hardware_fired;
-      trial_trace.latency_corrected_time_at_firing = estimated_current_time;
+      /* Publish AttemptTrace (fired). */
+      auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
+      attempt_trace.session_id = request->session_id;
+      attempt_trace.attempt_id = request->attempt_id;
+      attempt_trace.status = status;
+      attempt_trace.system_time_hardware_fired = system_time_hardware_fired;
+      attempt_trace.latency_corrected_time_at_firing = estimated_current_time;
 
-      this->trial_trace_publisher->publish(trial_trace);
+      this->attempt_trace_publisher->publish(attempt_trace);
 
       /* Cancel timer to make it one-shot. */
       active_trigger_timer->cancel();
@@ -329,34 +329,34 @@ void TriggerTimer::handle_request_timed_trigger(
   uint8_t status;
   switch (result) {
     case SchedulingResult::SCHEDULED:
-      status = neurosimo_pipeline_interfaces::msg::TrialTrace::STATUS_SCHEDULED;
+      status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_SCHEDULED;
       break;
     case SchedulingResult::TOO_LATE:
-      status = neurosimo_pipeline_interfaces::msg::TrialTrace::STATUS_TOO_LATE;
+      status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_TOO_LATE;
       break;
     case SchedulingResult::LOOPBACK_LATENCY_EXCEEDED:
-      status = neurosimo_pipeline_interfaces::msg::TrialTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED;
+      status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED;
       break;
     case SchedulingResult::ERROR:
-      status = neurosimo_pipeline_interfaces::msg::TrialTrace::STATUS_ERROR;
+      status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
       break;
   }
 
-  /* Publish TrialTrace (scheduled or rejected). */
-  auto trial_trace = neurosimo_pipeline_interfaces::msg::TrialTrace();
-  trial_trace.session_id = request->session_id;
-  trial_trace.trial_id = request->trial_id;
-  trial_trace.status = status;
-  trial_trace.stimulation_horizon = stimulation_horizon;
-  trial_trace.strict_stimulation_horizon = strict_stimulation_horizon;
-  trial_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
-  trial_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
-  trial_trace.loopback_latency_at_scheduling = this->current_loopback_latency;
-  trial_trace.maximum_timing_offset = this->maximum_timing_offset;
-  trial_trace.maximum_loopback_latency = this->maximum_loopback_latency;
-  trial_trace.trigger_to_pulse_delay = this->trigger_to_pulse_delay;
+  /* Publish AttemptTrace (scheduled or rejected). */
+  auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
+  attempt_trace.session_id = request->session_id;
+  attempt_trace.attempt_id = request->attempt_id;
+  attempt_trace.status = status;
+  attempt_trace.stimulation_horizon = stimulation_horizon;
+  attempt_trace.strict_stimulation_horizon = strict_stimulation_horizon;
+  attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
+  attempt_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
+  attempt_trace.loopback_latency_at_scheduling = this->current_loopback_latency;
+  attempt_trace.maximum_timing_offset = this->maximum_timing_offset;
+  attempt_trace.maximum_loopback_latency = this->maximum_loopback_latency;
+  attempt_trace.trigger_to_pulse_delay = this->trigger_to_pulse_delay;
 
-  this->trial_trace_publisher->publish(trial_trace);
+  this->attempt_trace_publisher->publish(attempt_trace);
 
   /* Set response success based on scheduling result. */
   bool success = (result == SchedulingResult::SCHEDULED);

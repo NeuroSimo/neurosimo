@@ -179,10 +179,8 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Predetermined trial tracking: detect when trial number changes to trigger process_predetermined. */
-  uint32_t previous_trial = 0;
-  std::string previous_stage_name;
-  bool predetermined_trial_pending = false;
+  /* Used for tracking the previous trial number to detect when it changes. */
+  int32_t previous_trial = -1;
 
   StreamInfo stream_info;
 

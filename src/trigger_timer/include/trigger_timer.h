@@ -14,7 +14,7 @@
 #include "neurosimo_eeg_interfaces/msg/sample.hpp"
 
 #include "neurosimo_pipeline_interfaces/msg/latency.hpp"
-#include "neurosimo_pipeline_interfaces/msg/trial_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 
 #include "neurosimo_pipeline_interfaces/srv/request_timed_trigger.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_trigger_timer.hpp"
@@ -35,7 +35,7 @@ private:
   rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer>::SharedPtr initialize_service;
   rclcpp::Service<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer>::SharedPtr finalize_service;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr loopback_latency_publisher;
-  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TrialTrace>::SharedPtr trial_trace_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_raw_subscriber;

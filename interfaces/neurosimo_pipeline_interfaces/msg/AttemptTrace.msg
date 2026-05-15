@@ -1,7 +1,7 @@
 # ============================================================================
-# TrialTrace.msg
-# A trace event that tracks a single trial (stimulation attempt) through the
-# pipeline. Progressively enriched by multiple nodes.
+# AttemptTrace.msg
+# A trace event that tracks a single stimulation attempt through the pipeline.
+# Progressively enriched by multiple nodes.
 #
 # Time units:
 # - sample_time / requested_* / actual_* are seconds since recording start.
@@ -12,7 +12,7 @@
 # Metadata (filled by Decider or scheduler)
 # ----------------------------------------------------------------------------
 uint8[16] session_id
-uint64 trial_id                           # Increments per trial, resets per session
+uint64 attempt_in_session                         # Increments per attempt, resets per session
 
 # ----------------------------------------------------------------------------
 # Status (filled by each stage)

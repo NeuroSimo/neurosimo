@@ -43,9 +43,9 @@ export interface DecisionTrace extends ROSLIB.Message {
   system_time_decider_finished: number
 }
 
-export interface TrialTrace extends ROSLIB.Message {
+export interface AttemptTrace extends ROSLIB.Message {
   session_id: number[]
-  trial_id: number
+  attempt_id: number
   status: number
   requested_stimulation_time: number
   stimulation_horizon: number
@@ -71,13 +71,13 @@ interface SessionStatisticsContextType {
   pulseProcessingLatency: Latency | null
   eventProcessingLatency: Latency | null
   decisionTrace: DecisionTrace | null
-  trialTrace: TrialTrace | null
+  attemptTrace: AttemptTrace | null
 
   setLoopbackLatency: React.Dispatch<React.SetStateAction<Latency | null>>
   setPulseProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
   setEventProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
-  setTrialTrace: React.Dispatch<React.SetStateAction<TrialTrace | null>>
+  setAttemptTrace: React.Dispatch<React.SetStateAction<AttemptTrace | null>>
 }
 
 const defaultSessionStatisticsState: SessionStatisticsContextType = {
@@ -85,7 +85,7 @@ const defaultSessionStatisticsState: SessionStatisticsContextType = {
   pulseProcessingLatency: null,
   eventProcessingLatency: null,
   decisionTrace: null,
-  trialTrace: null,
+  attemptTrace: null,
 
   setLoopbackLatency: () => {
     console.warn('setLoopbackLatency is not yet initialized.')
@@ -99,8 +99,8 @@ const defaultSessionStatisticsState: SessionStatisticsContextType = {
   setDecisionTrace: () => {
     console.warn('setDecisionTrace is not yet initialized.')
   },
-  setTrialTrace: () => {
-    console.warn('setTrialTrace is not yet initialized.')
+  setAttemptTrace: () => {
+    console.warn('setAttemptTrace is not yet initialized.')
   },
 }
 
@@ -115,7 +115,7 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
   const [pulseProcessingLatency, setPulseProcessingLatency] = useState<Latency | null>(null)
   const [eventProcessingLatency, setEventProcessingLatency] = useState<Latency | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
-  const [trialTrace, setTrialTrace] = useState<TrialTrace | null>(null)
+  const [attemptTrace, setAttemptTrace] = useState<AttemptTrace | null>(null)
   const loopbackLatencyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -175,16 +175,16 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
       setDecisionTrace(message)
     })
 
-    /* Subscriber for final trial traces. */
-    const trialTraceSubscriber = new Topic<TrialTrace>({
+    /* Subscriber for final attempt traces. */
+    const attemptTraceSubscriber = new Topic<AttemptTrace>({
       ros: ros,
-      name: '/neurosimo/pipeline/trial_trace/final',
-      messageType: 'neurosimo_pipeline_interfaces/TrialTrace',
+      name: '/neurosimo/pipeline/attempt_trace/final',
+      messageType: 'neurosimo_pipeline_interfaces/AttemptTrace',
     })
 
-    trialTraceSubscriber.subscribe((message) => {
-      console.log('trialTrace', message)
-      setTrialTrace(message)
+    attemptTraceSubscriber.subscribe((message) => {
+      console.log('attemptTrace', message)
+      setAttemptTrace(message)
     })
 
     /* Unsubscribers */
@@ -193,7 +193,7 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
       pulseProcessingLatencySubscriber.unsubscribe()
       eventProcessingLatencySubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
-      trialTraceSubscriber.unsubscribe()
+      attemptTraceSubscriber.unsubscribe()
       if (loopbackLatencyTimeoutRef.current) {
         clearTimeout(loopbackLatencyTimeoutRef.current)
       }
@@ -207,12 +207,12 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
         pulseProcessingLatency,
         eventProcessingLatency,
         decisionTrace,
-        trialTrace,
+        attemptTrace,
         setLoopbackLatency,
         setPulseProcessingLatency,
         setEventProcessingLatency,
         setDecisionTrace,
-        setTrialTrace,
+        setAttemptTrace,
       }}
     >
       {children}

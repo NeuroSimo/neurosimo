@@ -100,7 +100,7 @@ struct Protocol {
 struct ExperimentState {
   // Current position in protocol
   size_t current_element_index = 0;
-  uint32_t trial = 0;
+  uint32_t trial_in_stage = 0;
   
   // Stage tracking
   std::string stage_name;
@@ -121,7 +121,8 @@ struct ExperimentState {
   double last_sample_time = 0.0;  // Most recent sample time seen
   
   // Counters
-  uint32_t total_pulses = 0;
+  uint32_t trials_completed = 0;
+  uint64_t attempts_in_session = 0;
   
   // Flags
   bool protocol_complete = false;

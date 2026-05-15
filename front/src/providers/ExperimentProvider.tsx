@@ -8,7 +8,7 @@ export interface ExperimentState extends ROSLIB.Message {
   stage_name: string
   stage_index: number
   total_stages: number
-  trial: number
+  trial_in_stage: number
   total_trials_in_stage: number
   ongoing: boolean
   in_rest: boolean

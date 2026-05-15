@@ -10,7 +10,7 @@ using namespace experiment_coordinator;
 
 const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
-const std::string TRIAL_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/trial_trace/final";
+const std::string ATTEMPT_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/attempt_trace/final";
 const std::string HEARTBEAT_TOPIC = "/neurosimo/experiment_coordinator/heartbeat";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
 const uint16_t EEG_QUEUE_LENGTH = 65535;
@@ -47,11 +47,11 @@ ExperimentCoordinator::ExperimentCoordinator()
     EEG_QUEUE_LENGTH,
     std::bind(&ExperimentCoordinator::handle_raw_sample, this, _1));
   
-  /* Subscriber for trial trace final events. */
-  this->trial_trace_final_subscriber = this->create_subscription<neurosimo_pipeline_interfaces::msg::TrialTrace>(
-    TRIAL_TRACE_FINAL_TOPIC,
+  /* Subscriber for attempt trace final events. */
+  this->attempt_trace_final_subscriber = this->create_subscription<neurosimo_pipeline_interfaces::msg::AttemptTrace>(
+    ATTEMPT_TRACE_FINAL_TOPIC,
     100,
-    std::bind(&ExperimentCoordinator::handle_trial_trace_final, this, _1));
+    std::bind(&ExperimentCoordinator::handle_attempt_trace_final, this, _1));
 
   /* Client for finishing the session. */
   this->finish_session_client = this->create_client<std_srvs::srv::Trigger>(
@@ -138,8 +138,9 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.in_rest = state.in_rest;
   enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
-  enriched.trial = state.trial;
-  enriched.trial_count = state.total_pulses;
+  enriched.trial_in_stage = state.trial_in_stage;
+  enriched.trials_completed = state.trials_completed;
+  enriched.attempts_in_session = state.attempts_in_session;
 
   /* Add stage information and trial timing/type. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
@@ -149,8 +150,8 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
       enriched.stage_name = stage.name;
 
       /* Look up the trial timing/type from the precomputed trial_order. */
-      if (state.trial < stage.trial_order.size()) {
-        size_t type_idx = stage.trial_order[state.trial];
+      if (state.trial_in_stage < stage.trial_order.size()) {
+        size_t type_idx = stage.trial_order[state.trial_in_stage];
         const auto& trial_entry = stage.trial_types[type_idx];
         enriched.trial_timing = static_cast<uint8_t>(trial_entry.timing);
         enriched.trial_type = trial_entry.type;
@@ -167,7 +168,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   this->enriched_eeg_publisher->publish(enriched);
 }
 
-void ExperimentCoordinator::handle_trial_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TrialTrace> msg) {
+void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg) {
   /* Only process confirmed pulses. */
   if (!msg->pulse_confirmed) {
     return;
@@ -188,7 +189,8 @@ void ExperimentCoordinator::handle_trial_trace_final(const std::shared_ptr<neuro
     return;
   }
 
-  state.total_pulses++;
+  state.trials_completed++;
+  state.attempts_in_session++;
 
   /* Check if we're in a stage. */
   if (state.current_element_index >= protocol->elements.size()) {
@@ -204,13 +206,13 @@ void ExperimentCoordinator::handle_trial_trace_final(const std::shared_ptr<neuro
   }
 
   const auto& stage = element.stage.value();
-  state.trial++;
+  state.trial_in_stage++;
 
-  RCLCPP_INFO(this->get_logger(), "Pulse %u: Stage '%s' trial %u/%u",
-    state.total_pulses, stage.name.c_str(), state.trial, stage.trials);
+  RCLCPP_INFO(this->get_logger(), "Trial %u: Stage '%s' trial %u/%u",
+    state.trials_completed, stage.name.c_str(), state.trial_in_stage, stage.trials);
 
   /* Check if stage is complete. */
-  if (state.trial >= stage.trials) {
+  if (state.trial_in_stage >= stage.trials) {
     RCLCPP_INFO(this->get_logger(), "Stage '%s' complete (%u trials)",
       stage.name.c_str(), stage.trials);
 
@@ -431,7 +433,7 @@ void ExperimentCoordinator::end_rest() {
 
 void ExperimentCoordinator::start_stage(const Stage& stage, double current_time) {
   state.stage_name = stage.name;
-  state.trial = 0;
+  state.trial_in_stage = 0;
   state.stage_start_times[stage.name] = current_time;
   state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
   
@@ -510,7 +512,7 @@ void ExperimentCoordinator::publish_experiment_state() {
     msg.stage_name = "";
     msg.stage_index = 0;
     msg.total_stages = 0;
-    msg.trial = 0;
+    msg.trial_in_stage = 0;
     msg.total_trials_in_stage = 0;
     msg.stage_start_time = 0.0;
     msg.stage_elapsed_time = 0.0;
@@ -554,7 +556,7 @@ void ExperimentCoordinator::publish_experiment_state() {
   
   msg.stage_index = static_cast<uint32_t>(stage_index);
   msg.total_stages = static_cast<uint32_t>(total_stages);
-  msg.trial = state.in_rest ? 0 : state.trial;
+  msg.trial_in_stage = state.in_rest ? 0 : state.trial_in_stage;
   msg.total_trials_in_stage = total_trials_in_stage;
   
   /* Stage timing */

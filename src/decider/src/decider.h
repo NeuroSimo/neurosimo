@@ -33,7 +33,7 @@
 
 #include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
-#include "neurosimo_pipeline_interfaces/msg/trial_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_message.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_messages.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_decider.hpp"
@@ -155,7 +155,7 @@ private:
   rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_publisher;
-  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TrialTrace>::SharedPtr trial_trace_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::SensoryStimulus>::SharedPtr sensory_stimulus_publisher;
   rclcpp::Publisher<shared_stimulation_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
   rclcpp::Publisher<shared_stimulation_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
@@ -194,8 +194,11 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Used for tracking the current trial number. */
-  int32_t current_trial = -1;
+  /* Used for tracking the current trial within stage (for detecting trial changes). */
+  int32_t current_trial_in_stage = -1;
+
+  /* Counter for unique attempt IDs in traces. */
+  uint64_t next_attempt_id = 0;
 
   StreamInfo stream_info;
 

@@ -14,7 +14,7 @@
 #include "neurosimo_project_interfaces/msg/filename_list.hpp"
 #include "neurosimo_project_interfaces/srv/set_module.hpp"
 #include "neurosimo_pipeline_interfaces/msg/experiment_state.hpp"
-#include "neurosimo_pipeline_interfaces/msg/trial_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/protocol_info.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_protocol.hpp"
 #include "neurosimo_pipeline_interfaces/srv/finalize_protocol.hpp"
@@ -34,7 +34,7 @@ private:
   /* ROS2 interfaces */
   // Subscribers
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr raw_eeg_subscriber;
-  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::TrialTrace>::SharedPtr trial_trace_final_subscriber;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_final_subscriber;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
   
   // Publishers
@@ -70,7 +70,7 @@ private:
 
   /* Callbacks */
   void handle_raw_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
-  void handle_trial_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TrialTrace> msg);
+  void handle_attempt_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg);
   
   void handle_pause(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,

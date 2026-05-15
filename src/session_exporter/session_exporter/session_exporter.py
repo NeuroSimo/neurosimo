@@ -28,7 +28,7 @@ DATA_TYPE_TO_TOPIC = {
     ExportDataType.RAW_EEG: '/neurosimo/eeg/raw',
     ExportDataType.ENRICHED_EEG: '/neurosimo/eeg/enriched',
     ExportDataType.PREPROCESSED_EEG: '/neurosimo/eeg/preprocessed',
-    ExportDataType.STIMULATION_DECISIONS: '/neurosimo/pipeline/trial_trace/final',
+    ExportDataType.STIMULATION_DECISIONS: '/neurosimo/pipeline/attempt_trace/final',
     ExportDataType.DECIDER_LOGS: '/neurosimo/pipeline/decider/log',
     ExportDataType.PREPROCESSOR_LOGS: '/neurosimo/pipeline/preprocessor/log',
     ExportDataType.PRESENTER_LOGS: '/neurosimo/pipeline/presenter/log',
@@ -62,8 +62,9 @@ EEG_FIELDS_ENRICHED = EEG_FIELDS_RAW + [
     'experiment_time',
     'stage_name',
     'stage_index',
-    'trial',
-    'trial_count',
+    'trial_in_stage',
+    'trials_completed',
+    'attempts_in_session',
 ]
 
 EEG_FIELDS_PREPROCESSED = EEG_FIELDS_ENRICHED + [
@@ -79,8 +80,8 @@ TOPIC_TO_FIELDS = {
 }
 
 # Decision trace export fields
-TRIAL_TRACE_FIELDS = [
-    'trial_id',
+ATTEMPT_TRACE_FIELDS = [
+    'attempt_id',
     'status',
     'requested_stimulation_time',
     'stimulation_horizon',
@@ -112,7 +113,7 @@ TRIAL_TRACE_FIELDS = [
 ]
 
 # Status mapping for human-readable export
-TRIAL_TRACE_STATUS_MAP = {
+ATTEMPT_TRACE_STATUS_MAP = {
     1: 'scheduled',
     2: 'fired',
     3: 'pulse_observed',
@@ -128,7 +129,7 @@ DECISION_TRACE_STATUS_MAP = {
 }
 
 # Pulse confirmation method mapping for human-readable export
-TRIAL_TRACE_PULSE_CONFIRMATION_MAP = {
+ATTEMPT_TRACE_PULSE_CONFIRMATION_MAP = {
     0: 'none',
     1: 'eeg_trigger',
     2: 'trigger_timer_fire',
@@ -381,8 +382,8 @@ class SessionExporterNode(Node):
             
             if topic in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 writers[topic] = self._create_eeg_writer(output_file, topic)
-            elif topic == '/neurosimo/pipeline/trial_trace/final':
-                writers[topic] = self._create_trial_trace_writer(output_file)
+            elif topic == '/neurosimo/pipeline/attempt_trace/final':
+                writers[topic] = self._create_attempt_trace_writer(output_file)
             elif topic in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 writers[topic] = self._create_log_writer(output_file)
             elif topic == '/neurosimo/pipeline/sensory_stimulus':
@@ -436,8 +437,8 @@ class SessionExporterNode(Node):
             
             if topic_name in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 self._write_eeg_message(writer_info, timestamp, msg)
-            elif topic_name == '/neurosimo/pipeline/trial_trace/final':
-                self._write_trial_trace_message(writer_info, timestamp, msg)
+            elif topic_name == '/neurosimo/pipeline/attempt_trace/final':
+                self._write_attempt_trace_message(writer_info, timestamp, msg)
             elif topic_name in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 self._write_log_message(writer_info, timestamp, msg)
             elif topic_name == '/neurosimo/pipeline/sensory_stimulus':
@@ -504,10 +505,10 @@ class SessionExporterNode(Node):
         
         writer_info['writer'].writerow(row_data)
 
-    def _create_trial_trace_writer(self, output_file):
-        """Create a CSV writer for trial trace messages."""
+    def _create_attempt_trace_writer(self, output_file):
+        """Create a CSV writer for attempt trace messages."""
         f = open(output_file, 'w', newline='')
-        writer = csv.DictWriter(f, fieldnames=TRIAL_TRACE_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=ATTEMPT_TRACE_FIELDS)
         writer.writeheader()
         return {
             'file': f,
@@ -515,10 +516,10 @@ class SessionExporterNode(Node):
             'path': output_file,
         }
 
-    def _write_trial_trace_message(self, writer_info, timestamp, msg):
-        """Write a single trial trace message to CSV."""
+    def _write_attempt_trace_message(self, writer_info, timestamp, msg):
+        """Write a single attempt trace message to CSV."""
         row_data = {}
-        for field in TRIAL_TRACE_FIELDS:
+        for field in ATTEMPT_TRACE_FIELDS:
             if field.startswith('decision_'):
                 # Embedded decision fields
                 decision = msg.decision
@@ -547,9 +548,9 @@ class SessionExporterNode(Node):
                 if field == 'session_id':
                     row_data[field] = ''.join(f'{b:02x}' for b in value)
                 elif field == 'status':
-                    row_data[field] = TRIAL_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
+                    row_data[field] = ATTEMPT_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
                 elif field == 'pulse_confirmation_method':
-                    row_data[field] = TRIAL_TRACE_PULSE_CONFIRMATION_MAP.get(value, f'unknown_{value}')
+                    row_data[field] = ATTEMPT_TRACE_PULSE_CONFIRMATION_MAP.get(value, f'unknown_{value}')
                 else:
                     row_data[field] = value
         writer_info['writer'].writerow(row_data)

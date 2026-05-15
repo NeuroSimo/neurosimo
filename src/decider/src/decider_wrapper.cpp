@@ -492,7 +492,7 @@ bool DeciderWrapper::warm_up() {
         *periodic_emg,
         dummy_is_coil_at_target,
         "",
-        (uint64_t)0,  /* trial_count */
+        (uint64_t)0,  /* trials_completed */
         true  /* is_warm_up */
       );
       
@@ -870,7 +870,7 @@ ProcessResult DeciderWrapper::process_periodic(
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t trial_count) {
+    uint64_t trials_completed) {
 
   int reference_index = -this->periodic_sample_window_start;
   size_t num_samples = this->periodic_sample_window_end - this->periodic_sample_window_start + 1;
@@ -884,7 +884,7 @@ ProcessResult DeciderWrapper::process_periodic(
     set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
     py_result = decider_instance->attr("process_periodic")(
       reference_time, reference_index, *periodic_time_offsets, *periodic_eeg, *periodic_emg,
-      is_coil_at_target, stage_name, trial_count, false);
+      is_coil_at_target, stage_name, trials_completed, false);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
@@ -909,7 +909,7 @@ ProcessResult DeciderWrapper::process_pulse(
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t trial_count) {
+    uint64_t trials_completed) {
 
   if (!has_pulse_processor) {
     return ProcessResult::success_empty();
@@ -927,7 +927,7 @@ ProcessResult DeciderWrapper::process_pulse(
     set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
     py_result = decider_instance->attr("process_pulse")(
       reference_time, reference_index, *pulse_time_offsets, *pulse_eeg, *pulse_emg,
-      is_coil_at_target, stage_name, trial_count);
+      is_coil_at_target, stage_name, trials_completed);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
@@ -952,7 +952,7 @@ ProcessResult DeciderWrapper::process_event(
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
-    uint64_t trial_count) {
+    uint64_t trials_completed) {
 
   if (!has_event_processor) {
     return ProcessResult::success_empty();
@@ -970,7 +970,7 @@ ProcessResult DeciderWrapper::process_event(
     set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
     py_result = decider_instance->attr("process_event")(
       reference_time, reference_index, *event_time_offsets, *event_eeg, *event_emg,
-      is_coil_at_target, stage_name, trial_count);
+      is_coil_at_target, stage_name, trials_completed);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
@@ -993,7 +993,7 @@ ProcessResult DeciderWrapper::process_predetermined(
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     double_t reference_time,
     const std::string& stage_name,
-    uint32_t trial,
+    uint32_t trial_in_stage,
     const std::string& trial_type) {
 
   if (!has_predetermined_processor_) {
@@ -1005,7 +1005,7 @@ ProcessResult DeciderWrapper::process_predetermined(
   try {
     set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PREDETERMINED);
     py_result = decider_instance->attr("process_predetermined")(
-      reference_time, stage_name, trial, trial_type);
+      reference_time, stage_name, trial_in_stage, trial_type);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error in process_predetermined: ") + e.what();

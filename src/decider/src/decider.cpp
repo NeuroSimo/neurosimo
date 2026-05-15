@@ -910,8 +910,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     return;
   }
 
-  /* Detect new attempt. */
-  bool attempt_changed = (msg->attempt_in_session != this->current_attempt_in_session);
+  /* Cache attempt counter for use when publishing attempt trace. */
   this->current_attempt_in_session = msg->attempt_in_session;
 
   /* Check for sample index discontinuity and handle gaps. */
@@ -931,7 +930,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* Handle predetermined trials. */
   bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
-  if (is_predetermined && attempt_changed) {
+  if (is_predetermined && msg->is_new_attempt) {
     handle_predetermined_trial(msg);
   }
 

@@ -142,6 +142,12 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.trial_in_session = state.trial_in_session;
   enriched.attempt_in_session = state.attempt_in_session;
 
+  /* Copy and consume pending event flags (true on exactly one sample per transition). */
+  enriched.is_new_stage = state.is_new_stage_pending;
+  enriched.is_new_attempt = state.is_new_attempt_pending;
+  state.is_new_stage_pending = false;
+  state.is_new_attempt_pending = false;
+
   /* Add stage information and trial timing/type. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
     const auto& element = protocol->elements[state.current_element_index];
@@ -218,6 +224,13 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
 
     /* Advance to next element. */
     advance_to_next_element();
+
+    /* Note that we don't necessarily mark a new attempt pending here,
+       as the next element might be a rest. TODO: The control flow
+       could be improved to make this clearer. */
+  } else {
+    /* Mark new attempt pending. */
+    state.is_new_attempt_pending = true;
   }
 }
 
@@ -436,7 +449,10 @@ void ExperimentCoordinator::start_stage(const Stage& stage, double current_time)
   state.trial_in_stage = 0;
   state.stage_start_times[stage.name] = current_time;
   state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
-  
+
+  state.is_new_stage_pending = true;
+  state.is_new_attempt_pending = true;
+
   RCLCPP_INFO(this->get_logger(), "Stage '%s' started (%u trials)", 
     stage.name.c_str(), stage.trials);
 }

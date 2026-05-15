@@ -559,8 +559,8 @@ void EegDecider::handle_stimulation_request(
   this->trial_trace_publisher->publish(trial_trace);
 
   /* Check that the minimum trial interval has passed. */
-  auto time_since_previous_trial = earliest_pulse_time - this->previous_stimulation_time;
-  auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+  auto time_since_previous_trial = earliest_pulse_time - this->previous_stimulation.time;
+  auto has_minimum_trial_interval_passed = !this->previous_stimulation.is_set() ||
                                             time_since_previous_trial >= this->minimum_trial_interval;
 
   if (!has_minimum_trial_interval_passed) {
@@ -944,8 +944,8 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Pulse);
 
     /* Update the previous stimulation time. */
-    this->previous_stimulation_time = sample_time;
-    this->previous_stimulation_eeg_device_timestamp = msg->eeg_device_timestamp;
+    this->previous_stimulation.time = sample_time;
+    this->previous_stimulation.eeg_device_timestamp = msg->eeg_device_timestamp;
   }
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
@@ -970,8 +970,8 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   }
 
   /* Check if minimum trial interval has passed since last trigger. */
-  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                        sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
+  bool minimum_trial_interval_passed = !this->previous_stimulation.is_set() ||
+                                        sample_time >= this->previous_stimulation.time + this->minimum_trial_interval;
 
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   bool backpressure_detected = detect_backpressure(msg);
@@ -993,9 +993,17 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
     msg->trial, msg->stage_name.c_str(), msg->trial_type.c_str(), msg->time);
 
-  /* Use the time of the previous stimulation as the reference time. */
-  auto reference_time = this->previous_stimulation_time;
-  auto reference_eeg_device_timestamp = this->previous_stimulation_eeg_device_timestamp;
+  /* Use the time of the previous stimulation as the reference time - if not set, use the time of the sample. */
+  double_t reference_time = UNSET_TIME;
+  double_t reference_eeg_device_timestamp = UNSET_TIME;
+
+  if (this->previous_stimulation.is_set()) {
+    reference_time = this->previous_stimulation.time;
+    reference_eeg_device_timestamp = this->previous_stimulation.eeg_device_timestamp;
+  } else {
+    reference_time = msg->time;
+    reference_eeg_device_timestamp = msg->eeg_device_timestamp;
+  }
 
   /* Call process_predetermined on the Python side. */
   auto result = this->decider_wrapper->process_predetermined(

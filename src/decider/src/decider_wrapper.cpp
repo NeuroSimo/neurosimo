@@ -762,130 +762,24 @@ void DeciderWrapper::fill_arrays_from_buffer(
   });
 }
 
-/* TODO: Use struct for the return value. */
-std::tuple<
-  bool,
-  std::shared_ptr<double_t>,
-  std::string,
-  std::vector<shared_stimulation_interfaces::msg::TargetedPulse>> DeciderWrapper::process(
+/* Shared result parser used by all processing entry points. */
+ProcessResult DeciderWrapper::parse_result_dict(
+    const py::object& py_result,
+    bool allow_trigger_offset,
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
-    double_t reference_time,
-    ProcessingReason processing_reason,
-    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
-    bool is_coil_at_target,
-    const std::string& stage_name,
-    uint64_t trial_count) {
-
-  std::shared_ptr<double_t> trigger_offset = nullptr;
-  std::string coil_target;
-  std::vector<shared_stimulation_interfaces::msg::TargetedPulse> targeted_pulses;
-
-  /* Determine which arrays to use and their parameters. */
-  py::array_t<double>* py_time_offsets;
-  py::array_t<double>* py_eeg;
-  py::array_t<double>* py_emg;
-  int reference_index;
-  size_t start_offset;
-  size_t num_samples;
-
-  if (processing_reason == ProcessingReason::Periodic) {
-    py_time_offsets = periodic_time_offsets.get();
-    py_eeg = periodic_eeg.get();
-    py_emg = periodic_emg.get();
-    reference_index = -this->periodic_sample_window_start;
-    start_offset = this->periodic_window_start_offset_in_envelope;
-    num_samples = this->periodic_sample_window_end - this->periodic_sample_window_start + 1;
-
-  } else if (processing_reason == ProcessingReason::Pulse) {
-    py_time_offsets = pulse_time_offsets.get();
-    py_eeg = pulse_eeg.get();
-    py_emg = pulse_emg.get();
-    reference_index = -this->pulse_sample_window_start;
-    start_offset = this->pulse_window_start_offset_in_envelope;
-    num_samples = this->pulse_sample_window_end - this->pulse_sample_window_start + 1;
-
-  } else if (processing_reason == ProcessingReason::Event) {
-    py_time_offsets = event_time_offsets.get();
-    py_eeg = event_eeg.get();
-    py_emg = event_emg.get();
-    reference_index = -this->event_sample_window_start;
-    start_offset = this->event_window_start_offset_in_envelope;
-    num_samples = this->event_sample_window_end - this->event_sample_window_start + 1;
-
-  } else {
-    log_error("Invalid processing reason: " + std::to_string(static_cast<int>(processing_reason)));
-    return {false, trigger_offset, coil_target, targeted_pulses};
-  }
-
-  /* Fill the selected arrays from the reason-specific window position in the envelope. */
-  fill_arrays_from_buffer(buffer, reference_time, *py_time_offsets, *py_eeg, *py_emg, start_offset, num_samples);
-
-  /* Call the appropriate Python function. */
-  py::object py_result;
-  try {
-    switch (processing_reason) {
-      case ProcessingReason::Periodic:
-        set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
-        /* Call periodic processor. */
-        py_result = decider_instance->attr("process_periodic")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, trial_count, false);
-        break;
-
-      case ProcessingReason::Pulse:
-        set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
-        if (!has_pulse_processor) {
-          py_result = py::none();
-          break;
-        }
-        py_result = decider_instance->attr("process_pulse")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, trial_count);
-        break;
-
-      case ProcessingReason::Event:
-        set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
-        if (!has_event_processor) {
-          py_result = py::none();
-          break;
-        }
-        py_result = decider_instance->attr("process_event")(reference_time, reference_index, *py_time_offsets, *py_eeg, *py_emg, is_coil_at_target, stage_name, trial_count);
-        break;
-
-      default:
-        log_error("Invalid processing type: " + std::to_string(static_cast<int>(processing_reason)));
-        py_result = py::none();
-        break;
-    }
-
-  } catch(const py::error_already_set& e) {
-    std::string error_msg = std::string("Python error: ") + e.what();
-    log_error(error_msg);
-
-    // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-
-    return {false, trigger_offset, coil_target, targeted_pulses};
-
-  } catch(const std::exception& e) {
-    std::string error_msg = std::string("C++ error: ") + e.what();
-    log_error(error_msg);
-
-    // Add error to log buffer so it can be published to UI
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-
-    return {false, trigger_offset, coil_target, targeted_pulses};
-  }
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue) {
 
   /* If the return value is None, return early but mark it as successful. */
   if (py_result.is_none()) {
-    return {true, trigger_offset, coil_target, targeted_pulses};
+    return ProcessResult::success_empty();
   }
 
   /* If the return value is not None, ensure that it is a dictionary. */
   if (!py::isinstance<py::dict>(py_result)) {
-    log_error("Python module should return a dictionary.");
-    return {false, trigger_offset, coil_target, targeted_pulses};
+    log_error("Python module should return a dictionary or None.");
+    return ProcessResult::failure();
   }
 
-  /* Extract the dictionary from the result first */
   py::dict dict_result = py_result.cast<py::dict>();
 
   /* Validate that only allowed keys are present */
@@ -900,55 +794,58 @@ std::tuple<
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
       log_error("Unexpected key '" + key + "' in return value, only 'trigger_offset', 'targeted_pulses', 'sensory_stimuli', 'events', and 'coil_target' are allowed.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
+      return ProcessResult::failure();
     }
   }
 
+  ProcessResult result;
+  result.success = true;
+
   if (dict_result.contains("coil_target")) {
-    coil_target = dict_result["coil_target"].cast<std::string>();
+    result.coil_target = dict_result["coil_target"].cast<std::string>();
   }
 
   if (dict_result.contains("trigger_offset")) {
-    if (processing_reason == ProcessingReason::Pulse || processing_reason == ProcessingReason::Event) {
+    if (!allow_trigger_offset) {
       log_error("Timed trigger requests are not allowed for pulse or event processing.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
+      return ProcessResult::failure();
     }
-    trigger_offset = std::make_shared<double_t>(dict_result["trigger_offset"].cast<double_t>());
+    result.trigger_offset = std::make_shared<double_t>(dict_result["trigger_offset"].cast<double_t>());
   }
 
   if (dict_result.contains("targeted_pulses")) {
     if (!py::isinstance<py::list>(dict_result["targeted_pulses"])) {
       log_error("targeted_pulses must be a list.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
+      return ProcessResult::failure();
     }
 
     py::list py_targeted_pulses = dict_result["targeted_pulses"].cast<py::list>();
-    if (!process_targeted_pulses_list(py_targeted_pulses, targeted_pulses)) {
-      return {false, trigger_offset, coil_target, targeted_pulses};
+    if (!process_targeted_pulses_list(py_targeted_pulses, result.targeted_pulses)) {
+      return ProcessResult::failure();
     }
   }
 
-  if (trigger_offset != nullptr && !targeted_pulses.empty()) {
+  if (result.trigger_offset != nullptr && !result.targeted_pulses.empty()) {
     log_error("Return value cannot include both 'trigger_offset' and 'targeted_pulses'.");
-    return {false, trigger_offset, coil_target, targeted_pulses};
+    return ProcessResult::failure();
   }
 
   if (dict_result.contains("sensory_stimuli")) {
     if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
       log_error("sensory_stimuli must be a list.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
+      return ProcessResult::failure();
     }
 
     py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
     if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
-      return {false, trigger_offset, coil_target, targeted_pulses};
+      return ProcessResult::failure();
     }
   }
 
   if (dict_result.contains("events")) {
     if (!py::isinstance<py::list>(dict_result["events"])) {
       log_error("events must be a list.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
+      return ProcessResult::failure();
     }
 
     py::list events = dict_result["events"].cast<py::list>();
@@ -958,22 +855,135 @@ std::tuple<
     }
   }
 
-  return {true, trigger_offset, coil_target, targeted_pulses};
+  return result;
 }
 
-rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
-std::vector<LogEntry> DeciderWrapper::log_buffer;
-uint8_t DeciderWrapper::current_processing_path;
+ProcessResult DeciderWrapper::process_periodic(
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
+    double_t reference_time,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
+    bool is_coil_at_target,
+    const std::string& stage_name,
+    uint64_t trial_count) {
 
-bool DeciderWrapper::has_predetermined_processor() const {
-  return this->has_predetermined_processor_;
+  int reference_index = -this->periodic_sample_window_start;
+  size_t num_samples = this->periodic_sample_window_end - this->periodic_sample_window_start + 1;
+
+  fill_arrays_from_buffer(buffer, reference_time,
+    *periodic_time_offsets, *periodic_eeg, *periodic_emg,
+    this->periodic_window_start_offset_in_envelope, num_samples);
+
+  py::object py_result;
+  try {
+    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PERIODIC);
+    py_result = decider_instance->attr("process_periodic")(
+      reference_time, reference_index, *periodic_time_offsets, *periodic_eeg, *periodic_emg,
+      is_coil_at_target, stage_name, trial_count, false);
+
+  } catch(const py::error_already_set& e) {
+    std::string error_msg = std::string("Python error: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return ProcessResult::failure();
+
+  } catch(const std::exception& e) {
+    std::string error_msg = std::string("C++ error: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return ProcessResult::failure();
+  }
+
+  return parse_result_dict(py_result, true, sensory_stimuli, event_queue);
 }
 
-std::tuple<
-  bool,
-  std::shared_ptr<double_t>,
-  std::string,
-  std::vector<shared_stimulation_interfaces::msg::TargetedPulse>> DeciderWrapper::process_predetermined(
+ProcessResult DeciderWrapper::process_pulse(
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
+    double_t reference_time,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
+    bool is_coil_at_target,
+    const std::string& stage_name,
+    uint64_t trial_count) {
+
+  if (!has_pulse_processor) {
+    return ProcessResult::success_empty();
+  }
+
+  int reference_index = -this->pulse_sample_window_start;
+  size_t num_samples = this->pulse_sample_window_end - this->pulse_sample_window_start + 1;
+
+  fill_arrays_from_buffer(buffer, reference_time,
+    *pulse_time_offsets, *pulse_eeg, *pulse_emg,
+    this->pulse_window_start_offset_in_envelope, num_samples);
+
+  py::object py_result;
+  try {
+    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PULSE);
+    py_result = decider_instance->attr("process_pulse")(
+      reference_time, reference_index, *pulse_time_offsets, *pulse_eeg, *pulse_emg,
+      is_coil_at_target, stage_name, trial_count);
+
+  } catch(const py::error_already_set& e) {
+    std::string error_msg = std::string("Python error: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return ProcessResult::failure();
+
+  } catch(const std::exception& e) {
+    std::string error_msg = std::string("C++ error: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return ProcessResult::failure();
+  }
+
+  return parse_result_dict(py_result, false, sensory_stimuli, event_queue);
+}
+
+ProcessResult DeciderWrapper::process_event(
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
+    double_t reference_time,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
+    bool is_coil_at_target,
+    const std::string& stage_name,
+    uint64_t trial_count) {
+
+  if (!has_event_processor) {
+    return ProcessResult::success_empty();
+  }
+
+  int reference_index = -this->event_sample_window_start;
+  size_t num_samples = this->event_sample_window_end - this->event_sample_window_start + 1;
+
+  fill_arrays_from_buffer(buffer, reference_time,
+    *event_time_offsets, *event_eeg, *event_emg,
+    this->event_window_start_offset_in_envelope, num_samples);
+
+  py::object py_result;
+  try {
+    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_EVENT);
+    py_result = decider_instance->attr("process_event")(
+      reference_time, reference_index, *event_time_offsets, *event_eeg, *event_emg,
+      is_coil_at_target, stage_name, trial_count);
+
+  } catch(const py::error_already_set& e) {
+    std::string error_msg = std::string("Python error: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return ProcessResult::failure();
+
+  } catch(const std::exception& e) {
+    std::string error_msg = std::string("C++ error: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return ProcessResult::failure();
+  }
+
+  return parse_result_dict(py_result, false, sensory_stimuli, event_queue);
+}
+
+ProcessResult DeciderWrapper::process_predetermined(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     double_t reference_time,
@@ -981,13 +991,9 @@ std::tuple<
     uint32_t trial,
     const std::string& trial_type) {
 
-  std::shared_ptr<double_t> trigger_offset = nullptr;
-  std::string coil_target;
-  std::vector<shared_stimulation_interfaces::msg::TargetedPulse> targeted_pulses;
-
   if (!has_predetermined_processor_) {
     log_error("process_predetermined called but Python Decider has no process_predetermined method.");
-    return {false, trigger_offset, coil_target, targeted_pulses};
+    return ProcessResult::failure();
   }
 
   py::object py_result;
@@ -1000,89 +1006,22 @@ std::tuple<
     std::string error_msg = std::string("Python error in process_predetermined: ") + e.what();
     log_error(error_msg);
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-    return {false, trigger_offset, coil_target, targeted_pulses};
+    return ProcessResult::failure();
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error in process_predetermined: ") + e.what();
     log_error(error_msg);
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-    return {false, trigger_offset, coil_target, targeted_pulses};
+    return ProcessResult::failure();
   }
 
-  /* If the return value is None, return early but mark it as successful. */
-  if (py_result.is_none()) {
-    return {true, trigger_offset, coil_target, targeted_pulses};
-  }
-
-  if (!py::isinstance<py::dict>(py_result)) {
-    log_error("process_predetermined must return a dictionary or None.");
-    return {false, trigger_offset, coil_target, targeted_pulses};
-  }
-
-  py::dict dict_result = py_result.cast<py::dict>();
-
-  /* Validate keys. */
-  std::vector<std::string> allowed_keys = {
-    "trigger_offset",
-    "targeted_pulses",
-    "sensory_stimuli",
-    "events",
-    "coil_target"
-  };
-  for (const auto& item : dict_result) {
-    std::string key = py::str(item.first).cast<std::string>();
-    if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      log_error("Unexpected key '" + key + "' in process_predetermined return value.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
-    }
-  }
-
-  if (dict_result.contains("coil_target")) {
-    coil_target = dict_result["coil_target"].cast<std::string>();
-  }
-
-  if (dict_result.contains("trigger_offset")) {
-    trigger_offset = std::make_shared<double_t>(dict_result["trigger_offset"].cast<double_t>());
-  }
-
-  if (dict_result.contains("targeted_pulses")) {
-    if (!py::isinstance<py::list>(dict_result["targeted_pulses"])) {
-      log_error("targeted_pulses must be a list.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
-    }
-    py::list py_targeted_pulses = dict_result["targeted_pulses"].cast<py::list>();
-    if (!process_targeted_pulses_list(py_targeted_pulses, targeted_pulses)) {
-      return {false, trigger_offset, coil_target, targeted_pulses};
-    }
-  }
-
-  if (trigger_offset != nullptr && !targeted_pulses.empty()) {
-    log_error("process_predetermined return value cannot include both 'trigger_offset' and 'targeted_pulses'.");
-    return {false, trigger_offset, coil_target, targeted_pulses};
-  }
-
-  if (dict_result.contains("sensory_stimuli")) {
-    if (!py::isinstance<py::list>(dict_result["sensory_stimuli"])) {
-      log_error("sensory_stimuli must be a list.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
-    }
-    py::list py_sensory_stimuli = dict_result["sensory_stimuli"].cast<py::list>();
-    if (!process_sensory_stimuli_list(py_sensory_stimuli, sensory_stimuli)) {
-      return {false, trigger_offset, coil_target, targeted_pulses};
-    }
-  }
-
-  if (dict_result.contains("events")) {
-    if (!py::isinstance<py::list>(dict_result["events"])) {
-      log_error("events must be a list.");
-      return {false, trigger_offset, coil_target, targeted_pulses};
-    }
-    py::list events = dict_result["events"].cast<py::list>();
-    for (const auto& event : events) {
-      double event_time = event.cast<double>();
-      event_queue.push(event_time);
-    }
-  }
-
-  return {true, trigger_offset, coil_target, targeted_pulses};
+  return parse_result_dict(py_result, true, sensory_stimuli, event_queue);
 }
+
+bool DeciderWrapper::has_predetermined_processor() const {
+  return this->has_predetermined_processor_;
+}
+
+rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
+std::vector<LogEntry> DeciderWrapper::log_buffer;
+uint8_t DeciderWrapper::current_processing_path;

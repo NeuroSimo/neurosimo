@@ -2,8 +2,8 @@
 #define DECIDER_WRAPPER_H
 
 #include <memory>
+#include <queue>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include <pybind11/pybind11.h>
@@ -50,6 +50,16 @@ struct LogEntry {
   uint8_t processing_path;
 };
 
+struct ProcessResult {
+  bool success = false;
+  std::shared_ptr<double_t> trigger_offset = nullptr;
+  std::string coil_target;
+  std::vector<shared_stimulation_interfaces::msg::TargetedPulse> targeted_pulses;
+
+  static ProcessResult failure() { return {false, nullptr, {}, {}}; }
+  static ProcessResult success_empty() { return {true, nullptr, {}, {}}; }
+};
+
 class DeciderWrapper {
 public:
   DeciderWrapper(rclcpp::Logger& logger);
@@ -72,26 +82,35 @@ public:
     const py::dict& py_sensory_stimulus,
     neurosimo_pipeline_interfaces::msg::SensoryStimulus& out_msg);
 
-  std::tuple<
-    bool,
-    std::shared_ptr<double_t>,
-    std::string,
-    std::vector<shared_stimulation_interfaces::msg::TargetedPulse>> process(
+  ProcessResult process_periodic(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
-    double_t sample_window_base_time,
-    ProcessingReason processing_reason,
+    double_t reference_time,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
+    bool is_coil_at_target,
+    const std::string& stage_name,
+    uint64_t trial_count);
+
+  ProcessResult process_pulse(
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
+    double_t reference_time,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
+    bool is_coil_at_target,
+    const std::string& stage_name,
+    uint64_t trial_count);
+
+  ProcessResult process_event(
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
+    double_t reference_time,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
     uint64_t trial_count);
 
   /* Call Python process_predetermined for predetermined trials. */
-  std::tuple<
-    bool,
-    std::shared_ptr<double_t>,
-    std::string,
-    std::vector<shared_stimulation_interfaces::msg::TargetedPulse>> process_predetermined(
+  ProcessResult process_predetermined(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     double_t reference_time,
@@ -207,6 +226,12 @@ private:
   bool process_targeted_pulses_list(
     const py::list& py_targeted_pulses,
     std::vector<shared_stimulation_interfaces::msg::TargetedPulse>& targeted_pulses);
+
+  ProcessResult parse_result_dict(
+    const py::object& py_result,
+    bool allow_trigger_offset,
+    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
+    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue);
 
   void fill_arrays_from_buffer(
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,

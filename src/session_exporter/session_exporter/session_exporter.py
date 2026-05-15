@@ -156,6 +156,7 @@ PROCESSING_PATH_MAP = {
     LogMessage.PROCESSING_PATH_PULSE: 'pulse',
     LogMessage.PROCESSING_PATH_EVENT: 'event',
     LogMessage.PROCESSING_PATH_PERIODIC: 'periodic',
+    LogMessage.PROCESSING_PATH_PREDETERMINED: 'predetermined',
 }
 
 # Sensory stimulus export fields (base fields, parameters added dynamically)

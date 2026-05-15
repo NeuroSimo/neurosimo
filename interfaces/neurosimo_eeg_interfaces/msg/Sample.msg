@@ -29,6 +29,8 @@ uint32 stage_index              # Current stage index (0-based)
 uint32 trial_in_stage           # Current trial slot within stage (0-based), advances on success
 uint64 trial_in_session         # Total successful trials in session
 uint64 attempt_in_session       # Total attempts in session (advances every trigger)
+bool is_new_stage               # True on the first sample of each stage
+bool is_new_attempt             # True on the first sample of each attempt slot
 
 # Trial timing and type
 uint8 TRIAL_TIMING_PERIODIC=0

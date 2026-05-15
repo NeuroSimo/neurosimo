@@ -194,8 +194,8 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Used for tracking the current attempt within session. */
-  int32_t current_attempt_in_session = -1;
+  /* Cache of the latest sample's attempt counter, used when publishing attempt trace. */
+  uint64_t current_attempt_in_session = 0;
 
   StreamInfo stream_info;
 

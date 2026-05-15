@@ -124,6 +124,10 @@ struct ExperimentState {
   uint32_t trial_in_session = 0;
   uint64_t attempt_in_session = 0;
   
+  // Pending event flags (set when transition occurs, consumed on the next sample)
+  bool is_new_stage_pending = false;
+  bool is_new_attempt_pending = false;
+
   // Flags
   bool protocol_complete = false;
   bool is_session_ongoing = false;

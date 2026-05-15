@@ -357,6 +357,8 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   preprocessed_sample.trial_in_stage = triggering_sample->trial_in_stage;
   preprocessed_sample.trial_in_session = triggering_sample->trial_in_session;
   preprocessed_sample.attempt_in_session = triggering_sample->attempt_in_session;
+  preprocessed_sample.is_new_stage = triggering_sample->is_new_stage;
+  preprocessed_sample.is_new_attempt = triggering_sample->is_new_attempt;
 
   /* Carry forward any pending session start marker. */
   preprocessed_sample.is_session_start = this->pending_session_start;

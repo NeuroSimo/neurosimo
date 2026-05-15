@@ -145,7 +145,7 @@ Whether the coil is currently positioned at the target location (for neuronaviga
 #### `stage_name` (str)
 Current protocol stage name from the experiment coordinator.
 
-#### `trials_completed` (int)
+#### `trial_in_stage` (int)
 Total successful trials in session.
 
 #### `is_warm_up` (bool)
@@ -245,7 +245,7 @@ Called when a pulse event occurs, if the method is defined on the `Decider` clas
 ```python
 def process_pulse(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trials_completed):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trial_in_stage):
     """Process pulse events."""
     print(f"Pulse event at {reference_time}")
     return None
@@ -259,7 +259,7 @@ Called when a general event occurs (from `predefined_events` or dynamically sche
 ```python
 def process_event(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trials_completed):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trial_in_stage):
     """Process general events."""
     print(f"Event at {reference_time}")
     return None
@@ -351,7 +351,7 @@ def get_configuration(self):
     }
 
 def process_event(self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trials_completed):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trial_in_stage):
     """Handle trial start event."""
     # ...
 ```
@@ -402,7 +402,7 @@ For a complete example demonstrating both predefined and dynamic sensory stimuli
 ```python
 def process_periodic(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trials_completed, is_warm_up):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trial_in_stage, is_warm_up):
     # Generate stimuli based on current time or data
     return {
         'sensory_stimuli': [
@@ -463,7 +463,7 @@ If your decider maintains internal state that depends on real EEG/EMG data patte
 ```python
 def process_periodic(
         self, reference_time, reference_index, time_offsets,
-        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trials_completed, is_warm_up):
+        eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trial_in_stage, is_warm_up):
     
     # Your processing logic here...
     processed_data = self.analyze_eeg(eeg_buffer)

@@ -121,8 +121,8 @@ struct ExperimentState {
   double last_sample_time = 0.0;  // Most recent sample time seen
   
   // Counters
-  uint32_t trials_completed = 0;
-  uint64_t attempts_in_session = 0;
+  uint32_t trial_in_session = 0;
+  uint64_t attempt_in_session = 0;
   
   // Flags
   bool protocol_complete = false;

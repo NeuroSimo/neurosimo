@@ -42,7 +42,7 @@ private:
   std::array<uint8_t, 16> current_session_id = {};
   std::string data_source = "";
 
-  /* Storage for attempt traces keyed by attempt_id */
+  /* Storage for attempt traces keyed by attempt_in_session */
   std::map<uint64_t, std::vector<neurosimo_pipeline_interfaces::msg::AttemptTrace>> attempt_traces;
 
   /* Storage for decision traces, used to match decisions to trials */
@@ -76,7 +76,7 @@ private:
   neurosimo_pipeline_interfaces::msg::AttemptTrace* find_matching_attempt(uint64_t pulse_system_time);
 
   /* Merge all attempt traces for a given key and publish final */
-  void finalize_attempt(uint64_t attempt_id);
+  void finalize_attempt(uint64_t attempt_in_session);
 
   /* Check if a trial trace is terminal (finalized) */
   bool is_terminal_status(uint8_t status);

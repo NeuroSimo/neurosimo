@@ -126,8 +126,8 @@ void StimulationTracer::handle_decision_trace(const std::shared_ptr<neurosimo_pi
 }
 
 void StimulationTracer::handle_attempt_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg) {
-  RCLCPP_INFO(this->get_logger(), "Received attempt trace: attempt_id=%lu, status=%u, requested_stimulation_time=%f",
-              msg->attempt_id, msg->status, msg->requested_stimulation_time);
+  RCLCPP_INFO(this->get_logger(), "Received attempt trace: attempt_in_session=%lu, status=%u, requested_stimulation_time=%f",
+              msg->attempt_in_session, msg->status, msg->requested_stimulation_time);
 
   /* Skip if not initialized. */
   if (!this->is_initialized) {
@@ -139,14 +139,14 @@ void StimulationTracer::handle_attempt_trace(const std::shared_ptr<neurosimo_pip
     return;
   }
 
-  /* Store attempt trace in memory keyed by attempt_id. */
-  uint64_t attempt_id = msg->attempt_id;
+  /* Store attempt trace in memory keyed by attempt_in_session. */
+  uint64_t attempt_in_session = msg->attempt_in_session;
 
-  this->attempt_traces[attempt_id].push_back(*msg);
+  this->attempt_traces[attempt_in_session].push_back(*msg);
 
   /* If this trace has a terminal status, finalize the attempt. */
   if (this->is_terminal_status(msg->status)) {
-    finalize_attempt(attempt_id);
+    finalize_attempt(attempt_in_session);
   }
 }
 
@@ -212,7 +212,7 @@ void StimulationTracer::handle_pulse_processed(const std_msgs::msg::Empty::Share
   /* Create and publish the observation trace now that pulse processing is complete. */
   auto observation_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   observation_trace.session_id = matching_trace->session_id;
-  observation_trace.attempt_id = matching_trace->attempt_id;
+  observation_trace.attempt_in_session = matching_trace->attempt_in_session;
   observation_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED;
   observation_trace.actual_stimulation_time = pending.actual_stimulation_time;
   observation_trace.actual_stimulation_sample_index = pending.actual_stimulation_sample_index;
@@ -222,8 +222,8 @@ void StimulationTracer::handle_pulse_processed(const std_msgs::msg::Empty::Share
     pending.actual_stimulation_time - matching_trace->requested_stimulation_time;
 
   RCLCPP_INFO(this->get_logger(),
-              "Matched pulse (after processing) to attempt_id=%lu, timing_offset=%.4f ms",
-              matching_trace->attempt_id, observation_trace.timing_offset * 1000.0);
+              "Matched pulse (after processing) to attempt_in_session=%lu, timing_offset=%.4f ms",
+              matching_trace->attempt_in_session, observation_trace.timing_offset * 1000.0);
 
   /* Publish observation trace. */
   this->attempt_trace_publisher->publish(observation_trace);
@@ -257,11 +257,11 @@ neurosimo_pipeline_interfaces::msg::AttemptTrace* StimulationTracer::find_matchi
   return best_match;
 }
 
-void StimulationTracer::finalize_attempt(uint64_t attempt_id) {
-  RCLCPP_INFO(this->get_logger(), "Finalizing attempt: attempt_id=%lu", attempt_id);
+void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
+  RCLCPP_INFO(this->get_logger(), "Finalizing attempt: attempt_in_session=%lu", attempt_in_session);
 
   /* Find all traces for this attempt. */
-  auto it = this->attempt_traces.find(attempt_id);
+  auto it = this->attempt_traces.find(attempt_in_session);
   if (it == this->attempt_traces.end() || it->second.empty()) {
     return;
   }
@@ -276,8 +276,8 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_id) {
     if (trace.session_id != std::array<uint8_t, 16>{}) {
       final_trace.session_id = trace.session_id;
     }
-    if (trace.attempt_id != 0) {
-      final_trace.attempt_id = trace.attempt_id;
+    if (trace.attempt_in_session != 0) {
+      final_trace.attempt_in_session = trace.attempt_in_session;
     }
 
     /* Status - keep the latest (highest priority) status */
@@ -328,8 +328,8 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_id) {
   /* Publish the final merged trace. */
   this->attempt_trace_final_publisher->publish(final_trace);
 
-  RCLCPP_INFO(this->get_logger(), "Finalized attempt trace: attempt_id=%lu, status=%u",
-              final_trace.attempt_id, final_trace.status);
+  RCLCPP_INFO(this->get_logger(), "Finalized attempt trace: attempt_in_session=%lu, status=%u",
+              final_trace.attempt_in_session, final_trace.status);
 
   /* Remove from memory. */
   this->attempt_traces.erase(it);

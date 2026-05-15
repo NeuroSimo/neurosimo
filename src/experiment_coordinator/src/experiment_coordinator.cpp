@@ -139,8 +139,8 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
   enriched.trial_in_stage = state.trial_in_stage;
-  enriched.trials_completed = state.trials_completed;
-  enriched.attempts_in_session = state.attempts_in_session;
+  enriched.trial_in_session = state.trial_in_session;
+  enriched.attempt_in_session = state.attempt_in_session;
 
   /* Add stage information and trial timing/type. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
@@ -189,8 +189,8 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
     return;
   }
 
-  state.trials_completed++;
-  state.attempts_in_session++;
+  state.trial_in_session++;
+  state.attempt_in_session++;
 
   /* Check if we're in a stage. */
   if (state.current_element_index >= protocol->elements.size()) {
@@ -209,7 +209,7 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
   state.trial_in_stage++;
 
   RCLCPP_INFO(this->get_logger(), "Trial %u: Stage '%s' trial %u/%u",
-    state.trials_completed, stage.name.c_str(), state.trial_in_stage, stage.trials);
+    state.trial_in_session, stage.name.c_str(), state.trial_in_stage, stage.trials);
 
   /* Check if stage is complete. */
   if (state.trial_in_stage >= stage.trials) {

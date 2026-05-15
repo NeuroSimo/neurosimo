@@ -195,8 +195,8 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Used for tracking the previous trial number to detect when it changes. */
-  int32_t previous_trial = -1;
+  /* Used for tracking the current trial number. */
+  int32_t current_trial = -1;
 
   StreamInfo stream_info;
 

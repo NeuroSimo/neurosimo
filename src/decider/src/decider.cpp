@@ -580,7 +580,7 @@ void EegDecider::handle_stimulation_request(
     auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
     request_msg->trigger_offset = *result.trigger_offset;
     request_msg->session_id = this->session_id;
-    request_msg->attempt_in_session = this->next_attempt_in_session;
+    request_msg->attempt_in_session = this->current_attempt_in_session;
     request_msg->reference_sample_time = reference_time;
     this->request_timed_trigger(request_msg);
   }
@@ -616,7 +616,7 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   auto result = this->decider_wrapper->process_pulse(
     this->sensory_stimuli, this->sample_buffer, sample_time,
     this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trial_in_session);
+    request.triggering_sample->trial_in_stage);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during pulse processing at time %.3f (s).", sample_time);
@@ -668,7 +668,7 @@ void EegDecider::process_event_request(const DeferredProcessingRequest& request)
   auto result = this->decider_wrapper->process_event(
     this->sensory_stimuli, this->sample_buffer, sample_time,
     this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trial_in_session);
+    request.triggering_sample->trial_in_stage);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during event processing at time %.3f (s).", sample_time);
@@ -719,7 +719,7 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
   auto result = this->decider_wrapper->process_periodic(
     this->sensory_stimuli, this->sample_buffer, reference_time,
     this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trial_in_session);
+    request.triggering_sample->trial_in_stage);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during periodic processing at time %.3f (s).", reference_time);

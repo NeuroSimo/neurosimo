@@ -180,7 +180,6 @@ private:
   /* Session and decision tracking */
   std::array<uint8_t, 16> session_id = {};
   uint64_t decision_id = 0;
-  uint64_t trial_id = 0;
   uint64_t targeted_pulses_sequence_number = 0;
   uint64_t decision_fingerprint = 0;
 

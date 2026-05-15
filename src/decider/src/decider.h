@@ -73,15 +73,6 @@ struct DeferredProcessingRequest {
   }
 };
 
-struct SampleReference {
-  double_t time = UNSET_TIME;
-  double_t eeg_device_timestamp = UNSET_TIME;
-
-  bool is_set() const {
-    return !std::isnan(this->time) && !std::isnan(this->eeg_device_timestamp);
-  }
-};
-
 
 class DeciderWrapper;
 
@@ -185,8 +176,8 @@ private:
 
   double_t next_periodic_processing_time = UNSET_TIME;
 
-  /* Used for keeping track of the time of the previous stimulation to ensure that the minimum pulse interval is respected. */
-  SampleReference previous_stimulation;
+  /* Used for keeping track of the time of the previous stimulation to ensure that the minimum trial interval is respected. */
+  double_t previous_stimulation_time = UNSET_TIME;
 
   /* Used for publishing logs from the previous sample at the beginning of the current sample. */
   double_t previous_sample_time = UNSET_TIME;

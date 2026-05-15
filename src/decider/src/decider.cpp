@@ -539,15 +539,19 @@ void EegDecider::handle_stimulation_request(
   bool request_targeted_pulses = !result.targeted_pulses.empty();
 
   double_t earliest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
+  double_t latest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
 
   if (request_timed_trigger) {
     earliest_pulse_time = reference_time + *result.trigger_offset;
+    latest_pulse_time = earliest_pulse_time;
   }
 
   if (request_targeted_pulses) {
     earliest_pulse_time = reference_time + result.targeted_pulses.front().time_offset;
+    latest_pulse_time = earliest_pulse_time;
     for (const auto& pulse : result.targeted_pulses) {
       earliest_pulse_time = std::min(earliest_pulse_time, reference_time + pulse.time_offset);
+      latest_pulse_time = std::max(latest_pulse_time, reference_time + pulse.time_offset);
     }
   }
 
@@ -559,9 +563,9 @@ void EegDecider::handle_stimulation_request(
   this->attempt_trace_publisher->publish(attempt_trace);
 
   /* Check that the minimum trial interval has passed. */
-  auto time_since_previous_trial = earliest_pulse_time - this->previous_stimulation.time;
-  auto has_minimum_trial_interval_passed = !this->previous_stimulation.is_set() ||
-                                            time_since_previous_trial >= this->minimum_trial_interval;
+  auto time_since_previous_trial = earliest_pulse_time - this->previous_stimulation_time;
+  auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                           time_since_previous_trial >= this->minimum_trial_interval;
 
   if (!has_minimum_trial_interval_passed) {
     RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s).",
@@ -601,14 +605,7 @@ void EegDecider::handle_stimulation_request(
 
     this->targeted_pulses_publisher->publish(targeted_pulses_msg);
   }
-
-  /* Mark the estimated next stimulation time; this is replaced by the actual stimulation time
-     when received. EEG device timestamp is estimated based on the reference sample time and
-     the time difference between the estimated next stimulation time and the reference sample time,
-     assuming no clock drift between the EEG device and the system and no EEG clock resets - this
-     should work for most use cases. */
-  this->previous_stimulation.time = earliest_pulse_time;
-  this->previous_stimulation.eeg_device_timestamp = reference_eeg_device_timestamp + (earliest_pulse_time - reference_time);
+  this->previous_stimulation_time = latest_pulse_time;
 }
 
 void EegDecider::process_pulse_request(const DeferredProcessingRequest& request) {
@@ -953,10 +950,6 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   if (msg->pulse_trigger) {
     RCLCPP_INFO(this->get_logger(), "Received pulse trigger at time %.4f (s)", sample_time);
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Pulse);
-
-    /* Update the previous stimulation time. */
-    this->previous_stimulation.time = sample_time;
-    this->previous_stimulation.eeg_device_timestamp = msg->eeg_device_timestamp;
   }
 
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
@@ -985,8 +978,8 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   }
 
   /* Check if minimum trial interval has passed since last trigger. */
-  bool minimum_trial_interval_passed = !this->previous_stimulation.is_set() ||
-                                        sample_time >= this->previous_stimulation.time + this->minimum_trial_interval;
+  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
+                                       sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
 
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   bool backpressure_detected = detect_backpressure(msg);
@@ -1001,17 +994,9 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
     msg->trial_in_stage, msg->stage_name.c_str(), msg->trial_type.c_str(), msg->time);
 
-  /* Use the time of the previous stimulation as the reference time - if not set, use the time of the sample. */
+  // TODO: Add reference time and eeg device timestamp to the sample - this should come from the experiment coordinator.
   double_t reference_time = UNSET_TIME;
   double_t reference_eeg_device_timestamp = UNSET_TIME;
-
-  if (this->previous_stimulation.is_set()) {
-    reference_time = this->previous_stimulation.time;
-    reference_eeg_device_timestamp = this->previous_stimulation.eeg_device_timestamp;
-  } else {
-    reference_time = msg->time;
-    reference_eeg_device_timestamp = msg->eeg_device_timestamp;
-  }
 
   /* Call process_predetermined on the Python side. */
   auto result = this->decider_wrapper->process_predetermined(

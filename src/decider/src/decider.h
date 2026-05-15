@@ -117,8 +117,15 @@ private:
 
   bool is_sample_window_valid() const;
   void enqueue_deferred_request(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason);
-  void process_deferred_request(const DeferredProcessingRequest& request, double_t current_sample_time);
+  void process_periodic_request(const DeferredProcessingRequest& request);
+  void process_pulse_request(const DeferredProcessingRequest& request);
+  void process_event_request(const DeferredProcessingRequest& request);
   void process_ready_deferred_requests(double_t current_sample_time);
+
+  void handle_stimulation_request(
+    const ProcessResult& result,
+    const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>& triggering_sample,
+    double_t sample_time);
 
   void handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time);
   void handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time);

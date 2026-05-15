@@ -765,7 +765,7 @@ void DeciderWrapper::fill_arrays_from_buffer(
 /* Shared result parser used by all processing entry points. */
 ProcessResult DeciderWrapper::parse_result_dict(
     const py::object& py_result,
-    bool allow_trigger_offset,
+    bool allow_stimulation_request,
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue) {
 
@@ -806,7 +806,7 @@ ProcessResult DeciderWrapper::parse_result_dict(
   }
 
   if (dict_result.contains("trigger_offset")) {
-    if (!allow_trigger_offset) {
+    if (!allow_stimulation_request) {
       log_error("Timed trigger requests are not allowed for pulse or event processing.");
       return ProcessResult::failure();
     }
@@ -814,6 +814,11 @@ ProcessResult DeciderWrapper::parse_result_dict(
   }
 
   if (dict_result.contains("targeted_pulses")) {
+    if (!allow_stimulation_request) {
+      log_error("Targeted pulse requests are not allowed for pulse or event processing.");
+      return ProcessResult::failure();
+    }
+
     if (!py::isinstance<py::list>(dict_result["targeted_pulses"])) {
       log_error("targeted_pulses must be a list.");
       return ProcessResult::failure();

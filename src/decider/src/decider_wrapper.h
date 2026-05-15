@@ -229,7 +229,7 @@ private:
 
   ProcessResult parse_result_dict(
     const py::object& py_result,
-    bool allow_trigger_offset,
+    bool allow_stimulation_request,
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue);
 

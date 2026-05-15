@@ -601,6 +601,14 @@ void EegDecider::handle_stimulation_request(
 
     this->targeted_pulses_publisher->publish(targeted_pulses_msg);
   }
+
+  /* Mark the estimated next stimulation time; this is replaced by the actual stimulation time
+     when received. EEG device timestamp is estimated based on the reference sample time and
+     the time difference between the estimated next stimulation time and the reference sample time,
+     assuming no clock drift between the EEG device and the system and no EEG clock resets - this
+     should work for most use cases. */
+  this->previous_stimulation.time = earliest_pulse_time;
+  this->previous_stimulation.eeg_device_timestamp = reference_eeg_device_timestamp + (earliest_pulse_time - reference_time);
 }
 
 void EegDecider::process_pulse_request(const DeferredProcessingRequest& request) {

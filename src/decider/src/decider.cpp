@@ -123,13 +123,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/neurosimo/pipeline/latency/event_processing",
     10);
 
-  /* Service client for timed trigger. */
+  /* Service client for timed trigger.
+
+     The service server is created at session start, hence do not wait for it here. */
   this->timed_trigger_client = this->create_client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>(
     "/neurosimo/pipeline/timed_trigger", rclcpp::QoS(rclcpp::ServicesQoS()));
-
-  while (!timed_trigger_client->wait_for_service(2s)) {
-    RCLCPP_INFO(get_logger(), "Service /neurosimo/pipeline/timed_trigger not available, waiting...");
-  }
 
   /* Service client for session abort. */
   this->abort_session_client = this->create_client<neurosimo_system_interfaces::srv::AbortSession>(

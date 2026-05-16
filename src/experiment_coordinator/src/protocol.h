@@ -32,6 +32,7 @@ struct Stage {
   std::vector<TrialTypeEntry> trial_types;      // breakdown by timing/type
   std::string order = "sequential";             // "sequential" or "random"
   std::vector<size_t> trial_order;              // indices into trial_types, length == trials
+  std::optional<uint32_t> max_failures;         // per-stage cap on failed trials; absent means no retries
 };
 
 /**
@@ -118,6 +119,7 @@ struct ExperimentState {
   // Counters
   uint32_t trial_in_session = 0;
   uint64_t attempt_in_session = 0;
+  uint32_t failures_in_stage = 0;          // number of failed trials in current stage (for retry logic)
   
   // Pending event flags (set when transition occurs, consumed on the next sample)
   bool is_new_stage_pending = false;

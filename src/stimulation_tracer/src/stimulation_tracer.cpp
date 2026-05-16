@@ -158,13 +158,15 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
     if (trace.actual_stimulation_sample_index != 0) final_trace.actual_stimulation_sample_index = trace.actual_stimulation_sample_index;
     if (trace.timing_offset != 0.0) final_trace.timing_offset = trace.timing_offset;
 
+    /* Trial validity - if any trace marks it invalid, the final trace is invalid */
+    if (trace.invalid_trial) final_trace.invalid_trial = true;
   }
 
   /* Publish the final merged trace. */
   this->attempt_trace_final_publisher->publish(final_trace);
 
-  RCLCPP_INFO(this->get_logger(), "Finalized attempt trace: attempt_in_session=%lu, status=%u",
-              final_trace.attempt_in_session, final_trace.status);
+  RCLCPP_INFO(this->get_logger(), "Finalized attempt trace: attempt_in_session=%lu, status=%u, invalid_trial=%s",
+              final_trace.attempt_in_session, final_trace.status, final_trace.invalid_trial ? "true" : "false");
 
   /* Remove from memory. */
   this->attempt_traces.erase(it);

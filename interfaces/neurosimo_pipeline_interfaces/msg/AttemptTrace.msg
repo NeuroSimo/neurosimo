@@ -75,3 +75,8 @@ uint64 actual_stimulation_sample_index
 
 # Timing offset (actual - scheduled) in seconds
 float64 timing_offset
+
+# ----------------------------------------------------------------------------
+# Trial validity (filled by Decider from process_pulse return value)
+# ----------------------------------------------------------------------------
+bool invalid_trial                       # Whether the trial produced invalid data

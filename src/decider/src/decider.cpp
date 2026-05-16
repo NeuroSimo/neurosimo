@@ -526,7 +526,10 @@ bool EegDecider::is_sample_window_valid() const {
 void EegDecider::handle_stimulation_request(
     const ProcessResult& result,
     double_t reference_time,
-    double_t reference_eeg_device_timestamp) {
+    double_t reference_eeg_device_timestamp,
+    uint8_t attempt_timing,
+    const std::string& attempt_type,
+    uint64_t decision_id) {
 
   bool request_timed_trigger = result.trigger_offset != nullptr;
   bool request_targeted_pulses = !result.targeted_pulses.empty();
@@ -554,6 +557,9 @@ void EegDecider::handle_stimulation_request(
   attempt_trace.attempt_in_session = this->current_attempt_in_session;
   attempt_trace.requested_stimulation_time = earliest_pulse_time;
   attempt_trace.reference_time = reference_time;
+  attempt_trace.attempt_timing = attempt_timing;
+  attempt_trace.attempt_type = attempt_type;
+  attempt_trace.decision_id = decision_id;
   this->attempt_trace_publisher->publish(attempt_trace);
 
   /* Store for use when computing timing_offset on pulse observed. */
@@ -810,7 +816,11 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
 
   /* Handle stimulation requests. */
   if (stimulation_requested) {
-    handle_stimulation_request(result, reference_time, reference_eeg_device_timestamp);
+    handle_stimulation_request(
+      result, reference_time, reference_eeg_device_timestamp,
+      neurosimo_pipeline_interfaces::msg::AttemptTrace::ATTEMPT_TIMING_PERIODIC,
+      "",
+      this->decision_id);
   }
 }
 
@@ -1059,7 +1069,10 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
     return;
   }
 
-  handle_stimulation_request(result, reference_time, reference_eeg_device_timestamp);
+  handle_stimulation_request(
+    result, reference_time, reference_eeg_device_timestamp,
+    neurosimo_pipeline_interfaces::msg::AttemptTrace::ATTEMPT_TIMING_PREDETERMINED,
+    msg->trial_type);
 }
 
 bool EegDecider::detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {

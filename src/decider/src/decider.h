@@ -125,7 +125,10 @@ private:
   void handle_stimulation_request(
     const ProcessResult& result,
     double_t reference_time,
-    double_t reference_eeg_device_timestamp);
+    double_t reference_eeg_device_timestamp,
+    uint8_t attempt_timing,
+    const std::string& attempt_type = "",
+    uint64_t decision_id = 0);
     
   void handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   void handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);

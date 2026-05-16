@@ -134,6 +134,12 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
 
     /* Requested stimulation time */
     if (trace.requested_stimulation_time != 0.0) final_trace.requested_stimulation_time = trace.requested_stimulation_time;
+    if (trace.reference_time != 0.0) final_trace.reference_time = trace.reference_time;
+
+    /* Attempt information (from Decider) */
+    if (trace.attempt_timing != 0) final_trace.attempt_timing = trace.attempt_timing;
+    if (!trace.attempt_type.empty()) final_trace.attempt_type = trace.attempt_type;
+    if (trace.decision_id != 0) final_trace.decision_id = trace.decision_id;
 
     /* TriggerTimer fields */
     if (trace.stimulation_horizon != 0.0) final_trace.stimulation_horizon = trace.stimulation_horizon;
@@ -152,10 +158,6 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
     if (trace.actual_stimulation_sample_index != 0) final_trace.actual_stimulation_sample_index = trace.actual_stimulation_sample_index;
     if (trace.timing_offset != 0.0) final_trace.timing_offset = trace.timing_offset;
 
-    /* Embedded decision - take the first non-empty one */
-    if (trace.decision.decision_id != 0 && final_trace.decision.decision_id == 0) {
-      final_trace.decision = trace.decision;
-    }
   }
 
   /* Publish the final merged trace. */

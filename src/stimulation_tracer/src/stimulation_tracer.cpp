@@ -340,7 +340,6 @@ bool StimulationTracer::is_terminal_status(uint8_t status) {
   if (status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_LOOPBACK_LATENCY_EXCEEDED ||
       status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_TOO_LATE ||
       status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED ||
-      status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_MISSED ||
       status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR) {
     return true;
   }

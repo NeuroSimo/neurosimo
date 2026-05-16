@@ -71,15 +71,12 @@ void StimulationTracer::handle_initialize_stimulation_tracer(
 
   /* Store the session ID, data source, and mark as initialized. */
   this->current_session_id = request->session_id;
-  this->data_source = request->data_source;
   this->is_initialized = true;
 
   /* Clear any existing traces. */
   this->attempt_traces.clear();
   this->decision_traces.clear();
   this->pending_pulses.clear();
-
-  RCLCPP_INFO(this->get_logger(), "StimulationTracer initialized for session with data_source: %s", this->data_source.c_str());
 
   response->success = true;
 }
@@ -101,7 +98,6 @@ void StimulationTracer::handle_finalize_stimulation_tracer(
   this->pending_pulses.clear();
   this->is_initialized = false;
   this->current_session_id = {};
-  this->data_source = "";
 
   RCLCPP_INFO(this->get_logger(), "StimulationTracer finalized");
 
@@ -311,20 +307,6 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
     }
   }
 
-  bool is_simulated_data_source = this->data_source == "simulator" || this->data_source == "recording";
-
-  /* If the data source is simulated, the pulse is confirmed via trigger timer fire. */
-  if (is_simulated_data_source && final_trace.status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_FIRED) {
-    final_trace.pulse_confirmation_method = neurosimo_pipeline_interfaces::msg::AttemptTrace::METHOD_TRIGGER_TIMER_FIRE;
-    final_trace.pulse_confirmed = true;
-  }
-
-  /* If the data source is not simulated, the pulse is confirmed via EEG trigger. */
-  if (!is_simulated_data_source && final_trace.status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED) {
-    final_trace.pulse_confirmation_method = neurosimo_pipeline_interfaces::msg::AttemptTrace::METHOD_EEG_TRIGGER;
-    final_trace.pulse_confirmed = true;
-  }
-
   /* Publish the final merged trace. */
   this->attempt_trace_final_publisher->publish(final_trace);
 
@@ -343,13 +325,6 @@ bool StimulationTracer::is_terminal_status(uint8_t status) {
       status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR) {
     return true;
   }
-
-  /* For recording and simulator data sources, STATUS_FIRED is also sufficient to finalize. */
-  if ((this->data_source == "recording" || this->data_source == "simulator") &&
-      status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_FIRED) {
-    return true;
-  }
-
   return false;
 }
 

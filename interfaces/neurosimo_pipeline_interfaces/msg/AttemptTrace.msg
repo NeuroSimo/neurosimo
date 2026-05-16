@@ -55,9 +55,6 @@ float64 trigger_to_pulse_delay            # in seconds
 # ----------------------------------------------------------------------------
 # TriggerTimer timing (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
-float64 stimulation_horizon               # effective horizon accounting for maximum_timing_offset, in seconds
-float64 strict_stimulation_horizon        # strict horizon without timing offset tolerance, in seconds
-
 uint64 system_time_trigger_timer_received
 uint64 system_time_trigger_timer_finished
 

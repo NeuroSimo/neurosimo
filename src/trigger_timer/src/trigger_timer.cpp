@@ -153,9 +153,6 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<neurosimo_eeg_interfaces
 
   double_t sample_time = msg->time;
 
-  // Update latest sample information for calculating stimulation horizon
-  this->latest_sample_time = sample_time;
-
   // Store sample time and corresponding system time for time estimation
   this->stored_sample_time = sample_time;
   this->stored_system_time = std::chrono::high_resolution_clock::now();
@@ -310,10 +307,6 @@ void TriggerTimer::handle_request_timed_trigger(
   uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
     end_time.time_since_epoch()).count();
 
-  /* Calculate stimulation horizons. */
-  double_t strict_stimulation_horizon = estimate_current_sample_time() - request->reference_sample_time;
-  double_t stimulation_horizon = std::max(0.0, strict_stimulation_horizon - this->maximum_timing_offset);
-
   /* Determine status. */
   uint8_t status;
   switch (result) {
@@ -336,8 +329,6 @@ void TriggerTimer::handle_request_timed_trigger(
   attempt_trace.session_id = request->session_id;
   attempt_trace.attempt_in_session = request->attempt_in_session;
   attempt_trace.status = status;
-  attempt_trace.stimulation_horizon = stimulation_horizon;
-  attempt_trace.strict_stimulation_horizon = strict_stimulation_horizon;
   attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
   attempt_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
   attempt_trace.loopback_latency_at_scheduling = this->current_loopback_latency;
@@ -394,9 +385,6 @@ void TriggerTimer::reset_state() {
 
   /* Reset loopback monitoring flags */
   this->loopback_received = false;
-
-  /* Reset latest sample information */
-  this->latest_sample_time = 0.0;
 
   /* Reset stored time tracking */
   this->stored_sample_time = 0.0;

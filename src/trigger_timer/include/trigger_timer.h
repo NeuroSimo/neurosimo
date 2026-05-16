@@ -50,9 +50,6 @@ private:
   double_t current_loopback_latency = 0.0;
   double_t current_time = 0.0;
 
-  // Latest sample information for calculating stimulation horizon
-  double_t latest_sample_time = 0.0;
-
   // Synchronized time tracking for sample time and system time
   double_t stored_sample_time = 0.0;
   std::chrono::high_resolution_clock::time_point stored_system_time;

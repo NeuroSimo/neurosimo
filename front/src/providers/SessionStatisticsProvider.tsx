@@ -51,8 +51,6 @@ export interface AttemptTrace extends ROSLIB.Message {
   decision_id: number
   requested_stimulation_time: number
   reference_time: number
-  stimulation_horizon: number
-  strict_stimulation_horizon: number
   maximum_timing_offset: number
   maximum_loopback_latency: number
   trigger_to_pulse_delay: number

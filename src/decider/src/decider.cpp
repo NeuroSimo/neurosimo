@@ -917,6 +917,13 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Cache attempt counter for use when publishing attempt trace. */
   this->current_attempt_in_session = msg->attempt_in_session;
 
+  /* Track attempt reference: update on every is_attempt_start sample.
+     This is the timing anchor from which predetermined pulse offsets are computed. */
+  if (msg->is_attempt_start) {
+    this->attempt_reference_time = msg->time;
+    this->attempt_reference_eeg_device_timestamp = msg->eeg_device_timestamp;
+  }
+
   /* Check for sample index discontinuity and handle gaps. */
   detect_and_handle_sample_gap(msg);
 
@@ -926,16 +933,20 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* Handle periodic trials. */
-  bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
-  if (is_periodic) {
-    handle_periodic_trial(msg);
-  }
+  /* Handle trial commitment: when the coordinator commits, read timing/type and act. */
+  if (msg->is_attempt_committed) {
+    bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
+    bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
 
-  /* Handle predetermined trials. */
-  bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
-  if (is_predetermined && msg->is_new_attempt) {
-    handle_predetermined_trial(msg);
+    if (is_periodic) {
+      handle_periodic_trial(msg);
+    }
+    if (is_predetermined) {
+      handle_predetermined_trial(msg);
+    }
+  } else {
+    /* For non-commit samples with an ongoing periodic trial, continue periodic processing. */
+    handle_periodic_trial(msg);
   }
 
   /* Check if any decider-defined events occur at the current sample. */
@@ -965,7 +976,7 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   }
 
   /* Reset periodic processing time at the start of a new attempt to ensure alignment with attempt start. */
-  if (msg->is_new_attempt) {
+  if (msg->is_attempt_start) {
     this->next_periodic_processing_time = sample_time + this->decider_wrapper->get_periodic_processing_interval();
   }
 
@@ -993,11 +1004,12 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
     msg->trial_in_stage, msg->stage_name.c_str(), msg->trial_type.c_str(), msg->time);
 
-  double_t reference_time = msg->reference_time;
-  double_t reference_eeg_device_timestamp = msg->reference_eeg_device_timestamp;
+  /* Use the reference time tracked from the most recent is_attempt_start sample. */
+  double_t reference_time = this->attempt_reference_time;
+  double_t reference_eeg_device_timestamp = this->attempt_reference_eeg_device_timestamp;
 
   if (std::isnan(reference_time)) {
-    RCLCPP_ERROR(this->get_logger(), "No reference time provided for predetermined trial at time %.3f (s).", msg->time);
+    RCLCPP_ERROR(this->get_logger(), "No reference time available for predetermined trial at time %.3f (s).", msg->time);
     this->error_occurred = true;
     this->abort_session("Missing reference time for predetermined trial");
     return;

@@ -12,10 +12,9 @@ const TRIAL_STATUS_LABELS = {
   1: 'Scheduled',
   2: 'Fired',
   3: 'Pulse observed',
-  4: 'Missed',
-  5: 'Loopback latency exceeded',
-  6: 'Too late',
-  7: 'Error',
+  4: 'Loopback latency exceeded',
+  5: 'Too late',
+  6: 'Error',
 } as const
 
 export const getStatusLabel = (status: number): string => {
@@ -47,7 +46,11 @@ export interface AttemptTrace extends ROSLIB.Message {
   session_id: number[]
   attempt_in_session: number
   status: number
+  attempt_timing: number
+  attempt_type: string
+  decision_id: number
   requested_stimulation_time: number
+  reference_time: number
   stimulation_horizon: number
   strict_stimulation_horizon: number
   maximum_timing_offset: number
@@ -61,7 +64,7 @@ export interface AttemptTrace extends ROSLIB.Message {
   actual_stimulation_time: number
   actual_stimulation_sample_index: number
   timing_offset: number
-  decision: DecisionTrace
+  invalid_trial: boolean
 }
 
 interface SessionStatisticsContextType {

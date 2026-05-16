@@ -27,21 +27,11 @@ const Container = styled(ConfigPanel)`
 const IconButtonWrapper = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-`
+  gap: 3px;
 
-const IconButton = styled.button<{ disabled: boolean }>`
-  background: none;
-  border: 0.5px solid #666666;
-  border-radius: 3px;
-  width: 22px;
-  height: 22px;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666666;
-  opacity: ${props => props.disabled ? 0.5 : 1};
+  ${Select} {
+    margin-left: 4px;
+  }
 `
 
 const InfoIcon = styled.span<{ disabled: boolean }>`
@@ -55,10 +45,6 @@ const InfoIcon = styled.span<{ disabled: boolean }>`
   &:hover {
     color: ${props => props.disabled ? '#007bff' : '#0056b3'};
   }
-`
-
-const ProtocolSelect = styled(Select)`
-  max-width: 150px;
 `
 
 export const ExperimentPanel: React.FC = () => {
@@ -180,13 +166,13 @@ export const ExperimentPanel: React.FC = () => {
           >
             <FontAwesomeIcon icon={faInfoCircle} />
           </InfoIcon>
-          <ProtocolSelect onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
+          <Select onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
             {protocolList.map((protocol, index) => (
               <option key={index} value={protocol}>
                 {protocol}
               </option>
             ))}
-          </ProtocolSelect>
+          </Select>
         </IconButtonWrapper>
       </ConfigRow>
 

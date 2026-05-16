@@ -1,7 +1,7 @@
 import styled from 'styled-components'
 
 export const Select = styled.select`
-  width: 150px;
+  width: 190px;
   padding: 5px;
   border: 1px solid #ccc;
   border-radius: 3px;
@@ -16,7 +16,7 @@ export const Select = styled.select`
 `
 
 // Shared width for configuration panels
-export const CONFIG_PANEL_WIDTH = 320
+export const CONFIG_PANEL_WIDTH = 350
 
 /* Shared dashboard panel title offset (px). */
 export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 220

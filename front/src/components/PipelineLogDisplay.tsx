@@ -8,13 +8,13 @@ import { LogContext, LogMessage, LogLevel, LogPhase, ProcessingPath } from 'prov
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
 const PipelineLogPanelTitle = styled.div`
-  width: 735px;
+  width: 956px;
   position: fixed;
   top: 610px;
   right: 27px;
   z-index: 1001;
   text-align: left;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: bold;
   display: flex;
   justify-content: space-between;
@@ -23,16 +23,16 @@ const PipelineLogPanelTitle = styled.div`
 
 const TitleGroup = styled.div`
   display: flex;
-  gap: 7px;
+  gap: 9px;
   align-items: center;
 `
 
 const LogSourceSelect = styled.select`
   background-color: #f5f5f5;
   border: 1.3px solid #d46c0b;
-  border-radius: 3px;
-  padding: 3.5px 8px;
-  font-size: 11px;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 14px;
   font-weight: bold;
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s;
@@ -50,16 +50,16 @@ const LogSourceSelect = styled.select`
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 5px;
+  gap: 7px;
 `
 
 const LogButton = styled.button`
   background-color: #d46c0b;
   color: white;
   border: none;
-  border-radius: 3px;
-  padding: 3.5px 8px;
-  font-size: 10px;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 13px;
   cursor: pointer;
   transition: background-color 0.2s;
 
@@ -78,13 +78,13 @@ const LogButton = styled.button`
 `
 
 const PipelineLogPanel = styled(StyledPanel)`
-  width: 733px;
-  height: 230px;
+  width: 953px;
+  height: 299px;
   position: fixed;
   top: 650px;
   right: 10px;
   z-index: 1000;
-  padding: 9px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
 `
@@ -94,11 +94,11 @@ const LogContainer = styled.div`
   overflow-y: auto;
   background-color: #f9f9f9;
   border: 1px solid #ddd;
-  border-radius: 3px;
-  padding: 6px;
+  border-radius: 4px;
+  padding: 8px;
   font-family: 'Courier New', monospace;
-  font-size: 9px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.35;
   white-space: pre-wrap;
   word-wrap: break-word;
   user-select: text;
@@ -108,10 +108,10 @@ const LogContainer = styled.div`
 `
 
 const LogEntry = styled.div`
-  margin-bottom: 3px;
+  margin-bottom: 4px;
   color: #333;
   display: grid;
-  grid-template-columns: 50px 1fr;
+  grid-template-columns: 65px 1fr;
   gap: 0;
 `
 
@@ -131,7 +131,7 @@ const Timestamp = styled.span<{ $phase: number; $level: number }>`
     if (props.$level === 1) return '#ffc107'  // WARNING - yellow
     return '#e8e8e8'  // INFO - light gray
   }};
-  padding: 2px 3px;
+  padding: 3px 4px;
   border-right: 2px solid ${props => {
     if (props.$phase === 0) return '#b85a09'  // INITIALIZATION - darker orange
     if (props.$phase === 2) return '#545b62'  // FINALIZATION - darker gray
@@ -142,15 +142,15 @@ const Timestamp = styled.span<{ $phase: number; $level: number }>`
 `
 
 const LogText = styled.span<{ $processingPath: number }>`
-  padding: 2px 10px;
+  padding: 3px 13px;
   background-color: ${props => {
     if (props.$processingPath === 1) return '#e8f4f8'  // PULSE - light blue
     if (props.$processingPath === 2) return '#f0f9e8'  // EVENT - light green
     return 'transparent'  // UNDETERMINED and PERIODIC - no background
   }};
   border-left: ${props => {
-    if (props.$processingPath === 1) return '3px solid #3498db'  // PULSE - blue border
-    if (props.$processingPath === 2) return '3px solid #27ae60'  // EVENT - green border
+    if (props.$processingPath === 1) return '4px solid #3498db'  // PULSE - blue border
+    if (props.$processingPath === 2) return '4px solid #27ae60'  // EVENT - green border
     return 'none'  // UNDETERMINED and PERIODIC - no border
   }};
 `

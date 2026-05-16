@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, ReactNode } from 'react'
+import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
@@ -66,13 +66,11 @@ export interface AttemptTrace extends ROSLIB.Message {
 }
 
 interface SessionStatisticsContextType {
-  loopbackLatency: Latency | null
   pulseProcessingLatency: Latency | null
   eventProcessingLatency: Latency | null
   decisionTrace: DecisionTrace | null
   attemptTrace: AttemptTrace | null
 
-  setLoopbackLatency: React.Dispatch<React.SetStateAction<Latency | null>>
   setPulseProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
   setEventProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
@@ -80,15 +78,11 @@ interface SessionStatisticsContextType {
 }
 
 const defaultSessionStatisticsState: SessionStatisticsContextType = {
-  loopbackLatency: null,
   pulseProcessingLatency: null,
   eventProcessingLatency: null,
   decisionTrace: null,
   attemptTrace: null,
 
-  setLoopbackLatency: () => {
-    console.warn('setLoopbackLatency is not yet initialized.')
-  },
   setPulseProcessingLatency: () => {
     console.warn('setPulseProcessingLatency is not yet initialized.')
   },
@@ -110,35 +104,12 @@ interface SessionStatisticsProviderProps {
 }
 
 export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps> = ({ children }) => {
-  const [loopbackLatency, setLoopbackLatency] = useState<Latency | null>(null)
   const [pulseProcessingLatency, setPulseProcessingLatency] = useState<Latency | null>(null)
   const [eventProcessingLatency, setEventProcessingLatency] = useState<Latency | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
   const [attemptTrace, setAttemptTrace] = useState<AttemptTrace | null>(null)
-  const loopbackLatencyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    /* Subscriber for loopback latency. */
-    const loopbackLatencySubscriber = new Topic<Latency>({
-      ros: ros,
-      name: '/neurosimo/pipeline/latency/loopback',
-      messageType: 'neurosimo_pipeline_interfaces/Latency',
-    })
-
-    loopbackLatencySubscriber.subscribe((message) => {
-      setLoopbackLatency(message)
-
-      // Clear existing timeout
-      if (loopbackLatencyTimeoutRef.current) {
-        clearTimeout(loopbackLatencyTimeoutRef.current)
-      }
-
-      // Set new timeout to clear latency after 0.5 seconds of no messages
-      loopbackLatencyTimeoutRef.current = setTimeout(() => {
-        setLoopbackLatency(null)
-      }, 500)
-    })
-
     /* Subscriber for pulse processing latency. */
     const pulseProcessingLatencySubscriber = new Topic<Latency>({
       ros: ros,
@@ -188,26 +159,20 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
 
     /* Unsubscribers */
     return () => {
-      loopbackLatencySubscriber.unsubscribe()
       pulseProcessingLatencySubscriber.unsubscribe()
       eventProcessingLatencySubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
       attemptTraceSubscriber.unsubscribe()
-      if (loopbackLatencyTimeoutRef.current) {
-        clearTimeout(loopbackLatencyTimeoutRef.current)
-      }
     }
   }, [])
 
   return (
     <SessionStatisticsContext.Provider
       value={{
-        loopbackLatency,
         pulseProcessingLatency,
         eventProcessingLatency,
         decisionTrace,
         attemptTrace,
-        setLoopbackLatency,
         setPulseProcessingLatency,
         setEventProcessingLatency,
         setDecisionTrace,

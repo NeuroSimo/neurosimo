@@ -788,12 +788,13 @@ ProcessResult DeciderWrapper::parse_result_dict(
     "targeted_pulses",
     "sensory_stimuli",
     "events",
-    "coil_target"
+    "coil_target",
+    "invalid_trial"
   };
   for (const auto& item : dict_result) {
     std::string key = py::str(item.first).cast<std::string>();
     if (std::find(allowed_keys.begin(), allowed_keys.end(), key) == allowed_keys.end()) {
-      log_error("Unexpected key '" + key + "' in return value, only 'trigger_offset', 'targeted_pulses', 'sensory_stimuli', 'events', and 'coil_target' are allowed.");
+      log_error("Unexpected key '" + key + "' in return value, only 'trigger_offset', 'targeted_pulses', 'sensory_stimuli', 'events', 'coil_target', and 'invalid_trial' are allowed.");
       return ProcessResult::failure();
     }
   }
@@ -858,6 +859,10 @@ ProcessResult DeciderWrapper::parse_result_dict(
       double event_time = event.cast<double>();
       event_queue.push(event_time);
     }
+  }
+
+  if (dict_result.contains("invalid_trial")) {
+    result.invalid_trial = dict_result["invalid_trial"].cast<bool>();
   }
 
   return result;

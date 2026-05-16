@@ -171,6 +171,16 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std
           }
         }
 
+        /* Parse max_failures (optional, enables retry logic). */
+        if (stage_node["max_failures"]) {
+          uint32_t max_failures = stage_node["max_failures"].as<uint32_t>();
+          if (max_failures == 0) {
+            result.error_message = "Stage '" + stage.name + "' max_failures must be > 0";
+            return result;
+          }
+          stage.max_failures = max_failures;
+        }
+
         /* Build trial_order array. */
         build_trial_order(stage, subject_id);
         

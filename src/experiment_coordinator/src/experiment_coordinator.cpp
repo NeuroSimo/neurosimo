@@ -208,7 +208,6 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
     return;
   }
 
-  state.trial_in_session++;
   state.attempt_in_session++;
 
   /* Check if we're in a stage. */
@@ -225,22 +224,48 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
   }
 
   const auto& stage = element.stage.value();
-  state.trial_in_stage++;
+  bool invalid_trial = msg->invalid_trial;
 
-  RCLCPP_INFO(this->get_logger(), "Trial %u: Stage '%s' trial %u/%u",
-    state.trial_in_session, stage.name.c_str(), state.trial_in_stage, stage.trials);
+  if (invalid_trial) {
+    /* Invalid trial: increment failure counter, do not advance trial position. */
+    state.failures_in_stage++;
 
-  /* Check if stage is complete. */
-  if (state.trial_in_stage >= stage.trials) {
-    RCLCPP_INFO(this->get_logger(), "Stage '%s' complete (%u trials)",
-      stage.name.c_str(), stage.trials);
+    if (stage.max_failures.has_value()) {
+      RCLCPP_INFO(this->get_logger(), "Trial invalid: Stage '%s' failure %u/%u (trial %u/%u)",
+        stage.name.c_str(), state.failures_in_stage, stage.max_failures.value(),
+        state.trial_in_stage, stage.trials);
+    } else {
+      RCLCPP_INFO(this->get_logger(), "Trial invalid: Stage '%s' failure %u (trial %u/%u)",
+        stage.name.c_str(), state.failures_in_stage,
+        state.trial_in_stage, stage.trials);
+    }
+  } else {
+    /* Valid trial: advance trial counters. */
+    state.trial_in_stage++;
+    state.trial_in_session++;
+
+    RCLCPP_INFO(this->get_logger(), "Trial %u: Stage '%s' trial %u/%u (valid)",
+      state.trial_in_session, stage.name.c_str(), state.trial_in_stage, stage.trials);
+  }
+
+  /* Check if stage is complete:
+     - All target trials succeeded, OR
+     - Failure budget exhausted (if max_failures is set). */
+  bool stage_complete = (state.trial_in_stage >= stage.trials);
+
+  if (!stage_complete && stage.max_failures.has_value() &&
+      state.failures_in_stage >= stage.max_failures.value()) {
+    RCLCPP_WARN(this->get_logger(), "Stage '%s' failure budget exhausted (%u failures, %u/%u valid trials)",
+      stage.name.c_str(), state.failures_in_stage, state.trial_in_stage, stage.trials);
+    stage_complete = true;
+  }
+
+  if (stage_complete) {
+    RCLCPP_INFO(this->get_logger(), "Stage '%s' complete (%u valid trials, %u failures)",
+      stage.name.c_str(), state.trial_in_stage, state.failures_in_stage);
 
     /* Advance to next element. */
     advance_to_next_element();
-
-    /* Note that we don't necessarily mark a new attempt pending here,
-       as the next element might be a rest. TODO: The control flow
-       could be improved to make this clearer. */
   } else {
     /* Commit to the next attempt — the verdict is in, so we know which attempt is next. */
     state.is_attempt_committed_pending = true;
@@ -460,6 +485,7 @@ void ExperimentCoordinator::end_rest() {
 void ExperimentCoordinator::start_stage(const Stage& stage, double current_time) {
   state.stage_name = stage.name;
   state.trial_in_stage = 0;
+  state.failures_in_stage = 0;
   state.stage_start_times[stage.name] = current_time;
   state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
 
@@ -544,6 +570,8 @@ void ExperimentCoordinator::publish_experiment_state() {
     msg.total_stages = 0;
     msg.trial_in_stage = 0;
     msg.total_trials_in_stage = 0;
+    msg.failures_in_stage = 0;
+    msg.max_failures = 0;
     msg.stage_start_time = 0.0;
     msg.stage_elapsed_time = 0.0;
     msg.rest_duration = 0.0;
@@ -588,6 +616,16 @@ void ExperimentCoordinator::publish_experiment_state() {
   msg.total_stages = static_cast<uint32_t>(total_stages);
   msg.trial_in_stage = state.in_rest ? 0 : state.trial_in_stage;
   msg.total_trials_in_stage = total_trials_in_stage;
+  msg.failures_in_stage = state.in_rest ? 0 : state.failures_in_stage;
+
+  /* Report max_failures for the current stage (0 means no limit). */
+  if (!state.in_rest && state.current_element_index < this->protocol->elements.size()) {
+    const auto& element = this->protocol->elements[state.current_element_index];
+    if (element.type == ProtocolElement::Type::STAGE && element.stage.has_value() &&
+        element.stage->max_failures.has_value()) {
+      msg.max_failures = element.stage->max_failures.value();
+    }
+  }
   
   /* Stage timing */
   double stage_start_experiment_time = 0.0;

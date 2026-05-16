@@ -17,6 +17,7 @@ stages:
   - stage:
       name: "stage_name"
       trials: 100               # shorthand: 100 periodic trials
+      max_failures: 10          # optional: cap invalid trials before stage ends
       notes: "Optional notes about this stage"
 
   - rest:
@@ -56,7 +57,19 @@ A stage represents a period where stimuli are delivered. Each stage has:
       - { count: 50, timing: predetermined, type: low_iti }      # predetermined
     ```
 - `order` (optional): When using the list form, set to `"random"` to shuffle the individual trials across all groups randomly. The shuffle is seeded by the subject ID for reproducibility.
+- `max_failures` (optional): Maximum number of invalid trials allowed in this stage before the stage ends early. Must be greater than `0`. When omitted, invalid trials can be retried without a failure cap (the stage still ends only after the required number of **valid** trials). Invalid trials are reported by the decider's `process_pulse()` return value (`trial_invalid: true`); they do not advance the stage trial counter.
 - `notes`: Optional description
+
+#### Invalid trials and stage completion
+
+A trial counts as **valid** when the decider does not mark it invalid after pulse processing. A trial counts as **invalid** when `process_pulse()` returns `{'trial_invalid': True}`.
+
+A stage completes when either:
+
+1. The required number of **valid** trials has been reached (`trials`), or
+2. `max_failures` is set and the number of invalid trials in the stage reaches that limit (the stage ends even if fewer than `trials` valid trials were collected).
+
+Without `max_failures`, only condition (1) applies: invalid trials are retried until enough valid trials are recorded.
 
 #### Trial timing modes
 
@@ -92,6 +105,7 @@ The protocol loader will validate:
 - All stage names are unique
 - All `wait_until` anchors reference valid stage names
 - All stages have at least 1 trial
+- `max_failures`, when present, is greater than 0
 - All durations are positive (> 0)
 - All offsets are non-negative (>= 0)
 - Each rest has either `duration` or `wait_until`, but not both

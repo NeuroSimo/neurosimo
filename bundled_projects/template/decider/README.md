@@ -241,13 +241,21 @@ return {
 
 Called when a pulse event occurs, if the method is defined on the `Decider` class. Same signature as `process_periodic()` except without `is_warm_up` (never called during warm-up).
 
+**Return Value:**
+
+May return `None` or a dictionary with `sensory_stimuli`, `events`, `coil_target` (same format as `process_periodic()`), and optionally:
+
+#### `trial_invalid` (bool, optional)
+Mark the current trial as invalid (e.g. artifact, failed quality check). Defaults to `false` if omitted. When `true`, the experiment coordinator does not advance the stage trial counter; the attempt is retried. Stages may set `max_failures` in the protocol to cap how many invalid trials are allowed before the stage ends (see protocols README).
+
 **Example:**
 ```python
 def process_pulse(
         self, reference_time, reference_index, time_offsets,
         eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trial_in_stage):
     """Process pulse events."""
-    print(f"Pulse event at {reference_time}")
+    if self.has_artifact(eeg_buffer):
+        return {'trial_invalid': True}
     return None
 ```
 

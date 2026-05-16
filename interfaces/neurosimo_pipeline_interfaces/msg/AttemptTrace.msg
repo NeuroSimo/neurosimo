@@ -20,10 +20,9 @@ uint64 attempt_in_session                         # Increments per attempt, rese
 uint8 STATUS_SCHEDULED=1                  # trigger timer accepted and scheduled
 uint8 STATUS_FIRED=2                      # trigger timer fired hardware trigger
 uint8 STATUS_PULSE_PROCESSED=3            # pulse observed in EEG stream and corresponding decider processing completed
-uint8 STATUS_MISSED=4                     # expected pulse not observed within window
-uint8 STATUS_LOOPBACK_LATENCY_EXCEEDED=5  # loopback latency exceeds threshold
-uint8 STATUS_TOO_LATE=6                   # trigger time exceeded maximum timing offset
-uint8 STATUS_ERROR=7                      # error (e.g. LabJack not connected, trigger already scheduled)
+uint8 STATUS_LOOPBACK_LATENCY_EXCEEDED=4  # loopback latency exceeds threshold
+uint8 STATUS_TOO_LATE=5                   # trigger time exceeded maximum timing offset
+uint8 STATUS_ERROR=6                      # error (e.g. LabJack not connected, trigger already scheduled)
 uint8 status
 
 # ----------------------------------------------------------------------------

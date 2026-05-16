@@ -106,7 +106,7 @@ void TriggerTimer::_publish_heartbeat() {
 }
 
 void TriggerTimer::_check_loopback_timeout() {
-  if (this->session_started && this->data_source == "eeg_device" &&!this->loopback_received) {
+  if (this->data_source == "eeg_device" &&!this->loopback_received) {
     RCLCPP_ERROR(logger, "No triggers received for over %.1f seconds", loopback_monitor_interval);
     this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED, "No triggers received, please check the EEG settings and connections");
 
@@ -120,12 +120,6 @@ void TriggerTimer::_publish_health_status(uint8_t health_level, const std::strin
   health.health_level = health_level;
   health.message = message;
   this->health_publisher->publish(health);
-}
-
-void TriggerTimer::attempt_labjack_connection() {
-  if (labjack_manager) {
-    labjack_manager->request_connection_attempt();
-  }
 }
 
 void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t sample_time) {
@@ -402,7 +396,6 @@ void TriggerTimer::reset_state() {
   this->data_source = "";
 
   /* Reset loopback monitoring flags */
-  this->session_started = false;
   this->loopback_received = false;
 
   /* Reset latest sample information */
@@ -414,6 +407,51 @@ void TriggerTimer::reset_state() {
 
   /* Reset minimum trial interval tracking */
   this->last_trigger_time = std::numeric_limits<double_t>::quiet_NaN();
+}
+
+bool TriggerTimer::initialize_labjack() {
+  /* Initialize LabJack manager. */
+  if (this->use_mock_labjack) {
+    labjack_manager = std::make_unique<MockLabJackManager>(this->get_logger());
+  } else {
+    labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), false);
+  }
+  labjack_manager->start();
+
+  /* Set up a timer to signal connection attempts every second. */
+  timer = this->create_wall_timer(
+    std::chrono::seconds(1),
+    [this] {
+      if (labjack_manager) {
+        labjack_manager->request_connection_attempt();
+      }
+    });
+
+  /* Wait for LabJack connection - try for up to 1 second */
+  auto start_time = std::chrono::steady_clock::now();
+  bool connected = false;
+
+  while (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(1)) {
+    if (labjack_manager && labjack_manager->is_connected()) {
+      connected = true;
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  if (!connected) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to connect to LabJack device during initialization");
+
+    /* Publish error health status */
+    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
+                                "Failed to connect to LabJack device");
+
+    /* Clean up on failure */
+    reset_state();
+    return false;
+  }
+
+  return true;
 }
 
 void TriggerTimer::handle_initialize_trigger_timer(
@@ -434,13 +472,6 @@ void TriggerTimer::handle_initialize_trigger_timer(
   this->enable_labjack = request->enable_labjack;
   this->data_source = request->data_source;
   this->minimum_trial_interval = request->minimum_trial_interval;
-
-  /* If LabJack is not enabled, don't initialize trigger timer, but return success. */
-  if (!request->enable_labjack) {
-    RCLCPP_INFO(this->get_logger(), "LabJack is not enabled, not initializing trigger timer");
-    response->success = true;
-    return;
-  }
 
   /* Validate the maximum timing offset is non-negative */
   if (this->maximum_timing_offset < 0.0) {
@@ -479,51 +510,18 @@ void TriggerTimer::handle_initialize_trigger_timer(
   RCLCPP_INFO(this->get_logger(), "  LabJack enabled: %s", this->enable_labjack ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), " ");
 
-  /* Set up a timer to monitor loopback trigger reception every second. */
-  this->loopback_monitor_timer = this->create_wall_timer(
-    std::chrono::duration<double>(loopback_monitor_interval),
-    std::bind(&TriggerTimer::_check_loopback_timeout, this));
-
-  /* Set up a timer to signal connection attempts every second. */
-  timer = this->create_wall_timer(
-    std::chrono::seconds(1),
-    std::bind(&TriggerTimer::attempt_labjack_connection, this));
-
-  /* Initialize LabJack manager. */
-  if (this->use_mock_labjack) {
-    labjack_manager = std::make_unique<MockLabJackManager>(this->get_logger());
-  } else {
-    labjack_manager = std::make_unique<LabJackManager>(this->get_logger(), false);
-  }
-  labjack_manager->start();
-
-  /* Wait for LabJack connection - try for up to 1 second */
-  auto start_time = std::chrono::steady_clock::now();
-  bool connected = false;
-
-  while (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(1)) {
-    if (labjack_manager && labjack_manager->is_connected()) {
-      connected = true;
-      break;
+  /* If LabJack is not enabled, don't initialize trigger timer, but return success. */
+  if (request->enable_labjack) {
+    if (!initialize_labjack()) {
+      response->success = false;
+      return;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    /* Set up a timer to monitor loopback trigger reception every second. */
+    this->loopback_monitor_timer = this->create_wall_timer(
+      std::chrono::duration<double>(loopback_monitor_interval),
+      std::bind(&TriggerTimer::_check_loopback_timeout, this));
   }
-
-  if (!connected) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to connect to LabJack device during initialization");
-    response->success = false;
-
-    /* Publish error health status */
-    this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
-                                 "Failed to connect to LabJack device");
-
-    /* Clean up on failure */
-    reset_state();
-    return;
-  }
-
-  /* Mark session as started for loopback monitoring */
-  this->session_started = true;
 
   RCLCPP_INFO(this->get_logger(), "Trigger timer initialized successfully");
   response->success = true;
@@ -533,7 +531,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
 }
 
 void TriggerTimer::handle_finalize_trigger_timer(
-    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer::Request> request,
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer::Request> /* request */,
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer::Response> response) {
 
   reset_state();

@@ -57,8 +57,8 @@ struct ProcessResult {
   std::vector<shared_stimulation_interfaces::msg::TargetedPulse> targeted_pulses;
   bool invalid_trial = false;  // Set by process_pulse return value
 
-  static ProcessResult failure() { return {false, nullptr, {}, {}, true}; }
-  static ProcessResult success_empty() { return {true, nullptr, {}, {}, true}; }
+  static ProcessResult failure() { return {false, nullptr, {}, {}, false}; }
+  static ProcessResult success_empty() { return {true, nullptr, {}, {}, false}; }
 };
 
 class DeciderWrapper {

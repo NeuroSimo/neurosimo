@@ -24,11 +24,13 @@ uint64 reference_sample_index
 bool stimulate
 
 # ----------------------------------------------------------------------------
-# Decider / preprocessing timing (filled by Decider)
+# Latency breakdown (filled by Decider)
 # ----------------------------------------------------------------------------
+float64 eeg_device_processing_duration    # seconds (latest from /neurosimo/pipeline/latency/loopback)
 float64 decider_duration                  # seconds
 float64 preprocessor_duration             # seconds
-float64 decision_path_latency             # seconds from sample publish to decider decision
+float64 overhead_duration                 # seconds (pipeline path minus preprocessor and decider)
+float64 total_duration                    # seconds (preprocessor + decider + overhead)
 
 uint64 system_time_decider_received       # steady clock ns
 uint64 system_time_decider_finished       # steady clock ns

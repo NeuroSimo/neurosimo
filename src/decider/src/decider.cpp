@@ -67,6 +67,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     qos_persist_latest,
     std::bind(&EegDecider::handle_is_coil_at_target, this, _1));
 
+  this->loopback_latency_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::LoopbackLatency>(
+    "/neurosimo/pipeline/latency/loopback",
+    10,
+    std::bind(&EegDecider::handle_loopback_latency, this, _1));
+
   /* Publisher for decision trace. */
   this->decision_trace_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     "/neurosimo/pipeline/decision_trace",
@@ -808,9 +813,11 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
   decision_trace.reference_sample_index = request.triggering_sample->sample_index;
   decision_trace.stimulate = stimulation_requested;
 
+  decision_trace.eeg_device_processing_duration = this->latest_eeg_device_processing_duration;
   decision_trace.decider_duration = decider_duration;
   decision_trace.preprocessor_duration = request.triggering_sample->preprocessor_duration;
-  decision_trace.decision_path_latency = decision_path_latency;
+  decision_trace.overhead_duration = decision_path_latency - request.triggering_sample->preprocessor_duration - decider_duration;
+  decision_trace.total_duration = decision_trace.preprocessor_duration + decision_trace.decider_duration + decision_trace.overhead_duration;
 
   decision_trace.system_time_decider_received = system_time_decider_received;
   decision_trace.system_time_decider_finished = system_time_decider_finished;
@@ -896,6 +903,11 @@ void EegDecider::abort_session(const std::string& reason) {
 
 void EegDecider::handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg) {
   this->is_coil_at_target = msg->data;
+}
+
+void EegDecider::handle_loopback_latency(
+    const std::shared_ptr<neurosimo_pipeline_interfaces::msg::LoopbackLatency> msg) {
+  this->latest_eeg_device_processing_duration = msg->eeg_device_processing_duration;
 }
 
 void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {

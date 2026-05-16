@@ -35,9 +35,11 @@ export interface DecisionTrace extends ROSLIB.Message {
   reference_sample_time: number
   reference_sample_index: number
   stimulate: boolean
+  eeg_device_processing_duration: number
   decider_duration: number
   preprocessor_duration: number
-  decision_path_latency: number
+  overhead_duration: number
+  total_duration: number
   system_time_decider_received: number
   system_time_decider_finished: number
 }

@@ -33,6 +33,7 @@
 
 #include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/loopback_latency.hpp"
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_message.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_messages.hpp"
@@ -91,6 +92,7 @@ private:
   void publish_health_status(uint8_t health_level, const std::string& message);
 
   void handle_is_coil_at_target(const std::shared_ptr<std_msgs::msg::Bool> msg);
+  void handle_loopback_latency(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::LoopbackLatency> msg);
 
   void request_timed_trigger(std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   void timed_trigger_callback(rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
@@ -143,6 +145,7 @@ private:
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::LoopbackLatency>::SharedPtr loopback_latency_subscriber;
 
   rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
   rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
@@ -220,6 +223,9 @@ private:
 
   /* Neuronavigation */
   bool is_coil_at_target = false;
+
+  /* Latest EEG device processing duration from loopback latency publisher. */
+  double_t latest_eeg_device_processing_duration = 0.0;
 
   /* ROS parameters */
   double_t minimum_trial_interval = UNSET_TIME;

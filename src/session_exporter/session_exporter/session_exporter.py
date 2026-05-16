@@ -101,9 +101,10 @@ ATTEMPT_TRACE_FIELDS = [
     'decision_reference_sample_time',
     'decision_reference_sample_index',
     'decision_stimulate',
+    'decision_eeg_device_processing_duration',
     'decision_decider_duration',
     'decision_preprocessor_duration',
-    'decision_path_latency',
+    'decision_overhead_duration',
     'decision_system_time_decider_received',
     'decision_system_time_decider_finished',
 ]
@@ -522,12 +523,14 @@ class SessionExporterNode(Node):
                     row_data[field] = decision.reference_sample_index
                 elif field == 'decision_stimulate':
                     row_data[field] = decision.stimulate
+                elif field == 'decision_eeg_device_processing_duration':
+                    row_data[field] = decision.eeg_device_processing_duration
                 elif field == 'decision_decider_duration':
                     row_data[field] = decision.decider_duration
                 elif field == 'decision_preprocessor_duration':
                     row_data[field] = decision.preprocessor_duration
-                elif field == 'decision_path_latency':
-                    row_data[field] = decision.decision_path_latency
+                elif field == 'decision_overhead_duration':
+                    row_data[field] = decision.overhead_duration
                 elif field == 'decision_system_time_decider_received':
                     row_data[field] = decision.system_time_decider_received
                 elif field == 'decision_system_time_decider_finished':

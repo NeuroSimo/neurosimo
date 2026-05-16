@@ -64,14 +64,23 @@ export const StimulationDisplay: React.FC = () => {
   }, [attemptTrace])
 
   // Decision trace
-  const formattedDecisionPathLatency = decisionTrace?.decision_path_latency
-    ? (decisionTrace.decision_path_latency * 1000).toFixed(1) + ' ms'
+  const decisionPathLatency = decisionTrace
+    ? decisionTrace.preprocessor_duration + decisionTrace.decider_duration + decisionTrace.overhead_duration
+    : undefined
+  const formattedDecisionPathLatency = decisionPathLatency
+    ? (decisionPathLatency * 1000).toFixed(1) + ' ms'
+    : '\u2013'
+  const formattedEegDeviceProcessingDuration = decisionTrace?.eeg_device_processing_duration
+    ? (decisionTrace.eeg_device_processing_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const formattedPreprocessorDuration = decisionTrace?.preprocessor_duration
     ? (decisionTrace.preprocessor_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const formattedDeciderDuration = decisionTrace?.decider_duration
     ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
+    : '\u2013'
+  const formattedOverheadDuration = decisionTrace?.overhead_duration
+    ? (decisionTrace.overhead_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
   const formattedPulseProcessingLatency = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
@@ -100,6 +109,10 @@ export const StimulationDisplay: React.FC = () => {
           <StateTitle>Decision</StateTitle>
         </StateRow>
         <StateRow>
+          <IndentedStateTitle>EEG device</IndentedStateTitle>
+          <StateValue>{formattedEegDeviceProcessingDuration}</StateValue>
+        </StateRow>
+        <StateRow>
           <IndentedStateTitle>Time to decision</IndentedStateTitle>
           <StateValue>{formattedDecisionPathLatency}</StateValue>
         </StateRow>
@@ -110,6 +123,10 @@ export const StimulationDisplay: React.FC = () => {
         <StateRow>
           <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
           <StateValue>{formattedDeciderDuration}</StateValue>
+        </StateRow>
+        <StateRow>
+          <DoubleIndentedStateTitle>Overhead</DoubleIndentedStateTitle>
+          <StateValue>{formattedOverheadDuration}</StateValue>
         </StateRow>
         <SectionSpacer />
         <StateRow>

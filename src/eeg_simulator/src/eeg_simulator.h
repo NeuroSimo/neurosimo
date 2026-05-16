@@ -2,6 +2,7 @@
 #define EEG_SIMULATOR_H
 
 #include <cmath>
+#include <mutex>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -13,6 +14,7 @@
 #include "neurosimo_eeg_interfaces/action/initialize_simulator_stream.hpp"
 #include "neurosimo_eeg_interfaces/srv/start_streaming.hpp"
 #include "neurosimo_eeg_interfaces/srv/stop_streaming.hpp"
+#include "neurosimo_eeg_interfaces/srv/inject_trigger.hpp"
 
 #include "std_msgs/msg/empty.hpp"
 
@@ -26,6 +28,8 @@
 #include "neurosimo_system_interfaces/msg/data_source_state.hpp"
 #include "neurosimo_system_interfaces/msg/global_config.hpp"
 #include "neurosimo_system_interfaces/srv/abort_session.hpp"
+
+#include <set>
 
 const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const std::string UNSET_STRING = "";
@@ -67,6 +71,10 @@ private:
       const std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Request> request,
       std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Response> response);
 
+  void handle_inject_trigger(
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::InjectTrigger::Request> request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::InjectTrigger::Response> response);
+
   void abort_session();
 
   neurosimo_project_interfaces::msg::DatasetInfo dataset_info;
@@ -98,6 +106,10 @@ private:
   /* Pulse times loaded from dataset JSON, used to inject pulse_trigger flags. */
   std::vector<double_t> pulse_times;
 
+  /* Trigger times injected at runtime. */
+  std::set<double_t> injected_trigger_times;
+  std::mutex injected_triggers_mutex;
+
   /* Initialization state */
   bool is_initialized = false;
   std::string initialized_project_name;
@@ -122,6 +134,7 @@ private:
   rclcpp::Publisher<neurosimo_system_interfaces::msg::DataSourceState>::SharedPtr data_source_state_publisher;
   rclcpp::Service<neurosimo_eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service;
   rclcpp::Service<neurosimo_eeg_interfaces::srv::StopStreaming>::SharedPtr stop_streaming_service;
+  rclcpp::Service<neurosimo_eeg_interfaces::srv::InjectTrigger>::SharedPtr inject_trigger_service;
   rclcpp::TimerBase::SharedPtr stream_timer;
 
   /* Action server for initialization */

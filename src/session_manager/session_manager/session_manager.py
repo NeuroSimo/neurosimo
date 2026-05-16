@@ -15,7 +15,8 @@ from neurosimo_pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
     InitializeStimulationTracer, FinalizeStimulationTracer,
-    InitializeTriggerTimer, FinalizeTriggerTimer
+    InitializeTriggerTimer, FinalizeTriggerTimer,
+    InitializeTriggerSimulator, FinalizeTriggerSimulator
 )
 from neurosimo_eeg_interfaces.action import InitializeSimulatorStream
 from neurosimo_eeg_interfaces.srv import InitializeEegDeviceStream, InitializeEegReplayStream, StartStreaming, StopStreaming
@@ -87,6 +88,8 @@ class SessionManagerNode(Node):
             InitializeStimulationTracer, '/neurosimo/pipeline/stimulation_tracer/initialize', callback_group=self.callback_group)
         self.trigger_timer_init_client = self.create_client(
             InitializeTriggerTimer, '/neurosimo/pipeline/trigger_timer/initialize', callback_group=self.callback_group)
+        self.trigger_simulator_init_client = self.create_client(
+            InitializeTriggerSimulator, '/neurosimo/pipeline/trigger_simulator/initialize', callback_group=self.callback_group)
         self.simulator_stream_init_client = ActionClient(
             self, InitializeSimulatorStream, '/eeg_simulator/initialize', callback_group=self.callback_group)
         self.eeg_device_stream_init_client = self.create_client(
@@ -105,6 +108,8 @@ class SessionManagerNode(Node):
             FinalizeStimulationTracer, '/neurosimo/pipeline/stimulation_tracer/finalize', callback_group=self.callback_group)
         self.trigger_timer_finalize_client = self.create_client(
             FinalizeTriggerTimer, '/neurosimo/pipeline/trigger_timer/finalize', callback_group=self.callback_group)
+        self.trigger_simulator_finalize_client = self.create_client(
+            FinalizeTriggerSimulator, '/neurosimo/pipeline/trigger_simulator/finalize', callback_group=self.callback_group)
 
         # Create clients for session recording
         self.recording_start_client = self.create_client(
@@ -175,6 +180,8 @@ class SessionManagerNode(Node):
             (self.decider_finalize_client, '/neurosimo/pipeline/decider/finalize'),
             (self.presenter_finalize_client, '/neurosimo/pipeline/presenter/finalize'),
             (self.stimulation_tracer_finalize_client, '/neurosimo/pipeline/stimulation_tracer/finalize'),
+            (self.trigger_simulator_init_client, '/neurosimo/pipeline/trigger_simulator/initialize'),
+            (self.trigger_simulator_finalize_client, '/neurosimo/pipeline/trigger_simulator/finalize'),
             (self.recording_streaming_start_client, '/neurosimo/eeg_replay/streaming/start'),
             (self.eeg_simulator_streaming_start_client, '/neurosimo/eeg_simulator/streaming/start'),
             (self.eeg_device_streaming_start_client, '/neurosimo/eeg_device/streaming/start'),
@@ -357,7 +364,7 @@ class SessionManagerNode(Node):
 
         # Finalize components in reverse initialization order, collecting fingerprints where available
         if initialized['trigger_timer']:
-            if not self.finalize_trigger_timer(session_id):
+            if not self.finalize_trigger_timer(session_id, session_config):
                 self.logger.error('TriggerTimer finalization failed')
 
         if initialized['stimulation_tracer']:
@@ -619,7 +626,14 @@ class SessionManagerNode(Node):
         return True
 
     def initialize_trigger_timer(self, session_id, global_config, session_config, minimum_trial_interval):
-        """Initialize the trigger timer component."""
+        """Initialize the trigger timer or trigger simulator based on data source."""
+        if session_config.data_source == 'simulator':
+            return self.initialize_trigger_simulator(session_id, minimum_trial_interval)
+        else:
+            return self._initialize_trigger_timer_hardware(session_id, global_config, session_config, minimum_trial_interval)
+
+    def _initialize_trigger_timer_hardware(self, session_id, global_config, session_config, minimum_trial_interval):
+        """Initialize the hardware trigger timer component."""
         request = InitializeTriggerTimer.Request()
         request.session_id = session_id
 
@@ -641,6 +655,20 @@ class SessionManagerNode(Node):
             return False
 
         self.logger.info('TriggerTimer initialized successfully')
+        return True
+
+    def initialize_trigger_simulator(self, session_id, minimum_trial_interval):
+        """Initialize the trigger simulator component for simulated EEG data."""
+        request = InitializeTriggerSimulator.Request()
+        request.session_id = session_id
+        request.minimum_trial_interval = minimum_trial_interval
+
+        response = self.call_service(self.trigger_simulator_init_client, request, '/neurosimo/pipeline/trigger_simulator/initialize')
+
+        if response is None or not response.success:
+            return False
+
+        self.logger.info('TriggerSimulator initialized successfully')
         return True
 
     def initialize_protocol(self, session_id, global_config, session_config):
@@ -749,8 +777,15 @@ class SessionManagerNode(Node):
         self.logger.info('StimulationTracer finalized successfully')
         return True
 
-    def finalize_trigger_timer(self, session_id):
-        """Finalize the trigger timer component."""
+    def finalize_trigger_timer(self, session_id, session_config):
+        """Finalize the trigger timer or trigger simulator based on data source."""
+        if session_config.data_source == 'simulator':
+            return self.finalize_trigger_simulator(session_id)
+        else:
+            return self._finalize_trigger_timer_hardware(session_id)
+
+    def _finalize_trigger_timer_hardware(self, session_id):
+        """Finalize the hardware trigger timer component."""
         request = FinalizeTriggerTimer.Request()
         request.session_id = session_id
         response = self.call_service(self.trigger_timer_finalize_client, request, '/neurosimo/pipeline/trigger_timer/finalize')
@@ -760,6 +795,19 @@ class SessionManagerNode(Node):
             return False
 
         self.logger.info('TriggerTimer finalized successfully')
+        return True
+
+    def finalize_trigger_simulator(self, session_id):
+        """Finalize the trigger simulator component."""
+        request = FinalizeTriggerSimulator.Request()
+        request.session_id = session_id
+        response = self.call_service(self.trigger_simulator_finalize_client, request, '/neurosimo/pipeline/trigger_simulator/finalize')
+
+        if response is None or not response.success:
+            self.logger.error('TriggerSimulator finalization failed')
+            return False
+
+        self.logger.info('TriggerSimulator finalized successfully')
         return True
 
     def finalize_protocol(self, session_id):

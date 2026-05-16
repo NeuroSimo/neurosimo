@@ -193,6 +193,10 @@ private:
   /* Cache of the latest sample's attempt counter, used when publishing attempt trace. */
   uint64_t current_attempt_in_session = 0;
 
+  /* Track the type of the current attempt (periodic or predetermined) */
+  uint8_t current_attempt_type = 0;
+  bool stimulation_requested = false;
+
   /* Reference time tracked from the most recent is_attempt_start sample. */
   double_t attempt_reference_time = std::numeric_limits<double_t>::quiet_NaN();
   double_t attempt_reference_eeg_device_timestamp = std::numeric_limits<double_t>::quiet_NaN();

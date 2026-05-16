@@ -119,6 +119,7 @@ struct ExperimentState {
   // Counters
   uint32_t trial_in_session = 0;
   uint64_t attempt_in_session = 0;
+  uint32_t attempt_in_trial = 0;
   uint32_t failures_in_stage = 0;          // number of failed trials in current stage (for retry logic)
   
   // Pending event flags (set when transition occurs, consumed on the next sample)

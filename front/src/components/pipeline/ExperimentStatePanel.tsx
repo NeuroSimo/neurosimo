@@ -126,6 +126,12 @@ export const ExperimentStatePanel: React.FC = () => {
             {experimentState ? (experimentState.in_rest ? '—' : `${experimentState.trial_in_stage}/${experimentState.total_trials_in_stage || 0}`) : '—'}
           </StateValue>
         </StateRow>
+        <StateRow>
+          <StateTitle>Attempt</StateTitle>
+          <StateValue>
+            {experimentState?.ongoing && !experimentState.in_rest ? experimentState.attempt_in_trial : '—'}
+          </StateValue>
+        </StateRow>
         <br />
         <StateRow>
           <StateTitle>Time</StateTitle>

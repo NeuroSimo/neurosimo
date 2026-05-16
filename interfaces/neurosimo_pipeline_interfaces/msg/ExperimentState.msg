@@ -6,6 +6,8 @@ uint32 total_stages
 # Trial progress
 uint32 trial_in_stage
 uint32 total_trials_in_stage
+uint64 attempt_in_session
+uint32 attempt_in_trial
 uint32 failures_in_stage       # Failed trials in current stage (retry count)
 uint32 max_failures            # 0 means no retry limit set
 

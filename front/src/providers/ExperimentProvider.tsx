@@ -10,6 +10,8 @@ export interface ExperimentState extends ROSLIB.Message {
   total_stages: number
   trial_in_stage: number
   total_trials_in_stage: number
+  attempt_in_session: number
+  attempt_in_trial: number
   failures_in_stage: number
   max_failures: number
   ongoing: boolean

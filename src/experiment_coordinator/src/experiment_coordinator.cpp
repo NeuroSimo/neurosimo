@@ -206,11 +206,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
 }
 
 void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg) {
-  /* Only process confirmed pulses. */
-  if (!msg->pulse_confirmed) {
-    return;
-  }
-
   if (!state.is_session_ongoing) {
     RCLCPP_WARN(this->get_logger(), "Session not ongoing, ignoring pulse event");
     return;

@@ -61,8 +61,6 @@ export interface AttemptTrace extends ROSLIB.Message {
   actual_stimulation_time: number
   actual_stimulation_sample_index: number
   timing_offset: number
-  pulse_confirmation_method: number
-  pulse_confirmed: boolean
   decision: DecisionTrace
 }
 

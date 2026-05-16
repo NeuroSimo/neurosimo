@@ -97,8 +97,6 @@ ATTEMPT_TRACE_FIELDS = [
     'actual_stimulation_time',
     'actual_stimulation_sample_index',
     'timing_offset',
-    'pulse_confirmed',
-    'pulse_confirmation_method',
     # Embedded decision fields (flattened with decision_ prefix)
     'decision_id',
     'decision_status',
@@ -126,13 +124,6 @@ ATTEMPT_TRACE_STATUS_MAP = {
 DECISION_TRACE_STATUS_MAP = {
     1: 'decided_no',
     2: 'decided_yes',
-}
-
-# Pulse confirmation method mapping for human-readable export
-ATTEMPT_TRACE_PULSE_CONFIRMATION_MAP = {
-    0: 'none',
-    1: 'eeg_trigger',
-    2: 'trigger_timer_fire',
 }
 
 # Log export fields
@@ -549,8 +540,6 @@ class SessionExporterNode(Node):
                     row_data[field] = ''.join(f'{b:02x}' for b in value)
                 elif field == 'status':
                     row_data[field] = ATTEMPT_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
-                elif field == 'pulse_confirmation_method':
-                    row_data[field] = ATTEMPT_TRACE_PULSE_CONFIRMATION_MAP.get(value, f'unknown_{value}')
                 else:
                     row_data[field] = value
         writer_info['writer'].writerow(row_data)

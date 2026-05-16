@@ -12,11 +12,6 @@ const double_t INJECT_TRIGGER_TIMEOUT_SEC = 0.1;
 TriggerSimulator::TriggerSimulator() : Node("trigger_simulator"), logger(rclcpp::get_logger("trigger_simulator")) {
   RCLCPP_INFO(this->get_logger(), "Initializing trigger simulator...");
 
-  /* Service for trigger request — same topic as trigger_timer so upstream callers are agnostic. */
-  this->trigger_request_service = create_service<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>(
-    "/neurosimo/pipeline/timed_trigger",
-    std::bind(&TriggerSimulator::handle_request_timed_trigger, this, _1, _2));
-
   /* Service for initialization. */
   this->initialize_service = create_service<neurosimo_pipeline_interfaces::srv::InitializeTriggerSimulator>(
     "/neurosimo/pipeline/trigger_simulator/initialize",
@@ -74,6 +69,7 @@ void TriggerSimulator::publish_health_status(uint8_t health_level, const std::st
 }
 
 void TriggerSimulator::reset_state() {
+  this->trigger_request_service.reset();
   this->is_initialized = false;
   this->session_id.clear();
   this->minimum_trial_interval = 0.0;
@@ -105,6 +101,10 @@ void TriggerSimulator::handle_initialize(
     return;
   }
 
+  this->trigger_request_service = create_service<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>(
+    "/neurosimo/pipeline/timed_trigger",
+    std::bind(&TriggerSimulator::handle_request_timed_trigger, this, _1, _2));
+
   this->is_initialized = true;
 
   RCLCPP_INFO(this->get_logger(), " ");
@@ -131,8 +131,6 @@ void TriggerSimulator::handle_finalize(
 void TriggerSimulator::handle_request_timed_trigger(
     const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request,
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Response> response) {
-
-  std::lock_guard<std::mutex> lock(handler_mutex);
 
   /* Capture timing at request receipt. */
   auto start_time = std::chrono::high_resolution_clock::now();

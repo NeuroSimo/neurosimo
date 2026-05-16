@@ -40,11 +40,6 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     10,
     std::bind(&TriggerTimer::handle_eeg_raw, this, _1));
 
-  /* Service for trigger request. */
-  this->trigger_request_service = create_service<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>(
-    TIMED_TRIGGER_SERVICE,
-    std::bind(&TriggerTimer::handle_request_timed_trigger, this, _1, _2));
-
   /* Service for initialization. */
   this->initialize_service = create_service<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer>(
     "/neurosimo/pipeline/trigger_timer/initialize",
@@ -364,6 +359,8 @@ void TriggerTimer::handle_request_timed_trigger(
 }
 
 void TriggerTimer::reset_state() {
+  this->trigger_request_service.reset();
+
   /* Cancel and reset the connection timer */
   if (timer) {
     timer->cancel();
@@ -522,6 +519,10 @@ void TriggerTimer::handle_initialize_trigger_timer(
       std::chrono::duration<double>(loopback_monitor_interval),
       std::bind(&TriggerTimer::_check_loopback_timeout, this));
   }
+
+  this->trigger_request_service = create_service<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>(
+    TIMED_TRIGGER_SERVICE,
+    std::bind(&TriggerTimer::handle_request_timed_trigger, this, _1, _2));
 
   RCLCPP_INFO(this->get_logger(), "Trigger timer initialized successfully");
   response->success = true;

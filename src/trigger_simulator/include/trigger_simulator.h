@@ -45,8 +45,6 @@ private:
   double_t minimum_trial_interval = 0.0;
   double_t last_trigger_time = std::numeric_limits<double_t>::quiet_NaN();
 
-  std::mutex handler_mutex;
-
   /* Handlers */
   void handle_request_timed_trigger(
     const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request,

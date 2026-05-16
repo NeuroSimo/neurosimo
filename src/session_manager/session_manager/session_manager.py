@@ -303,7 +303,7 @@ class SessionManagerNode(Node):
             self.logger.error('Protocol initialization failed')
             return initialized
         initialized['protocol'] = True
-        self._minimum_trial_interval = minimum_trial_interval
+        self.minimum_trial_interval = minimum_trial_interval
 
         # Initialize presenter (must be before decider)
         if not self.initialize_presenter(global_config, session_config, session_id, stream_info):
@@ -312,7 +312,7 @@ class SessionManagerNode(Node):
         initialized['presenter'] = True
 
         # Initialize decider
-        if not self.initialize_decider(global_config, session_config, session_id, stream_info, self._minimum_trial_interval):
+        if not self.initialize_decider(global_config, session_config, session_id, stream_info, self.minimum_trial_interval):
             self.logger.error('Decider initialization failed')
             return initialized
         initialized['decider'] = True
@@ -329,11 +329,17 @@ class SessionManagerNode(Node):
             return initialized
         initialized['stimulation_tracer'] = True
 
-        # Initialize trigger timer
-        if not self.initialize_trigger_timer(session_id, global_config, session_config, self._minimum_trial_interval):
-            self.logger.error('TriggerTimer initialization failed')
-            return initialized
-        initialized['trigger_timer'] = True
+        # Initialize trigger timer or trigger simulator based on data source
+        if session_config.data_source == 'eeg_device':
+            if not self.initialize_trigger_timer(session_id, global_config, session_config, self.minimum_trial_interval):
+                self.logger.error('TriggerTimer initialization failed')
+                return initialized
+            initialized['trigger_timer'] = True
+        else:
+            if not self.initialize_trigger_simulator(session_id, self.minimum_trial_interval):
+                self.logger.error('TriggerSimulator initialization failed')
+                return initialized
+            initialized['trigger_simulator'] = True
 
         # Start recording
         if not self.start_recording(session_id, global_config, session_config, stream_info):
@@ -364,8 +370,12 @@ class SessionManagerNode(Node):
 
         # Finalize components in reverse initialization order, collecting fingerprints where available
         if initialized['trigger_timer']:
-            if not self.finalize_trigger_timer(session_id, session_config):
+            if not self.finalize_trigger_timer(session_id):
                 self.logger.error('TriggerTimer finalization failed')
+        
+        if initialized['trigger_simulator']:
+            if not self.finalize_trigger_simulator(session_id):
+                self.logger.error('TriggerSimulator finalization failed')
 
         if initialized['stimulation_tracer']:
             if not self.finalize_stimulation_tracer(session_id):
@@ -431,11 +441,17 @@ class SessionManagerNode(Node):
                 self.logger.error('Stream initialization failed')
                 return
 
-            # Initialize all components
+            # Initialize components
             initialized = self.initialize_session(session_id, global_config, session_config, stream_info)
-            
-            # Check if initialization completed successfully
-            if not all(initialized.values()):
+
+            # Check that all required components have been initialized.
+            required_components = ['protocol', 'presenter', 'decider', 'preprocessor', 'stimulation_tracer', 'recording', 'streaming']
+            if session_config.data_source == 'eeg_device':
+                required_components.append('trigger_timer')
+            else:
+                required_components.append('trigger_simulator')
+
+            if not all(initialized[component] for component in required_components):
                 self.logger.error('Session initialization incomplete')
                 return
 
@@ -626,13 +642,6 @@ class SessionManagerNode(Node):
         return True
 
     def initialize_trigger_timer(self, session_id, global_config, session_config, minimum_trial_interval):
-        """Initialize the trigger timer or trigger simulator based on data source."""
-        if session_config.data_source == 'simulator':
-            return self.initialize_trigger_simulator(session_id, minimum_trial_interval)
-        else:
-            return self._initialize_trigger_timer_hardware(session_id, global_config, session_config, minimum_trial_interval)
-
-    def _initialize_trigger_timer_hardware(self, session_id, global_config, session_config, minimum_trial_interval):
         """Initialize the hardware trigger timer component."""
         request = InitializeTriggerTimer.Request()
         request.session_id = session_id
@@ -777,14 +786,7 @@ class SessionManagerNode(Node):
         self.logger.info('StimulationTracer finalized successfully')
         return True
 
-    def finalize_trigger_timer(self, session_id, session_config):
-        """Finalize the trigger timer or trigger simulator based on data source."""
-        if session_config.data_source == 'simulator':
-            return self.finalize_trigger_simulator(session_id)
-        else:
-            return self._finalize_trigger_timer_hardware(session_id)
-
-    def _finalize_trigger_timer_hardware(self, session_id):
+    def finalize_trigger_timer(self, session_id):
         """Finalize the hardware trigger timer component."""
         request = FinalizeTriggerTimer.Request()
         request.session_id = session_id

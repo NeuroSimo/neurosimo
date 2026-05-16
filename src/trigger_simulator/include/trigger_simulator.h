@@ -4,6 +4,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include <limits>
 #include <mutex>
+#include <optional>
 
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 #include "neurosimo_pipeline_interfaces/srv/request_timed_trigger.hpp"
@@ -59,10 +60,25 @@ private:
     const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerSimulator::Request> request,
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeTriggerSimulator::Response> response);
 
+  struct InjectTriggerCallResult {
+    enum class Status { Success, Timeout } status;
+    std::shared_ptr<neurosimo_eeg_interfaces::srv::InjectTrigger::Response> response;
+  };
+
   /* Helpers */
   void publish_heartbeat();
   void publish_health_status(uint8_t health_level, const std::string& message);
   void reset_state();
+
+  void publish_attempt_trace(const neurosimo_pipeline_interfaces::msg::AttemptTrace& trace);
+  void publish_attempt_trace(
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>& request,
+    uint8_t status,
+    uint64_t system_time_trigger_timer_received_ns);
+
+  InjectTriggerCallResult call_service_inject_trigger(
+    double_t sample_time,
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>& request);
 };
 
 #endif // TRIGGER_SIMULATOR_H

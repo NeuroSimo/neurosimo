@@ -72,6 +72,45 @@ void TriggerSimulator::publish_health_status(uint8_t health_level, const std::st
   this->health_publisher->publish(health);
 }
 
+void TriggerSimulator::publish_attempt_trace(
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>& request,
+    uint8_t status,
+    uint64_t system_time_trigger_timer_received_ns) {
+
+  auto trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
+  trace.session_id = request->session_id;
+  trace.attempt_in_session = request->attempt_in_session;
+  trace.status = status;
+  trace.system_time_trigger_timer_received = system_time_trigger_timer_received_ns;
+  trace.system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+
+  this->attempt_trace_publisher->publish(trace);
+}
+
+TriggerSimulator::InjectTriggerCallResult TriggerSimulator::call_service_inject_trigger(
+    double_t sample_time,
+    const std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>& request) {
+
+  auto inject_request = std::make_shared<neurosimo_eeg_interfaces::srv::InjectTrigger::Request>();
+  inject_request->sample_time = sample_time;
+  inject_request->session_id = request->session_id;
+  inject_request->attempt_in_session = request->attempt_in_session;
+
+  auto future = this->inject_trigger_client->async_send_request(inject_request);
+  auto timeout = std::chrono::duration<double>(INJECT_TRIGGER_TIMEOUT_SEC);
+
+  InjectTriggerCallResult result;
+  if (future.wait_for(std::chrono::duration_cast<std::chrono::nanoseconds>(timeout)) != std::future_status::ready) {
+    result.status = InjectTriggerCallResult::Status::Timeout;
+    return result;
+  }
+
+  result.status = InjectTriggerCallResult::Status::Success;
+  result.response = future.get();
+  return result;
+}
+
 void TriggerSimulator::reset_state() {
   this->trigger_request_service.reset();
   this->is_initialized = false;
@@ -145,16 +184,12 @@ void TriggerSimulator::handle_request_timed_trigger(
 
   /* If not initialized, reject immediately. */
   if (!this->is_initialized) {
-    RCLCPP_WARN_THROTTLE(logger, *this->get_clock(), 5000, "Trigger request received but trigger simulator is not initialized");
+    RCLCPP_ERROR(logger, "Trigger request received but trigger simulator is not initialized");
 
-    auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
-    attempt_trace.session_id = request->session_id;
-    attempt_trace.attempt_in_session = request->attempt_in_session;
-    attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
-    attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
-    attempt_trace.system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-    this->attempt_trace_publisher->publish(attempt_trace);
+    publish_attempt_trace(
+      request,
+      neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR,
+      system_time_trigger_timer_received);
 
     response->success = false;
     return;
@@ -167,93 +202,56 @@ void TriggerSimulator::handle_request_timed_trigger(
       RCLCPP_ERROR(logger, "Minimum trial interval (%.1f s) not met (%.3f s since last trigger), rejecting.",
                    this->minimum_trial_interval, time_since_last);
 
-      auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
-      attempt_trace.session_id = request->session_id;
-      attempt_trace.attempt_in_session = request->attempt_in_session;
-      attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
-      attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
-      attempt_trace.system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-      this->attempt_trace_publisher->publish(attempt_trace);
+      publish_attempt_trace(
+        request,
+        neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR,
+        system_time_trigger_timer_received);
 
       response->success = false;
       return;
     }
   }
 
-  /* Publish SCHEDULED trace before calling the simulator. */
-  {
-    auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
-    attempt_trace.session_id = request->session_id;
-    attempt_trace.attempt_in_session = request->attempt_in_session;
-    attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_SCHEDULED;
-    attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
+  publish_attempt_trace(
+    request,
+    neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_SCHEDULED,
+    system_time_trigger_timer_received);
 
-    /* Hardware-specific fields: set to 0.0 since not applicable in simulation. */
-    attempt_trace.maximum_timing_offset = 0.0;
-    attempt_trace.maximum_loopback_latency = 0.0;
-    attempt_trace.trigger_to_pulse_delay = 0.0;
-    attempt_trace.stimulation_horizon = 0.0;
-    attempt_trace.strict_stimulation_horizon = 0.0;
-    attempt_trace.loopback_latency_at_scheduling = 0.0;
+  auto inject_result = call_service_inject_trigger(desired_pulse_time, request);
 
-    this->attempt_trace_publisher->publish(attempt_trace);
-  }
-
-  /* Call InjectTrigger on the eeg_simulator. */
-  auto inject_request = std::make_shared<neurosimo_eeg_interfaces::srv::InjectTrigger::Request>();
-  inject_request->sample_time = desired_pulse_time;
-  inject_request->session_id = request->session_id;
-  inject_request->attempt_in_session = request->attempt_in_session;
-
-  auto future = this->inject_trigger_client->async_send_request(inject_request);
-
-  auto timeout = std::chrono::duration<double>(INJECT_TRIGGER_TIMEOUT_SEC);
-  if (future.wait_for(std::chrono::duration_cast<std::chrono::nanoseconds>(timeout)) != std::future_status::ready) {
-    uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+  if (inject_result.status == InjectTriggerCallResult::Status::Timeout) {
     RCLCPP_ERROR(logger, "InjectTrigger service call timed out (%.0f ms)", INJECT_TRIGGER_TIMEOUT_SEC * 1000);
 
     this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED,
                                 "EEG simulator inject_trigger service timed out");
 
-    auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
-    attempt_trace.session_id = request->session_id;
-    attempt_trace.attempt_in_session = request->attempt_in_session;
-    attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
-    attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
-    attempt_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
-    this->attempt_trace_publisher->publish(attempt_trace);
+    publish_attempt_trace(
+      request,
+      neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR,
+      system_time_trigger_timer_received);
 
     response->success = false;
     return;
   }
 
-  uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
-    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+  auto inject_response = inject_result.response;
+  uint8_t rejection_reason = inject_response->rejection_reason;
 
-  auto inject_response = future.get();
+  bool success = inject_response->success && rejection_reason == neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_NONE;
 
   /* Capture system time at the moment the injection was confirmed. */
   uint64_t system_time_hardware_fired = std::chrono::duration_cast<std::chrono::nanoseconds>(
     std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-  /* Translate the response into an AttemptTrace. */
   auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   attempt_trace.session_id = request->session_id;
   attempt_trace.attempt_in_session = request->attempt_in_session;
   attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
-  attempt_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
 
-  /* Hardware-specific fields: not applicable in simulation. */
-  attempt_trace.maximum_timing_offset = 0.0;
-  attempt_trace.maximum_loopback_latency = 0.0;
-  attempt_trace.trigger_to_pulse_delay = 0.0;
-  attempt_trace.stimulation_horizon = 0.0;
-  attempt_trace.strict_stimulation_horizon = 0.0;
-  attempt_trace.loopback_latency_at_scheduling = 0.0;
+  /* Technically not completely true, but close enough for our purposes. */
+  attempt_trace.system_time_trigger_timer_finished = system_time_hardware_fired;
 
-  if (inject_response->success) {
+  if (success) {
     attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_FIRED;
     attempt_trace.system_time_hardware_fired = system_time_hardware_fired;
     attempt_trace.latency_corrected_time_at_firing = desired_pulse_time;
@@ -263,26 +261,11 @@ void TriggerSimulator::handle_request_timed_trigger(
 
     RCLCPP_INFO(logger, "Trigger injected at sample time %.4f s", desired_pulse_time);
   } else {
-    uint8_t rejection = inject_response->rejection_reason;
+    attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
 
-    if (rejection == neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_TOO_LATE) {
+    if (rejection_reason == neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_TOO_LATE) {
       attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_TOO_LATE;
-      RCLCPP_WARN(logger, "Trigger injection rejected: too late (playback at %.4f s, requested %.4f s)",
-                   inject_response->current_playback_time, desired_pulse_time);
-    } else {
-      attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
-
-      if (rejection == neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_NOT_PLAYING) {
-        RCLCPP_WARN(logger, "Trigger injection rejected: simulator not playing");
-        this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED,
-                                    "EEG simulator is not playing back data");
-      } else {
-        RCLCPP_ERROR(logger, "Trigger injection failed with rejection reason %d", rejection);
-        this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED,
-                                    "Trigger injection failed");
-      }
     }
-
     response->success = false;
   }
 

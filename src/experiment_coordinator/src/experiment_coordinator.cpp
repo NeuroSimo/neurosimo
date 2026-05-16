@@ -177,7 +177,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
       if (enriched.is_attempt_committed && state.trial_in_stage < stage.trial_order.size()) {
         size_t type_idx = stage.trial_order[state.trial_in_stage];
         const auto& trial_entry = stage.trial_types[type_idx];
-        enriched.trial_timing = static_cast<uint8_t>(trial_entry.timing);
+        enriched.trial_timing = trial_entry.timing;
         enriched.trial_type = trial_entry.type;
       }
     }

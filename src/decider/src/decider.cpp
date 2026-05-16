@@ -50,11 +50,6 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
   /* Publisher for heartbeat. */
   this->heartbeat_publisher = this->create_publisher<std_msgs::msg::Empty>(HEARTBEAT_TOPIC, 10);
 
-  /* Publisher for pulse-processed trigger (Empty). */
-  this->pulse_processed_publisher = this->create_publisher<std_msgs::msg::Empty>(
-    "/neurosimo/decider/pulse_processed",
-    10);
-
   /* Note: The EEG subscriber will be during initialization based on whether preprocessor is enabled. */
 
   /* Set up QoS profile for persistent state topics */
@@ -561,6 +556,9 @@ void EegDecider::handle_stimulation_request(
   attempt_trace.reference_time = reference_time;
   this->attempt_trace_publisher->publish(attempt_trace);
 
+  /* Store for use when computing timing_offset on pulse observed. */
+  this->last_requested_stimulation_time = earliest_pulse_time;
+
   /* Check that the minimum trial interval has passed. */
   auto time_since_previous_trial = earliest_pulse_time - this->previous_stimulation_time;
   auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
@@ -654,9 +652,15 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   latency_msg.latency = decider_duration;
   this->pulse_processing_latency_publisher->publish(latency_msg);
 
-  /* Publish an Empty trigger to signal that pulse processing is complete. */
-  std_msgs::msg::Empty trigger_msg;
-  this->pulse_processed_publisher->publish(trigger_msg);
+  /* Publish attempt trace with STATUS_PULSE_PROCESSED. */
+  auto pulse_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
+  pulse_trace.session_id = this->session_id;
+  pulse_trace.attempt_in_session = this->current_attempt_in_session;
+  pulse_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED;
+  pulse_trace.actual_stimulation_time = sample_time;
+  pulse_trace.actual_stimulation_sample_index = request.triggering_sample->sample_index;
+  pulse_trace.timing_offset = sample_time - this->last_requested_stimulation_time;
+  this->attempt_trace_publisher->publish(pulse_trace);
 }
 
 void EegDecider::process_event_request(const DeferredProcessingRequest& request) {

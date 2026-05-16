@@ -140,7 +140,6 @@ private:
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
-  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pulse_processed_publisher;
 
   rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr timed_trigger_client;
   rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
@@ -178,6 +177,9 @@ private:
 
   /* Used for keeping track of the time of the previous stimulation to ensure that the minimum trial interval is respected. */
   double_t previous_stimulation_time = UNSET_TIME;
+
+  /* Requested stimulation time from the latest stimulation request; used for timing_offset in pulse trace. */
+  double_t last_requested_stimulation_time = std::numeric_limits<double_t>::quiet_NaN();
 
   /* Used for publishing logs from the previous sample at the beginning of the current sample. */
   double_t previous_sample_time = UNSET_TIME;

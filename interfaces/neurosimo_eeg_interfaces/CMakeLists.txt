@@ -36,6 +36,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/InitializeEegReplayStream.srv"
   "srv/StartStreaming.srv"
   "srv/StopStreaming.srv"
+  "srv/InjectTrigger.srv"
 
   DEPENDENCIES builtin_interfaces
 )

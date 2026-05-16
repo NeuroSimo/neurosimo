@@ -77,6 +77,13 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     rclcpp::ServicesQoS(),
     callback_group);
 
+  /* Service for injecting triggers at specific sample times. */
+  this->inject_trigger_service = this->create_service<neurosimo_eeg_interfaces::srv::InjectTrigger>(
+    "/neurosimo/eeg_simulator/inject_trigger",
+    std::bind(&EegSimulator::handle_inject_trigger, this, std::placeholders::_1, std::placeholders::_2),
+    rclcpp::ServicesQoS(),
+    callback_group);
+
   /* Publisher for EEG samples.
 
      NB: It is crucial to not use the shared, re-entrant callback group for this publisher, as EEG sample messages
@@ -200,6 +207,12 @@ void EegSimulator::execute_initialize(
   this->current_pulse_index = 0;
   this->time_offset = 0.0;
 
+  /* Clear any previously injected triggers. */
+  {
+    std::lock_guard<std::mutex> lock(this->injected_triggers_mutex);
+    this->injected_trigger_times.clear();
+  }
+
   /* Log pulse times info if present. */
   if (!this->pulse_times.empty()) {
     RCLCPP_INFO(this->get_logger(), "Dataset has %zu pulse times. First pulse at %.4f s.",
@@ -300,6 +313,12 @@ void EegSimulator::handle_stop_streaming(
 
   stop_streaming_timer();
 
+  /* Clear any pending injected triggers. */
+  {
+    std::lock_guard<std::mutex> lock(this->injected_triggers_mutex);
+    this->injected_trigger_times.clear();
+  }
+
   /* Store the final fingerprint before resetting state */
   response->data_source_fingerprint = this->data_source_fingerprint;
   RCLCPP_INFO(this->get_logger(), "Session data fingerprint: 0x%016lx", response->data_source_fingerprint);
@@ -308,6 +327,44 @@ void EegSimulator::handle_stop_streaming(
   publish_data_source_state();
 
   response->success = true;
+}
+
+void EegSimulator::handle_inject_trigger(
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::InjectTrigger::Request> request,
+      std::shared_ptr<neurosimo_eeg_interfaces::srv::InjectTrigger::Response> response) {
+
+  /* Check that streaming is active. */
+  if (this->data_source_state != neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
+    RCLCPP_WARN(this->get_logger(), "InjectTrigger rejected: simulator is not streaming");
+    response->success = false;
+    response->rejection_reason = neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_NOT_PLAYING;
+    response->current_playback_time = 0.0;
+    return;
+  }
+
+  /* Compute the current playback time to check if the requested sample time is in the past. */
+  double_t current_sample_time = this->current_index * this->sampling_period + this->time_offset;
+  response->current_playback_time = current_sample_time;
+
+  if (request->sample_time < current_sample_time) {
+    RCLCPP_WARN(this->get_logger(), "InjectTrigger rejected: sample time %.4f is in the past (current: %.4f)",
+                request->sample_time, current_sample_time);
+    response->success = false;
+    response->rejection_reason = neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_TOO_LATE;
+    return;
+  }
+
+  /* Add the trigger time to the injected set. */
+  {
+    std::lock_guard<std::mutex> lock(this->injected_triggers_mutex);
+    this->injected_trigger_times.insert(request->sample_time);
+  }
+
+  RCLCPP_INFO(this->get_logger(), "Trigger injected at sample time %.4f s (attempt %lu)",
+              request->sample_time, request->attempt_in_session);
+
+  response->success = true;
+  response->rejection_reason = neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_NONE;
 }
 
 
@@ -369,7 +426,7 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   msg.valid = true;
 
-  /* Check if a pulse should be delivered at this sample time. */
+  /* Check if a pulse should be delivered at this sample time (from dataset metadata). */
   msg.pulse_trigger = false;
   if (!this->pulse_times.empty() && this->current_pulse_index < this->pulse_times.size()) {
     double_t next_pulse_time = this->pulse_times[this->current_pulse_index];
@@ -387,6 +444,20 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
       } else {
         RCLCPP_INFO(this->get_logger(), "No more pulses in this dataset.");
       }
+    }
+  }
+
+  /* Check if a trigger was injected at runtime for this sample time. */
+  {
+    std::lock_guard<std::mutex> lock(this->injected_triggers_mutex);
+    /* Find any injected trigger times that are at or before this sample's time.
+       Since samples arrive in order, consume all triggers up to the current sample time. */
+    auto it = this->injected_trigger_times.begin();
+    while (it != this->injected_trigger_times.end() && *it <= time) {
+      msg.pulse_trigger = true;
+      RCLCPP_INFO(this->get_logger(), "Injected trigger delivered at %.4f s (requested at %.4f s).",
+                  time, *it);
+      it = this->injected_trigger_times.erase(it);
     }
   }
 

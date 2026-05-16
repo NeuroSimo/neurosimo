@@ -1,0 +1,18 @@
+# Inject a trigger marker into the simulated EEG stream at a specific sample time.
+# Used by trigger_simulator to request the eeg_simulator to mark a sample with a pulse trigger.
+
+float64 sample_time               # Absolute sample time at which the trigger should appear
+uint8[16] session_id              # For traceability
+uint64 attempt_in_session         # For traceability
+---
+bool success
+
+# Rejection reason constants
+uint8 REJECTION_NONE = 0
+uint8 REJECTION_TOO_LATE = 1             # sample_time already passed the playback head
+uint8 REJECTION_NOT_PLAYING = 2          # Simulator is not currently streaming
+uint8 REJECTION_INTERNAL_ERROR = 3
+
+uint8 rejection_reason
+
+float64 current_playback_time     # Simulator's playback head at the moment of decision

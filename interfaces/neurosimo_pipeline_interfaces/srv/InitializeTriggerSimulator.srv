@@ -1,0 +1,8 @@
+# Initialize pipeline component: trigger_simulator
+
+uint8[16] session_id
+
+# Safety configuration
+float64 minimum_trial_interval
+---
+bool success

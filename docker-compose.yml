@@ -378,6 +378,22 @@ services:
     privileged: true
     network_mode: host
 
+  trigger_simulator:
+    build:
+      context: .
+      dockerfile: src/trigger_simulator/Dockerfile
+    env_file:
+      - .env
+    environment:
+      # ROS configuration
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
+    volumes:
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/etc/timezone:/etc/timezone:ro'
+    network_mode: host
+
   # Frontend-related services
   rosbridge:
     build:

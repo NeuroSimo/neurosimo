@@ -75,7 +75,7 @@ export const ExperimentStatePanel: React.FC = () => {
   const isElectron = !!(window as any).electronAPI
 
   const formatSeconds = (value?: number | null) => {
-    if (value === undefined || value === null) return '—'
+    if (value === undefined || value === null || value === 0) return '—'
     return `${value.toFixed(1)}s`
   }
 

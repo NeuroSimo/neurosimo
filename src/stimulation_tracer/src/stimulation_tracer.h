@@ -11,7 +11,6 @@
 #include <vector>
 #include <array>
 
-#include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_stimulation_tracer.hpp"
 #include "neurosimo_pipeline_interfaces/srv/finalize_stimulation_tracer.hpp"
@@ -24,7 +23,6 @@ public:
 private:
   rclcpp::Logger logger;
 
-  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>::SharedPtr decision_trace_subscriber;
   rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_subscriber;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_final_publisher;
@@ -40,10 +38,6 @@ private:
   /* Storage for attempt traces keyed by attempt_in_session */
   std::map<uint64_t, std::vector<neurosimo_pipeline_interfaces::msg::AttemptTrace>> attempt_traces;
 
-  /* Storage for decision traces, used to match decisions to trials */
-  std::vector<neurosimo_pipeline_interfaces::msg::DecisionTrace> decision_traces;
-
-  void handle_decision_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg);
   void handle_attempt_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg);
 
   void handle_initialize_stimulation_tracer(

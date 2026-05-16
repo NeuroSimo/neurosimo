@@ -80,10 +80,6 @@ export const StimulationDisplay: React.FC = () => {
   const formattedEventProcessingLatency = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
 
   const referenceTime = latestAttemptTrace?.reference_time
-  const isReactiveMode =
-    latestAttemptTrace?.requested_stimulation_time !== undefined &&
-    referenceTime !== undefined &&
-    Math.abs(latestAttemptTrace.requested_stimulation_time - referenceTime) <= 0.001
 
   const formattedReferenceSampleTime = referenceTime !== undefined
     ? referenceTime.toFixed(3).replace(/\.?0+$/, '') + ' s'
@@ -92,22 +88,10 @@ export const StimulationDisplay: React.FC = () => {
     latestAttemptTrace?.requested_stimulation_time !== undefined && referenceTime !== undefined
     ? '+' + ((latestAttemptTrace.requested_stimulation_time - referenceTime) * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const stimulationHorizonMs =
-    latestAttemptTrace?.stimulation_horizon !== undefined ? latestAttemptTrace.stimulation_horizon * 1000 : undefined
-  const formattedStimulationHorizon =
-    stimulationHorizonMs !== undefined ? '>' + stimulationHorizonMs.toFixed(1) + ' ms' : '\u2013'
-  const formattedStrictHorizon = latestAttemptTrace?.strict_stimulation_horizon !== undefined
-    ? '>' + (latestAttemptTrace.strict_stimulation_horizon * 1000).toFixed(1) + ' ms'
-    : '\u2013'
   const formattedTimingOffset = latestAttemptTrace?.timing_offset !== undefined && latestAttemptTrace.timing_offset !== 0
     ? (latestAttemptTrace.timing_offset * 1000).toFixed(1) + ' ms'
     : '\u2013'
-  const baseStatus = latestAttemptTrace?.status !== undefined ? getStatusLabel(latestAttemptTrace.status) : '\u2013'
-  const reactiveTooLateStatus =
-    isReactiveMode && latestAttemptTrace?.status === 5 && stimulationHorizonMs !== undefined
-      ? `Too late (+${stimulationHorizonMs.toFixed(1)} ms)`
-      : null
-  const formattedStatus = reactiveTooLateStatus ?? baseStatus
+  const formattedStatus = latestAttemptTrace?.status !== undefined ? getStatusLabel(latestAttemptTrace.status) : '\u2013'
 
   return (
     <>
@@ -159,19 +143,6 @@ export const StimulationDisplay: React.FC = () => {
           <IndentedStateTitle>Status</IndentedStateTitle>
           <StateValue>{formattedStatus}</StateValue>
         </StateRow>
-        <SectionSpacer />
-        {!isReactiveMode && (
-          <>
-            <StateRow>
-              <IndentedStateTitle>Horizon</IndentedStateTitle>
-              <StateValue>{formattedStimulationHorizon}</StateValue>
-            </StateRow>
-            <StateRow>
-              <DoubleIndentedStateTitle>Strict</DoubleIndentedStateTitle>
-              <StateValue>{formattedStrictHorizon}</StateValue>
-            </StateRow>
-          </>
-        )}
       </StimulationPanel>
     </>
   )

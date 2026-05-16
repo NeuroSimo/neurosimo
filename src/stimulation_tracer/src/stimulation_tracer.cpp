@@ -142,8 +142,6 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
     if (trace.decision_id != 0) final_trace.decision_id = trace.decision_id;
 
     /* TriggerTimer fields */
-    if (trace.stimulation_horizon != 0.0) final_trace.stimulation_horizon = trace.stimulation_horizon;
-    if (trace.strict_stimulation_horizon != 0.0) final_trace.strict_stimulation_horizon = trace.strict_stimulation_horizon;
     if (trace.system_time_trigger_timer_received != 0) final_trace.system_time_trigger_timer_received = trace.system_time_trigger_timer_received;
     if (trace.system_time_trigger_timer_finished != 0) final_trace.system_time_trigger_timer_finished = trace.system_time_trigger_timer_finished;
     if (trace.system_time_hardware_fired != 0) final_trace.system_time_hardware_fired = trace.system_time_hardware_fired;

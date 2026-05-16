@@ -84,8 +84,6 @@ ATTEMPT_TRACE_FIELDS = [
     'attempt_in_session',
     'status',
     'requested_stimulation_time',
-    'stimulation_horizon',
-    'strict_stimulation_horizon',
     'system_time_trigger_timer_received',
     'system_time_trigger_timer_finished',
     'system_time_hardware_fired',

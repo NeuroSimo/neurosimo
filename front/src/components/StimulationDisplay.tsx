@@ -39,6 +39,11 @@ const SectionSpacer = styled.div<{ $height?: number }>`
   height: ${props => props.$height ?? 6}px;
 `
 
+const BreakdownDivider = styled.div`
+  margin: 10px 12px 10px 12px;
+  border-top: 1px solid #d8d8d8;
+`
+
 export const StimulationDisplay: React.FC = () => {
   const { pulseProcessingLatency, eventProcessingLatency, decisionTrace, attemptTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
   const { sessionState } = useSession()
@@ -64,11 +69,8 @@ export const StimulationDisplay: React.FC = () => {
   }, [attemptTrace])
 
   // Decision trace
-  const decisionPathLatency = decisionTrace
-    ? decisionTrace.preprocessor_duration + decisionTrace.decider_duration + decisionTrace.overhead_duration
-    : undefined
-  const formattedDecisionPathLatency = decisionPathLatency
-    ? (decisionPathLatency * 1000).toFixed(1) + ' ms'
+  const formattedTotalDuration = decisionTrace?.total_duration
+    ? (decisionTrace.total_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const formattedEegDeviceProcessingDuration = decisionTrace?.eeg_device_processing_duration
     ? (decisionTrace.eeg_device_processing_duration * 1000).toFixed(1) + ' ms'
@@ -106,52 +108,45 @@ export const StimulationDisplay: React.FC = () => {
       <StimulationPanel>
         {/* Latency */}
         <StateRow>
-          <StateTitle>Decision</StateTitle>
+          <StateTitle>Decision latency</StateTitle>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>EEG device</IndentedStateTitle>
+          <IndentedStateTitle>EEG acquisition</IndentedStateTitle>
           <StateValue>{formattedEegDeviceProcessingDuration}</StateValue>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Time to decision</IndentedStateTitle>
-          <StateValue>{formattedDecisionPathLatency}</StateValue>
-        </StateRow>
-        <StateRow>
-          <DoubleIndentedStateTitle>Preprocessor</DoubleIndentedStateTitle>
+          <IndentedStateTitle>Preprocessor</IndentedStateTitle>
           <StateValue>{formattedPreprocessorDuration}</StateValue>
         </StateRow>
         <StateRow>
-          <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
+          <IndentedStateTitle>Decider</IndentedStateTitle>
           <StateValue>{formattedDeciderDuration}</StateValue>
         </StateRow>
         <StateRow>
-          <DoubleIndentedStateTitle>Overhead</DoubleIndentedStateTitle>
+          <IndentedStateTitle>Overhead</IndentedStateTitle>
           <StateValue>{formattedOverheadDuration}</StateValue>
         </StateRow>
-        <SectionSpacer />
+        <BreakdownDivider />
         <StateRow>
-          <IndentedStateTitle>Pulse processing</IndentedStateTitle>
-          <StateValue>{formattedPulseProcessingLatency}</StateValue>
+          <IndentedStateTitle>Total</IndentedStateTitle>
+          <StateValue>{formattedTotalDuration}</StateValue>
         </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Event processing</IndentedStateTitle>
-          <StateValue>{formattedEventProcessingLatency}</StateValue>
-        </StateRow>
-        <SectionSpacer />
+        <SectionSpacer $height={16} />
         {/* Pulse */}
         <StateRow>
           <StateTitle>Pulse</StateTitle>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Decided at</IndentedStateTitle>
+          <IndentedStateTitle>Reference time</IndentedStateTitle>
           <StateValue>{formattedReferenceSampleTime}</StateValue>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Requested for</IndentedStateTitle>
+          <IndentedStateTitle>Requested offset</IndentedStateTitle>
           <StateValue>{formattedRequestedStimulationOffset}</StateValue>
         </StateRow>
+        <SectionSpacer />
         <StateRow>
-          <IndentedStateTitle>Timing offset</IndentedStateTitle>
+          <IndentedStateTitle>Timing error</IndentedStateTitle>
           <StateValue>{formattedTimingOffset}</StateValue>
         </StateRow>
         <StateRow>

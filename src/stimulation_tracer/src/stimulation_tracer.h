@@ -40,7 +40,6 @@ private:
   /* Current session tracking */
   bool is_initialized = false;
   std::array<uint8_t, 16> current_session_id = {};
-  std::string data_source = "";
 
   /* Storage for attempt traces keyed by attempt_in_session */
   std::map<uint64_t, std::vector<neurosimo_pipeline_interfaces::msg::AttemptTrace>> attempt_traces;

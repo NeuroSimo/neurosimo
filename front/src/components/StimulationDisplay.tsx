@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react'
 import styled from 'styled-components'
 
+import { ExperimentContext } from 'providers/ExperimentProvider'
 import {
   DoubleIndentedStateTitle,
   IndentedStateTitle,
@@ -46,7 +47,10 @@ const BreakdownDivider = styled.div`
 
 export const StimulationDisplay: React.FC = () => {
   const { pulseProcessingLatency, eventProcessingLatency, decisionTrace, attemptTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
+
   const { sessionState } = useSession()
+  const { experimentState } = useContext(ExperimentContext)
+
   const [latestAttemptTrace, setLatestAttemptTrace] = useState<AttemptTrace | null>(null)
   const [previousSessionState, setPreviousSessionState] = useState<SessionStateValue>(SessionStateValue.STOPPED)
 
@@ -117,24 +121,24 @@ export const StimulationDisplay: React.FC = () => {
         </StateRow>
         <StateRow>
           <IndentedStateTitle>EEG acquisition</IndentedStateTitle>
-          <StateValue>{formattedEegDeviceProcessingDuration}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedEegDeviceProcessingDuration : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Preprocessor</IndentedStateTitle>
-          <StateValue>{formattedPreprocessorDuration}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedPreprocessorDuration : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Decider</IndentedStateTitle>
-          <StateValue>{formattedDeciderDuration}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedDeciderDuration : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Overhead</IndentedStateTitle>
-          <StateValue>{formattedOverheadDuration}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedOverheadDuration : '\u2013'}</StateValue>
         </StateRow>
         <BreakdownDivider />
         <StateRow>
           <IndentedStateTitle>Total</IndentedStateTitle>
-          <StateValue>{formattedTotalDuration}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedTotalDuration : '\u2013'}</StateValue>
         </StateRow>
         <SectionSpacer $height={16} />
         {/* Pulse */}
@@ -143,20 +147,20 @@ export const StimulationDisplay: React.FC = () => {
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Reference time</IndentedStateTitle>
-          <StateValue>{formattedReferenceSampleTime}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedReferenceSampleTime : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Requested offset</IndentedStateTitle>
-          <StateValue>{formattedRequestedStimulationOffset}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedRequestedStimulationOffset : '\u2013'}</StateValue>
         </StateRow>
         <SectionSpacer />
         <StateRow>
           <IndentedStateTitle>Timing error</IndentedStateTitle>
-          <StateValue>{formattedTimingOffset}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedTimingOffset : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Status</IndentedStateTitle>
-          <StateValue>{formattedStatus}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedStatus : '\u2013'}</StateValue>
         </StateRow>
       </StimulationPanel>
     </>

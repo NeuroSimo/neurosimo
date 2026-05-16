@@ -34,6 +34,7 @@ private:
   rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
 
   /* Service client for eeg_simulator trigger injection */
+  rclcpp::CallbackGroup::SharedPtr client_callback_group;
   rclcpp::Client<neurosimo_eeg_interfaces::srv::InjectTrigger>::SharedPtr inject_trigger_client;
 
   /* Timers */

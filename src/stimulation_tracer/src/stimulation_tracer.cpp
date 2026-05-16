@@ -7,25 +7,11 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 const std::string DECISION_TRACE_TOPIC = "/neurosimo/pipeline/decision_trace";
 const std::string ATTEMPT_TRACE_TOPIC = "/neurosimo/pipeline/attempt_trace";
 const std::string ATTEMPT_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/attempt_trace/final";
-const std::string PULSE_PROCESSED_TOPIC = "/neurosimo/decider/pulse_processed";
 
 StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclcpp::get_logger("stimulation_tracer")) {
-  /* Subscriber for EEG raw data. */
-  this->eeg_sample_subscriber = create_subscription<neurosimo_eeg_interfaces::msg::Sample>(
-    EEG_RAW_TOPIC,
-    10,
-    std::bind(&StimulationTracer::handle_eeg_sample, this, _1));
-
-  /* Subscriber for decider pulse-processed notifications. */
-  this->pulse_processed_subscriber = create_subscription<std_msgs::msg::Empty>(
-    PULSE_PROCESSED_TOPIC,
-    10,
-    std::bind(&StimulationTracer::handle_pulse_processed, this, _1));
-
   /* Subscriber for decision traces (all decisions from Decider). */
   this->decision_trace_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
     DECISION_TRACE_TOPIC,
@@ -76,7 +62,6 @@ void StimulationTracer::handle_initialize_stimulation_tracer(
   /* Clear any existing traces. */
   this->attempt_traces.clear();
   this->decision_traces.clear();
-  this->pending_pulses.clear();
 
   response->success = true;
 }
@@ -95,7 +80,6 @@ void StimulationTracer::handle_finalize_stimulation_tracer(
   /* Clear traces and reset state. */
   this->attempt_traces.clear();
   this->decision_traces.clear();
-  this->pending_pulses.clear();
   this->is_initialized = false;
   this->current_session_id = {};
 
@@ -144,113 +128,6 @@ void StimulationTracer::handle_attempt_trace(const std::shared_ptr<neurosimo_pip
   if (this->is_terminal_status(msg->status)) {
     finalize_attempt(attempt_in_session);
   }
-}
-
-void StimulationTracer::handle_eeg_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
-  /* Check if this sample contains a pulse trigger. */
-  if (!msg->pulse_trigger) {
-    return;
-  }
-
-  /* Capture system time when pulse was received. */
-  auto pulse_receive_time = std::chrono::high_resolution_clock::now();
-  uint64_t pulse_system_time = std::chrono::duration_cast<std::chrono::nanoseconds>(
-    pulse_receive_time.time_since_epoch()).count();
-
-  double_t actual_stimulation_time = msg->time;
-  uint64_t actual_stimulation_sample_index = msg->sample_index;
-
-  RCLCPP_INFO(this->get_logger(), "Pulse trigger detected at time: %.4f (s), sample_index: %lu",
-              actual_stimulation_time, actual_stimulation_sample_index);
-
-  /* Enqueue this pulse and wait for decider pulse-processed notification before publishing observation. */
-  PendingPulse pending;
-  pending.pulse_system_time = pulse_system_time;
-  pending.actual_stimulation_time = actual_stimulation_time;
-  pending.actual_stimulation_sample_index = actual_stimulation_sample_index;
-  this->pending_pulses.push_back(pending);
-
-  RCLCPP_INFO(this->get_logger(),
-              "Queued pulse for observation; waiting for decider pulse_processed signal (queue size=%zu).",
-              this->pending_pulses.size());
-}
-
-void StimulationTracer::handle_pulse_processed(const std_msgs::msg::Empty::SharedPtr msg) {
-  (void)msg;
-
-  RCLCPP_INFO(this->get_logger(), "Received pulse processed notification");
-
-  /* Skip if not initialized. */
-  if (!this->is_initialized) {
-    return;
-  }
-
-  if (this->pending_pulses.empty()) {
-    RCLCPP_WARN(this->get_logger(),
-                "Received pulse_processed notification but no pending pulses are queued.");
-    return;
-  }
-
-  /* Get the oldest pending pulse. */
-  PendingPulse pending = this->pending_pulses.front();
-  this->pending_pulses.pop_front();
-
-  /* Find the matching attempt trace using the stored pulse system time. */
-  auto* matching_trace = find_matching_attempt(pending.pulse_system_time);
-
-  if (matching_trace == nullptr) {
-    RCLCPP_WARN(this->get_logger(),
-                "No matching attempt trace found for pulse at time: %.4f (s) when processing pulse_processed.",
-                pending.actual_stimulation_time);
-    return;
-  }
-
-  /* Create and publish the observation trace now that pulse processing is complete. */
-  auto observation_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
-  observation_trace.session_id = matching_trace->session_id;
-  observation_trace.attempt_in_session = matching_trace->attempt_in_session;
-  observation_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED;
-  observation_trace.actual_stimulation_time = pending.actual_stimulation_time;
-  observation_trace.actual_stimulation_sample_index = pending.actual_stimulation_sample_index;
-
-  /* Calculate timing offset: actual - scheduled. */
-  observation_trace.timing_offset =
-    pending.actual_stimulation_time - matching_trace->requested_stimulation_time;
-
-  RCLCPP_INFO(this->get_logger(),
-              "Matched pulse (after processing) to attempt_in_session=%lu, timing_offset=%.4f ms",
-              matching_trace->attempt_in_session, observation_trace.timing_offset * 1000.0);
-
-  /* Publish observation trace. */
-  this->attempt_trace_publisher->publish(observation_trace);
-}
-
-neurosimo_pipeline_interfaces::msg::AttemptTrace* StimulationTracer::find_matching_attempt(uint64_t pulse_system_time) {
-  /* Find attempt trace with latest system_time_hardware_fired that's before pulse_system_time.
-     For data-driven trials, we can also use the embedded decision's system_time_decider_finished. */
-  neurosimo_pipeline_interfaces::msg::AttemptTrace* best_match = nullptr;
-  uint64_t latest_time = 0;
-
-  for (auto& [key, traces] : this->attempt_traces) {
-    for (auto& trace : traces) {
-      /* Check system_time_hardware_fired first (set by TriggerTimer). */
-      uint64_t candidate_time = trace.system_time_hardware_fired;
-
-      /* Fall back to the embedded decision's system_time_decider_finished. */
-      if (candidate_time == 0) {
-        candidate_time = trace.decision.system_time_decider_finished;
-      }
-
-      if (candidate_time > 0 && candidate_time < pulse_system_time) {
-        if (candidate_time > latest_time) {
-          latest_time = candidate_time;
-          best_match = &trace;
-        }
-      }
-    }
-  }
-
-  return best_match;
 }
 
 void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {

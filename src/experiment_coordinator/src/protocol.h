@@ -9,21 +9,15 @@
 #include <limits>
 #include <cstdint>
 
-namespace experiment_coordinator {
+#include "neurosimo_eeg_interfaces/msg/sample.hpp"
 
-/**
- * @brief Trial timing modes
- */
-enum class TrialTiming : uint8_t {
-  PERIODIC = 0,
-  PREDETERMINED = 1,
-};
+namespace experiment_coordinator {
 
 /**
  * @brief Describes one group of trials within a stage
  */
 struct TrialTypeEntry {
-  TrialTiming timing = TrialTiming::PERIODIC;
+  uint8_t timing = neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC;
   std::string type;        // e.g. "low_iti", empty for periodic
   uint32_t count = 0;
 };

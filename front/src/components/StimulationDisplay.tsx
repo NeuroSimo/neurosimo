@@ -73,19 +73,19 @@ export const StimulationDisplay: React.FC = () => {
     ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  // Pulse info comes from the attempt trace (with embedded decision for reference time)
-  const trialDecision = latestAttemptTrace?.decision
+  // Pulse info comes from the attempt trace (reference_time is the decider's reference sample time)
+  const referenceTime = latestAttemptTrace?.reference_time
   const isReactiveMode =
     latestAttemptTrace?.requested_stimulation_time !== undefined &&
-    trialDecision?.reference_sample_time !== undefined &&
-    Math.abs(latestAttemptTrace.requested_stimulation_time - trialDecision.reference_sample_time) <= 0.001
+    referenceTime !== undefined &&
+    Math.abs(latestAttemptTrace.requested_stimulation_time - referenceTime) <= 0.001
 
-  const formattedReferenceSampleTime = trialDecision?.reference_sample_time
-    ? trialDecision.reference_sample_time.toFixed(3).replace(/\.?0+$/, '') + ' s'
+  const formattedReferenceSampleTime = referenceTime !== undefined
+    ? referenceTime.toFixed(3).replace(/\.?0+$/, '') + ' s'
     : '\u2013'
   const formattedRequestedStimulationOffset =
-    latestAttemptTrace?.requested_stimulation_time !== undefined && trialDecision?.reference_sample_time !== undefined
-    ? '+' + ((latestAttemptTrace.requested_stimulation_time - trialDecision.reference_sample_time) * 1000).toFixed(1) + ' ms'
+    latestAttemptTrace?.requested_stimulation_time !== undefined && referenceTime !== undefined
+    ? '+' + ((latestAttemptTrace.requested_stimulation_time - referenceTime) * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const stimulationHorizonMs =
     latestAttemptTrace?.stimulation_horizon !== undefined ? latestAttemptTrace.stimulation_horizon * 1000 : undefined
@@ -99,7 +99,7 @@ export const StimulationDisplay: React.FC = () => {
     : '\u2013'
   const baseStatus = latestAttemptTrace?.status !== undefined ? getStatusLabel(latestAttemptTrace.status) : '\u2013'
   const reactiveTooLateStatus =
-    isReactiveMode && latestAttemptTrace?.status === 8 && stimulationHorizonMs !== undefined
+    isReactiveMode && latestAttemptTrace?.status === 5 && stimulationHorizonMs !== undefined
       ? `Too late (+${stimulationHorizonMs.toFixed(1)} ms)`
       : null
   const formattedStatus = reactiveTooLateStatus ?? baseStatus

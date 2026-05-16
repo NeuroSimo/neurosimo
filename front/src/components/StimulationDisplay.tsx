@@ -40,7 +40,7 @@ const SectionSpacer = styled.div<{ $height?: number }>`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { loopbackLatency, pulseProcessingLatency, eventProcessingLatency, decisionTrace, attemptTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
+  const { pulseProcessingLatency, eventProcessingLatency, decisionTrace, attemptTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
   const { sessionState } = useSession()
   const [latestAttemptTrace, setLatestAttemptTrace] = useState<AttemptTrace | null>(null)
   const [previousSessionState, setPreviousSessionState] = useState<SessionStateValue>(SessionStateValue.STOPPED)
@@ -74,8 +74,6 @@ export const StimulationDisplay: React.FC = () => {
     ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  // Attempt trace
-  const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
   const formattedPulseProcessingLatency = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
   const formattedEventProcessingLatency = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
 

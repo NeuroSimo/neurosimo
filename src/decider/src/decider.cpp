@@ -948,18 +948,13 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   process_ready_deferred_requests(sample_time);
 
   /* Handle trial commitment: when the coordinator commits, read timing/type and act. */
-  if (msg->is_attempt_committed) {
-    bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
-    bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
+  bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
+  bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
 
-    if (is_periodic) {
-      handle_periodic_trial(msg);
-    }
-    if (is_predetermined) {
-      handle_predetermined_trial(msg);
-    }
-  } else {
-    /* For non-commit samples with an ongoing periodic trial, continue periodic processing. */
+  if (msg->is_attempt_committed && is_predetermined) {
+    handle_predetermined_trial(msg);
+  }
+  if (is_periodic) {
     handle_periodic_trial(msg);
   }
 

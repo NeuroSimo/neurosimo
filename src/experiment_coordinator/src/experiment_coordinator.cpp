@@ -209,6 +209,7 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
   }
 
   state.attempt_in_session++;
+  state.attempt_in_trial++;
 
   /* Check if we're in a stage. */
   if (state.current_element_index >= protocol->elements.size()) {
@@ -243,6 +244,7 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
     /* Valid trial: advance trial counters. */
     state.trial_in_stage++;
     state.trial_in_session++;
+    state.attempt_in_trial = 0;
 
     RCLCPP_INFO(this->get_logger(), "Trial %u: Stage '%s' trial %u/%u (valid)",
       state.trial_in_session, stage.name.c_str(), state.trial_in_stage, stage.trials);
@@ -485,6 +487,7 @@ void ExperimentCoordinator::end_rest() {
 void ExperimentCoordinator::start_stage(const Stage& stage, double current_time) {
   state.stage_name = stage.name;
   state.trial_in_stage = 0;
+  state.attempt_in_trial = 0;
   state.failures_in_stage = 0;
   state.stage_start_times[stage.name] = current_time;
   state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
@@ -570,6 +573,8 @@ void ExperimentCoordinator::publish_experiment_state() {
     msg.total_stages = 0;
     msg.trial_in_stage = 0;
     msg.total_trials_in_stage = 0;
+    msg.attempt_in_session = 0;
+    msg.attempt_in_trial = 0;
     msg.failures_in_stage = 0;
     msg.max_failures = 0;
     msg.stage_start_time = 0.0;
@@ -616,6 +621,8 @@ void ExperimentCoordinator::publish_experiment_state() {
   msg.total_stages = static_cast<uint32_t>(total_stages);
   msg.trial_in_stage = state.in_rest ? 0 : state.trial_in_stage;
   msg.total_trials_in_stage = total_trials_in_stage;
+  msg.attempt_in_session = state.attempt_in_session;
+  msg.attempt_in_trial = state.in_rest ? 0 : state.attempt_in_trial;
   msg.failures_in_stage = state.in_rest ? 0 : state.failures_in_stage;
 
   /* Report max_failures for the current stage (0 means no limit). */

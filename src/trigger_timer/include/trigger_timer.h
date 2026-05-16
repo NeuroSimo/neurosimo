@@ -13,7 +13,7 @@
 
 #include "neurosimo_eeg_interfaces/msg/sample.hpp"
 
-#include "neurosimo_pipeline_interfaces/msg/latency.hpp"
+#include "neurosimo_pipeline_interfaces/msg/loopback_latency.hpp"
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 
 #include "neurosimo_pipeline_interfaces/srv/request_timed_trigger.hpp"
@@ -34,7 +34,7 @@ private:
   rclcpp::Service<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedPtr trigger_request_service;
   rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeTriggerTimer>::SharedPtr initialize_service;
   rclcpp::Service<neurosimo_pipeline_interfaces::srv::FinalizeTriggerTimer>::SharedPtr finalize_service;
-  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr loopback_latency_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::LoopbackLatency>::SharedPtr loopback_latency_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
@@ -91,7 +91,7 @@ private:
   bool initialize_labjack();
   void reset_state();
 
-  void measure_loopback_latency(bool loopback_trigger, double_t sample_time);
+  void measure_loopback_latency(bool loopback_trigger, double_t sample_time, uint64_t system_time_data_source_published);
   SchedulingResult schedule_trigger_with_timer(std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
   double_t estimate_current_sample_time();
 

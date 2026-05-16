@@ -56,7 +56,7 @@ TriggerTimer::TriggerTimer() : Node("trigger_timer"), logger(rclcpp::get_logger(
     10);
 
   /* Publisher for timing latency. */
-  this->loopback_latency_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::Latency>(
+  this->loopback_latency_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::LoopbackLatency>(
     "/neurosimo/pipeline/latency/loopback",
     10);
 
@@ -117,7 +117,8 @@ void TriggerTimer::_publish_health_status(uint8_t health_level, const std::strin
   this->health_publisher->publish(health);
 }
 
-void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t sample_time) {
+void TriggerTimer::measure_loopback_latency(
+    bool loopback_trigger, double_t sample_time, uint64_t system_time_data_source_published) {
   /* Update current latency if loopback trigger is present. */
   if (loopback_trigger) {
     RCLCPP_INFO_THROTTLE(logger, *this->get_clock(), 2000, "Receiving loopback triggers");
@@ -125,9 +126,15 @@ void TriggerTimer::measure_loopback_latency(bool loopback_trigger, double_t samp
     this->current_loopback_latency = sample_time - this->last_loopback_time;
     this->loopback_received = true;
 
-    /* Publish loopback latency ROS message. */
-    auto msg = neurosimo_pipeline_interfaces::msg::Latency();
-    msg.latency = this->current_loopback_latency;
+    auto received_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    double_t pipeline_latency = static_cast<double_t>(received_ns - system_time_data_source_published) / 1e9;
+    double_t eeg_device_processing_duration = this->current_loopback_latency - pipeline_latency;
+
+    auto msg = neurosimo_pipeline_interfaces::msg::LoopbackLatency();
+    msg.loopback_latency = this->current_loopback_latency;
+    msg.pipeline_latency = pipeline_latency;
+    msg.eeg_device_processing_duration = eeg_device_processing_duration;
 
     this->loopback_latency_publisher->publish(msg);
   }
@@ -157,7 +164,7 @@ void TriggerTimer::handle_eeg_raw(const std::shared_ptr<neurosimo_eeg_interfaces
   this->stored_sample_time = sample_time;
   this->stored_system_time = std::chrono::high_resolution_clock::now();
 
-  measure_loopback_latency(msg->loopback_trigger, sample_time);
+  measure_loopback_latency(msg->loopback_trigger, sample_time, msg->system_time_data_source_published);
 }
 
 double_t TriggerTimer::estimate_current_sample_time() {

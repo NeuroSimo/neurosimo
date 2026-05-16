@@ -134,17 +134,17 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   /* Update experiment state based on sample time. */
   update_experiment_state(sample_time);
 
-  /* Update timing reference for subsequent predetermined trials.
-     Always overwrite with the most recent relevant event — last writer wins:
-     session start < pulse trigger < rest end (if both happen on the same sample). */
+  /* Detect attempt boundaries: session start, pulse trigger, or rest ending.
+     An attempt boundary marks the temporal start of a new attempt window,
+     even if we don't yet know which attempt it is. */
   if (msg->is_session_start) {
-    state.pending_reference = {msg->time, msg->eeg_device_timestamp};
+    state.is_attempt_start_pending = true;
   }
   if (msg->pulse_trigger) {
-    state.pending_reference = {msg->time, msg->eeg_device_timestamp};
+    state.is_attempt_start_pending = true;
   }
   if (was_in_rest && !state.in_rest) {
-    state.pending_reference = {msg->time, msg->eeg_device_timestamp};
+    state.is_attempt_start_pending = true;
   }
 
   /* Create enriched sample. */
@@ -158,17 +158,15 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.trial_in_session = state.trial_in_session;
   enriched.attempt_in_session = state.attempt_in_session;
 
-  /* Initialize reference fields to NaN (set below for predetermined trials). */
-  enriched.reference_time = std::numeric_limits<double>::quiet_NaN();
-  enriched.reference_eeg_device_timestamp = std::numeric_limits<double>::quiet_NaN();
-
   /* Copy and consume pending event flags (true on exactly one sample per transition). */
   enriched.is_new_stage = state.is_new_stage_pending;
-  enriched.is_new_attempt = state.is_new_attempt_pending;
+  enriched.is_attempt_start = state.is_attempt_start_pending;
+  enriched.is_attempt_committed = state.is_attempt_committed_pending;
   state.is_new_stage_pending = false;
-  state.is_new_attempt_pending = false;
+  state.is_attempt_start_pending = false;
+  state.is_attempt_committed_pending = false;
 
-  /* Add stage information and trial timing/type. */
+  /* Add stage information and trial timing/type (valid only on commit samples). */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
     const auto& element = protocol->elements[state.current_element_index];
     if (element.type == ProtocolElement::Type::STAGE) {
@@ -176,22 +174,11 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
       enriched.stage_name = stage.name;
 
       /* Look up the trial timing/type from the precomputed trial_order. */
-      if (state.trial_in_stage < stage.trial_order.size()) {
+      if (enriched.is_attempt_committed && state.trial_in_stage < stage.trial_order.size()) {
         size_t type_idx = stage.trial_order[state.trial_in_stage];
         const auto& trial_entry = stage.trial_types[type_idx];
         enriched.trial_timing = static_cast<uint8_t>(trial_entry.timing);
         enriched.trial_type = trial_entry.type;
-      }
-
-      /* For predetermined trials starting a new attempt, attach the timing reference. */
-      if (enriched.is_new_attempt &&
-          enriched.trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED) {
-
-        enriched.reference_time = state.pending_reference.time;
-        enriched.reference_eeg_device_timestamp = state.pending_reference.eeg_device_timestamp;
-
-        RCLCPP_INFO(this->get_logger(), "Predetermined trial reference: %.3f s",
-          state.pending_reference.time);
       }
     }
   }
@@ -255,8 +242,8 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
        as the next element might be a rest. TODO: The control flow
        could be improved to make this clearer. */
   } else {
-    /* Mark new attempt pending. */
-    state.is_new_attempt_pending = true;
+    /* Commit to the next attempt — the verdict is in, so we know which attempt is next. */
+    state.is_attempt_committed_pending = true;
   }
 }
 
@@ -477,7 +464,8 @@ void ExperimentCoordinator::start_stage(const Stage& stage, double current_time)
   state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
 
   state.is_new_stage_pending = true;
-  state.is_new_attempt_pending = true;
+  state.is_attempt_start_pending = true;
+  state.is_attempt_committed_pending = true;
 
   RCLCPP_INFO(this->get_logger(), "Stage '%s' started (%u trials)", 
     stage.name.c_str(), stage.trials);

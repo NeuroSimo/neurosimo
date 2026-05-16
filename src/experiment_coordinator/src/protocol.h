@@ -127,16 +127,8 @@ struct ExperimentState {
   
   // Pending event flags (set when transition occurs, consumed on the next sample)
   bool is_new_stage_pending = false;
-  bool is_new_attempt_pending = false;
-
-  // Reference time tracking for predetermined trials.
-  struct SampleReference {
-    double time = std::numeric_limits<double>::quiet_NaN();
-    double eeg_device_timestamp = std::numeric_limits<double>::quiet_NaN();
-  };
-
-  // Reference for the next predetermined trial attempt.
-  SampleReference pending_reference;
+  bool is_attempt_start_pending = false;
+  bool is_attempt_committed_pending = false;
 
   // Flags
   bool protocol_complete = false;

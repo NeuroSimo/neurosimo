@@ -7,10 +7,12 @@ using namespace std::chrono;
 using namespace std::placeholders;
 
 const double_t HEARTBEAT_INTERVAL_SEC = 0.5;
-const double_t INJECT_TRIGGER_TIMEOUT_SEC = 0.1;
+const double_t INJECT_TRIGGER_TIMEOUT_SEC = 0.2;
 
 TriggerSimulator::TriggerSimulator() : Node("trigger_simulator"), logger(rclcpp::get_logger("trigger_simulator")) {
   RCLCPP_INFO(this->get_logger(), "Initializing trigger simulator...");
+
+  this->client_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 
   /* Service for initialization. */
   this->initialize_service = create_service<neurosimo_pipeline_interfaces::srv::InitializeTriggerSimulator>(
@@ -48,7 +50,9 @@ TriggerSimulator::TriggerSimulator() : Node("trigger_simulator"), logger(rclcpp:
 
   /* Client for injecting triggers into the EEG simulator */
   this->inject_trigger_client = this->create_client<neurosimo_eeg_interfaces::srv::InjectTrigger>(
-    "/neurosimo/eeg_simulator/inject_trigger");
+    "/neurosimo/eeg_simulator/inject_trigger",
+    rclcpp::ServicesQoS(),
+    this->client_callback_group);
 
   /* Publish initial READY state */
   this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
@@ -204,14 +208,10 @@ void TriggerSimulator::handle_request_timed_trigger(
 
   auto future = this->inject_trigger_client->async_send_request(inject_request);
 
-  /* Wait for the response with a short timeout. */
   auto timeout = std::chrono::duration<double>(INJECT_TRIGGER_TIMEOUT_SEC);
-  auto status = future.wait_for(timeout);
-
-  uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
-    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-
-  if (status != std::future_status::ready) {
+  if (future.wait_for(std::chrono::duration_cast<std::chrono::nanoseconds>(timeout)) != std::future_status::ready) {
+    uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch()).count();
     RCLCPP_ERROR(logger, "InjectTrigger service call timed out (%.0f ms)", INJECT_TRIGGER_TIMEOUT_SEC * 1000);
 
     this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::DEGRADED,
@@ -228,6 +228,9 @@ void TriggerSimulator::handle_request_timed_trigger(
     response->success = false;
     return;
   }
+
+  uint64_t system_time_trigger_timer_finished = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
   auto inject_response = future.get();
 
@@ -292,7 +295,10 @@ int main(int argc, char *argv[]) {
 
   auto node = std::make_shared<TriggerSimulator>();
 
-  rclcpp::spin(node);
+  auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+  executor->add_node(node);
+  executor->spin();
+
   rclcpp::shutdown();
 
   return 0;

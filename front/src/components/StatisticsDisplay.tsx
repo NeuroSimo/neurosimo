@@ -58,11 +58,11 @@ export const StatisticsDisplay: React.FC = () => {
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Raw</IndentedStateTitle>
-          <StateValue>{eegStatistics?.num_of_raw_samples ?? '\u2013'}</StateValue>
+          <StateValue>{eegStatistics?.num_of_raw_samples !== undefined && eegStatistics?.num_of_raw_samples !== 0 ? eegStatistics?.num_of_raw_samples : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Preprocessed</IndentedStateTitle>
-          <StateValue>{eegStatistics?.num_of_preprocessed_samples ?? '\u2013'}</StateValue>
+          <StateValue>{eegStatistics?.num_of_preprocessed_samples !== undefined && eegStatistics?.num_of_preprocessed_samples !== 0 ? eegStatistics?.num_of_preprocessed_samples : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Dropped</IndentedStateTitle>

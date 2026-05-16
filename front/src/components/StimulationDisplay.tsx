@@ -91,11 +91,16 @@ export const StimulationDisplay: React.FC = () => {
   const referenceTime = latestAttemptTrace?.reference_time
 
   const formattedReferenceSampleTime = referenceTime !== undefined
-    ? referenceTime.toFixed(3).replace(/\.?0+$/, '') + ' s'
+    ? referenceTime.toFixed(1) + ' s'
     : '\u2013'
-  const formattedRequestedStimulationOffset =
+  const requestedStimulationOffsetSeconds =
     latestAttemptTrace?.requested_stimulation_time !== undefined && referenceTime !== undefined
-    ? '+' + ((latestAttemptTrace.requested_stimulation_time - referenceTime) * 1000).toFixed(1) + ' ms'
+      ? latestAttemptTrace.requested_stimulation_time - referenceTime
+      : undefined
+  const formattedRequestedStimulationOffset = requestedStimulationOffsetSeconds !== undefined
+    ? requestedStimulationOffsetSeconds * 1000 > 1000
+      ? '+' + requestedStimulationOffsetSeconds.toFixed(1) + ' s'
+      : '+' + (requestedStimulationOffsetSeconds * 1000).toFixed(1) + ' ms'
     : '\u2013'
   const formattedTimingOffset = latestAttemptTrace?.timing_offset !== undefined && latestAttemptTrace.timing_offset !== 0
     ? (latestAttemptTrace.timing_offset * 1000).toFixed(1) + ' ms'

@@ -608,7 +608,9 @@ void EegDecider::handle_stimulation_request(
 
     this->targeted_pulses_publisher->publish(targeted_pulses_msg);
   }
+
   this->previous_stimulation_time = latest_pulse_time;
+  this->stimulation_requested = true;
 }
 
 void EegDecider::process_pulse_request(const DeferredProcessingRequest& request) {
@@ -947,15 +949,22 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* Handle trial commitment: when the coordinator commits, read timing/type and act. */
-  bool is_periodic = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
-  bool is_predetermined = (msg->trial_timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
-
-  if (msg->is_attempt_committed && is_predetermined) {
-    handle_predetermined_trial(msg);
+  /* Handle attempt commitment. */
+  if (msg->is_attempt_committed) {
+    this->current_attempt_type = msg->trial_timing;
+    this->stimulation_requested = false;
   }
-  if (is_periodic) {
-    handle_periodic_trial(msg);
+
+  /* If stimulation has not been requested for the current attempt, handle the attempt. */
+  if (!this->stimulation_requested) {
+    bool is_periodic = (this->current_attempt_type == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
+    bool is_predetermined = (this->current_attempt_type == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
+    if (is_periodic) {
+      handle_periodic_trial(msg);
+    }
+    if (is_predetermined) {
+      handle_predetermined_trial(msg);
+    }
   }
 
   /* Check if any decider-defined events occur at the current sample. */

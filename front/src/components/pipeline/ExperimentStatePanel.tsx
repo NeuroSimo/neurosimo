@@ -63,6 +63,10 @@ const VariableContentContainer = styled.div`
   flex-direction: column;
 `
 
+const SectionSpacer = styled.div<{ $height?: number }>`
+  height: ${props => props.$height ?? 8}px;
+`
+
 export const ExperimentStatePanel: React.FC = () => {
   const { experimentState } = useContext(ExperimentContext)
 
@@ -112,27 +116,33 @@ export const ExperimentStatePanel: React.FC = () => {
           <StateTitle>Status</StateTitle>
           <StateValue>{experimentState?.ongoing ? (isPaused ? 'Paused' : (experimentState.in_rest ? 'Rest' : 'Running')) : 'Idle'}</StateValue>
         </StateRow>
+        <SectionSpacer />
         <StateRow>
           <StateTitle>Stage</StateTitle>
           <StateValue>
-            {experimentState?.stage_name
-              ? `${experimentState.stage_name} (${(experimentState.stage_index ?? 0) + 1}/${experimentState.total_stages ?? 0})`
-              : '—'}
+            {experimentState?.ongoing ? experimentState?.stage_name : '—'}
           </StateValue>
         </StateRow>
         <StateRow>
+          <IndentedStateTitle>&nbsp;</IndentedStateTitle>
+          <StateValue>
+            {experimentState?.ongoing ? `${(experimentState?.stage_index ?? 0) + 1} of ${experimentState?.total_stages ?? 0}` : ''}
+          </StateValue>
+        </StateRow>
+        <SectionSpacer />
+        <StateRow>
           <StateTitle>Trial</StateTitle>
           <StateValue>
-            {experimentState ? (experimentState.in_rest ? '—' : `${experimentState.trial_in_stage}/${experimentState.total_trials_in_stage || 0}`) : '—'}
+            {experimentState?.ongoing && !experimentState?.in_rest ? `${experimentState.trial_in_stage + 1} of ${experimentState.total_trials_in_stage || 0}` : '—'}
           </StateValue>
         </StateRow>
         <StateRow>
           <StateTitle>Attempt</StateTitle>
           <StateValue>
-            {experimentState?.ongoing && !experimentState.in_rest ? experimentState.attempt_in_trial : '—'}
+            {experimentState?.ongoing && !experimentState.in_rest ? experimentState.attempt_in_trial + 1 : '—'}
           </StateValue>
         </StateRow>
-        <br />
+        <SectionSpacer />
         <StateRow>
           <StateTitle>Time</StateTitle>
         </StateRow>
@@ -169,7 +179,7 @@ export const ExperimentStatePanel: React.FC = () => {
             </>
           )}
         </VariableContentContainer>
-        <div style={{ height: '14px' }} />
+        <SectionSpacer $height={14} />
         <StateRow style={{ justifyContent: 'center', paddingRight: 12 }}>
           <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing}>
             {pauseResumeLabel}

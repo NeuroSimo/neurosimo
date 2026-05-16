@@ -324,7 +324,9 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
   auto triggering_sample = request.triggering_sample;
   double_t sample_time = triggering_sample->time;
 
-  /* Process the sample. */
+  preprocessed_sample = *triggering_sample;
+
+  /* Process the sample (overwrites eeg, emg, valid, and time). */
   bool success = this->preprocessor_wrapper->process(
     preprocessed_sample,
     this->sample_buffer,
@@ -339,29 +341,6 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
     this->abort_session("Preprocessor Python error");
     return;
   }
-
-  /* Copy metadata from the triggering sample. */
-  preprocessed_sample.system_time_data_source_published = triggering_sample->system_time_data_source_published;
-  preprocessed_sample.sample_index = triggering_sample->sample_index;
-
-  /* Copy hardware trigger information. */
-  preprocessed_sample.pulse_trigger = triggering_sample->pulse_trigger;
-  preprocessed_sample.loopback_trigger = triggering_sample->loopback_trigger;
-
-  /* Copy experiment state. */
-  preprocessed_sample.in_rest = triggering_sample->in_rest;
-  preprocessed_sample.paused = triggering_sample->paused;
-  preprocessed_sample.experiment_time = triggering_sample->experiment_time;
-  preprocessed_sample.stage_name = triggering_sample->stage_name;
-  preprocessed_sample.stage_index = triggering_sample->stage_index;
-  preprocessed_sample.trial_in_stage = triggering_sample->trial_in_stage;
-  preprocessed_sample.trial_in_session = triggering_sample->trial_in_session;
-  preprocessed_sample.attempt_in_session = triggering_sample->attempt_in_session;
-  preprocessed_sample.is_new_stage = triggering_sample->is_new_stage;
-  preprocessed_sample.is_attempt_start = triggering_sample->is_attempt_start;
-  preprocessed_sample.is_attempt_committed = triggering_sample->is_attempt_committed;
-  preprocessed_sample.trial_timing = triggering_sample->trial_timing;
-  preprocessed_sample.trial_type = triggering_sample->trial_type;
 
   /* Carry forward any pending session start marker. */
   preprocessed_sample.is_session_start = this->pending_session_start;

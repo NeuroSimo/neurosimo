@@ -35,6 +35,10 @@ const StimulationPanel = styled(StyledPanel)`
   z-index: 1000;
 `
 
+const SectionSpacer = styled.div<{ $height?: number }>`
+  height: ${props => props.$height ?? 6}px;
+`
+
 export const StimulationDisplay: React.FC = () => {
   const { loopbackLatency, pulseProcessingLatency, eventProcessingLatency, decisionTrace, attemptTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
   const { sessionState } = useSession()
@@ -59,10 +63,7 @@ export const StimulationDisplay: React.FC = () => {
     }
   }, [attemptTrace])
 
-  // Decision latency comes from the live decision trace stream
-  const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
-  const formattedPulseProcessingLatency = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
-  const formattedEventProcessingLatency = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  // Decision trace
   const formattedDecisionPathLatency = decisionTrace?.decision_path_latency
     ? (decisionTrace.decision_path_latency * 1000).toFixed(1) + ' ms'
     : '\u2013'
@@ -73,7 +74,11 @@ export const StimulationDisplay: React.FC = () => {
     ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  // Pulse info comes from the attempt trace (reference_time is the decider's reference sample time)
+  // Attempt trace
+  const formattedLoopbackLatency = loopbackLatency ? (loopbackLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedPulseProcessingLatency = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
+  const formattedEventProcessingLatency = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+
   const referenceTime = latestAttemptTrace?.reference_time
   const isReactiveMode =
     latestAttemptTrace?.requested_stimulation_time !== undefined &&
@@ -110,22 +115,10 @@ export const StimulationDisplay: React.FC = () => {
       <StimulationPanel>
         {/* Latency */}
         <StateRow>
-          <StateTitle>Latency</StateTitle>
+          <StateTitle>Decision</StateTitle>
         </StateRow>
         <StateRow>
-          <IndentedStateTitle>Loopback</IndentedStateTitle>
-          <StateValue>{formattedLoopbackLatency}</StateValue>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Pulse processing</IndentedStateTitle>
-          <StateValue>{formattedPulseProcessingLatency}</StateValue>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Event processing</IndentedStateTitle>
-          <StateValue>{formattedEventProcessingLatency}</StateValue>
-        </StateRow>
-        <StateRow>
-          <IndentedStateTitle>Decision path</IndentedStateTitle>
+          <IndentedStateTitle>Time to decision</IndentedStateTitle>
           <StateValue>{formattedDecisionPathLatency}</StateValue>
         </StateRow>
         <StateRow>
@@ -136,7 +129,16 @@ export const StimulationDisplay: React.FC = () => {
           <DoubleIndentedStateTitle>Decider</DoubleIndentedStateTitle>
           <StateValue>{formattedDeciderDuration}</StateValue>
         </StateRow>
-        <br />
+        <SectionSpacer />
+        <StateRow>
+          <IndentedStateTitle>Pulse processing</IndentedStateTitle>
+          <StateValue>{formattedPulseProcessingLatency}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Event processing</IndentedStateTitle>
+          <StateValue>{formattedEventProcessingLatency}</StateValue>
+        </StateRow>
+        <SectionSpacer />
         {/* Pulse */}
         <StateRow>
           <StateTitle>Pulse</StateTitle>
@@ -157,7 +159,7 @@ export const StimulationDisplay: React.FC = () => {
           <IndentedStateTitle>Status</IndentedStateTitle>
           <StateValue>{formattedStatus}</StateValue>
         </StateRow>
-        <div style={{ height: '8px' }} />
+        <SectionSpacer />
         {!isReactiveMode && (
           <>
             <StateRow>

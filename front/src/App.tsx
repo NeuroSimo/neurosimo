@@ -12,6 +12,7 @@ import { PipelineView } from 'views/PipelineView'
 import { DashboardView } from 'views/DashboardView'
 import { DetachedExperimentView } from 'components/DetachedExperimentView'
 import { RosConnectionOverlay } from 'components/RosConnectionOverlay'
+import { PIPELINE_WRAPPER_HEIGHT } from 'styles/General'
 
 const App = () => {
   const isDetached = new URLSearchParams(window.location.search).get('detached') === 'true'
@@ -46,11 +47,14 @@ const ContentContainer = styled.div`
 `
 
 const Wrapper = styled.div`
+  position: relative;
+  height: ${PIPELINE_WRAPPER_HEIGHT}px;
   padding: 1.23rem 0rem;
   margin: 0.62rem;
   background-color: #e8e8e8;
   border-radius: 16px;
   box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 `
 
 export default App

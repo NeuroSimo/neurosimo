@@ -22,6 +22,9 @@ export const CONFIG_PANEL_WIDTH = 350
 export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 220
 export const DASHBOARD_PANEL_HEIGHT = 300
 
+/* Gray pipeline content area height (px). */
+export const PIPELINE_WRAPPER_HEIGHT = 1000
+
 export const StyledPanel = styled.div<{ isGrayedOut?: boolean }>`
   padding: 14px 0px 23px 21px;
   border-radius: 3px;

@@ -72,7 +72,6 @@ private:
   double_t last_trigger_time = std::numeric_limits<double_t>::quiet_NaN();
 
   // Loopback monitoring flags
-  bool session_started = false;
   bool loopback_received = false;
 
   enum class SchedulingResult {
@@ -92,7 +91,7 @@ private:
 
   std::mutex handler_mutex;  // Mutex for trigger request and EEG raw handlers
 
-  void attempt_labjack_connection();
+  bool initialize_labjack();
   void reset_state();
 
   void measure_loopback_latency(bool loopback_trigger, double_t sample_time);

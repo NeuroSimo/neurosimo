@@ -7,17 +7,10 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-const std::string DECISION_TRACE_TOPIC = "/neurosimo/pipeline/decision_trace";
 const std::string ATTEMPT_TRACE_TOPIC = "/neurosimo/pipeline/attempt_trace";
 const std::string ATTEMPT_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/attempt_trace/final";
 
 StimulationTracer::StimulationTracer() : Node("stimulation_tracer"), logger(rclcpp::get_logger("stimulation_tracer")) {
-  /* Subscriber for decision traces (all decisions from Decider). */
-  this->decision_trace_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::DecisionTrace>(
-    DECISION_TRACE_TOPIC,
-    100,
-    std::bind(&StimulationTracer::handle_decision_trace, this, _1));
-
   /* Subscriber for attempt traces (from Decider and TriggerTimer). */
   this->attempt_trace_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::AttemptTrace>(
     ATTEMPT_TRACE_TOPIC,
@@ -61,7 +54,6 @@ void StimulationTracer::handle_initialize_stimulation_tracer(
 
   /* Clear any existing traces. */
   this->attempt_traces.clear();
-  this->decision_traces.clear();
 
   response->success = true;
 }
@@ -79,30 +71,12 @@ void StimulationTracer::handle_finalize_stimulation_tracer(
 
   /* Clear traces and reset state. */
   this->attempt_traces.clear();
-  this->decision_traces.clear();
   this->is_initialized = false;
   this->current_session_id = {};
 
   RCLCPP_INFO(this->get_logger(), "StimulationTracer finalized");
 
   response->success = true;
-}
-
-void StimulationTracer::handle_decision_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::DecisionTrace> msg) {
-  /* Skip if not initialized. */
-  if (!this->is_initialized) {
-    return;
-  }
-
-  /* Store positive decision traces for matching with trials later. */
-  if (msg->stimulate) {
-    this->decision_traces.push_back(*msg);
-
-    /* Limit stored decisions to avoid unbounded growth. Keep last 100. */
-    if (this->decision_traces.size() > 100) {
-      this->decision_traces.erase(this->decision_traces.begin());
-    }
-  }
 }
 
 void StimulationTracer::handle_attempt_trace(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg) {

@@ -26,6 +26,16 @@ uint8 STATUS_ERROR=6                      # error (e.g. LabJack not connected, t
 uint8 status
 
 # ----------------------------------------------------------------------------
+# Attempt information (filled by Decider)
+# ----------------------------------------------------------------------------
+uint8 ATTEMPT_TIMING_PERIODIC=1
+uint8 ATTEMPT_TIMING_PREDETERMINED=2
+uint8 attempt_timing              # How the attempt is triggered
+string attempt_type               # Attempt type (e.g. "low_iti"), empty for periodic
+
+uint64 decision_id                # Only set for periodic attempts
+
+# ----------------------------------------------------------------------------
 # Requested stimulation (filled by Decider)
 # ----------------------------------------------------------------------------
 float64 requested_stimulation_time        # seconds since recording start
@@ -65,8 +75,3 @@ uint64 actual_stimulation_sample_index
 
 # Timing offset (actual - scheduled) in seconds
 float64 timing_offset
-
-# ----------------------------------------------------------------------------
-# Embedded decision (only present for data-driven trials)
-# ----------------------------------------------------------------------------
-DecisionTrace decision

@@ -34,8 +34,8 @@ bool is_attempt_start           # Attempt boundary: fires on session start, afte
 bool is_attempt_committed       # Coordinator has committed to this attempt's identity (timing/type now valid)
 
 # Trial timing and type (valid only on is_attempt_committed samples)
-uint8 TRIAL_TIMING_PERIODIC=0
-uint8 TRIAL_TIMING_PREDETERMINED=1
+uint8 TRIAL_TIMING_PERIODIC=1
+uint8 TRIAL_TIMING_PREDETERMINED=2
 uint8 trial_timing              # How the trial is triggered
 string trial_type               # Trial type (e.g. "low_iti"), empty for periodic
 

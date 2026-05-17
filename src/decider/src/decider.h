@@ -38,6 +38,8 @@
 #include "neurosimo_pipeline_interfaces/msg/attempt_commit.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_message.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_messages.hpp"
+#include "neurosimo_pipeline_interfaces/msg/task_start.hpp"
+#include "neurosimo_pipeline_interfaces/msg/task_finished.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_decider.hpp"
 #include "neurosimo_pipeline_interfaces/srv/finalize_decider.hpp"
 #include "neurosimo_system_interfaces/srv/abort_session.hpp"
@@ -113,6 +115,7 @@ private:
 
   void process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   void handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptCommit> msg);
+  void handle_task_start(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TaskStart> msg);
   void detect_and_handle_sample_gap(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   bool detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
 
@@ -146,6 +149,7 @@ private:
 
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
   rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::AttemptCommit>::SharedPtr attempt_commit_subscriber;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::TaskStart>::SharedPtr task_start_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
   rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::LoopbackLatency>::SharedPtr loopback_latency_subscriber;
@@ -161,6 +165,7 @@ private:
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr event_processing_latency_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TaskFinished>::SharedPtr task_finished_publisher;
 
   /* Service server for initialization */
   rclcpp::Service<neurosimo_pipeline_interfaces::srv::InitializeDecider>::SharedPtr initialize_service_server;

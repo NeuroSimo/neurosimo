@@ -123,6 +123,17 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/neurosimo/pipeline/latency/event_processing",
     10);
 
+  /* Publisher for task finished. */
+  this->task_finished_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::TaskFinished>(
+    "/neurosimo/pipeline/task_finished",
+    10);
+
+  /* Subscriber for task start from experiment coordinator. */
+  this->task_start_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::TaskStart>(
+    "/neurosimo/pipeline/task_start",
+    10,
+    std::bind(&EegDecider::handle_task_start, this, _1));
+
   /* Service client for timed trigger.
 
      The service server is created at session start, hence do not wait for it here. */
@@ -927,6 +938,41 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
   this->stimulation_requested = false;
   this->current_attempt_type = msg->trial_timing;
   this->current_trial_type = msg->trial_type;
+}
+
+void EegDecider::handle_task_start(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TaskStart> msg) {
+  if (msg->session_id != this->session_id) {
+    RCLCPP_ERROR(this->get_logger(), "Received task start with mismatched session id.");
+    return;
+  }
+
+  if (!this->is_initialized) {
+    RCLCPP_ERROR(this->get_logger(), "Received task start but decider is not initialized.");
+    return;
+  }
+
+  RCLCPP_INFO(this->get_logger(), "Starting task '%s' (id: %lu)", msg->task_name.c_str(), msg->task_id);
+
+  bool success = this->decider_wrapper->process_task(msg->task_name);
+
+  /* Drain and publish logs generated during task processing. */
+  this->decider_wrapper->drain_logs();
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, 0.0);
+
+  if (!success) {
+    RCLCPP_ERROR(this->get_logger(), "process_task failed for task '%s' (id: %lu).", msg->task_name.c_str(), msg->task_id);
+    this->error_occurred = true;
+    this->abort_session("Error in process_task method");
+    return;
+  }
+
+  /* Publish TaskFinished to signal completion to the coordinator. */
+  auto finished_msg = neurosimo_pipeline_interfaces::msg::TaskFinished();
+  finished_msg.session_id = this->session_id;
+  finished_msg.task_id = msg->task_id;
+  this->task_finished_publisher->publish(finished_msg);
+
+  RCLCPP_INFO(this->get_logger(), "Task '%s' (id: %lu) completed.", msg->task_name.c_str(), msg->task_id);
 }
 
 void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {

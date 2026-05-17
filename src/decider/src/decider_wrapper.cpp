@@ -314,6 +314,12 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_DEBUG(*logger_ptr, "Registered predetermined processor (process_predetermined)");
   }
 
+  /* Detect process_task method by convention. */
+  if (py::hasattr(*decider_instance, "process_task")) {
+    this->has_task_processor_ = true;
+    RCLCPP_DEBUG(*logger_ptr, "Registered task processor (process_task)");
+  }
+
   /* TODO: The logic below works but is too complex just to cover the case where the sample window is fully in the past. It should be simplified. */
 
   /* Calculate maximum buffer size needed to cover all windows.
@@ -419,6 +425,12 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_INFO(*logger_ptr, "  - Deterministic processor: %sDisabled%s (no process_predetermined method)", bold_on.c_str(), bold_off.c_str());
   } else {
     RCLCPP_INFO(*logger_ptr, "  - Deterministic processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
+  }
+
+  if (!this->has_task_processor_) {
+    RCLCPP_INFO(*logger_ptr, "  - Task processor: %sDisabled%s (no process_task method)", bold_on.c_str(), bold_off.c_str());
+  } else {
+    RCLCPP_INFO(*logger_ptr, "  - Task processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
   }
 
   RCLCPP_INFO(*logger_ptr, " ");
@@ -1030,6 +1042,36 @@ ProcessResult DeciderWrapper::process_predetermined(
 
 bool DeciderWrapper::has_predetermined_processor() const {
   return this->has_predetermined_processor_;
+}
+
+bool DeciderWrapper::process_task(const std::string& task_name) {
+  if (!has_task_processor_) {
+    log_error("process_task called but Python Decider has no process_task method.");
+    return false;
+  }
+
+  try {
+    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_TASK);
+    decider_instance->attr("process_task")(task_name);
+
+  } catch(const py::error_already_set& e) {
+    std::string error_msg = std::string("Python error in process_task: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return false;
+
+  } catch(const std::exception& e) {
+    std::string error_msg = std::string("C++ error in process_task: ") + e.what();
+    log_error(error_msg);
+    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+    return false;
+  }
+
+  return true;
+}
+
+bool DeciderWrapper::has_task_processor() const {
+  return this->has_task_processor_;
 }
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;

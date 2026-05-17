@@ -237,8 +237,22 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std
         
         protocol.elements.push_back(ProtocolElement::create_rest(rest));
         
+      } else if (element["task"]) {
+        // Parse task element
+        const YAML::Node& task_node = element["task"];
+        
+        Task task;
+        
+        if (!task_node["name"]) {
+          result.error_message = "Task at index " + std::to_string(i) + " missing 'name'";
+          return result;
+        }
+        task.name = task_node["name"].as<std::string>();
+        
+        protocol.elements.push_back(ProtocolElement::create_task(task));
+        
       } else {
-        result.error_message = "Element at index " + std::to_string(i) + " must be either 'stage' or 'rest'";
+        result.error_message = "Element at index " + std::to_string(i) + " must be either 'stage', 'rest', or 'task'";
         return result;
       }
     }
@@ -264,8 +278,10 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std
 }
 
 bool ProtocolLoader::validate_protocol(const Protocol& protocol, std::string& error_message) {
-  // Collect all stage names
+  // Collect all stage and task names (both can serve as anchors)
   std::set<std::string> stage_names;
+  std::set<std::string> task_names;
+  std::set<std::string> anchor_names;  // union of stage + task names
   
   for (const auto& element : protocol.elements) {
     if (element.type == ProtocolElement::Type::STAGE) {
@@ -277,16 +293,31 @@ bool ProtocolLoader::validate_protocol(const Protocol& protocol, std::string& er
         return false;
       }
       stage_names.insert(stage.name);
+      anchor_names.insert(stage.name);
       
       // Validate trials > 0
       if (stage.trials == 0) {
         error_message = "Stage '" + stage.name + "' must have at least 1 trial";
         return false;
       }
+    } else if (element.type == ProtocolElement::Type::TASK) {
+      const auto& task = element.task.value();
+      
+      // Check for duplicate task names and conflicts with stage names
+      if (task_names.count(task.name) > 0) {
+        error_message = "Duplicate task name: " + task.name;
+        return false;
+      }
+      if (stage_names.count(task.name) > 0) {
+        error_message = "Task name conflicts with stage name: " + task.name;
+        return false;
+      }
+      task_names.insert(task.name);
+      anchor_names.insert(task.name);
     }
   }
   
-  // Validate that wait_until anchors reference valid stages
+  // Validate that wait_until anchors reference valid stages or tasks
   for (const auto& element : protocol.elements) {
     if (element.type == ProtocolElement::Type::REST) {
       const auto& rest = element.rest.value();
@@ -294,8 +325,8 @@ bool ProtocolLoader::validate_protocol(const Protocol& protocol, std::string& er
       if (rest.wait_until.has_value()) {
         const std::string& anchor = rest.wait_until.value().anchor;
         
-        if (stage_names.count(anchor) == 0) {
-          error_message = "Rest references non-existent stage anchor: " + anchor;
+        if (anchor_names.count(anchor) == 0) {
+          error_message = "Rest references non-existent anchor: " + anchor;
           return false;
         }
       }
@@ -398,6 +429,12 @@ neurosimo_pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_inf
       
       element_msg.type = neurosimo_pipeline_interfaces::msg::ProtocolElementInfo::REST;
       element_msg.rest.notes = rest.notes;
+      
+    } else if (element.type == ProtocolElement::Type::TASK) {
+      const auto& task = element.task.value();
+      
+      element_msg.type = neurosimo_pipeline_interfaces::msg::ProtocolElementInfo::TASK;
+      element_msg.task_name = task.name;
     }
     
     info_msg.elements.push_back(element_msg);

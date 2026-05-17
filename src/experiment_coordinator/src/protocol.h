@@ -53,17 +53,26 @@ struct Rest {
 };
 
 /**
+ * @brief Represents a task element (e.g., train_classifier)
+ */
+struct Task {
+  std::string name;
+};
+
+/**
  * @brief Union type for protocol elements
  */
 struct ProtocolElement {
   enum class Type {
     STAGE,
-    REST
+    REST,
+    TASK
   };
   
   Type type;
   std::optional<Stage> stage;
   std::optional<Rest> rest;
+  std::optional<Task> task;
   
   static ProtocolElement create_stage(const Stage& s) {
     ProtocolElement elem;
@@ -76,6 +85,13 @@ struct ProtocolElement {
     ProtocolElement elem;
     elem.type = Type::REST;
     elem.rest = r;
+    return elem;
+  }
+
+  static ProtocolElement create_task(const Task& t) {
+    ProtocolElement elem;
+    elem.type = Type::TASK;
+    elem.task = t;
     return elem;
   }
 };
@@ -107,6 +123,11 @@ struct ExperimentState {
   bool in_rest = false;
   double rest_start_time = 0.0;            // Experiment time when rest started
   std::optional<double> rest_target_time;  // Experiment target time
+
+  // Task tracking
+  bool in_task = false;
+  std::string task_name;
+  uint64_t task_id = 0;                    // Monotonically increasing task ID within session
   
   // Pause tracking
   bool paused = false;

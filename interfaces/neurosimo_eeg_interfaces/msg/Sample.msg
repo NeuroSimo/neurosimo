@@ -27,6 +27,7 @@ bool event_trigger
 # Experiment state (filled by ExperimentCoordinator)
 # ============================================================================
 bool in_rest                    # Protocol-defined rest period
+bool in_task                    # Protocol-defined task period
 bool paused                     # User-initiated pause
 float64 experiment_time         # Pause-adjusted experiment time (seconds)
 string stage_name               # Current stage name from protocol

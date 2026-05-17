@@ -1,6 +1,7 @@
-# Type of element: 0 = STAGE, 1 = REST
+# Type of element: 0 = STAGE, 1 = REST, 2 = TASK
 uint8 STAGE = 0
 uint8 REST = 1
+uint8 TASK = 2
 
 uint8 type
 
@@ -9,3 +10,6 @@ ProtocolStageInfo stage
 
 # Only populated if type == REST
 ProtocolRestInfo rest
+
+# Only populated if type == TASK
+string task_name

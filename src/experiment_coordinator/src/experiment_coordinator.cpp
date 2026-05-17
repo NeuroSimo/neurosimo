@@ -41,6 +41,10 @@ ExperimentCoordinator::ExperimentCoordinator()
   /* Publisher for attempt commit (not tied to a specific sample). */
   this->attempt_commit_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::AttemptCommit>(
     "/neurosimo/pipeline/attempt_commit", 10);
+
+  /* Publisher for task start. */
+  this->task_start_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::TaskStart>(
+    "/neurosimo/pipeline/task_start", 10);
   
   /* Publisher for experiment UI state. */
   this->experiment_state_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::ExperimentState>(
@@ -57,6 +61,12 @@ ExperimentCoordinator::ExperimentCoordinator()
     ATTEMPT_TRACE_FINAL_TOPIC,
     100,
     std::bind(&ExperimentCoordinator::handle_attempt_trace_final, this, _1));
+
+  /* Subscriber for task finished events from decider. */
+  this->task_finished_subscriber = this->create_subscription<neurosimo_pipeline_interfaces::msg::TaskFinished>(
+    "/neurosimo/pipeline/task_finished",
+    10,
+    std::bind(&ExperimentCoordinator::handle_task_finished, this, _1));
 
   /* Client for finishing the session. */
   this->finish_session_client = this->create_client<std_srvs::srv::Trigger>(
@@ -187,6 +197,7 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
 
   /* Add experiment state fields. */
   enriched.in_rest = state.in_rest;
+  enriched.in_task = state.in_task;
   enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
   enriched.trial_in_stage = state.trial_in_stage;
@@ -464,6 +475,8 @@ void ExperimentCoordinator::advance_to_next_element() {
     start_stage(element.stage.value(), current_time);
   } else if (element.type == ProtocolElement::Type::REST) {
     start_rest(element.rest.value(), current_time);
+  } else if (element.type == ProtocolElement::Type::TASK) {
+    start_task(element.task.value(), current_time);
   }
 }
 
@@ -515,6 +528,58 @@ void ExperimentCoordinator::end_rest() {
   state.rest_target_time.reset();
 }
 
+void ExperimentCoordinator::start_task(const Task& task, double current_time) {
+  state.in_task = true;
+  state.task_name = task.name;
+  state.task_id++;
+
+  /* Record the task start time so it can serve as an anchor for wait_until rests. */
+  state.stage_start_experiment_times[task.name] = get_experiment_time(current_time);
+
+  RCLCPP_INFO(this->get_logger(), "Task '%s' started (id: %lu)", task.name.c_str(), state.task_id);
+
+  /* Publish TaskStart message to the decider. */
+  auto msg = neurosimo_pipeline_interfaces::msg::TaskStart();
+  msg.session_id = this->session_id;
+  msg.task_id = state.task_id;
+  msg.task_name = task.name;
+  this->task_start_publisher->publish(msg);
+}
+
+void ExperimentCoordinator::end_task() {
+  RCLCPP_INFO(this->get_logger(), "Task '%s' (id: %lu) finished.", state.task_name.c_str(), state.task_id);
+
+  state.in_task = false;
+  state.task_name.clear();
+}
+
+void ExperimentCoordinator::handle_task_finished(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TaskFinished> msg) {
+  if (msg->session_id != this->session_id) {
+    RCLCPP_WARN(this->get_logger(), "Received task_finished with mismatched session_id");
+    return;
+  }
+
+  if (!state.in_task) {
+    RCLCPP_WARN(this->get_logger(), "Received task_finished but not currently in a task");
+    return;
+  }
+
+  if (msg->task_id != state.task_id) {
+    RCLCPP_WARN(this->get_logger(), "Received task_finished with mismatched task_id (got %lu, expected %lu)",
+      msg->task_id, state.task_id);
+    return;
+  }
+
+  end_task();
+
+  /* Advance to next element. */
+  if (state.current_element_index + 1 < protocol->elements.size()) {
+    advance_to_next_element();
+  } else {
+    mark_protocol_complete();
+  }
+}
+
 void ExperimentCoordinator::start_stage(const Stage& stage, double current_time) {
   state.stage_name = stage.name;
   state.trial_in_stage = 0;
@@ -543,6 +608,8 @@ void ExperimentCoordinator::reset_experiment_state() {
       start_stage(first_element.stage.value(), initial_time);
     } else if (first_element.type == ProtocolElement::Type::REST) {
       start_rest(first_element.rest.value(), initial_time);
+    } else if (first_element.type == ProtocolElement::Type::TASK) {
+      start_task(first_element.task.value(), initial_time);
     }
   }
 }
@@ -596,6 +663,7 @@ void ExperimentCoordinator::publish_experiment_state() {
   /* If not ongoing, publish a clean, cleared state for UI consumers. */
   if (!ongoing) {
     msg.in_rest = false;
+    msg.in_task = false;
     msg.paused = false;
     msg.experiment_time = 0.0;
     msg.session_time = 0.0;
@@ -620,6 +688,8 @@ void ExperimentCoordinator::publish_experiment_state() {
   }
   
   msg.in_rest = state.in_rest;
+  msg.in_task = state.in_task;
+  msg.task_name = state.task_name;
   msg.paused = state.paused;
   msg.experiment_time = experiment_time;
   msg.session_time = current_time;

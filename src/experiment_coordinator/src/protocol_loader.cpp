@@ -108,7 +108,7 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std
           /* Shorthand: trials: N  → N periodic trials. */
           stage.trials = trials_node.as<uint32_t>();
           TrialTypeEntry entry;
-          entry.timing = neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC;
+          entry.timing = neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC;
           entry.count = stage.trials;
           stage.trial_types.push_back(entry);
 
@@ -134,9 +134,9 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std
             if (entry_node["timing"]) {
               std::string timing_str = entry_node["timing"].as<std::string>();
               if (timing_str == "periodic") {
-                entry.timing = neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC;
+                entry.timing = neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC;
               } else if (timing_str == "predetermined") {
-                entry.timing = neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED;
+                entry.timing = neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PREDETERMINED;
               } else {
                 result.error_message = "Stage '" + stage.name + "' trial entry " + std::to_string(j) + " has invalid timing '" + timing_str + "' (must be 'periodic' or 'predetermined')";
                 return result;
@@ -147,7 +147,7 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std
             if (entry_node["type"]) {
               entry.type = entry_node["type"].as<std::string>();
             }
-            if (entry.timing == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED && entry.type.empty()) {
+            if (entry.timing == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PREDETERMINED && entry.type.empty()) {
               result.error_message = "Stage '" + stage.name + "' trial entry " + std::to_string(j) + ": 'type' is required when timing is 'predetermined'";
               return result;
             }

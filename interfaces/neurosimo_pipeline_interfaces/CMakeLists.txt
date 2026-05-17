@@ -28,6 +28,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LoopbackLatency.msg"
   "msg/DecisionTrace.msg"
   "msg/AttemptTrace.msg"
+  "msg/AttemptCommit.msg"
   "msg/SensoryStimulus.msg"
   "msg/LogMessage.msg"
   "msg/LogMessages.msg"

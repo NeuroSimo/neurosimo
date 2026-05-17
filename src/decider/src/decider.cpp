@@ -268,6 +268,12 @@ void EegDecider::handle_initialize_decider(
     /* TODO: Should the queue be 1 samples long to make it explicit if we are too slow? */
     EEG_QUEUE_LENGTH,
     std::bind(&EegDecider::process_sample, this, _1));
+
+  /* Subscribe to attempt commit messages from experiment coordinator. */
+  this->attempt_commit_subscriber = create_subscription<neurosimo_pipeline_interfaces::msg::AttemptCommit>(
+    "/neurosimo/pipeline/attempt_commit",
+    10,
+    std::bind(&EegDecider::handle_attempt_commit, this, _1));
   
   // Print section header
   log_section_header("Loading decider: " + module_name);
@@ -911,6 +917,13 @@ void EegDecider::handle_loopback_latency(
   this->latest_eeg_device_processing_duration = msg->eeg_device_processing_duration;
 }
 
+void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptCommit> msg) {
+  this->attempt_commmit_received = true;
+  this->stimulation_requested = false;
+  this->current_attempt_type = msg->trial_timing;
+  this->current_trial_type = msg->trial_type;
+}
+
 void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Return early if decider is not enabled or initialized. */
   if (!this->is_enabled || !this->is_initialized) {
@@ -963,16 +976,10 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* Handle attempt commitment. */
-  if (msg->is_attempt_committed) {
-    this->current_attempt_type = msg->trial_timing;
-    this->stimulation_requested = false;
-  }
-
   /* If stimulation has not been requested for the current attempt, handle the attempt. */
-  if (!this->stimulation_requested) {
-    bool is_periodic = (this->current_attempt_type == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC);
-    bool is_predetermined = (this->current_attempt_type == neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PREDETERMINED);
+  if (this->attempt_commit_received && !this->stimulation_requested) {
+    bool is_periodic = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC);
+    bool is_predetermined = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PREDETERMINED);
     if (is_periodic) {
       handle_periodic_trial(msg);
     }
@@ -1040,7 +1047,7 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
 
 void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
-    msg->trial_in_stage, msg->stage_name.c_str(), msg->trial_type.c_str(), msg->time);
+    msg->trial_in_stage, msg->stage_name.c_str(), this->current_trial_type.c_str(), msg->time);
 
   /* Use the reference time tracked from the most recent is_attempt_start sample. */
   double_t reference_time = this->attempt_reference_time;
@@ -1060,7 +1067,7 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
     reference_time,
     msg->stage_name,
     msg->trial_in_stage,
-    msg->trial_type);
+    this->current_trial_type);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "process_predetermined failed at time %.3f (s).", msg->time);
@@ -1096,7 +1103,7 @@ void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_
   handle_stimulation_request(
     result, reference_time, reference_eeg_device_timestamp,
     neurosimo_pipeline_interfaces::msg::AttemptTrace::ATTEMPT_TIMING_PREDETERMINED,
-    msg->trial_type);
+    this->current_trial_type);
 }
 
 bool EegDecider::detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {

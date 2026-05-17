@@ -529,8 +529,9 @@ bool EegDecider::is_sample_window_valid() const {
      1. The buffer is not yet full (not enough samples)
      2. Any sample in the window is paused
      3. Any sample in the window is in a rest period
-     4. Any sample in the window is marked as invalid by the preprocessor
-     5. Any sample in the window failed preprocessing */
+     4. Any sample in the window is in a task period
+     5. Any sample in the window is marked as invalid by the preprocessor
+     6. Any sample in the window failed preprocessing */
 
   if (!this->sample_buffer.is_full()) {
     return false;
@@ -538,7 +539,7 @@ bool EegDecider::is_sample_window_valid() const {
 
   bool has_invalid_sample = false;
   this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>& sample) {
-    if (sample->paused || sample->in_rest || !sample->valid || sample->preprocessing_failed) {
+    if (sample->paused || sample->in_rest || sample->in_task || !sample->valid || sample->preprocessing_failed) {
       has_invalid_sample = true;
     }
   });
@@ -1028,7 +1029,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   process_ready_deferred_requests(sample_time);
 
   /* If stimulation has not been requested for the current attempt, handle the attempt. */
-  if (this->attempt_commit_received && !this->stimulation_requested) {
+  if (this->attempt_commit_received && !this->stimulation_requested && !msg->in_task && !msg->in_rest) {
     bool is_periodic = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC);
     bool is_predetermined = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PREDETERMINED);
     if (is_periodic) {

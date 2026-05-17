@@ -14,7 +14,11 @@ uint32 max_failures            # 0 means no retry limit set
 # State flags
 bool ongoing
 bool in_rest
+bool in_task
 bool paused
+
+# Task info (if in_task)
+string task_name
 
 # Time tracking
 float64 experiment_time        # Pause-adjusted

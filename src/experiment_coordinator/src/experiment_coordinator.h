@@ -18,6 +18,8 @@
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/attempt_commit.hpp"
 #include "neurosimo_pipeline_interfaces/msg/protocol_info.hpp"
+#include "neurosimo_pipeline_interfaces/msg/task_start.hpp"
+#include "neurosimo_pipeline_interfaces/msg/task_finished.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_protocol.hpp"
 #include "neurosimo_pipeline_interfaces/srv/finalize_protocol.hpp"
 #include "neurosimo_pipeline_interfaces/srv/get_protocol_info.hpp"
@@ -38,10 +40,12 @@ private:
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr raw_eeg_subscriber;
   rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::AttemptTrace>::SharedPtr attempt_trace_final_subscriber;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr active_project_subscriber;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::TaskFinished>::SharedPtr task_finished_subscriber;
   
   // Publishers
   rclcpp::Publisher<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptCommit>::SharedPtr attempt_commit_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TaskStart>::SharedPtr task_start_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
@@ -75,6 +79,7 @@ private:
   /* Callbacks */
   void handle_raw_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   void handle_attempt_trace_final(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptTrace> msg);
+  void handle_task_finished(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TaskFinished> msg);
   
   void handle_pause(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
@@ -102,6 +107,8 @@ private:
   void advance_to_next_element();
   void start_rest(const experiment_coordinator::Rest& rest, double current_time);
   void end_rest();
+  void start_task(const experiment_coordinator::Task& task, double current_time);
+  void end_task();
   void start_stage(const experiment_coordinator::Stage& stage, double current_time);
   void reset_experiment_state();
   

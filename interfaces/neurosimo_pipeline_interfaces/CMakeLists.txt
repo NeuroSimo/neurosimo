@@ -37,6 +37,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ProtocolRestInfo.msg"
   "msg/ProtocolElementInfo.msg"
   "msg/ProtocolInfo.msg"
+  "msg/TaskStart.msg"
+  "msg/TaskFinished.msg"
 
   "srv/RequestTimedTrigger.srv"
 

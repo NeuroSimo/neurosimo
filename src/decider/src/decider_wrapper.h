@@ -119,7 +119,11 @@ public:
     uint32_t trial_in_stage,
     const std::string& trial_type);
 
+  /* Call Python process_task for task in the protocol. */
+  bool process_task(const std::string& task_name);
+
   bool has_predetermined_processor() const;
+  bool has_task_processor() const;
 
   std::size_t get_envelope_buffer_size() const;
   double get_periodic_processing_interval() const;
@@ -170,10 +174,11 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
 
-  /* Whether the decider defines process_pulse / process_event / process_predetermined methods */
+  /* Whether the decider defines process_pulse / process_event / process_predetermined / process_task methods */
   bool has_pulse_processor = false;
   bool has_event_processor = false;
   bool has_predetermined_processor_ = false;
+  bool has_task_processor_ = false;
 
   /* Preallocated numpy arrays for periodic processor */
   std::unique_ptr<py::array_t<double>> periodic_time_offsets;

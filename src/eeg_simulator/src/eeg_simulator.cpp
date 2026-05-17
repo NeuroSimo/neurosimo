@@ -175,7 +175,7 @@ void EegSimulator::execute_initialize(
 
   // Set the dataset and start time
   std::string data_directory = "projects/" + std::string(goal->project_name) + "/eeg_simulator/";
-  auto [success, dataset_info, pulse_times] = this->dataset_manager_->get_dataset_info(goal->dataset_filename, data_directory);
+  auto [success, dataset_info, event_times] = this->dataset_manager_->get_dataset_info(goal->dataset_filename, data_directory);
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to get dataset info: %s", goal->dataset_filename.c_str());
     this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR, "Failed to get dataset info");
@@ -183,7 +183,7 @@ void EegSimulator::execute_initialize(
     return;
   }
   this->dataset_info = dataset_info;
-  this->pulse_times = pulse_times;
+  this->event_times = event_times;
 
   // Load dataset into buffer
   this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::LOADING;
@@ -204,7 +204,7 @@ void EegSimulator::execute_initialize(
   this->sampling_period = 1.0 / this->dataset_info.sampling_frequency;
 
   this->current_index = 0;
-  this->current_pulse_index = 0;
+  this->current_event_index = 0;
   this->time_offset = 0.0;
 
   /* Clear any previously injected triggers. */
@@ -213,10 +213,10 @@ void EegSimulator::execute_initialize(
     this->injected_trigger_times.clear();
   }
 
-  /* Log pulse times info if present. */
-  if (!this->pulse_times.empty()) {
-    RCLCPP_INFO(this->get_logger(), "Dataset has %zu pulse times. First pulse at %.4f s.",
-                this->pulse_times.size(), this->pulse_times[0]);
+  /* Log event times info if present. */
+  if (!this->event_times.empty()) {
+    RCLCPP_INFO(this->get_logger(), "Dataset has %zu event times. First event at %.4f s.",
+                this->event_times.size(), this->event_times[0]);
   }
 
   this->data_source_state = neurosimo_system_interfaces::msg::DataSourceState::READY;
@@ -426,23 +426,22 @@ bool EegSimulator::publish_single_sample(size_t sample_index, bool is_session_st
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
   msg.valid = true;
 
-  /* Check if a pulse should be delivered at this sample time (from dataset metadata). */
-  msg.pulse_trigger = false;
-  if (!this->pulse_times.empty() && this->current_pulse_index < this->pulse_times.size()) {
-    double_t next_pulse_time = this->pulse_times[this->current_pulse_index];
-    if (sample_time >= next_pulse_time) {
-      msg.pulse_trigger = true;
-      this->current_pulse_index++;
+  /* Check if an event should be delivered at this sample time (from dataset metadata). */
+  msg.event_trigger = false;
+  if (!this->event_times.empty() && this->current_event_index < this->event_times.size()) {
+    double_t next_event_time = this->event_times[this->current_event_index];
+    if (sample_time >= next_event_time) {
+      msg.event_trigger = true;
+      this->current_event_index++;
 
-      RCLCPP_INFO(this->get_logger(), "Pulse delivered at %.4f s (pulse %zu/%zu).",
-                  sample_time, this->current_pulse_index, this->pulse_times.size());
+      RCLCPP_INFO(this->get_logger(), "Event delivered at %.4f s (event %zu/%zu).",
+                  sample_time, this->current_event_index, this->event_times.size());
 
-      /* Log next pulse time if there is one. */
-      if (this->current_pulse_index < this->pulse_times.size()) {
-        RCLCPP_INFO(this->get_logger(), "Next pulse at %.4f s.",
-                    this->pulse_times[this->current_pulse_index]);
+      if (this->current_event_index < this->event_times.size()) {
+        RCLCPP_INFO(this->get_logger(), "Next event at %.4f s.",
+                    this->event_times[this->current_event_index]);
       } else {
-        RCLCPP_INFO(this->get_logger(), "No more pulses in this dataset.");
+        RCLCPP_INFO(this->get_logger(), "No more events in this dataset.");
       }
     }
   }

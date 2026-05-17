@@ -994,6 +994,12 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Pulse);
   }
 
+  /* Check if the sample contains a simulated event trigger (EEG simulator only). */
+  if (msg->event_trigger) {
+    RCLCPP_INFO(this->get_logger(), "Received event trigger at time %.4f (s)", sample_time);
+    enqueue_deferred_request(msg, sample_time, ProcessingReason::Event);
+  }
+
   /* Check if the request we just added can be processed immediately (e.g., if look_ahead_samples == 0). */
   process_ready_deferred_requests(sample_time);
 }

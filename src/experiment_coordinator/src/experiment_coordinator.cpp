@@ -37,6 +37,10 @@ ExperimentCoordinator::ExperimentCoordinator()
   /* Publisher for enriched EEG data. */
   this->enriched_eeg_publisher = this->create_publisher<neurosimo_eeg_interfaces::msg::Sample>(
     EEG_ENRICHED_TOPIC, EEG_QUEUE_LENGTH);
+
+  /* Publisher for attempt commit (not tied to a specific sample). */
+  this->attempt_commit_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::AttemptCommit>(
+    "/neurosimo/pipeline/attempt_commit", 10);
   
   /* Publisher for experiment UI state. */
   this->experiment_state_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::ExperimentState>(
@@ -112,6 +116,36 @@ void ExperimentCoordinator::publish_health_status(uint8_t health_level, const st
   this->health_publisher->publish(health);
 }
 
+void ExperimentCoordinator::publish_attempt_commit() {
+  if (!this->is_protocol_initialized || state.in_rest) {
+    return;
+  }
+
+  if (state.current_element_index >= protocol->elements.size()) {
+    return;
+  }
+
+  const auto& element = protocol->elements[state.current_element_index];
+  if (element.type != ProtocolElement::Type::STAGE) {
+    return;
+  }
+
+  const auto& stage = element.stage.value();
+  if (state.trial_in_stage >= stage.trial_order.size()) {
+    return;
+  }
+
+  size_t type_idx = stage.trial_order[state.trial_in_stage];
+  const auto& trial_entry = stage.trial_types[type_idx];
+
+  auto msg = neurosimo_pipeline_interfaces::msg::AttemptCommit();
+  msg.attempt_in_session = state.attempt_in_session;
+  msg.trial_timing = trial_entry.timing;
+  msg.trial_type = trial_entry.type;
+
+  this->attempt_commit_publisher->publish(msg);
+}
+
 void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   /* Handle session start marker from EEG bridge/simulator. */
   if (msg->is_session_start) {
@@ -161,25 +195,15 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   /* Copy and consume pending event flags (true on exactly one sample per transition). */
   enriched.is_new_stage = state.is_new_stage_pending;
   enriched.is_attempt_start = state.is_attempt_start_pending;
-  enriched.is_attempt_committed = state.is_attempt_committed_pending;
   state.is_new_stage_pending = false;
   state.is_attempt_start_pending = false;
-  state.is_attempt_committed_pending = false;
 
-  /* Add stage information and trial timing/type (valid only on commit samples). */
+  /* Add stage information. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
     const auto& element = protocol->elements[state.current_element_index];
     if (element.type == ProtocolElement::Type::STAGE) {
       const auto& stage = element.stage.value();
       enriched.stage_name = stage.name;
-
-      /* Look up the trial timing/type from the precomputed trial_order. */
-      if (enriched.is_attempt_committed && state.trial_in_stage < stage.trial_order.size()) {
-        size_t type_idx = stage.trial_order[state.trial_in_stage];
-        const auto& trial_entry = stage.trial_types[type_idx];
-        enriched.trial_timing = trial_entry.timing;
-        enriched.trial_type = trial_entry.type;
-      }
     }
   }
 
@@ -269,8 +293,8 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
     /* Advance to next element. */
     advance_to_next_element();
   } else {
-    /* Commit to the next attempt — the verdict is in, so we know which attempt is next. */
-    state.is_attempt_committed_pending = true;
+    /* Commit to the next attempt - the verdict is in, so we know which attempt is next. */
+    publish_attempt_commit();
   }
 }
 
@@ -494,7 +518,7 @@ void ExperimentCoordinator::start_stage(const Stage& stage, double current_time)
 
   state.is_new_stage_pending = true;
   state.is_attempt_start_pending = true;
-  state.is_attempt_committed_pending = true;
+  publish_attempt_commit();
 
   RCLCPP_INFO(this->get_logger(), "Stage '%s' started (%u trials)", 
     stage.name.c_str(), stage.trials);

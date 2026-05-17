@@ -35,6 +35,7 @@
 #include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/loopback_latency.hpp"
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/attempt_commit.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_message.hpp"
 #include "neurosimo_pipeline_interfaces/msg/log_messages.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_decider.hpp"
@@ -111,6 +112,7 @@ private:
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeDecider::Response> response);
 
   void process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
+  void handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptCommit> msg);
   void detect_and_handle_sample_gap(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   bool detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
 
@@ -143,6 +145,7 @@ private:
   rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
 
   rclcpp::Subscription<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr eeg_subscriber;
+  rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::AttemptCommit>::SharedPtr attempt_commit_subscriber;
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr is_coil_at_target_subscriber;
   rclcpp::Subscription<neurosimo_pipeline_interfaces::msg::LoopbackLatency>::SharedPtr loopback_latency_subscriber;
@@ -198,7 +201,9 @@ private:
 
   /* Track the type of the current attempt (periodic or predetermined) */
   uint8_t current_attempt_type = 0;
+  std::string current_trial_type;
   bool stimulation_requested = false;
+  bool attempt_commit_received = false;
 
   /* Reference time tracked from the most recent is_attempt_start sample. */
   double_t attempt_reference_time = std::numeric_limits<double_t>::quiet_NaN();

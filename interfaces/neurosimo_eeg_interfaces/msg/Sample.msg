@@ -36,13 +36,6 @@ uint64 trial_in_session         # Total successful trials in session
 uint64 attempt_in_session       # Total attempts in session (advances every trigger)
 bool is_new_stage               # True on the first sample of each stage
 bool is_attempt_start           # Attempt boundary: fires on session start, after a pulse, or after rest ends
-bool is_attempt_committed       # Coordinator has committed to this attempt's identity (timing/type now valid)
-
-# Trial timing and type (valid only on is_attempt_committed samples)
-uint8 TRIAL_TIMING_PERIODIC=1
-uint8 TRIAL_TIMING_PREDETERMINED=2
-uint8 trial_timing              # How the trial is triggered
-string trial_type               # Trial type (e.g. "low_iti"), empty for periodic
 
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)

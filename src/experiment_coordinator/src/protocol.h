@@ -9,7 +9,7 @@
 #include <limits>
 #include <cstdint>
 
-#include "neurosimo_eeg_interfaces/msg/sample.hpp"
+#include "neurosimo_pipeline_interfaces/msg/attempt_commit.hpp"
 
 namespace experiment_coordinator {
 
@@ -17,7 +17,7 @@ namespace experiment_coordinator {
  * @brief Describes one group of trials within a stage
  */
 struct TrialTypeEntry {
-  uint8_t timing = neurosimo_eeg_interfaces::msg::Sample::TRIAL_TIMING_PERIODIC;
+  uint8_t timing = neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC;
   std::string type;        // e.g. "low_iti", empty for periodic
   uint32_t count = 0;
 };
@@ -125,7 +125,6 @@ struct ExperimentState {
   // Pending event flags (set when transition occurs, consumed on the next sample)
   bool is_new_stage_pending = false;
   bool is_attempt_start_pending = false;
-  bool is_attempt_committed_pending = false;
 
   // Flags
   bool protocol_complete = false;

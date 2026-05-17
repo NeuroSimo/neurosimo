@@ -15,6 +15,7 @@
 #include "neurosimo_project_interfaces/srv/set_module.hpp"
 #include "neurosimo_pipeline_interfaces/msg/experiment_state.hpp"
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"
+#include "neurosimo_pipeline_interfaces/msg/attempt_commit.hpp"
 #include "neurosimo_pipeline_interfaces/msg/protocol_info.hpp"
 #include "neurosimo_pipeline_interfaces/srv/initialize_protocol.hpp"
 #include "neurosimo_pipeline_interfaces/srv/finalize_protocol.hpp"
@@ -39,6 +40,7 @@ private:
   
   // Publishers
   rclcpp::Publisher<neurosimo_eeg_interfaces::msg::Sample>::SharedPtr enriched_eeg_publisher;
+  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::AttemptCommit>::SharedPtr attempt_commit_publisher;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr heartbeat_publisher;
   rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::ExperimentState>::SharedPtr experiment_state_publisher;
@@ -93,6 +95,7 @@ private:
   void publish_experiment_state();
   
   /* Experiment logic */
+  void publish_attempt_commit();
   void update_experiment_state(double current_time);
   void advance_to_next_element();
   void start_rest(const experiment_coordinator::Rest& rest, double current_time);

@@ -1,6 +1,7 @@
 #ifndef EXPERIMENT_COORDINATOR_H
 #define EXPERIMENT_COORDINATOR_H
 
+#include <array>
 #include <string>
 #include <memory>
 #include <vector>
@@ -66,6 +67,7 @@ private:
   experiment_coordinator::ExperimentState state;
   experiment_coordinator::ProtocolLoader protocol_loader;
   bool is_protocol_initialized = false;
+  std::array<uint8_t, 16> session_id = {};
     
   /* Logger */
   rclcpp::Logger logger;

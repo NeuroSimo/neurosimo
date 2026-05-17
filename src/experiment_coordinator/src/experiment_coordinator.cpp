@@ -139,6 +139,7 @@ void ExperimentCoordinator::publish_attempt_commit() {
   const auto& trial_entry = stage.trial_types[type_idx];
 
   auto msg = neurosimo_pipeline_interfaces::msg::AttemptCommit();
+  msg.session_id = this->session_id;
   msg.attempt_in_session = state.attempt_in_session;
   msg.trial_timing = trial_entry.timing;
   msg.trial_type = trial_entry.type;
@@ -367,6 +368,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
 
   this->protocol = result.protocol;
   this->is_protocol_initialized = true;
+  this->session_id = request->session_id;
 
   /* Reset experiment state. */
   reset_experiment_state();
@@ -379,13 +381,18 @@ void ExperimentCoordinator::handle_initialize_protocol(
 void ExperimentCoordinator::handle_finalize_protocol(
     const std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeProtocol::Request> request,
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::FinalizeProtocol::Response> response) {
-  (void)request;  // session_id not currently used
-  
+  if (request->session_id != this->session_id) {
+    RCLCPP_WARN(this->get_logger(), "Finalize called with mismatched session_id");
+    response->success = false;
+    return;
+  }
+
   RCLCPP_INFO(this->get_logger(), "Finalizing protocol");
   
   /* Reset state */
   this->is_protocol_initialized = false;
   this->protocol.reset();
+  this->session_id = {};
   reset_experiment_state();
 
   response->success = true;

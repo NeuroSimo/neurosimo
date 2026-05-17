@@ -8,6 +8,7 @@
 # receive this, the current attempt has this identity."
 # ============================================================================
 
+uint8[16] session_id
 uint64 attempt_in_session       # Which attempt is being committed (join key)
 
 uint8 TRIAL_TIMING_PERIODIC=1

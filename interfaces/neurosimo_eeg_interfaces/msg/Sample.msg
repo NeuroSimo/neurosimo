@@ -42,6 +42,7 @@ string trial_type               # Trial type (e.g. "low_iti"), empty for periodi
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)
 # ============================================================================
+bool preprocessing_failed      # Preprocessing step failed for this sample
 bool valid                     # Sample quality check passed
 float64 preprocessor_duration  # Time spent in preprocessing (seconds)
 

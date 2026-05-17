@@ -314,64 +314,54 @@ void EegPreprocessor::abort_session(const std::string& reason) {
 }
 
 void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& request, [[maybe_unused]] double_t current_sample_time) {
-  /* Validate that the current sample window is suitable for processing. */
-  if (!is_sample_window_valid()) {
-    return;
-  }
-
   auto start_time = std::chrono::high_resolution_clock::now();
 
   auto triggering_sample = request.triggering_sample;
   double_t sample_time = triggering_sample->time;
 
   preprocessed_sample = *triggering_sample;
+  preprocessed_sample.preprocessing_failed = false;
 
-  /* Process the sample (overwrites eeg, emg, valid, and time). */
-  bool success = this->preprocessor_wrapper->process(
-    preprocessed_sample,
-    this->sample_buffer,
-    sample_time,
-    triggering_sample->pulse_trigger);
+  if (is_sample_window_valid()) {
+    bool success = this->preprocessor_wrapper->process(
+      preprocessed_sample,
+      this->sample_buffer,
+      sample_time,
+      triggering_sample->pulse_trigger);
 
-  if (!success) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Python call failed, not processing EEG sample at time %.3f (s).",
-                 sample_time);
-    this->error_occurred = true;
-    this->abort_session("Preprocessor Python error");
-    return;
+    if (!success) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Python call failed, not processing EEG sample at time %.3f (s).",
+                   sample_time);
+      this->error_occurred = true;
+      this->abort_session("Preprocessor Python error");
+      return;
+    }
+  } else {
+    preprocessed_sample.preprocessing_failed = true;
   }
 
-  /* Carry forward any pending session start marker. */
-  preprocessed_sample.is_session_start = this->pending_session_start;
-
-  /* Clear the pending marker after carrying it forward. */
-  this->pending_session_start = false;
-
-  /* Calculate preprocessing duration. */
   auto end_time = std::chrono::high_resolution_clock::now();
   preprocessed_sample.preprocessor_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
-  /* Update data fingerprint with EEG data */
-  if (!preprocessed_sample.eeg.empty()) {
-    this->preprocessor_fingerprint = XXH64(preprocessed_sample.eeg.data(),
-                                            preprocessed_sample.eeg.size() * sizeof(double),
-                                            this->preprocessor_fingerprint);
-  }
-  
-  /* Update data fingerprint with EMG data */
-  if (!preprocessed_sample.emg.empty()) {
-    this->preprocessor_fingerprint = XXH64(preprocessed_sample.emg.data(),
-                                            preprocessed_sample.emg.size() * sizeof(double),
-                                            this->preprocessor_fingerprint);
+  if (!preprocessed_sample.preprocessing_failed) {
+    if (!preprocessed_sample.eeg.empty()) {
+      this->preprocessor_fingerprint = XXH64(preprocessed_sample.eeg.data(),
+                                              preprocessed_sample.eeg.size() * sizeof(double),
+                                              this->preprocessor_fingerprint);
+    }
+
+    if (!preprocessed_sample.emg.empty()) {
+      this->preprocessor_fingerprint = XXH64(preprocessed_sample.emg.data(),
+                                              preprocessed_sample.emg.size() * sizeof(double),
+                                              this->preprocessor_fingerprint);
+    }
   }
 
-  /* Add system timestamp for when preprocessor published this sample. */
   preprocessed_sample.system_time_preprocessor_published =
     std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-  /* Publish the preprocessed sample. */
   preprocessed_eeg_publisher->publish(preprocessed_sample);
 }
 
@@ -418,11 +408,6 @@ void EegPreprocessor::process_sample(const std::shared_ptr<neurosimo_eeg_interfa
 
   /* Update previous sample time for next iteration's log publishing */
   this->previous_sample_time = sample_time;
-
-  /* Handle session start marker by marking that we need to carry it over to the next published sample. */
-  if (msg->is_session_start) {
-    this->pending_session_start = true;
-  }
 
   /* Check that no error has occurred. */
   if (this->error_occurred) {

@@ -110,9 +110,6 @@ private:
 
   bool error_occurred = false;
 
-  /* Pending session start marker to be carried forward to the next published sample. */
-  bool pending_session_start = false;
-
   /* XXHash state for data fingerprinting */
   uint64_t preprocessor_fingerprint = 0;
 

@@ -74,7 +74,7 @@ run_case \
     "rtsound_deterministic.py" \
     "true" \
     "phastimate.py" \
-    "test_data_with_pulse_62_eeg_channels.json" \
+    "test_data_with_event_62_eeg_channels.json" \
     "example_long.yaml" \
     "10231642243859112162" \
     "4523506742077868031" \
@@ -99,7 +99,7 @@ run_case \
     "example.py" \
     "true" \
     "example.py" \
-    "test_data_with_pulse.json" \
+    "test_data_with_event.json" \
     "example_long.yaml" \
     "1947103796442606795" \
     "2440193878910607350" \
@@ -112,7 +112,7 @@ run_case \
     "rtsound_deterministic.py" \
     "true" \
     "block_at_pulse.py" \
-    "test_data_with_pulse_62_eeg_channels.json" \
+    "test_data_with_event_62_eeg_channels.json" \
     "example_long.yaml" \
     "10231642243859112162" \
     "4523506742077868031" \

@@ -42,7 +42,7 @@ void DatasetManager::handle_get_dataset_info(
   }
 
   /* Parse the dataset info directly from the JSON file */
-  auto [success, dataset_info, pulse_times] = get_dataset_info(request->filename, data_directory_);
+  auto [success, dataset_info, event_times] = get_dataset_info(request->filename, data_directory_);
 
   if (!success) {
     response->success = false;
@@ -126,27 +126,27 @@ std::tuple<bool, neurosimo_project_interfaces::msg::DatasetInfo, std::vector<dou
       dataset_msg.loop = false;
     }
 
-    /* Read optional "pulse_file" field and load pulse times from CSV. */
-    std::vector<double_t> parsed_pulse_times;
-    if (json_data.contains("pulse_file") && json_data["pulse_file"].is_string()) {
-      std::string pulse_file = json_data["pulse_file"];
-      std::string pulse_file_path = directory_path + "/" + pulse_file;
+    /* Read optional "event_file" field and load event times from CSV. */
+    std::vector<double_t> parsed_event_times;
+    if (json_data.contains("event_file") && json_data["event_file"].is_string()) {
+      std::string event_file = json_data["event_file"];
+      std::string event_file_path = directory_path + "/" + event_file;
 
-      auto [success, pulse_times] = read_pulse_times_from_csv(pulse_file_path);
+      auto [success, event_times] = read_event_times_from_csv(event_file_path);
       if (!success) {
         return std::make_tuple(false, neurosimo_project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
       }
-      parsed_pulse_times = pulse_times;
+      parsed_event_times = event_times;
 
-      /* Warn if loop is enabled with pulse_file - this combination is not supported. */
-      if (dataset_msg.loop && !parsed_pulse_times.empty()) {
-        RCLCPP_WARN(node_->get_logger(), "Warning: pulse_file with loop=true is not supported in %s, pulse times will be ignored", json_filename.c_str());
-        parsed_pulse_times.clear();
-      } else if (!parsed_pulse_times.empty()) {
-        RCLCPP_INFO(node_->get_logger(), "Loaded %zu pulse times from %s", parsed_pulse_times.size(), pulse_file.c_str());
+      /* Warn if loop is enabled with event_file - this combination is not supported. */
+      if (dataset_msg.loop && !parsed_event_times.empty()) {
+        RCLCPP_WARN(node_->get_logger(), "Warning: event_file with loop=true is not supported in %s, event times will be ignored", json_filename.c_str());
+        parsed_event_times.clear();
+      } else if (!parsed_event_times.empty()) {
+        RCLCPP_INFO(node_->get_logger(), "Loaded %zu event times from %s", parsed_event_times.size(), event_file.c_str());
       }
     }
-    dataset_msg.trial_count = parsed_pulse_times.size();
+    dataset_msg.trial_count = parsed_event_times.size();
 
     /* Get sample count from the data file and compute duration. */
     std::string data_file_path = directory_path + "/" + dataset_msg.data_filename;
@@ -159,7 +159,7 @@ std::tuple<bool, neurosimo_project_interfaces::msg::DatasetInfo, std::vector<dou
 
     dataset_msg.duration = static_cast<double>(sample_count) / dataset_msg.sampling_frequency;
 
-    return std::make_tuple(true, dataset_msg, parsed_pulse_times);
+    return std::make_tuple(true, dataset_msg, parsed_event_times);
 
   } catch (const nlohmann::json::parse_error& ex) {
     RCLCPP_ERROR(node_->get_logger(), "JSON parse error in %s: %s", json_filename.c_str(), ex.what());
@@ -184,40 +184,40 @@ std::tuple<bool, size_t> DatasetManager::get_sample_count(const std::string& dat
   return std::make_tuple(true, line_count);
 }
 
-std::tuple<bool, std::vector<double_t>> DatasetManager::read_pulse_times_from_csv(const std::string& pulse_file_path) {
-  std::vector<double_t> pulse_times;
+std::tuple<bool, std::vector<double_t>> DatasetManager::read_event_times_from_csv(const std::string& event_file_path) {
+  std::vector<double_t> event_times;
 
-  if (!std::filesystem::exists(pulse_file_path)) {
-    RCLCPP_ERROR(node_->get_logger(), "Pulse file not found: %s", pulse_file_path.c_str());
-    return std::make_tuple(false, pulse_times);
+  if (!std::filesystem::exists(event_file_path)) {
+    RCLCPP_ERROR(node_->get_logger(), "Event file not found: %s", event_file_path.c_str());
+    return std::make_tuple(false, event_times);
   }
 
-  std::ifstream pulse_file_stream(pulse_file_path);
-  if (!pulse_file_stream.is_open()) {
-    RCLCPP_ERROR(node_->get_logger(), "Error opening pulse file: %s", pulse_file_path.c_str());
-    return std::make_tuple(false, pulse_times);
+  std::ifstream event_file_stream(event_file_path);
+  if (!event_file_stream.is_open()) {
+    RCLCPP_ERROR(node_->get_logger(), "Error opening event file: %s", event_file_path.c_str());
+    return std::make_tuple(false, event_times);
   }
 
   std::string line;
-  while (std::getline(pulse_file_stream, line)) {
+  while (std::getline(event_file_stream, line)) {
     /* Skip empty lines */
     if (line.empty() || line.find_first_not_of(" \t\r\n") == std::string::npos) {
       continue;
     }
 
     try {
-      double_t pulse_time = std::stod(line);
-      pulse_times.push_back(pulse_time);
+      double_t event_time = std::stod(line);
+      event_times.push_back(event_time);
     } catch (const std::exception& e) {
-      RCLCPP_ERROR(node_->get_logger(), "Error parsing pulse time from line '%s' in %s: %s", 
-                   line.c_str(), pulse_file_path.c_str(), e.what());
+      RCLCPP_ERROR(node_->get_logger(), "Error parsing event time from line '%s' in %s: %s",
+                   line.c_str(), event_file_path.c_str(), e.what());
       return std::make_tuple(false, std::vector<double_t>());
     }
   }
 
-  pulse_file_stream.close();
+  event_file_stream.close();
 
-  return std::make_tuple(true, pulse_times);
+  return std::make_tuple(true, event_times);
 }
 
 std::tuple<bool, std::string> DatasetManager::load_dataset(

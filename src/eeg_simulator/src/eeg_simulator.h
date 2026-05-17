@@ -84,7 +84,7 @@ private:
   double_t play_dataset_from = 0.0;
 
   size_t current_index = 0;
-  size_t current_pulse_index = 0;
+  size_t current_event_index = 0;
 
   std::string error_message = UNSET_STRING;
 
@@ -103,8 +103,8 @@ private:
   double_t latest_sample_time = 0.0;
   double_t time_offset = 0.0;
 
-  /* Pulse times loaded from dataset JSON, used to inject pulse_trigger flags. */
-  std::vector<double_t> pulse_times;
+  /* Event times loaded from dataset JSON, used to set event_trigger on samples. */
+  std::vector<double_t> event_times;
 
   /* Trigger times injected at runtime. */
   std::set<double_t> injected_trigger_times;

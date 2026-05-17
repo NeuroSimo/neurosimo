@@ -63,23 +63,23 @@ python3 "./generate_random_data.py" \
     --sampling_frequency 5000 \
     --loop
 
-echo "Generating test data with pulse at 5 seconds..."
+echo "Generating test data with event at 5 seconds..."
 python3 "./generate_random_data.py" \
     --duration 30 \
     --output_directory "$TARGET_PROJECT_DIR/eeg_simulator" \
-    --output_filename "test_data_with_pulse" \
-    --dataset_name "Test data with pulse at 5s" \
+    --output_filename "test_data_with_event" \
+    --dataset_name "Test data with event at 5s" \
     --sampling_frequency 5000 \
-    --pulse_times 5.0
+    --event_times 5.0
 
-echo "Generating test data with pulse at 5 seconds and 62 EEG channels..."
+echo "Generating test data with event at 5 seconds and 62 EEG channels..."
 python3 "./generate_random_data.py" \
     --duration 30 \
     --output_directory "$TARGET_PROJECT_DIR/eeg_simulator" \
-    --output_filename "test_data_with_pulse_62_eeg_channels" \
-    --dataset_name "Test data with pulse at 5s and 62 EEG channels" \
+    --output_filename "test_data_with_event_62_eeg_channels" \
+    --dataset_name "Test data with event at 5s and 62 EEG channels" \
     --sampling_frequency 5000 \
-    --pulse_times 5.0 \
+    --event_times 5.0 \
     --eeg_channels 62
 
 
@@ -90,7 +90,7 @@ python3 "./generate_random_data.py" \
     --output_filename "test_data_with_timestamp_values" \
     --dataset_name "Test data with timestamp values" \
     --sampling_frequency 5000 \
-    --pulse_times 3.5 7.5 10.5 13.5 \
+    --event_times 3.5 7.5 10.5 13.5 \
     --eeg_channels 62 \
     --emg_channels 2 \
     --timestamp_values

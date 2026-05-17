@@ -38,19 +38,19 @@ def save_to_csv(output_directory, filename, data, fmt='%.5f'):
     np.savetxt(output_path, data, delimiter=",", fmt=fmt)
 
 
-def save_pulse_times_to_csv(output_directory, base_filename, pulse_times):
-    """Save pulse times to a CSV file."""
-    pulse_filename = base_filename + "_pulses.csv"
-    pulse_path = os.path.join(output_directory, pulse_filename)
+def save_event_times_to_csv(output_directory, base_filename, event_times):
+    """Save event times to a CSV file."""
+    event_filename = base_filename + "_events.csv"
+    event_path = os.path.join(output_directory, event_filename)
 
-    with open(pulse_path, 'w') as pulse_file:
-        for pulse_time in pulse_times:
-            pulse_file.write(f"{pulse_time}\n")
+    with open(event_path, 'w') as event_file:
+        for event_time in event_times:
+            event_file.write(f"{event_time}\n")
 
-    return pulse_filename
+    return event_filename
 
 
-def save_to_json(output_directory, base_filename, name, sampling_frequency, num_eeg_channels, num_emg_channels, data_filename, loop, pulse_times=None):
+def save_to_json(output_directory, base_filename, name, sampling_frequency, num_eeg_channels, num_emg_channels, data_filename, loop, event_times=None):
     json_filename = base_filename + ".json"
     json_data = {
         "name": name,
@@ -63,10 +63,9 @@ def save_to_json(output_directory, base_filename, name, sampling_frequency, num_
         "loop": loop,
     }
 
-    # Add pulse file if pulse times are provided
-    if pulse_times is not None and len(pulse_times) > 0:
-        pulse_filename = save_pulse_times_to_csv(output_directory, base_filename, pulse_times)
-        json_data["pulse_file"] = pulse_filename
+    if event_times is not None and len(event_times) > 0:
+        event_filename = save_event_times_to_csv(output_directory, base_filename, event_times)
+        json_data["event_file"] = event_filename
 
     output_path = os.path.join(output_directory, json_filename)
     with open(output_path, 'w') as json_file:
@@ -84,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_filename", type=str, default="random_data", help="Output base filename without extension")
     parser.add_argument("--dataset_name", type=str, default="Random data", help="Name of the dataset")
     parser.add_argument("--loop", action="store_true", help="Whether to loop the dataset when reaching the end")
-    parser.add_argument("--pulse_times", nargs='*', type=float, help="Times in seconds when pulses occur (space-separated list, optional)")
+    parser.add_argument("--event_times", nargs='*', type=float, help="Times in seconds when events occur (space-separated list, optional)")
     parser.add_argument("--timestamp_values", action="store_true", help="Generate data where values equal the timestamp (for testing)")
 
     args = parser.parse_args()
@@ -107,7 +106,7 @@ if __name__ == "__main__":
         num_emg_channels=args.emg_channels,
         data_filename=data_filename,
         loop=args.loop,
-        pulse_times=args.pulse_times,
+        event_times=args.event_times,
     )
 
     data_type = "Timestamp" if args.timestamp_values else "Random"

@@ -54,6 +54,7 @@ EEG_FIELDS_RAW = [
     'system_time_data_source_published',
     'is_session_start',
     'pulse_trigger',
+    'event_trigger',
 ]
 
 EEG_FIELDS_ENRICHED = EEG_FIELDS_RAW + [

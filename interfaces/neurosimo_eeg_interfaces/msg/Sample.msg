@@ -13,10 +13,15 @@ float64 eeg_device_timestamp    # Raw timestamp from EEG device, seconds
 uint64 sample_index             # Sample count (0-based)
 
 # ============================================================================
-# Hardware triggers/events (filled by EEG bridge or EEG simulator)
+# Hardware triggers (filled by EEG bridge or EEG simulator)
 # ============================================================================
 bool pulse_trigger
 bool loopback_trigger
+
+# ============================================================================
+# Simulated events (filled by EEG simulator)
+# ============================================================================
+bool event_trigger
 
 # ============================================================================
 # Experiment state (filled by ExperimentCoordinator)

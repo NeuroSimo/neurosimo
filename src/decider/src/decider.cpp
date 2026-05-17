@@ -918,7 +918,12 @@ void EegDecider::handle_loopback_latency(
 }
 
 void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::AttemptCommit> msg) {
-  this->attempt_commmit_received = true;
+  if (msg->session_id != this->session_id) {
+    RCLCPP_ERROR(this->get_logger(), "Received attempt commit with mismatched session id.");
+    return;
+  }
+
+  this->attempt_commit_received = true;
   this->stimulation_requested = false;
   this->current_attempt_type = msg->trial_timing;
   this->current_trial_type = msg->trial_type;

@@ -512,7 +512,8 @@ bool EegDecider::is_sample_window_valid() const {
      1. The buffer is not yet full (not enough samples)
      2. Any sample in the window is paused
      3. Any sample in the window is in a rest period
-     4. Any sample in the window is marked as invalid by the preprocessor */
+     4. Any sample in the window is marked as invalid by the preprocessor
+     5. Any sample in the window failed preprocessing */
 
   if (!this->sample_buffer.is_full()) {
     return false;
@@ -520,7 +521,7 @@ bool EegDecider::is_sample_window_valid() const {
 
   bool has_invalid_sample = false;
   this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>& sample) {
-    if (sample->paused || sample->in_rest || !sample->valid) {
+    if (sample->paused || sample->in_rest || !sample->valid || sample->preprocessing_failed) {
       has_invalid_sample = true;
     }
   });

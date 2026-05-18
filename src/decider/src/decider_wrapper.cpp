@@ -241,7 +241,7 @@ bool DeciderWrapper::initialize_module(
   double pulse_sample_window_end_seconds = 0.0;
 
   if (py::hasattr(*decider_instance, "process_pulse")) {
-    this->has_pulse_processor = true;
+    this->has_pulse_processor_ = true;
 
     /* Extract optional pulse_sample_window (flat key). */
     if (config.contains("pulse_sample_window")) {
@@ -277,7 +277,7 @@ bool DeciderWrapper::initialize_module(
   double event_sample_window_end_seconds = 0.0;
 
   if (py::hasattr(*decider_instance, "process_event")) {
-    this->has_event_processor = true;
+    this->has_event_processor_ = true;
 
     /* Extract optional event_sample_window (flat key). */
     if (config.contains("event_sample_window")) {
@@ -405,7 +405,7 @@ bool DeciderWrapper::initialize_module(
 
   RCLCPP_INFO(*logger_ptr, "  - Periodic processing interval: %s%.3f%s (s)", bold_on.c_str(), this->periodic_processing_interval, bold_off.c_str());
             
-  if (!this->has_pulse_processor) {
+  if (!this->has_pulse_processor_) {
     RCLCPP_INFO(*logger_ptr, "  - Pulse processor: %sDisabled%s (no process_pulse method)", bold_on.c_str(), bold_off.c_str());
   } else {
     RCLCPP_INFO(*logger_ptr, "  - Pulse processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
@@ -413,7 +413,7 @@ bool DeciderWrapper::initialize_module(
                 bold_on.c_str(), pulse_sample_window_start_seconds, pulse_sample_window_end_seconds, bold_off.c_str());
   }
 
-  if (!this->has_event_processor) {
+  if (!this->has_event_processor_) {
     RCLCPP_INFO(*logger_ptr, "  - Event processor: %sDisabled%s (no process_event method)", bold_on.c_str(), bold_off.c_str());
   } else {
     RCLCPP_INFO(*logger_ptr, "  - Event processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
@@ -590,7 +590,7 @@ int DeciderWrapper::get_periodic_look_ahead_samples() const {
 
 int DeciderWrapper::get_pulse_look_ahead_samples() const {
   /* If no pulse processor is defined, pulses should be processed immediately. */
-  if (!this->has_pulse_processor) {
+  if (!this->has_pulse_processor_) {
     return 0;
   }
   return std::max(this->pulse_sample_window_end, 0);
@@ -928,7 +928,7 @@ ProcessResult DeciderWrapper::process_pulse(
     const std::string& stage_name,
     uint64_t trial_in_stage) {
 
-  if (!has_pulse_processor) {
+  if (!has_pulse_processor_) {
     return ProcessResult::success_empty();
   }
 
@@ -971,7 +971,7 @@ ProcessResult DeciderWrapper::process_event(
     const std::string& stage_name,
     uint64_t trial_in_stage) {
 
-  if (!has_event_processor) {
+  if (!has_event_processor_) {
     return ProcessResult::success_empty();
   }
 
@@ -1038,6 +1038,14 @@ ProcessResult DeciderWrapper::process_predetermined(
   }
 
   return parse_result_dict(py_result, true, sensory_stimuli, event_queue);
+}
+
+bool DeciderWrapper::has_pulse_processor() const {
+  return this->has_pulse_processor_;
+}
+
+bool DeciderWrapper::has_event_processor() const {
+  return this->has_event_processor_;
 }
 
 bool DeciderWrapper::has_predetermined_processor() const {

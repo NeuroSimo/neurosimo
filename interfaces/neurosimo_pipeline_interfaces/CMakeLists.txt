@@ -35,6 +35,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ExperimentState.msg"
   "msg/ProtocolStageInfo.msg"
   "msg/ProtocolRestInfo.msg"
+  "msg/ProtocolTaskInfo.msg"
   "msg/ProtocolElementInfo.msg"
   "msg/ProtocolInfo.msg"
   "msg/TaskStart.msg"

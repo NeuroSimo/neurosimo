@@ -248,6 +248,10 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std
           return result;
         }
         task.name = task_node["name"].as<std::string>();
+
+        if (task_node["notes"]) {
+          task.notes = task_node["notes"].as<std::string>();
+        }
         
         protocol.elements.push_back(ProtocolElement::create_task(task));
         
@@ -434,7 +438,8 @@ neurosimo_pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_inf
       const auto& task = element.task.value();
       
       element_msg.type = neurosimo_pipeline_interfaces::msg::ProtocolElementInfo::TASK;
-      element_msg.task_name = task.name;
+      element_msg.task.name = task.name;
+      element_msg.task.notes = task.notes;
     }
     
     info_msg.elements.push_back(element_msg);

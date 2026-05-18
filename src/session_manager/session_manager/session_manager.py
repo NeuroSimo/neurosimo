@@ -293,6 +293,7 @@ class SessionManagerNode(Node):
             'preprocessor': False,
             'stimulation_tracer': False,
             'trigger_timer': False,
+            'trigger_simulator': False,
             'recording': False,
             'streaming': False
         }

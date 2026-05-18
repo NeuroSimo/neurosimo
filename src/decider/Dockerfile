@@ -52,6 +52,10 @@ RUN pip3 install -r requirements/mne.txt
 # All runtime requirements are satisfied by previously installed packages.
 RUN pip3 install --no-deps mneflow==0.5.10 py_neuromodulation==0.1.7
 
+# XXX: Install Git - not necessarily a long-term dependency, but it's convenient
+#      for some users currently.
+RUN apt-get update && apt-get install -y git
+
 # Copy ROS workspace and build packages
 
 WORKDIR /app

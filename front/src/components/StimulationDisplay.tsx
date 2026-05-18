@@ -89,8 +89,8 @@ export const StimulationDisplay: React.FC = () => {
     ? (decisionTrace.overhead_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedPulseProcessingLatency = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
-  const formattedEventProcessingLatency = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedPulseProcessingTime = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
+  const formattedEventProcessingTime = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
 
   const referenceTime = latestAttemptTrace?.reference_time
 
@@ -161,6 +161,18 @@ export const StimulationDisplay: React.FC = () => {
         <StateRow>
           <IndentedStateTitle>Status</IndentedStateTitle>
           <StateValue>{experimentState?.ongoing ? formattedStatus : '\u2013'}</StateValue>
+        </StateRow>
+        <SectionSpacer $height={16} />
+        <StateRow>
+          <StateTitle>Processing time</StateTitle>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Pulse</IndentedStateTitle>
+          <StateValue>{experimentState?.ongoing ? formattedPulseProcessingTime : '\u2013'}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Event</IndentedStateTitle>
+          <StateValue>{experimentState?.ongoing ? formattedEventProcessingTime : '\u2013'}</StateValue>
         </StateRow>
       </StimulationPanel>
     </>

@@ -18,7 +18,7 @@ export const PipelineView = () => {
       pipeline={
         <>
           <PipelineDiagram />
-          <div style={{ marginTop: '287px' }} />
+          <div style={{ marginTop: '317px' }} />
           <SessionPanel />
         </>
       }

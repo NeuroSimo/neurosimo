@@ -114,7 +114,15 @@ export const ExperimentStatePanel: React.FC = () => {
       <Panel>
         <StateRow>
           <StateTitle>Status</StateTitle>
-          <StateValue>{experimentState?.ongoing ? (isPaused ? 'Paused' : (experimentState.in_rest ? 'Rest' : 'Running')) : 'Idle'}</StateValue>
+          <StateValue>
+            {experimentState?.ongoing
+              ? (isPaused
+                  ? 'Paused'
+                  : (experimentState.in_rest
+                      ? 'Rest'
+                      : (experimentState.in_task ? 'Task' : 'Running')))
+              : 'Idle'}
+          </StateValue>
         </StateRow>
         <SectionSpacer />
         <StateRow>
@@ -133,13 +141,13 @@ export const ExperimentStatePanel: React.FC = () => {
         <StateRow>
           <StateTitle>Trial</StateTitle>
           <StateValue>
-            {experimentState?.ongoing && !experimentState?.in_rest ? `${experimentState.trial_in_stage + 1} of ${experimentState.total_trials_in_stage || 0}` : '—'}
+            {experimentState?.ongoing && !experimentState?.in_rest && !experimentState?.in_task ? `${experimentState.trial_in_stage + 1} of ${experimentState.total_trials_in_stage || 0}` : '—'}
           </StateValue>
         </StateRow>
         <StateRow>
           <StateTitle>Attempt</StateTitle>
           <StateValue>
-            {experimentState?.ongoing && !experimentState.in_rest ? experimentState.attempt_in_trial + 1 : '—'}
+            {experimentState?.ongoing && !experimentState.in_rest && !experimentState.in_task ? experimentState.attempt_in_trial + 1 : '—'}
           </StateValue>
         </StateRow>
         <SectionSpacer />
@@ -164,6 +172,17 @@ export const ExperimentStatePanel: React.FC = () => {
               <StateRow>
                 <IndentedStateTitle>Rest remaining</IndentedStateTitle>
                 <StateValue>{formatSeconds(experimentState.rest_remaining)}</StateValue>
+              </StateRow>
+            </>
+          ) : experimentState?.in_task ? (
+            <>
+              <StateRow>
+                <IndentedStateTitle>Task name</IndentedStateTitle>
+                <StateValue>{experimentState.task_name || '—'}</StateValue>
+              </StateRow>
+              <StateRow style={{ visibility: 'hidden' }}>
+                <IndentedStateTitle>&nbsp;</IndentedStateTitle>
+                <StateValue>&nbsp;</StateValue>
               </StateRow>
             </>
           ) : (

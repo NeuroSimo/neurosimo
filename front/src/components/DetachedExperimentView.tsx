@@ -87,6 +87,22 @@ export const DetachedExperimentView: React.FC = () => {
     )
   }
 
+  if (experimentState.in_task) {
+    return (
+      <>
+        <DragBar />
+        <FullScreenContainer>
+          <div>
+            <RestText>Task</RestText>
+            <RestText style={{ fontSize: '48px', marginTop: '10px' }}>
+              {experimentState.task_name || ''}
+            </RestText>
+          </div>
+        </FullScreenContainer>
+      </>
+    )
+  }
+
   return (
     <>
       <DragBar />

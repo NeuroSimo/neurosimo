@@ -664,6 +664,7 @@ void ExperimentCoordinator::publish_experiment_state() {
   if (!ongoing) {
     msg.in_rest = false;
     msg.in_task = false;
+    msg.task_name = "";
     msg.paused = false;
     msg.experiment_time = 0.0;
     msg.session_time = 0.0;
@@ -720,14 +721,15 @@ void ExperimentCoordinator::publish_experiment_state() {
   
   msg.stage_index = static_cast<uint32_t>(stage_index);
   msg.total_stages = static_cast<uint32_t>(total_stages);
-  msg.trial_in_stage = state.in_rest ? 0 : state.trial_in_stage;
+  const bool suppress_stage_trial_fields = state.in_rest || state.in_task;
+  msg.trial_in_stage = suppress_stage_trial_fields ? 0 : state.trial_in_stage;
   msg.total_trials_in_stage = total_trials_in_stage;
   msg.attempt_in_session = state.attempt_in_session;
-  msg.attempt_in_trial = state.in_rest ? 0 : state.attempt_in_trial;
-  msg.failures_in_stage = state.in_rest ? 0 : state.failures_in_stage;
+  msg.attempt_in_trial = suppress_stage_trial_fields ? 0 : state.attempt_in_trial;
+  msg.failures_in_stage = suppress_stage_trial_fields ? 0 : state.failures_in_stage;
 
   /* Report max_failures for the current stage (0 means no limit). */
-  if (!state.in_rest && state.current_element_index < this->protocol->elements.size()) {
+  if (!suppress_stage_trial_fields && state.current_element_index < this->protocol->elements.size()) {
     const auto& element = this->protocol->elements[state.current_element_index];
     if (element.type == ProtocolElement::Type::STAGE && element.stage.has_value() &&
         element.stage->max_failures.has_value()) {

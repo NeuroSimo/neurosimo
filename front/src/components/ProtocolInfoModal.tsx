@@ -178,36 +178,20 @@ export const ProtocolInfoModal: React.FC<ProtocolInfoModalProps> = ({
             <InfoLabel>Filename:</InfoLabel>
             <InfoValue>{protocolInfo.yaml_filename}</InfoValue>
           </InfoRow>
-          <InfoRow>
-            <InfoLabel># of Stages:</InfoLabel>
-            <InfoValue>{totalStages}</InfoValue>
-          </InfoRow>
-          <InfoRow>
-            <InfoLabel># of Trials:</InfoLabel>
-            <InfoValue>{totalTrials}</InfoValue>
-          </InfoRow>
-          {totalTasks > 0 && (
-            <InfoRow>
-              <InfoLabel># of Tasks:</InfoLabel>
-              <InfoValue>{totalTasks}</InfoValue>
-            </InfoRow>
-          )}
-          {totalRests > 0 && (
-            <InfoRow>
-              <InfoLabel># of Rests:</InfoLabel>
-              <InfoValue>{totalRests}</InfoValue>
-            </InfoRow>
-          )}
           {protocolInfo.description && (
             <InfoRow>
               <InfoLabel>Description:</InfoLabel>
               <InfoValue>{protocolInfo.description}</InfoValue>
             </InfoRow>
           )}
+          <InfoRow>
+            <InfoLabel>Trials:</InfoLabel>
+            <InfoValue>{totalTrials}</InfoValue>
+          </InfoRow>
         </InfoSection>
 
         <ElementsSection>
-          <ElementsSectionTitle>Protocol elements</ElementsSectionTitle>
+          <ElementsSectionTitle>Steps</ElementsSectionTitle>
           {protocolInfo.elements.map((element, index) => {
             switch (element.type) {
               case PROTOCOL_ELEMENT_TYPE.STAGE:

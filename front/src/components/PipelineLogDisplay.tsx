@@ -10,7 +10,7 @@ type LogSource = 'preprocessor' | 'decider' | 'presenter'
 const PipelineLogPanelTitle = styled.div`
   width: 956px;
   position: fixed;
-  top: 630px;
+  top: 660px;
   right: 27px;
   z-index: 1001;
   text-align: left;
@@ -81,7 +81,7 @@ const PipelineLogPanel = styled(StyledPanel)`
   width: 953px;
   height: 299px;
   position: fixed;
-  top: 670px;
+  top: 700px;
   right: 10px;
   z-index: 1000;
   padding: 12px;

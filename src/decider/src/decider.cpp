@@ -957,9 +957,11 @@ void EegDecider::handle_task_start(const std::shared_ptr<neurosimo_pipeline_inte
 
   bool success = this->decider_wrapper->process_task(msg->task_name);
 
-  /* Drain and publish logs generated during task processing. */
+  /* Drain and publish logs generated during task processing.
+     Use the latest EEG sample time (updated by process_sample while the task runs). */
   this->decider_wrapper->drain_logs();
-  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, 0.0);
+  const double_t log_sample_time = std::isnan(this->previous_sample_time) ? 0.0 : this->previous_sample_time;
+  publish_python_logs(neurosimo_pipeline_interfaces::msg::LogMessage::PHASE_RUNTIME, log_sample_time);
 
   if (!success) {
     RCLCPP_ERROR(this->get_logger(), "process_task failed for task '%s' (id: %lu).", msg->task_name.c_str(), msg->task_id);

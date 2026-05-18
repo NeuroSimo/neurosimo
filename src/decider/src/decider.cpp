@@ -15,6 +15,7 @@
 #include "filesystem_utils/filesystem_utils.h"
 
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 using namespace std::chrono;
 using namespace std::placeholders;
@@ -113,14 +114,14 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/neurosimo/pipeline/decider/log",
     qos_keep_all_logs);
 
-  /* Publisher for pulse processing latency. */
-  this->pulse_processing_latency_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::Latency>(
-    "/neurosimo/pipeline/latency/pulse_processing",
+  /* Publisher for pulse processing time. */
+  this->pulse_processing_time_publisher = this->create_publisher<std_msgs::msg::Float64>(
+    "/neurosimo/pipeline/processing_time/pulse",
     10);
 
-  /* Publisher for event processing latency. */
-  this->event_processing_latency_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::Latency>(
-    "/neurosimo/pipeline/latency/event_processing",
+  /* Publisher for event processing time. */
+  this->event_processing_time_publisher = this->create_publisher<std_msgs::msg::Float64>(
+    "/neurosimo/pipeline/processing_time/event",
     10);
 
   /* Publisher for task finished. */
@@ -680,9 +681,9 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   auto end_time = std::chrono::high_resolution_clock::now();
   double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
-  auto latency_msg = neurosimo_pipeline_interfaces::msg::Latency();
-  latency_msg.latency = decider_duration;
-  this->pulse_processing_latency_publisher->publish(latency_msg);
+  auto processing_time_msg = std_msgs::msg::Float64();
+  processing_time_msg.data = decider_duration;
+  this->pulse_processing_time_publisher->publish(processing_time_msg);
 
   /* Publish attempt trace with STATUS_PULSE_PROCESSED. */
   auto pulse_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
@@ -738,9 +739,9 @@ void EegDecider::process_event_request(const DeferredProcessingRequest& request)
   auto end_time = std::chrono::high_resolution_clock::now();
   double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
 
-  auto latency_msg = neurosimo_pipeline_interfaces::msg::Latency();
-  latency_msg.latency = decider_duration;
-  this->event_processing_latency_publisher->publish(latency_msg);
+  auto processing_time_msg = std_msgs::msg::Float64();
+  processing_time_msg.data = decider_duration;
+  this->event_processing_time_publisher->publish(processing_time_msg);
 }
 
 void EegDecider::process_periodic_request(const DeferredProcessingRequest& request) {

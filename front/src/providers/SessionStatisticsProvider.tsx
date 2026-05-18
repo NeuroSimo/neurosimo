@@ -25,8 +25,8 @@ export const getStatusLabel = (status: number): string => {
   )
 }
 
-interface Latency extends ROSLIB.Message {
-  latency: number
+interface Float64 extends ROSLIB.Message {
+  data: number
 }
 
 export interface DecisionTrace extends ROSLIB.Message {
@@ -68,28 +68,28 @@ export interface AttemptTrace extends ROSLIB.Message {
 }
 
 interface SessionStatisticsContextType {
-  pulseProcessingLatency: Latency | null
-  eventProcessingLatency: Latency | null
+  pulseProcessingTime: number | null
+  eventProcessingTime: number | null
   decisionTrace: DecisionTrace | null
   attemptTrace: AttemptTrace | null
 
-  setPulseProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
-  setEventProcessingLatency: React.Dispatch<React.SetStateAction<Latency | null>>
+  setPulseProcessingTime: React.Dispatch<React.SetStateAction<number | null>>
+  setEventProcessingTime: React.Dispatch<React.SetStateAction<number | null>>
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
   setAttemptTrace: React.Dispatch<React.SetStateAction<AttemptTrace | null>>
 }
 
 const defaultSessionStatisticsState: SessionStatisticsContextType = {
-  pulseProcessingLatency: null,
-  eventProcessingLatency: null,
+  pulseProcessingTime: null,
+  eventProcessingTime: null,
   decisionTrace: null,
   attemptTrace: null,
 
-  setPulseProcessingLatency: () => {
-    console.warn('setPulseProcessingLatency is not yet initialized.')
+  setPulseProcessingTime: () => {
+    console.warn('setPulseProcessingTime is not yet initialized.')
   },
-  setEventProcessingLatency: () => {
-    console.warn('setEventProcessingLatency is not yet initialized.')
+  setEventProcessingTime: () => {
+    console.warn('setEventProcessingTime is not yet initialized.')
   },
   setDecisionTrace: () => {
     console.warn('setDecisionTrace is not yet initialized.')
@@ -106,34 +106,32 @@ interface SessionStatisticsProviderProps {
 }
 
 export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps> = ({ children }) => {
-  const [pulseProcessingLatency, setPulseProcessingLatency] = useState<Latency | null>(null)
-  const [eventProcessingLatency, setEventProcessingLatency] = useState<Latency | null>(null)
+  const [pulseProcessingTime, setPulseProcessingTime] = useState<number | null>(null)
+  const [eventProcessingTime, setEventProcessingTime] = useState<number | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
   const [attemptTrace, setAttemptTrace] = useState<AttemptTrace | null>(null)
 
   useEffect(() => {
-    /* Subscriber for pulse processing latency. */
-    const pulseProcessingLatencySubscriber = new Topic<Latency>({
+    /* Subscriber for pulse processing time. */
+    const pulseProcessingTimeSubscriber = new Topic<Float64>({
       ros: ros,
-      name: '/neurosimo/pipeline/latency/pulse_processing',
-      messageType: 'neurosimo_pipeline_interfaces/Latency',
+      name: '/neurosimo/pipeline/processing_time/pulse',
+      messageType: 'std_msgs/Float64',
     })
 
-    pulseProcessingLatencySubscriber.subscribe((message) => {
-      console.log('pulseProcessingLatency', message)
-      setPulseProcessingLatency(message)
+    pulseProcessingTimeSubscriber.subscribe((message) => {
+      setPulseProcessingTime(message.data)
     })
 
-    /* Subscriber for event processing latency. */
-    const eventProcessingLatencySubscriber = new Topic<Latency>({
+    /* Subscriber for event processing time. */
+    const eventProcessingTimeSubscriber = new Topic<Float64>({
       ros: ros,
-      name: '/neurosimo/pipeline/latency/event_processing',
-      messageType: 'neurosimo_pipeline_interfaces/Latency',
+      name: '/neurosimo/pipeline/processing_time/event',
+      messageType: 'std_msgs/Float64',
     })
 
-    eventProcessingLatencySubscriber.subscribe((message) => {
-      console.log('eventProcessingLatency', message)
-      setEventProcessingLatency(message)
+    eventProcessingTimeSubscriber.subscribe((message) => {
+      setEventProcessingTime(message.data)
     })
 
     /* Subscriber for decision traces (all decisions from Decider). */
@@ -161,8 +159,8 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
 
     /* Unsubscribers */
     return () => {
-      pulseProcessingLatencySubscriber.unsubscribe()
-      eventProcessingLatencySubscriber.unsubscribe()
+      pulseProcessingTimeSubscriber.unsubscribe()
+      eventProcessingTimeSubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
       attemptTraceSubscriber.unsubscribe()
     }
@@ -171,12 +169,12 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
   return (
     <SessionStatisticsContext.Provider
       value={{
-        pulseProcessingLatency,
-        eventProcessingLatency,
+        pulseProcessingTime,
+        eventProcessingTime,
         decisionTrace,
         attemptTrace,
-        setPulseProcessingLatency,
-        setEventProcessingLatency,
+        setPulseProcessingTime,
+        setEventProcessingTime,
         setDecisionTrace,
         setAttemptTrace,
       }}

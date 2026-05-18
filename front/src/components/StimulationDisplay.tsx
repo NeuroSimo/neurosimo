@@ -46,7 +46,7 @@ const BreakdownDivider = styled.div`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { pulseProcessingLatency, eventProcessingLatency, decisionTrace, attemptTrace, setPulseProcessingLatency, setEventProcessingLatency } = useContext(SessionStatisticsContext)
+  const { pulseProcessingTime, eventProcessingTime, decisionTrace, attemptTrace, setPulseProcessingTime, setEventProcessingTime } = useContext(SessionStatisticsContext)
 
   const { sessionState } = useSession()
   const { experimentState } = useContext(ExperimentContext)
@@ -59,11 +59,11 @@ export const StimulationDisplay: React.FC = () => {
     if (previousSessionState === SessionStateValue.STOPPED &&
         (sessionState.state === SessionStateValue.INITIALIZING || sessionState.state === SessionStateValue.RUNNING)) {
       setLatestAttemptTrace(null)
-      setPulseProcessingLatency(null)
-      setEventProcessingLatency(null)
+      setPulseProcessingTime(null)
+      setEventProcessingTime(null)
     }
     setPreviousSessionState(sessionState.state)
-  }, [sessionState.state, previousSessionState, setPulseProcessingLatency, setEventProcessingLatency])
+  }, [sessionState.state, previousSessionState, setPulseProcessingTime, setEventProcessingTime])
 
   // Update latest attempt trace from context
   useEffect(() => {
@@ -89,8 +89,8 @@ export const StimulationDisplay: React.FC = () => {
     ? (decisionTrace.overhead_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedPulseProcessingTime = pulseProcessingLatency ? (pulseProcessingLatency.latency).toFixed(1) + ' s' : '\u2013'
-  const formattedEventProcessingTime = eventProcessingLatency ? (eventProcessingLatency.latency * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedPulseProcessingTime = pulseProcessingTime !== null ? (pulseProcessingTime).toFixed(1) + ' s' : '\u2013'
+  const formattedEventProcessingTime = eventProcessingTime !== null ? (eventProcessingTime * 1000).toFixed(1) + ' ms' : '\u2013'
 
   const referenceTime = latestAttemptTrace?.reference_time
 

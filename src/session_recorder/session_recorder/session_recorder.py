@@ -28,8 +28,8 @@ TOPICS_TO_RECORD = [
     '/neurosimo/pipeline/experiment_state',
     '/neurosimo/pipeline/sensory_stimulus',
     '/neurosimo/pipeline/latency/loopback',
-    '/neurosimo/pipeline/latency/pulse_processing',
-    '/neurosimo/pipeline/latency/event_processing',
+    '/neurosimo/pipeline/processing_time/pulse',
+    '/neurosimo/pipeline/processing_time/event',
 
     # Pipeline logs
     '/neurosimo/pipeline/decider/log',

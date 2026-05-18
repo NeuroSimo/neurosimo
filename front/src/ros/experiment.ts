@@ -11,10 +11,16 @@ export interface ProtocolRestInfo extends ROSLIB.Message {
   notes: string
 }
 
+export interface ProtocolTaskInfo extends ROSLIB.Message {
+  name: string
+  notes: string
+}
+
 export interface ProtocolElementInfo extends ROSLIB.Message {
-  type: number  // 0 = STAGE, 1 = REST
+  type: number  // 0 = STAGE, 1 = REST, 2 = TASK
   stage: ProtocolStageInfo
   rest: ProtocolRestInfo
+  task: ProtocolTaskInfo
 }
 
 export interface ProtocolInfo extends ROSLIB.Message {
@@ -27,6 +33,7 @@ export interface ProtocolInfo extends ROSLIB.Message {
 export const PROTOCOL_ELEMENT_TYPE = {
   STAGE: 0,
   REST: 1,
+  TASK: 2,
 }
 
 /* Pause experiment */

@@ -682,13 +682,14 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
     this->coil_target_publisher->publish(coil_target_msg);
   }
 
-  /* Publish the processing duration. */
-  auto end_time = std::chrono::high_resolution_clock::now();
-  double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
-
-  auto processing_time_msg = std_msgs::msg::Float64();
-  processing_time_msg.data = decider_duration;
-  this->pulse_processing_time_publisher->publish(processing_time_msg);
+  /* Publish pulse processing time if the decider has a pulse processor. */
+  if (this->decider_wrapper->has_pulse_processor()) {
+    auto end_time = std::chrono::high_resolution_clock::now();
+    double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
+    auto processing_time_msg = std_msgs::msg::Float64();
+    processing_time_msg.data = decider_duration;
+    this->pulse_processing_time_publisher->publish(processing_time_msg);
+  }
 
   /* Publish attempt trace with STATUS_PULSE_PROCESSED. */
   auto pulse_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
@@ -740,13 +741,14 @@ void EegDecider::process_event_request(const DeferredProcessingRequest& request)
     this->coil_target_publisher->publish(coil_target_msg);
   }
 
-  /* Publish the processing duration. */
-  auto end_time = std::chrono::high_resolution_clock::now();
-  double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
-
-  auto processing_time_msg = std_msgs::msg::Float64();
-  processing_time_msg.data = decider_duration;
-  this->event_processing_time_publisher->publish(processing_time_msg);
+  /* Publish event processing time if the decider has an event processor. */
+  if (this->decider_wrapper->has_event_processor()) {
+    auto end_time = std::chrono::high_resolution_clock::now();
+    double_t decider_duration = std::chrono::duration<double_t>(end_time - start_time).count();
+    auto processing_time_msg = std_msgs::msg::Float64();
+    processing_time_msg.data = decider_duration;
+    this->event_processing_time_publisher->publish(processing_time_msg);
+  }
 }
 
 void EegDecider::process_periodic_request(const DeferredProcessingRequest& request) {

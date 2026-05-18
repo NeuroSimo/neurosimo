@@ -28,6 +28,10 @@ export interface ExperimentState extends ROSLIB.Message {
   rest_remaining: number
   next_stage_name: string
   next_is_rest: boolean
+  step_index: number
+  total_steps: number
+  step_type: number
+  step_label: string
 }
 
 interface ExperimentContextType {

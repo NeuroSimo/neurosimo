@@ -99,6 +99,33 @@ export const ExperimentStatePanel: React.FC = () => {
   const PauseResumeButton = isPaused ? StyledButton : StyledRedButton
   const pauseResumeLabel = isPaused ? 'Resume' : 'Pause'
 
+  const totalSteps = experimentState?.total_steps ?? 0
+  const stepIndex = experimentState?.step_index ?? 0
+  const stepLabel =
+    (experimentState?.step_label && experimentState.step_label.length > 0)
+      ? experimentState.step_label
+      : (experimentState?.ongoing
+          ? (experimentState.stage_name || experimentState.task_name || '—')
+          : '—')
+  const stepCountText =
+    experimentState?.ongoing
+      ? (totalSteps > 0
+          ? `${stepIndex + 1} of ${totalSteps}`
+          : `${(experimentState.stage_index ?? 0) + 1} of ${experimentState.total_stages ?? 0}`)
+      : ''
+  const STEP_TYPE_LABELS = ['Stage', 'Rest', 'Task'] as const
+  const stepTypeText =
+    experimentState?.ongoing
+      ? (totalSteps > 0
+          ? (STEP_TYPE_LABELS[experimentState.step_type as 0 | 1 | 2] ?? '—')
+          : (experimentState.in_rest ? 'Rest' : experimentState.in_task ? 'Task' : 'Stage'))
+      : '—'
+  const showTrialProgress =
+    !!experimentState?.ongoing &&
+    !experimentState.in_rest &&
+    !experimentState.in_task &&
+    (totalSteps > 0 ? experimentState.step_type === 0 : true)
+
   return (
     <>
       <ExperimentStateTitle>
@@ -118,36 +145,32 @@ export const ExperimentStatePanel: React.FC = () => {
             {experimentState?.ongoing
               ? (isPaused
                   ? 'Paused'
-                  : (experimentState.in_rest
-                      ? 'Rest'
-                      : (experimentState.in_task ? 'Task' : 'Running')))
-              : 'Idle'}
+                  : 'Running'
+              ): 'Ready'}
           </StateValue>
         </StateRow>
         <SectionSpacer />
         <StateRow>
-          <StateTitle>Stage</StateTitle>
+          <StateTitle>Step</StateTitle>
           <StateValue>
-            {experimentState?.ongoing ? experimentState?.stage_name : '—'}
+            {experimentState?.ongoing ? stepLabel : '—'}
           </StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>&nbsp;</IndentedStateTitle>
-          <StateValue>
-            {experimentState?.ongoing ? `${(experimentState?.stage_index ?? 0) + 1} of ${experimentState?.total_stages ?? 0}` : ''}
-          </StateValue>
+          <StateValue>{stepCountText}</StateValue>
         </StateRow>
         <SectionSpacer />
         <StateRow>
           <StateTitle>Trial</StateTitle>
           <StateValue>
-            {experimentState?.ongoing && !experimentState?.in_rest && !experimentState?.in_task ? `${experimentState.trial_in_stage + 1} of ${experimentState.total_trials_in_stage || 0}` : '—'}
+            {showTrialProgress ? `${experimentState.trial_in_stage + 1} of ${experimentState.total_trials_in_stage || 0}` : '—'}
           </StateValue>
         </StateRow>
         <StateRow>
           <StateTitle>Attempt</StateTitle>
           <StateValue>
-            {experimentState?.ongoing && !experimentState.in_rest && !experimentState.in_task ? experimentState.attempt_in_trial + 1 : '—'}
+            {showTrialProgress ? experimentState.attempt_in_trial + 1 : '—'}
           </StateValue>
         </StateRow>
         <SectionSpacer />
@@ -176,9 +199,9 @@ export const ExperimentStatePanel: React.FC = () => {
             </>
           ) : experimentState?.in_task ? (
             <>
-              <StateRow>
-                <IndentedStateTitle>Task name</IndentedStateTitle>
-                <StateValue>{experimentState.task_name || '—'}</StateValue>
+              <StateRow style={{ visibility: 'hidden' }}>
+                <IndentedStateTitle>&nbsp;</IndentedStateTitle>
+                <StateValue>&nbsp;</StateValue>
               </StateRow>
               <StateRow style={{ visibility: 'hidden' }}>
                 <IndentedStateTitle>&nbsp;</IndentedStateTitle>

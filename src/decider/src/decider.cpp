@@ -937,6 +937,7 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
 
   this->attempt_commit_received = true;
   this->stimulation_requested = false;
+  this->committed_attempt_in_session = msg->attempt_in_session;
   this->current_attempt_type = msg->trial_timing;
   this->current_trial_type = msg->trial_type;
 }
@@ -1028,8 +1029,11 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* If stimulation has not been requested for the current attempt, handle the attempt. */
-  if (this->attempt_commit_received && !this->stimulation_requested && !msg->in_task && !msg->in_rest) {
+  /* Attempt commit is active if it has been received and the attempt in sample matches the committed attempt. */
+  bool attempt_commit_active = this->attempt_commit_received && msg->attempt_in_session == this->committed_attempt_in_session;
+
+  /* If attempt commit is active and stimulation has not been requested, handle the attempt. */
+  if (attempt_commit_active && !this->stimulation_requested && !msg->in_task && !msg->in_rest) {
     bool is_periodic = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC);
     bool is_predetermined = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PREDETERMINED);
     if (is_periodic) {

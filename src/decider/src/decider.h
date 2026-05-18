@@ -204,7 +204,8 @@ private:
   /* Cache of the latest sample's attempt counter, used when publishing attempt trace. */
   uint64_t current_attempt_in_session = 0;
 
-  /* Track the type of the current attempt (periodic or predetermined) */
+  /* Stored from AttemptCommit; used in process_sample only when sample attempt_in_session matches. */
+  uint64_t committed_attempt_in_session = 0;
   uint8_t current_attempt_type = 0;
   std::string current_trial_type;
   bool stimulation_requested = false;

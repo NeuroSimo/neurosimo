@@ -30,6 +30,7 @@ TOPICS_TO_RECORD = [
     '/neurosimo/pipeline/latency/loopback',
     '/neurosimo/pipeline/processing_time/pulse',
     '/neurosimo/pipeline/processing_time/event',
+    '/neurosimo/pipeline/processing_time/task',
 
     # Pipeline logs
     '/neurosimo/pipeline/decider/log',

@@ -46,7 +46,7 @@ const BreakdownDivider = styled.div`
 `
 
 export const StimulationDisplay: React.FC = () => {
-  const { pulseProcessingTime, eventProcessingTime, decisionTrace, attemptTrace, setPulseProcessingTime, setEventProcessingTime } = useContext(SessionStatisticsContext)
+  const { pulseProcessingTime, eventProcessingTime, taskProcessingTime, decisionTrace, attemptTrace, setPulseProcessingTime, setEventProcessingTime, setTaskProcessingTime } = useContext(SessionStatisticsContext)
 
   const { sessionState } = useSession()
   const { experimentState } = useContext(ExperimentContext)
@@ -61,9 +61,10 @@ export const StimulationDisplay: React.FC = () => {
       setLatestAttemptTrace(null)
       setPulseProcessingTime(null)
       setEventProcessingTime(null)
+      setTaskProcessingTime(null)
     }
     setPreviousSessionState(sessionState.state)
-  }, [sessionState.state, previousSessionState, setPulseProcessingTime, setEventProcessingTime])
+  }, [sessionState.state, previousSessionState, setPulseProcessingTime, setEventProcessingTime, setTaskProcessingTime])
 
   // Update latest attempt trace from context
   useEffect(() => {
@@ -91,6 +92,7 @@ export const StimulationDisplay: React.FC = () => {
 
   const formattedPulseProcessingTime = pulseProcessingTime !== null ? (pulseProcessingTime).toFixed(1) + ' s' : '\u2013'
   const formattedEventProcessingTime = eventProcessingTime !== null ? (eventProcessingTime * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedTaskProcessingTime = taskProcessingTime !== null ? (taskProcessingTime * 1000).toFixed(1) + ' ms' : '\u2013'
 
   const referenceTime = latestAttemptTrace?.reference_time
 
@@ -140,7 +142,7 @@ export const StimulationDisplay: React.FC = () => {
           <IndentedStateTitle>Total</IndentedStateTitle>
           <StateValue>{experimentState?.ongoing ? formattedTotalDuration : '\u2013'}</StateValue>
         </StateRow>
-        <SectionSpacer $height={16} />
+        <SectionSpacer $height={12} />
         {/* Pulse */}
         <StateRow>
           <StateTitle>Pulse</StateTitle>
@@ -162,13 +164,17 @@ export const StimulationDisplay: React.FC = () => {
           <IndentedStateTitle>Status</IndentedStateTitle>
           <StateValue>{experimentState?.ongoing ? formattedStatus : '\u2013'}</StateValue>
         </StateRow>
-        <SectionSpacer $height={16} />
+        <SectionSpacer $height={12} />
         <StateRow>
           <StateTitle>Processing time</StateTitle>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Pulse</IndentedStateTitle>
           <StateValue>{experimentState?.ongoing ? formattedPulseProcessingTime : '\u2013'}</StateValue>
+        </StateRow>
+        <StateRow>
+          <IndentedStateTitle>Task</IndentedStateTitle>
+          <StateValue>{experimentState?.ongoing ? formattedTaskProcessingTime : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Event</IndentedStateTitle>

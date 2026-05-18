@@ -164,6 +164,7 @@ private:
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pulse_processing_time_publisher;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr event_processing_time_publisher;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr task_processing_time_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TaskFinished>::SharedPtr task_finished_publisher;
 
   /* Service server for initialization */

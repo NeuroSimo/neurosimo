@@ -70,11 +70,13 @@ export interface AttemptTrace extends ROSLIB.Message {
 interface SessionStatisticsContextType {
   pulseProcessingTime: number | null
   eventProcessingTime: number | null
+  taskProcessingTime: number | null
   decisionTrace: DecisionTrace | null
   attemptTrace: AttemptTrace | null
 
   setPulseProcessingTime: React.Dispatch<React.SetStateAction<number | null>>
   setEventProcessingTime: React.Dispatch<React.SetStateAction<number | null>>
+  setTaskProcessingTime: React.Dispatch<React.SetStateAction<number | null>>
   setDecisionTrace: React.Dispatch<React.SetStateAction<DecisionTrace | null>>
   setAttemptTrace: React.Dispatch<React.SetStateAction<AttemptTrace | null>>
 }
@@ -82,6 +84,7 @@ interface SessionStatisticsContextType {
 const defaultSessionStatisticsState: SessionStatisticsContextType = {
   pulseProcessingTime: null,
   eventProcessingTime: null,
+  taskProcessingTime: null,
   decisionTrace: null,
   attemptTrace: null,
 
@@ -90,6 +93,9 @@ const defaultSessionStatisticsState: SessionStatisticsContextType = {
   },
   setEventProcessingTime: () => {
     console.warn('setEventProcessingTime is not yet initialized.')
+  },
+  setTaskProcessingTime: () => {
+    console.warn('setTaskProcessingTime is not yet initialized.')
   },
   setDecisionTrace: () => {
     console.warn('setDecisionTrace is not yet initialized.')
@@ -108,6 +114,7 @@ interface SessionStatisticsProviderProps {
 export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps> = ({ children }) => {
   const [pulseProcessingTime, setPulseProcessingTime] = useState<number | null>(null)
   const [eventProcessingTime, setEventProcessingTime] = useState<number | null>(null)
+  const [taskProcessingTime, setTaskProcessingTime] = useState<number | null>(null)
   const [decisionTrace, setDecisionTrace] = useState<DecisionTrace | null>(null)
   const [attemptTrace, setAttemptTrace] = useState<AttemptTrace | null>(null)
 
@@ -132,6 +139,17 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
 
     eventProcessingTimeSubscriber.subscribe((message) => {
       setEventProcessingTime(message.data)
+    })
+
+    /* Subscriber for task processing time. */
+    const taskProcessingTimeSubscriber = new Topic<Float64>({
+      ros: ros,
+      name: '/neurosimo/pipeline/processing_time/task',
+      messageType: 'std_msgs/Float64',
+    })
+
+    taskProcessingTimeSubscriber.subscribe((message) => {
+      setTaskProcessingTime(message.data)
     })
 
     /* Subscriber for decision traces (all decisions from Decider). */
@@ -161,6 +179,7 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
     return () => {
       pulseProcessingTimeSubscriber.unsubscribe()
       eventProcessingTimeSubscriber.unsubscribe()
+      taskProcessingTimeSubscriber.unsubscribe()
       decisionTraceSubscriber.unsubscribe()
       attemptTraceSubscriber.unsubscribe()
     }
@@ -171,10 +190,12 @@ export const SessionStatisticsProvider: React.FC<SessionStatisticsProviderProps>
       value={{
         pulseProcessingTime,
         eventProcessingTime,
+        taskProcessingTime,
         decisionTrace,
         attemptTrace,
         setPulseProcessingTime,
         setEventProcessingTime,
+        setTaskProcessingTime,
         setDecisionTrace,
         setAttemptTrace,
       }}

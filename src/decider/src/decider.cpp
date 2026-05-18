@@ -124,6 +124,11 @@ EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")
     "/neurosimo/pipeline/processing_time/event",
     10);
 
+  /* Publisher for task processing time. */
+  this->task_processing_time_publisher = this->create_publisher<std_msgs::msg::Float64>(
+    "/neurosimo/pipeline/processing_time/task",
+    10);
+
   /* Publisher for task finished. */
   this->task_finished_publisher = this->create_publisher<neurosimo_pipeline_interfaces::msg::TaskFinished>(
     "/neurosimo/pipeline/task_finished",
@@ -956,6 +961,7 @@ void EegDecider::handle_task_start(const std::shared_ptr<neurosimo_pipeline_inte
 
   RCLCPP_INFO(this->get_logger(), "Starting task '%s' (id: %lu)", msg->task_name.c_str(), msg->task_id);
 
+  auto start_time = std::chrono::high_resolution_clock::now();
   bool success = this->decider_wrapper->process_task(msg->task_name);
 
   /* Drain and publish logs generated during task processing.
@@ -970,6 +976,14 @@ void EegDecider::handle_task_start(const std::shared_ptr<neurosimo_pipeline_inte
     this->abort_session("Error in process_task method");
     return;
   }
+
+  /* Publish the processing duration. */
+  auto end_time = std::chrono::high_resolution_clock::now();
+  double_t task_duration = std::chrono::duration<double_t>(end_time - start_time).count();
+
+  auto processing_time_msg = std_msgs::msg::Float64();
+  processing_time_msg.data = task_duration;
+  this->task_processing_time_publisher->publish(processing_time_msg);
 
   /* Publish TaskFinished to signal completion to the coordinator. */
   auto finished_msg = neurosimo_pipeline_interfaces::msg::TaskFinished();

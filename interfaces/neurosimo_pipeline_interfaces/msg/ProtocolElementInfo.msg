@@ -12,4 +12,4 @@ ProtocolStageInfo stage
 ProtocolRestInfo rest
 
 # Only populated if type == TASK
-string task_name
+ProtocolTaskInfo task

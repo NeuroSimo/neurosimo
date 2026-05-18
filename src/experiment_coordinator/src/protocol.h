@@ -57,6 +57,7 @@ struct Rest {
  */
 struct Task {
   std::string name;
+  std::string notes;
 };
 
 /**

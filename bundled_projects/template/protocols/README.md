@@ -26,9 +26,12 @@ stages:
 
   - rest:
       wait_until:
-        anchor: "stage_name"  # Reference to a previous stage
-        offset: 900.0  # Seconds after that stage started
+        anchor: "stage_name"  # Reference to a previous stage or task
+        offset: 900.0  # Seconds after that stage or task started
       notes: "Optional notes"
+
+  - task:
+      name: "train_classifier"  # Arbitrary name; must match decider logic
 ```
 
 ## Safety
@@ -89,13 +92,27 @@ A rest period where no stimuli are delivered. Can be defined in two ways:
      duration: 60.0  # seconds
    ```
 
-2. **Wait-until-based**: Rest until a specific time relative to a previous stage
+2. **Wait-until-based**: Rest until a specific time relative to a previous stage or task
    ```yaml
    rest:
      wait_until:
-       anchor: "baseline"  # Name of a previous stage
-       offset: 300.0  # Wait until 300s after that stage started
+       anchor: "baseline"  # Name of a previous stage or task
+       offset: 300.0  # Wait until 300s after that anchor started
    ```
+
+### Task
+A task represents a non-trial block of work handled by the decider (for example, training a classifier on collected data). The protocol advances to the next element only after the decider finishes the task.
+
+```yaml
+task:
+  name: "train_classifier"
+```
+
+- `name` (required): Unique identifier for the task. Passed to the decider's `process_task` method. Must not duplicate another task name or any stage name.
+- When a task starts, the experiment coordinator publishes a `TaskStart` message. The decider runs `process_task(task_name)` and publishes `TaskFinished` when done. Until then, no trials run and samples are marked `in_task`.
+- Task start times are recorded like stage start times, so a task `name` can be used as a `wait_until` anchor for a later rest (the anchor must already have started when the rest begins).
+
+The decider must implement `process_task(self, task_name: str)` for protocols that include tasks. If the method is missing, starting a task aborts the session.
 
 ## Validation
 
@@ -103,7 +120,8 @@ The protocol loader will validate:
 - The `safety` section is present with a positive `minimum_trial_interval`
 - The protocol has at least one element
 - All stage names are unique
-- All `wait_until` anchors reference valid stage names
+- All task names are unique and do not conflict with stage names
+- All `wait_until` anchors reference a valid stage or task name
 - All stages have at least 1 trial
 - `max_failures`, when present, is greater than 0
 - All durations are positive (> 0)

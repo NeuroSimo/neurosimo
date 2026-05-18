@@ -19,6 +19,7 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include "std_msgs/msg/empty.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 #include "neurosimo_eeg_interfaces/msg/sample.hpp"
 #include "neurosimo_eeg_interfaces/msg/stream_info.hpp"
@@ -29,8 +30,6 @@
 
 #include "shared_stimulation_interfaces/msg/coil_target.hpp"
 #include "shared_stimulation_interfaces/msg/targeted_pulses.hpp"
-#include "neurosimo_pipeline_interfaces/msg/latency.hpp"
-
 #include "neurosimo_pipeline_interfaces/msg/sensory_stimulus.hpp"
 #include "neurosimo_pipeline_interfaces/msg/decision_trace.hpp"
 #include "neurosimo_pipeline_interfaces/msg/loopback_latency.hpp"
@@ -163,8 +162,8 @@ private:
   rclcpp::Publisher<shared_stimulation_interfaces::msg::TargetedPulses>::SharedPtr targeted_pulses_publisher;
   rclcpp::Publisher<shared_stimulation_interfaces::msg::CoilTarget>::SharedPtr coil_target_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::LogMessages>::SharedPtr python_log_publisher;
-  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr pulse_processing_latency_publisher;
-  rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::Latency>::SharedPtr event_processing_latency_publisher;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pulse_processing_time_publisher;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr event_processing_time_publisher;
   rclcpp::Publisher<neurosimo_pipeline_interfaces::msg::TaskFinished>::SharedPtr task_finished_publisher;
 
   /* Service server for initialization */

@@ -34,3 +34,9 @@ float64 rest_remaining         # Time remaining in rest
 # Next stage preview
 string next_stage_name
 bool next_is_rest
+
+# Current protocol element ("step"): index in elements[], total count, kind (0=stage, 1=rest, 2=task)
+uint32 step_index
+uint32 total_steps
+uint8 step_type
+string step_label

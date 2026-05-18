@@ -684,6 +684,10 @@ void ExperimentCoordinator::publish_experiment_state() {
     msg.rest_remaining = 0.0;
     msg.next_stage_name = "";
     msg.next_is_rest = false;
+    msg.step_index = 0;
+    msg.total_steps = 0;
+    msg.step_type = 0;
+    msg.step_label = "";
     this->experiment_state_publisher->publish(msg);
     return;
   }
@@ -780,6 +784,35 @@ void ExperimentCoordinator::publish_experiment_state() {
         msg.next_is_rest = true;
         break;
       }
+    }
+  }
+
+  /* Step = current protocol element (stage, rest, or task). */
+  msg.step_index = 0;
+  msg.total_steps = 0;
+  msg.step_type = 0;
+  msg.step_label = "";
+  if (has_protocol && state.current_element_index < this->protocol->elements.size()) {
+    msg.step_index = static_cast<uint32_t>(state.current_element_index);
+    msg.total_steps = static_cast<uint32_t>(this->protocol->elements.size());
+    const auto& step_element = this->protocol->elements[state.current_element_index];
+    switch (step_element.type) {
+      case ProtocolElement::Type::STAGE:
+        msg.step_type = 0;
+        if (step_element.stage.has_value()) {
+          msg.step_label = step_element.stage->name;
+        }
+        break;
+      case ProtocolElement::Type::REST:
+        msg.step_type = 1;
+        msg.step_label = "Rest";
+        break;
+      case ProtocolElement::Type::TASK:
+        msg.step_type = 2;
+        if (step_element.task.has_value()) {
+          msg.step_label = step_element.task->name;
+        }
+        break;
     }
   }
   

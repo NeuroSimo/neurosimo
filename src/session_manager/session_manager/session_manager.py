@@ -746,7 +746,13 @@ class SessionManagerNode(Node):
         request.session_id = session_id
 
         # Call finalize service
-        response = self.call_service(self.decider_finalize_client, request, '/neurosimo/pipeline/decider/finalize')
+        #
+        # XXX: Decider cannot stop Python processing easily in the middle, so we give it a generous timeout in case
+        #   it is, e.g., in the middle of a classifier training.
+        response = self.call_service(self.decider_finalize_client,
+            request,
+            '/neurosimo/pipeline/decider/finalize',
+            timeout_sec=60.0)
 
         if response is None or not response.success:
             # Restart the decider since finalize failed/timed out

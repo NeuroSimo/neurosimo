@@ -85,11 +85,22 @@ const ElementsSectionTitle = styled.h4`
   font-size: 16px;
 `
 
-const ElementCard = styled.div<{ isStage: boolean }>`
+type ElementVariant = 'stage' | 'rest' | 'task'
+
+const elementCardStyles: Record<
+  ElementVariant,
+  { bg: string; border: string }
+> = {
+  stage: { bg: '#e3f2fd', border: '#2196f3' },
+  rest: { bg: '#fff3e0', border: '#ff9800' },
+  task: { bg: '#e8f5e9', border: '#4caf50' },
+}
+
+const ElementCard = styled.div<{ $variant: ElementVariant }>`
   padding: 12px;
   margin-bottom: 8px;
-  background-color: ${props => props.isStage ? '#e3f2fd' : '#fff3e0'};
-  border-left: 4px solid ${props => props.isStage ? '#2196f3' : '#ff9800'};
+  background-color: ${props => elementCardStyles[props.$variant].bg};
+  border-left: 4px solid ${props => elementCardStyles[props.$variant].border};
   border-radius: 4px;
 `
 
@@ -100,9 +111,15 @@ const ElementHeader = styled.div`
   margin-bottom: 4px;
 `
 
-const ElementType = styled.span<{ isStage: boolean }>`
+const elementTypeColors: Record<ElementVariant, string> = {
+  stage: '#1976d2',
+  rest: '#f57c00',
+  task: '#2e7d32',
+}
+
+const ElementType = styled.span<{ $variant: ElementVariant }>`
   font-weight: 600;
-  color: ${props => props.isStage ? '#1976d2' : '#f57c00'};
+  color: ${props => elementTypeColors[props.$variant]};
   text-transform: uppercase;
   font-size: 12px;
 `
@@ -144,6 +161,7 @@ export const ProtocolInfoModal: React.FC<ProtocolInfoModalProps> = ({
     .filter(e => e.type === PROTOCOL_ELEMENT_TYPE.STAGE)
     .reduce((sum, e) => sum + e.stage.trials, 0)
   const totalRests = protocolInfo.elements.filter(e => e.type === PROTOCOL_ELEMENT_TYPE.REST).length
+  const totalTasks = protocolInfo.elements.filter(e => e.type === PROTOCOL_ELEMENT_TYPE.TASK).length
 
   return (
     <ModalOverlay onClick={onClose}>
@@ -168,6 +186,18 @@ export const ProtocolInfoModal: React.FC<ProtocolInfoModalProps> = ({
             <InfoLabel># of Trials:</InfoLabel>
             <InfoValue>{totalTrials}</InfoValue>
           </InfoRow>
+          {totalTasks > 0 && (
+            <InfoRow>
+              <InfoLabel># of Tasks:</InfoLabel>
+              <InfoValue>{totalTasks}</InfoValue>
+            </InfoRow>
+          )}
+          {totalRests > 0 && (
+            <InfoRow>
+              <InfoLabel># of Rests:</InfoLabel>
+              <InfoValue>{totalRests}</InfoValue>
+            </InfoRow>
+          )}
           {protocolInfo.description && (
             <InfoRow>
               <InfoLabel>Description:</InfoLabel>
@@ -177,30 +207,50 @@ export const ProtocolInfoModal: React.FC<ProtocolInfoModalProps> = ({
         </InfoSection>
 
         <ElementsSection>
-          <ElementsSectionTitle>Stages</ElementsSectionTitle>
+          <ElementsSectionTitle>Protocol elements</ElementsSectionTitle>
           {protocolInfo.elements.map((element, index) => {
-            const isStage = element.type === PROTOCOL_ELEMENT_TYPE.STAGE
-            
-            return (
-              <ElementCard key={index} isStage={isStage}>
-                <ElementHeader>
-                  <ElementType isStage={isStage}>
-                    {isStage ? 'Stage' : 'Rest'}
-                  </ElementType>
-                  {isStage && <ElementName>{element.stage.name}</ElementName>}
-                </ElementHeader>
-                {isStage && (
-                  <ElementDetails>
-                    Trials: {element.stage.trials}
-                  </ElementDetails>
-                )}
-                {((isStage && element.stage.notes) || (!isStage && element.rest.notes)) && (
-                  <ElementNotes>
-                    {isStage ? element.stage.notes : element.rest.notes}
-                  </ElementNotes>
-                )}
-              </ElementCard>
-            )
+            switch (element.type) {
+              case PROTOCOL_ELEMENT_TYPE.STAGE:
+                return (
+                  <ElementCard key={index} $variant="stage">
+                    <ElementHeader>
+                      <ElementType $variant="stage">Stage</ElementType>
+                      <ElementName>{element.stage.name}</ElementName>
+                    </ElementHeader>
+                    <ElementDetails>
+                      Trials: {element.stage.trials}
+                    </ElementDetails>
+                    {element.stage.notes && (
+                      <ElementNotes>{element.stage.notes}</ElementNotes>
+                    )}
+                  </ElementCard>
+                )
+              case PROTOCOL_ELEMENT_TYPE.REST:
+                return (
+                  <ElementCard key={index} $variant="rest">
+                    <ElementHeader>
+                      <ElementType $variant="rest">Rest</ElementType>
+                    </ElementHeader>
+                    {element.rest.notes && (
+                      <ElementNotes>{element.rest.notes}</ElementNotes>
+                    )}
+                  </ElementCard>
+                )
+              case PROTOCOL_ELEMENT_TYPE.TASK:
+                return (
+                  <ElementCard key={index} $variant="task">
+                    <ElementHeader>
+                      <ElementType $variant="task">Task</ElementType>
+                      <ElementName>{element.task.name}</ElementName>
+                    </ElementHeader>
+                    {element.task.notes && (
+                      <ElementNotes>{element.task.notes}</ElementNotes>
+                    )}
+                  </ElementCard>
+                )
+              default:
+                return null
+            }
           })}
         </ElementsSection>
       </ModalContent>

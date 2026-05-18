@@ -45,6 +45,15 @@ const BreakdownDivider = styled.div`
   border-top: 1px solid #d8d8d8;
 `
 
+/** `seconds` duration: one decimal in ms if |seconds| < 1, else one decimal in s. */
+function formatDurationFromSeconds(seconds: number, leadPlusWhenPositive?: boolean): string {
+  const abs = Math.abs(seconds)
+  const magnitude = abs < 1 ? (abs * 1000).toFixed(1) + ' ms' : abs.toFixed(1) + ' s'
+  if (seconds < 0) return '-' + magnitude
+  if (leadPlusWhenPositive && seconds >= 0) return '+' + magnitude
+  return magnitude
+}
+
 export const StimulationDisplay: React.FC = () => {
   const { pulseProcessingTime, eventProcessingTime, taskProcessingTime, decisionTrace, attemptTrace, setPulseProcessingTime, setEventProcessingTime, setTaskProcessingTime } = useContext(SessionStatisticsContext)
 
@@ -90,9 +99,12 @@ export const StimulationDisplay: React.FC = () => {
     ? (decisionTrace.overhead_duration * 1000).toFixed(1) + ' ms'
     : '\u2013'
 
-  const formattedPulseProcessingTime = pulseProcessingTime !== null ? (pulseProcessingTime).toFixed(1) + ' s' : '\u2013'
-  const formattedEventProcessingTime = eventProcessingTime !== null ? (eventProcessingTime * 1000).toFixed(1) + ' ms' : '\u2013'
-  const formattedTaskProcessingTime = taskProcessingTime !== null ? (taskProcessingTime * 1000).toFixed(1) + ' ms' : '\u2013'
+  const formattedPulseProcessingTime =
+    pulseProcessingTime !== null ? formatDurationFromSeconds(pulseProcessingTime) : '\u2013'
+  const formattedEventProcessingTime =
+    eventProcessingTime !== null ? formatDurationFromSeconds(eventProcessingTime) : '\u2013'
+  const formattedTaskProcessingTime =
+    taskProcessingTime !== null ? formatDurationFromSeconds(taskProcessingTime) : '\u2013'
 
   const referenceTime = latestAttemptTrace?.reference_time
 
@@ -103,14 +115,14 @@ export const StimulationDisplay: React.FC = () => {
     latestAttemptTrace?.requested_stimulation_time !== undefined && referenceTime !== undefined
       ? latestAttemptTrace.requested_stimulation_time - referenceTime
       : undefined
-  const formattedRequestedStimulationOffset = requestedStimulationOffsetSeconds !== undefined
-    ? requestedStimulationOffsetSeconds * 1000 > 1000
-      ? '+' + requestedStimulationOffsetSeconds.toFixed(1) + ' s'
-      : '+' + (requestedStimulationOffsetSeconds * 1000).toFixed(1) + ' ms'
-    : '\u2013'
-  const formattedTimingOffset = latestAttemptTrace?.timing_offset !== undefined && latestAttemptTrace.timing_offset !== 0
-    ? (latestAttemptTrace.timing_offset * 1000).toFixed(1) + ' ms'
-    : '\u2013'
+  const formattedRequestedStimulationOffset =
+    requestedStimulationOffsetSeconds !== undefined
+      ? formatDurationFromSeconds(requestedStimulationOffsetSeconds, true)
+      : '\u2013'
+  const formattedTimingOffset =
+    latestAttemptTrace?.timing_offset !== undefined && latestAttemptTrace.timing_offset !== 0
+      ? formatDurationFromSeconds(latestAttemptTrace.timing_offset)
+      : '\u2013'
   const formattedStatus = latestAttemptTrace?.status !== undefined ? getStatusLabel(latestAttemptTrace.status) : '\u2013'
 
   return (

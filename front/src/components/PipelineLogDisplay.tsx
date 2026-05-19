@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { StyledPanel, DASHBOARD_PANEL_OFFSET_FROM_TOP } from 'styles/General'
 
 import { LogContext, LogMessage, LogLevel, LogPhase, ProcessingPath } from 'providers/LogProvider'
+import { StickyBottomScrollContainer } from 'components/StickyBottomScrollContainer'
 
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
@@ -89,7 +90,7 @@ const PipelineLogPanel = styled(StyledPanel)`
   flex-direction: column;
 `
 
-const LogContainer = styled.div`
+const LogContainer = styled(StickyBottomScrollContainer)`
   flex: 1;
   overflow-y: auto;
   background-color: #f9f9f9;
@@ -158,7 +159,6 @@ const LogText = styled.span<{ $processingPath: number }>`
 export const PipelineLogDisplay: React.FC = () => {
   const { preprocessorLogs, deciderLogs, presenterLogs, clearAllLogs } = useContext(LogContext)
   const [selectedSource, setSelectedSource] = useState<LogSource>('decider')
-  const logContainerRef = useRef<HTMLDivElement>(null)
   const prevLogLengthsRef = useRef({ preprocessor: 0, decider: 0, presenter: 0 })
 
   // Get the currently selected logs
@@ -188,13 +188,6 @@ export const PipelineLogDisplay: React.FC = () => {
       presenter: presenterLogs.length,
     }
   }, [preprocessorLogs, deciderLogs, presenterLogs, selectedSource])
-
-  // Auto-scroll to bottom when new logs arrive
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
-    }
-  }, [currentLogs])
 
   const getTimestampLabel = (log: LogMessage): string => {
     if (log.phase === LogPhase.INITIALIZATION) return 'Init'
@@ -253,7 +246,7 @@ export const PipelineLogDisplay: React.FC = () => {
         </ButtonGroup>
       </PipelineLogPanelTitle>
       <PipelineLogPanel>
-        <LogContainer ref={logContainerRef}>
+        <LogContainer contentDependency={currentLogs} resetScrollDependency={selectedSource}>
           {currentLogs.length === 0 ? (
             <LogEntry style={{ color: '#999', fontStyle: 'italic', display: 'block' }}>
               No logs...

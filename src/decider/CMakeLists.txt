@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.15)
 project(decider)
 
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -8,8 +8,16 @@ endif ()
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 include_directories(${Python3_INCLUDE_DIRS})
 
+# Find pybind11 via pip-installed package
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -m pybind11 --cmakedir
+  OUTPUT_VARIABLE pybind11_DIR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND_ERROR_IS_FATAL ANY
+)
+find_package(pybind11 CONFIG REQUIRED)
+
 find_package(ament_cmake REQUIRED)
-find_package(pybind11_vendor REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rcpputils REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -38,6 +46,7 @@ target_include_directories(decider
         $<INSTALL_INTERFACE:lib>)
 
 target_link_libraries(decider
+  pybind11::module
   Python3::Python
   realtime_utils::utils
   filesystem_utils::filesystem_utils
@@ -93,6 +102,7 @@ target_include_directories(cpp_bindings
 )
 
 target_link_libraries(cpp_bindings
+  pybind11::module
   Python3::Python
   realtime_utils::utils
   filesystem_utils::filesystem_utils
@@ -103,7 +113,6 @@ target_include_directories(cpp_bindings PRIVATE ${XXHASH_INCLUDE_DIRS})
 
 ament_target_dependencies(
   cpp_bindings
-  pybind11_vendor
   rclcpp
   rcpputils
   std_msgs

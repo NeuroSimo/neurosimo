@@ -77,8 +77,8 @@ run_case \
     "test_data_with_event_62_eeg_channels.json" \
     "example_long.yaml" \
     "10231642243859112162" \
-    "4523506742077868031" \
-    "4045430255371611672"
+    "8527223543724992283" \
+    "17171734237016170379"
 
 # Note that sample window tester (sample_window.py) only works with the test data with timestamp values.
 run_case \
@@ -91,7 +91,7 @@ run_case \
     "example_long.yaml" \
     "13667919222937123031" \
     "0" \
-    "17608087463065513595"
+    "14781943766693887815"
 
 run_case \
     "example" \
@@ -103,7 +103,7 @@ run_case \
     "example_long.yaml" \
     "1947103796442606795" \
     "2440193878910607350" \
-    "16539190759114767510"
+    "1929694472138563427"
 
 # TODO: RTsound default lead field matrix works only with 62 EEG channels. Unify so that we don't need to generate separate test data to test RTsound.
 run_case \
@@ -115,8 +115,8 @@ run_case \
     "test_data_with_event_62_eeg_channels.json" \
     "example_long.yaml" \
     "10231642243859112162" \
-    "4523506742077868031" \
-    "16539190759114767510"
+    "11299317862827407326" \
+    "13104000387243979601"
 
 #tests-1  | >       assert fingerprints.get("data_source") == expected_data_source_fingerprint
 #tests-1  | E       AssertionError: assert 2901333299821517825 == 2690643853576505113

@@ -56,6 +56,10 @@ RUN pip3 install --no-deps mneflow==0.5.10 py_neuromodulation==0.1.7
 #      for some users currently.
 RUN apt-get update && apt-get install -y git
 
+# Install modern pybind11 (system pybind11-dev is 2.11.1, too old for NumPy 2 ABI)
+RUN apt-get update && apt-get remove -y pybind11-dev && rm -rf /var/lib/apt/lists/*
+RUN pip3 install pybind11==3.0.4
+
 # Copy ROS workspace and build packages
 
 WORKDIR /app

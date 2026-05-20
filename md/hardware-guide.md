@@ -18,18 +18,27 @@ NeuroSimo supports the following hardware devices:
 
 ### Bittium NeurOne
 
-Bittium NeurOne can be configured to send data via UDP to a specified port and IP address.
-Configuring the real-time streaming consists of two steps: configuring the NeurOne and configuring the computer.
+Configuring the real-time streaming from the NeurOne to NeuroSimo consists of two steps: configuring the NeurOne and configuring the computer on which NeuroSimo is installed.
 
-Here are the steps to configure the NeurOne:
+#### NeurOne settings
 
-1. Go to the protocol settings of the NeurOne and select "Digital Out" settings.
+Configure the general NeurOne settings as follows:
+
+- Open "Settings" tab in the NeurOne software.
+- Under both the Trigger A and Trigger B tabs, set the trigger type to "Stimulus Trigger".
+
+Configure the protocol settings as follows:
+
+1. Go to the "Protocol" tab in the NeurOne software, select the protocol, click "Edit", select "Real-time Out" tab, and then "Settings" under the tab.
 2. Set the Packet Frequency (Hz) equal to the sampling frequency of the EEG data.
-3. Set "Target IP Address" to 192.168.200.254 and "Target Port" to 50000.
+3. Set "Target IP Address" to 192.168.200.254 and "Target UDP Port" to 50000.
 4. Enable "Send Triggers as Channels" and "Send Packets MeasurementStart and MeasurementEnd".
-5. Click "Ok" to save the settings.
+5. Disable the other checkboxes.
+6. Click "Ok" to save the settings.
 
-Here are the steps to configure the computer:
+#### Computer settings
+
+Configure the computer on which NeuroSimo is installed as follows:
 
 1. After connecting the EEG device to the computer via Ethernet cable, open the "Network" settings of the computer.
 2. Select the Ethernet connection and click on "Properties".

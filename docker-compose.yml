@@ -103,11 +103,20 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
+      - DISPLAY=${DISPLAY}
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/snd:/dev/snd
+    group_add:
+      - video
+      - audio
     network_mode: host
+    privileged: true
     profiles:
       - non-gpu
 
@@ -130,11 +139,20 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
+      - DISPLAY=${DISPLAY}
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/snd:/dev/snd
+    group_add:
+      - video
+      - audio
     network_mode: host
+    privileged: true
     deploy:
       resources:
         reservations:

@@ -274,7 +274,7 @@ void EegSimulator::handle_global_config(const std::shared_ptr<neurosimo_system_i
 }
 
 void EegSimulator::handle_start_streaming(
-      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Request> request,
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Request> /* request */,
       std::shared_ptr<neurosimo_eeg_interfaces::srv::StartStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received start streaming request");
   if (!this->is_initialized) {
@@ -299,7 +299,7 @@ void EegSimulator::handle_start_streaming(
 }
 
 void EegSimulator::handle_stop_streaming(
-      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Request> request,
+      const std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Request> /* request */,
       std::shared_ptr<neurosimo_eeg_interfaces::srv::StopStreaming::Response> response) {
   RCLCPP_INFO(this->get_logger(), "Received stop streaming request");
 

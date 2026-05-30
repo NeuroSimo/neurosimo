@@ -844,7 +844,7 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
   decision_trace.decider_duration = decider_duration;
   decision_trace.preprocessor_duration = request.triggering_sample->preprocessor_duration;
   decision_trace.overhead_duration = decision_path_latency - request.triggering_sample->preprocessor_duration - decider_duration;
-  decision_trace.total_duration = decision_trace.preprocessor_duration + decision_trace.decider_duration + decision_trace.overhead_duration;
+  decision_trace.total_duration = decision_trace.eeg_device_processing_duration + decision_trace.preprocessor_duration + decision_trace.decider_duration + decision_trace.overhead_duration;
 
   decision_trace.system_time_decider_received = system_time_decider_received;
   decision_trace.system_time_decider_finished = system_time_decider_finished;

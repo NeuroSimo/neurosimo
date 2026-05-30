@@ -30,7 +30,7 @@ float64 eeg_device_processing_duration    # seconds (latest from /neurosimo/pipe
 float64 decider_duration                  # seconds
 float64 preprocessor_duration             # seconds
 float64 overhead_duration                 # seconds (pipeline path minus preprocessor and decider)
-float64 total_duration                    # seconds (preprocessor + decider + overhead)
+float64 total_duration                    # seconds (eeg acquisition + preprocessor + decider + overhead)
 
 uint64 system_time_decider_received       # steady clock ns
 uint64 system_time_decider_finished       # steady clock ns

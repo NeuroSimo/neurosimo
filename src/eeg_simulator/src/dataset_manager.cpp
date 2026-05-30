@@ -1,4 +1,5 @@
 #include "dataset_manager.h"
+#include "csv_reader.h"
 
 #include <fstream>
 #include <sstream>
@@ -168,20 +169,11 @@ std::tuple<bool, neurosimo_project_interfaces::msg::DatasetInfo, std::vector<dou
 }
 
 std::tuple<bool, size_t> DatasetManager::get_sample_count(const std::string& data_file_path) {
-  std::ifstream data_file(data_file_path);
-
-  if (!data_file.is_open()) {
-    RCLCPP_ERROR(node_->get_logger(), "Error opening file: %s", data_file_path.c_str());
-    return std::make_tuple(false, 0);
+  auto [success, line_count] = csv_reader::count_lines(data_file_path);
+  if (!success) {
+    RCLCPP_ERROR(node_->get_logger(), "Error reading file: %s", data_file_path.c_str());
   }
-
-  size_t line_count = 0;
-  std::string line;
-  while (std::getline(data_file, line)) {
-    line_count++;
-  }
-
-  return std::make_tuple(true, line_count);
+  return std::make_tuple(success, line_count);
 }
 
 std::tuple<bool, std::vector<double_t>> DatasetManager::read_event_times_from_csv(const std::string& event_file_path) {
@@ -225,47 +217,19 @@ std::tuple<bool, std::string> DatasetManager::load_dataset(
     const neurosimo_project_interfaces::msg::DatasetInfo& dataset_info,
     std::vector<std::vector<double_t>>& buffer) {
 
-  /* Open and read data file. */
   std::string data_filename = dataset_info.data_filename;
   std::string data_file_path = "projects/" + project_name + "/eeg_simulator/" + data_filename;
 
   RCLCPP_INFO(node_->get_logger(), "Loading dataset: %s", data_filename.c_str());
 
-  std::ifstream data_file(data_file_path);
+  size_t num_columns = static_cast<size_t>(dataset_info.num_eeg_channels + dataset_info.num_emg_channels);
+  auto [success, error_msg] = csv_reader::parse_numeric_csv(data_file_path, num_columns, buffer);
 
-  if (!data_file.is_open()) {
-    std::string error_msg = "Error opening file: " + data_file_path;
+  if (!success) {
     RCLCPP_ERROR(node_->get_logger(), "%s", error_msg.c_str());
     return std::make_tuple(false, error_msg);
   }
 
-  buffer.clear();
-  std::string line;
-  uint32_t line_number = 0;
-  while (std::getline(data_file, line)) {
-    line_number++;
-    std::stringstream ss(line);
-    std::string number;
-    std::vector<double_t> data;
-    while (std::getline(ss, number, ',')) {
-      double_t value;
-      try {
-        value = std::stod(number);
-      } catch (const std::invalid_argument& e) {
-        std::string error_msg = "Error converting string to double on line " + std::to_string(line_number);
-        RCLCPP_ERROR(node_->get_logger(), "%s", error_msg.c_str());
-        RCLCPP_ERROR(node_->get_logger(), "Line contents: %s", line.c_str());
-        data_file.close();
-        return std::make_tuple(false, error_msg);
-      }
-      data.push_back(value);
-    }
-    buffer.push_back(data);
-  }
-
-  data_file.close();
-
   RCLCPP_INFO(node_->get_logger(), "Finished loading data. Loaded %zu samples.", buffer.size());
-
   return std::make_tuple(true, "");
 }

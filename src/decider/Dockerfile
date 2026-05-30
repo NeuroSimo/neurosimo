@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.6.0-base-ubuntu24.04
+FROM nvidia/cuda:12.8.1-base-ubuntu24.04
 
 SHELL ["/bin/bash", "-c"]
 
@@ -26,31 +26,113 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up CUDA environment variables.
+# CUDA env. NOTE: we deliberately do NOT set LD_LIBRARY_PATH=/usr/local/cuda/lib64.
+# torch is installed from pip wheels that bundle their own CUDA runtime + NVRTC,
+# and pointing the loader at the base image's CUDA tree can shadow those bundled
+# libs and cause nvrtc/builtins load failures at runtime.
 ENV PATH=/usr/local/cuda/bin:${PATH}
-ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # Python dependencies
 WORKDIR /app
 
-COPY src/decider/requirements/torch.txt requirements/torch.txt
-RUN pip3 install --timeout 900 --retries 3 -r requirements/torch.txt
+RUN pip3 install --no-cache-dir --ignore-installed --upgrade pip setuptools wheel
 
-COPY src/decider/requirements/science.txt requirements/science.txt
-# --ignore-installed is needed because python3-pip (apt) ships a Debian-managed
-# numpy without a pip RECORD file, which prevents pip from upgrading it normally.
-RUN pip3 install --ignore-installed -r requirements/science.txt
+# Install the PyTorch stack from the CUDA 12.8 wheel index.
+# The +cu128 local-version pins prevent accidental cu126/cu130 resolution.
+ARG PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu128
 
-COPY src/decider/requirements/mne.txt requirements/mne.txt
-RUN pip3 install -r requirements/mne.txt
+RUN pip3 install --no-cache-dir --timeout 900 --retries 3 \
+    torch==2.10.0+cu128 \
+    torchvision==0.25.0+cu128 \
+    torchaudio==2.10.0+cu128 \
+    --index-url ${PYTORCH_INDEX_URL}
+
+# Gate immediately so a wrong wheel fails the build here, not at runtime.
+RUN python3 - <<'PY'
+import torch
+print("torch:", torch.__version__)
+print("torch CUDA:", torch.version.cuda)
+assert torch.__version__ == "2.10.0+cu128", torch.__version__
+assert torch.version.cuda == "12.8", torch.version.cuda
+PY
+
+# Constraints pin the exact +cu128 build so no later step can re-resolve torch.
+RUN cat >/tmp/torch-constraints.txt <<'EOF'
+torch==2.10.0+cu128
+torchvision==0.25.0+cu128
+torchaudio==2.10.0+cu128
+EOF
+
+# Install numpy fresh, ignoring the Debian-managed numpy (apt's numpy has no pip
+# RECORD file, so pip can't upgrade it normally). Scoped to numpy ONLY so we do
+# NOT use --ignore-installed for the torch-dependent packages below, which would
+# make pip re-resolve torch and pull a mismatched (e.g. cu130) wheel.
+RUN pip3 install --no-cache-dir --ignore-installed numpy==2.2.6
+
+# Science stack. No --ignore-installed here. The constraint keeps torch pinned,
+# and --extra-index-url keeps the pinned +cu128 wheel satisfiable if any
+# dependency references torch.
+RUN pip3 install --no-cache-dir \
+    --constraint /tmp/torch-constraints.txt \
+    --extra-index-url ${PYTORCH_INDEX_URL} \
+    matplotlib==3.10.8 \
+    wandb==0.25.0 \
+    pyyaml==6.0.1 \
+    omegaconf==2.3.0 \
+    tqdm==4.67.3 \
+    diffusers==0.36.0 \
+    accelerate==1.12.0 \
+    lovely-tensors==0.1.21 \
+    numpy==2.2.6 \
+    scipy==1.17.1 \
+    ema-pytorch==0.7.9 \
+    scikit-learn==1.8.0 \
+    pandas==3.0.1 \
+    statsmodels==0.14.6 \
+    torchinfo==1.8.0 \
+    joblib==1.5.3 \
+    einops==0.8.2 \
+    spectrum==0.9.0
+
+RUN pip3 install --no-cache-dir \
+    --constraint /tmp/torch-constraints.txt \
+    --extra-index-url ${PYTORCH_INDEX_URL} \
+    mne==1.12.0 \
+    mne-realtime==0.3.0 \
+    mne_icalabel==0.8.1
 
 # --no-deps is required: mneflow pins mne<=1.7 (would downgrade our mne==1.12.0),
 # and py_neuromodulation forces scipy to backtrack to a version with no prebuilt
 # wheel, causing a source build that fails without a Fortran compiler.
 # All runtime requirements are satisfied by previously installed packages.
-RUN pip3 install --no-deps mneflow==0.5.10 py_neuromodulation==0.1.7
+RUN pip3 install --no-cache-dir --no-deps mneflow==0.5.10 py_neuromodulation==0.1.7
+
+# Final gate after ALL Python installs. At build time there is no GPU, so the
+# complex-backward test is guarded behind cuda.is_available() and only runs at
+# runtime if invoked; the version asserts always run.
+RUN python3 - <<'PY'
+import glob
+import torch
+
+print("FINAL torch:", torch.__version__)
+print("FINAL torch CUDA:", torch.version.cuda)
+print("CUDA available:", torch.cuda.is_available())
+
+assert torch.__version__ == "2.10.0+cu128", torch.__version__
+assert torch.version.cuda == "12.8", torch.version.cuda
+
+print("NVRTC libs:")
+for p in glob.glob("/usr/local/lib/python3.12/dist-packages/nvidia/**/libnvrtc*", recursive=True):
+    print(" ", p)
+
+if torch.cuda.is_available():
+    x = torch.randn(32, device="cuda", dtype=torch.complex64, requires_grad=True)
+    y = (-x).real.sum()
+    y.backward()
+    print("complex CUDA backward OK")
+PY
 
 # XXX: Install Git - not necessarily a long-term dependency, but it's convenient
 #      for some users currently.
@@ -58,7 +140,7 @@ RUN apt-get update && apt-get install -y git
 
 # Install modern pybind11 (system pybind11-dev is 2.11.1, too old for NumPy 2 ABI)
 RUN apt-get update && apt-get remove -y pybind11-dev && rm -rf /var/lib/apt/lists/*
-RUN pip3 install pybind11==3.0.4
+RUN pip3 install --no-cache-dir pybind11==3.0.4
 
 # Copy ROS workspace and build packages
 

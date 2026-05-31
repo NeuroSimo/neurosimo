@@ -24,7 +24,7 @@ const std::string PROJECTS_DIRECTORY = "/app/projects";
 const std::string DEFAULT_PREPROCESSOR_NAME = "example";
 
 /* Have a long queue to avoid dropping messages. */
-const uint16_t EEG_QUEUE_LENGTH = 65535;
+const size_t EEG_QUEUE_LENGTH = 65535;
 
 EegPreprocessor::EegPreprocessor() : Node("preprocessor"), logger(rclcpp::get_logger("preprocessor")) {
   /* Publisher for heartbeat. */

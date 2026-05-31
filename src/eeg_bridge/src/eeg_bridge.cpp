@@ -28,7 +28,7 @@ const std::string HEARTBEAT_TOPIC = "/neurosimo/eeg_bridge/heartbeat";
 const std::string DROPPED_SAMPLES_TOPIC = "/neurosimo/eeg/dropped_samples";
 
 /* Have a long queue to avoid dropping messages. */
-const uint16_t EEG_QUEUE_LENGTH = 65535;
+const size_t EEG_QUEUE_LENGTH = 65535;
 
 /* Sample timeout in milliseconds */
 const int64_t SAMPLE_TIMEOUT_MS = 200;

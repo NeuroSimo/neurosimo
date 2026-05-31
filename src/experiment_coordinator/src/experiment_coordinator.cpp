@@ -14,7 +14,7 @@ const std::string EEG_ENRICHED_TOPIC = "/neurosimo/eeg/enriched";
 const std::string ATTEMPT_TRACE_FINAL_TOPIC = "/neurosimo/pipeline/attempt_trace/final";
 const std::string HEARTBEAT_TOPIC = "/neurosimo/experiment_coordinator/heartbeat";
 const std::string PROJECTS_DIRECTORY = "/app/projects";
-const uint16_t EEG_QUEUE_LENGTH = 65535;
+const size_t EEG_QUEUE_LENGTH = 65535;
 const uint16_t EXPERIMENT_STATE_PUBLISH_RATE_HZ = 20;
 
 ExperimentCoordinator::ExperimentCoordinator()

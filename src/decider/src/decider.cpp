@@ -30,8 +30,8 @@ const std::string PROJECTS_DIRECTORY = "/app/projects";
 
 const std::string DEFAULT_MODULE_NAME = "example";
 
-/* Have a long queue to avoid dropping messages. */
-const uint16_t EEG_QUEUE_LENGTH = 65535;
+/* Have a long queue to avoid dropping messages (120 seconds worth of messages at 5 kHz). */
+const size_t EEG_QUEUE_LENGTH = 120 * 5000;
 
 /* Signal handler for crash debugging */
 void crash_handler(int sig) {

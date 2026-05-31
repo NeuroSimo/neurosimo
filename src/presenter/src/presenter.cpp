@@ -24,7 +24,7 @@ const std::string PROJECTS_DIRECTORY = "/app/projects";
 const std::string DEFAULT_PRESENTER_NAME = "example";
 
 /* Have a long queue to avoid dropping messages. */
-const uint16_t EEG_QUEUE_LENGTH = 65535;
+const size_t EEG_QUEUE_LENGTH = 65535;
 
 EegPresenter::EegPresenter() : Node("presenter"), logger(rclcpp::get_logger("presenter")) {
   /* Subscriber for EEG samples (to get session markers and time). */

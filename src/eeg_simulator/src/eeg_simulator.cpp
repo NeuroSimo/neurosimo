@@ -25,7 +25,7 @@ const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 
 const milliseconds STREAMING_INTERVAL = 1ms;
 /* Have a long queue to avoid dropping messages. */
-const uint16_t EEG_QUEUE_LENGTH = 65535;
+const size_t EEG_QUEUE_LENGTH = 65535;
 /* TODO: Simulating the EEG device to the level of sending UDP packets not implemented on the C++
      side yet. For a previous Python reference implementation, see commit c0afb515b. */
 EegSimulator::EegSimulator() : Node("eeg_simulator") {

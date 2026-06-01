@@ -12,6 +12,31 @@
 
 namespace py = pybind11;
 
+namespace {
+
+template<typename T>
+void rotate_if_referenced(
+    std::unique_ptr<py::array_t<T>>& arr,
+    const std::vector<size_t>& shape) {
+  if (Py_REFCNT(arr->ptr()) > 1) {
+    arr = std::make_unique<py::array_t<T>>(shape);
+  }
+}
+
+void rotate_sample_buffers_if_referenced(
+    std::unique_ptr<py::array_t<double>>& time_offsets,
+    std::unique_ptr<py::array_t<double>>& eeg,
+    std::unique_ptr<py::array_t<double>>& emg,
+    size_t num_samples,
+    size_t eeg_channels,
+    size_t emg_channels) {
+  rotate_if_referenced(time_offsets, {num_samples});
+  rotate_if_referenced(eeg, {num_samples, eeg_channels});
+  rotate_if_referenced(emg, {num_samples, emg_channels});
+}
+
+}  // namespace
+
 DeciderWrapper::DeciderWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
 
@@ -507,6 +532,10 @@ bool DeciderWrapper::warm_up() {
         (uint64_t)0,  /* trial_in_stage */
         true  /* is_warm_up */
       );
+
+      rotate_sample_buffers_if_referenced(
+        periodic_time_offsets, periodic_eeg, periodic_emg,
+        periodic_buffer_size, eeg_size, emg_size);
       
       auto end_time = std::chrono::high_resolution_clock::now();
       auto duration = std::chrono::duration<double, std::milli>(end_time - start_time).count();
@@ -916,6 +945,9 @@ ProcessResult DeciderWrapper::process_periodic(
     return ProcessResult::failure();
   }
 
+  rotate_sample_buffers_if_referenced(
+    periodic_time_offsets, periodic_eeg, periodic_emg,
+    num_samples, eeg_size, emg_size);
   return parse_result_dict(py_result, true, sensory_stimuli, event_queue);
 }
 
@@ -959,6 +991,9 @@ ProcessResult DeciderWrapper::process_pulse(
     return ProcessResult::failure();
   }
 
+  rotate_sample_buffers_if_referenced(
+    pulse_time_offsets, pulse_eeg, pulse_emg,
+    num_samples, eeg_size, emg_size);
   return parse_result_dict(py_result, false, sensory_stimuli, event_queue);
 }
 
@@ -1002,6 +1037,9 @@ ProcessResult DeciderWrapper::process_event(
     return ProcessResult::failure();
   }
 
+  rotate_sample_buffers_if_referenced(
+    event_time_offsets, event_eeg, event_emg,
+    num_samples, eeg_size, emg_size);
   return parse_result_dict(py_result, false, sensory_stimuli, event_queue);
 }
 

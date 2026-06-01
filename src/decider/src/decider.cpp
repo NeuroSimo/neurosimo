@@ -1114,8 +1114,8 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   bool backpressure_detected = detect_backpressure(msg);
 
-  /* Check if periodic processing should trigger (skip if backpressure detected). */
-  if (periodic_processing_triggered && minimum_trial_interval_passed && !backpressure_detected) {
+  /* Check if periodic processing should trigger. */
+  if (periodic_processing_triggered && minimum_trial_interval_passed) {
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
   }
 }
@@ -1196,7 +1196,7 @@ bool EegDecider::detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfa
       RCLCPP_WARN_THROTTLE(this->get_logger(),
                           *this->get_clock(),
                           1000,  // Throttle to once per second
-                          "Backpressure detected: %.3f s latency (cutoff: %.3f s), skipping periodic processing",
+                          "Backpressure detected: %.3f s latency (cutoff: %.3f s)",
                           latency, BACKPRESSURE_CUTOFF);
       return true;
     }

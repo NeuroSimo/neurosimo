@@ -24,6 +24,8 @@ using namespace std::placeholders;
 const std::string EEG_RAW_TOPIC = "/neurosimo/eeg/raw";
 
 const milliseconds STREAMING_INTERVAL = 1ms;
+/* Playback speed relative to real time (1.0 = real-time, 0.5 = half speed). For testing. */
+const double_t DATASET_PLAYBACK_SPEED = 0.5;
 /* Have a long queue to avoid dropping messages. */
 const size_t EEG_QUEUE_LENGTH = 65535;
 /* TODO: Simulating the EEG device to the level of sending UDP packets not implemented on the C++
@@ -378,7 +380,7 @@ void EegSimulator::stream_timer_callback() {
   }
 
   double_t elapsed = this->get_clock()->now().seconds() - this->session_start_time;
-  double_t target_time = this->play_dataset_from + elapsed;
+  double_t target_time = this->play_dataset_from + elapsed * DATASET_PLAYBACK_SPEED;
 
   bool success = this->publish_until(target_time);
   if (!success) {

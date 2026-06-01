@@ -65,11 +65,20 @@ torchvision==0.25.0+cu128
 torchaudio==2.10.0+cu128
 EOF
 
-# Install numpy fresh, ignoring the Debian-managed numpy (apt's numpy has no pip
-# RECORD file, so pip can't upgrade it normally). Scoped to numpy ONLY so we do
-# NOT use --ignore-installed for the torch-dependent packages below, which would
-# make pip re-resolve torch and pull a mismatched (e.g. cu130) wheel.
-RUN pip3 install --no-cache-dir --ignore-installed numpy==2.2.6
+# Install selected packages fresh when Ubuntu/Debian provided versions lack pip
+# RECORD metadata and cannot be uninstalled by pip.
+RUN pip3 install --no-cache-dir --ignore-installed \
+    numpy==2.2.6 \
+    psutil==7.2.2 \
+    pluggy==1.6.0 \
+    pytest==9.0.3 \
+    pygments==2.19.2 \
+    pyparsing==3.2.5 \
+    python-dateutil==2.9.0.post0 \
+    pyyaml==6.0.3 \
+    zipp==3.23.0 \
+    coverage==7.12.0 \
+    iniconfig==2.3.0
 
 # Science stack. No --ignore-installed here. The constraint keeps torch pinned,
 # and --extra-index-url keeps the pinned +cu128 wheel satisfiable if any
@@ -77,9 +86,9 @@ RUN pip3 install --no-cache-dir --ignore-installed numpy==2.2.6
 RUN pip3 install --no-cache-dir \
     --constraint /tmp/torch-constraints.txt \
     --extra-index-url ${PYTORCH_INDEX_URL} \
-    matplotlib==3.10.8 \
-    wandb==0.25.0 \
-    pyyaml==6.0.1 \
+    matplotlib==3.10.9 \
+    wandb==0.27.0 \
+    pyyaml==6.0.3 \
     omegaconf==2.3.0 \
     tqdm==4.67.3 \
     diffusers==0.36.0 \
@@ -95,18 +104,20 @@ RUN pip3 install --no-cache-dir \
     joblib==1.5.3 \
     einops==0.8.2 \
     spectrum==0.9.0 \
-    psutil==7.0.0 \
     pyriemann==0.11 \
     rich==14.2.0 \
-    submitit==1.5.3 \
+    submitit==1.5.4 \
     moabb==1.5.0
 
 RUN pip3 install --no-cache-dir \
     --constraint /tmp/torch-constraints.txt \
     --extra-index-url ${PYTORCH_INDEX_URL} \
-    mne==1.12.0 \
+    mne==1.12.1 \
     mne-realtime==0.3.0 \
-    mne_icalabel==0.8.1
+    mne_icalabel==0.9.0
+
+# Check declared dependency consistency before intentionally overriding dependencies with --no-deps.
+RUN pip3 check
 
 # --no-deps is required: mneflow pins mne<=1.7 (would downgrade our mne==1.12.0),
 # and py_neuromodulation forces scipy to backtrack to a version with no prebuilt

@@ -30,6 +30,7 @@ interface PipelineParameters {
 interface SimulatorParameters {
   dataset_filename: string
   start_time: number
+  playback_speed: number
 }
 
 interface SessionConfigContextType {
@@ -51,6 +52,7 @@ interface SessionConfigContextType {
   setExperimentProtocol: (protocol: string, callback?: () => void) => Promise<void>
   setSimulatorDataset: (filename: string, callback?: () => void) => Promise<void>
   setSimulatorStartTime: (startTime: number, callback?: () => void) => Promise<void>
+  setSimulatorPlaybackSpeed: (playbackSpeed: number, callback?: () => void) => Promise<void>
   setBagId: (bagId: string, callback?: () => void) => Promise<void>
   setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => Promise<void>
   setDataSource: (dataSource: string, callback?: () => void) => Promise<void>
@@ -75,6 +77,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   simulator: {
     dataset_filename: '',
     start_time: 0,
+    playback_speed: 1,
   },
   dataSource: 'simulator',
   setSubjectId: asyncNoop,
@@ -88,6 +91,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   setExperimentProtocol: asyncNoop,
   setSimulatorDataset: asyncNoop,
   setSimulatorStartTime: asyncNoop,
+  setSimulatorPlaybackSpeed: asyncNoop,
   setBagId: asyncNoop,
   setPlayPreprocessed: asyncNoop,
   setDataSource: asyncNoop,
@@ -129,6 +133,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
   const simulator: SimulatorParameters = {
     dataset_filename: (sessionConfig.get('simulator.dataset_filename') as string) || '',
     start_time: (sessionConfig.get('simulator.start_time') as number) || 0,
+    playback_speed: (sessionConfig.get('simulator.playback_speed') as number) || 1,
   }
 
   const dataSource = (sessionConfig.get('data_source') as string) || 'simulator'
@@ -159,6 +164,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         newConfig.set('experiment.protocol', msg.protocol_filename)
         newConfig.set('simulator.dataset_filename', msg.simulator_dataset_filename)
         newConfig.set('simulator.start_time', msg.simulator_start_time)
+        newConfig.set('simulator.playback_speed', msg.simulator_playback_speed)
         newConfig.set('data_source', msg.data_source)
         newConfig.set('replay.bag_id', msg.replay_bag_id)
         newConfig.set('replay.play_preprocessed', msg.replay_play_preprocessed)
@@ -220,6 +226,10 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('simulator.start_time', startTime, callback || noop)
   }
+  const setSimulatorPlaybackSpeed = async (playbackSpeed: number, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('simulator.playback_speed', playbackSpeed, callback || noop)
+  }
   const setBagId = async (bagId: string, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('replay.bag_id', bagId, callback || noop)
@@ -251,6 +261,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         setExperimentProtocol,
         setSimulatorDataset,
         setSimulatorStartTime,
+        setSimulatorPlaybackSpeed,
         setBagId,
         setPlayPreprocessed,
         setDataSource,

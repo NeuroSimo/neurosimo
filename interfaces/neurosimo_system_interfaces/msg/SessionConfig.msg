@@ -19,6 +19,7 @@ string data_source
 # Simulator parameters
 string simulator_dataset_filename
 float64 simulator_start_time
+float64 simulator_playback_speed
 
 # Replay parameters
 string replay_bag_id

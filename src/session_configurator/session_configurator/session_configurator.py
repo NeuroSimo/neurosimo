@@ -51,6 +51,7 @@ class SessionConfiguratorNode(Node):
         # Simulator parameters
         self.declare_parameter('simulator.dataset_filename', '')
         self.declare_parameter('simulator.start_time', 0.0)
+        self.declare_parameter('simulator.playback_speed', 1.0)
 
         self.declare_parameter('replay.bag_id', '')
         self.declare_parameter('replay.play_preprocessed', False)
@@ -138,6 +139,7 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_config["experiment.protocol"]),
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
+            rclpy.parameter.Parameter('simulator.playback_speed', rclpy.parameter.Parameter.Type.DOUBLE, session_config.get("simulator.playback_speed", 1.0)),
             rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
             rclpy.parameter.Parameter('replay.bag_id', rclpy.parameter.Parameter.Type.STRING, session_config["replay.bag_id"]),
             rclpy.parameter.Parameter('replay.play_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["replay.play_preprocessed"]),
@@ -277,6 +279,7 @@ class SessionConfiguratorNode(Node):
         config.data_source = session_config.get('data_source', 'simulator')
         config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
         config.simulator_start_time = session_config.get('simulator.start_time', 0.0)
+        config.simulator_playback_speed = session_config.get('simulator.playback_speed', 1.0)
         
         config.replay_bag_id = session_config.get('replay.bag_id', '')
         config.replay_play_preprocessed = session_config.get('replay.play_preprocessed', False)

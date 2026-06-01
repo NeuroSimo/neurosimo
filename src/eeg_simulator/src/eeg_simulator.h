@@ -6,9 +6,6 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
-#include "rcl_interfaces/msg/parameter_descriptor.hpp"
-#include "rcl_interfaces/msg/parameter_type.hpp"
-
 #include "neurosimo_eeg_interfaces/msg/sample.hpp"
 #include "neurosimo_eeg_interfaces/msg/stream_info.hpp"
 #include "neurosimo_eeg_interfaces/action/initialize_simulator_stream.hpp"
@@ -82,6 +79,7 @@ private:
   neurosimo_system_interfaces::msg::DataSourceState::_state_type data_source_state = neurosimo_system_interfaces::msg::DataSourceState::READY;
 
   double_t play_dataset_from = 0.0;
+  double_t playback_speed = 1.0;
 
   size_t current_index = 0;
   size_t current_event_index = 0;

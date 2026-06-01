@@ -204,7 +204,7 @@ def test_fingerprints(ros_node: Node, projects_root: Path) -> None:
     harness.set_parameters(
         "session_configurator",
         {
-            "subject_id": "S777",
+            "subject_id": 777,
             "notes": "fingerprint_test",
             "data_source": "simulator",
             "simulator.dataset_filename": simulator_dataset_filename,

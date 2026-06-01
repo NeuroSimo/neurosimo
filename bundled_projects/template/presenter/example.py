@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Presenter:
-    def __init__(self, subject_id: str) -> None:
+    def __init__(self, subject_id: int) -> None:
         self.subject_id = subject_id
         self.win = visual.Window(size=[400, 400], pos=[0, 0], allowGUI=False, units='norm')
         print(f"Presenter initialized for subject", subject_id, ".")

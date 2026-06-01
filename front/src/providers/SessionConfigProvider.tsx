@@ -5,7 +5,7 @@ import { ros } from 'ros/ros'
 
 // Structured parameter interfaces
 interface MetadataParameters {
-  subject_id: string
+  subject_id: number
   notes: string
 }
 
@@ -41,7 +41,7 @@ interface SessionConfigContextType {
   dataSource: string
 
   // Convenience setters
-  setSubjectId: (subjectId: string, callback?: () => void) => Promise<void>
+  setSubjectId: (subjectId: number, callback?: () => void) => Promise<void>
   setNotes: (notes: string, callback?: () => void) => Promise<void>
   setDeciderModule: (module: string, callback?: () => void) => Promise<void>
   setDeciderEnabled: (enabled: boolean, callback?: () => void) => Promise<void>
@@ -65,7 +65,7 @@ const asyncNoop = async () => {}
 
 const defaultSessionConfigState: SessionConfigContextType = {
   metadata: {
-    subject_id: '',
+    subject_id: 1,
     notes: '',
   },
   pipeline: {
@@ -108,7 +108,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
 
   // Structured parameter access
   const metadata: MetadataParameters = {
-    subject_id: (sessionConfig.get('subject_id') as string) || '',
+    subject_id: (sessionConfig.get('subject_id') as number) ?? 1,
     notes: (sessionConfig.get('notes') as string) || '',
   }
 
@@ -182,7 +182,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
   // Convenience setters - use dynamic import to avoid circular dependencies
   const noop = () => {} // eslint-disable-line @typescript-eslint/no-empty-function
 
-  const setSubjectId = async (subjectId: string, callback?: () => void): Promise<void> => {
+  const setSubjectId = async (subjectId: number, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('subject_id', subjectId, callback || noop)
   }

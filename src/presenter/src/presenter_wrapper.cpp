@@ -47,7 +47,7 @@ builtins.print = _print
 bool PresenterWrapper::initialize_module(
     const std::string& directory,
     const std::string& module_name,
-    const std::string& subject_id) {
+    int32_t subject_id) {
 
   /* Set the sys.path to include the directory of the module. */
   py::module sys_module = py::module::import("sys");

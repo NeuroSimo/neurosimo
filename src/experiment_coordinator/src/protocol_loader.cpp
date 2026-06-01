@@ -15,7 +15,7 @@ ProtocolLoader::ProtocolLoader(rclcpp::Logger logger) : logger(logger) {}
 /**
  * @brief Build the flat trial_order array from trial_types and optionally shuffle it.
  */
-static void build_trial_order(Stage& stage, const std::string& subject_id) {
+static void build_trial_order(Stage& stage, int32_t subject_id) {
   stage.trial_order.clear();
   stage.trial_order.reserve(stage.trials);
 
@@ -26,14 +26,12 @@ static void build_trial_order(Stage& stage, const std::string& subject_id) {
   }
 
   if (stage.order == "random") {
-    /* Seed from subject_id using std::hash so the order is reproducible per subject. */
-    size_t seed = std::hash<std::string>{}(subject_id);
-    std::mt19937 rng(seed);
+    std::mt19937 rng(static_cast<uint32_t>(subject_id));
     std::shuffle(stage.trial_order.begin(), stage.trial_order.end(), rng);
   }
 }
 
-LoadResult ProtocolLoader::load_from_file(const std::string& filepath, const std::string& subject_id) {
+LoadResult ProtocolLoader::load_from_file(const std::string& filepath, int32_t subject_id) {
   LoadResult result;
   result.success = false;
   
@@ -361,7 +359,7 @@ LoadResult ProtocolLoader::load_from_project(
     const std::string& projects_directory,
     const std::string& project_name,
     const std::string& protocol_filename,
-    const std::string& subject_id) {
+    int32_t subject_id) {
   
   LoadResult result;
   result.success = false;

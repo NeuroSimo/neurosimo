@@ -11,7 +11,7 @@ The Presenter module handles real-time presentation of sensory stimuli (visual, 
 Initializes the presenter and sets up display/audio hardware.
 
 **Parameters:**
-- `subject_id` (str): Subject identifier
+- `subject_id` (int): Subject identifier (1–999)
 
 **Common initialization tasks:**
 - Create display window

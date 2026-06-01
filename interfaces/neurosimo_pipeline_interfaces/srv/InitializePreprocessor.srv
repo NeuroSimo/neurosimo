@@ -10,6 +10,6 @@ bool enabled
 neurosimo_eeg_interfaces/StreamInfo stream_info
 
 # Metadata
-string subject_id
+int32 subject_id
 ---
 bool success

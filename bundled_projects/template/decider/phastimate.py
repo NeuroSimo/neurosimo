@@ -59,7 +59,7 @@ class Decider:
     of EEG signals and schedules triggers based on target phase detection.
     """
     
-    def __init__(self, subject_id: str, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: int):
+    def __init__(self, subject_id: int, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: int):
         """
         Initialize the Decider with parameters and filter design.
         

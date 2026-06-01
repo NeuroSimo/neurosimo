@@ -14,7 +14,7 @@ export interface RecordingInfo extends ROSLIB.Message {
   decider_enabled: boolean
   presenter_enabled: boolean
   project_name: string
-  subject_id: string
+  subject_id: number
   notes: string
   protocol_filename: string
   data_source: string

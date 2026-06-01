@@ -14,6 +14,8 @@ const ALWAYS_DOUBLE_PARAMS = new Set([
   'maximum_loopback_latency',
   'maximum_timing_offset',
   'trigger_to_pulse_delay',
+  'simulator.start_time',
+  'simulator.playback_speed',
 ])
 
 /**

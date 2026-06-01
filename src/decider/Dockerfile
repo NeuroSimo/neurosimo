@@ -94,7 +94,12 @@ RUN pip3 install --no-cache-dir \
     torchinfo==1.8.0 \
     joblib==1.5.3 \
     einops==0.8.2 \
-    spectrum==0.9.0
+    spectrum==0.9.0 \
+    psutil==7.0.0 \
+    pyriemann==0.11 \
+    rich==14.2.0 \
+    submitit==1.5.3 \
+    moabb==1.5.0
 
 RUN pip3 install --no-cache-dir \
     --constraint /tmp/torch-constraints.txt \

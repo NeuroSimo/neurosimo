@@ -1,6 +1,7 @@
 #ifndef presenter_WRAPPER_H
 #define presenter_WRAPPER_H
 
+#include <cstdint>
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <pybind11/numpy.h>
@@ -36,7 +37,7 @@ public:
   bool initialize_module(
       const std::string& directory,
       const std::string& module_name,
-      const std::string& subject_id);
+      int32_t subject_id);
 
   bool process(neurosimo_pipeline_interfaces::msg::SensoryStimulus& msg);
 

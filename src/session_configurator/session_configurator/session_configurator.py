@@ -31,7 +31,7 @@ class SessionConfiguratorNode(Node):
 
         # Session parameters
         self.declare_parameter('notes', '')
-        self.declare_parameter('subject_id', '')
+        self.declare_parameter('subject_id', 1)
 
         # Decider parameters
         self.declare_parameter('decider.module', '')
@@ -129,7 +129,7 @@ class SessionConfiguratorNode(Node):
 
         self.set_parameters([
             rclpy.parameter.Parameter('notes', rclpy.parameter.Parameter.Type.STRING, session_config["notes"]),
-            rclpy.parameter.Parameter('subject_id', rclpy.parameter.Parameter.Type.STRING, session_config["subject_id"]),
+            rclpy.parameter.Parameter('subject_id', rclpy.parameter.Parameter.Type.INTEGER, session_config["subject_id"]),
             rclpy.parameter.Parameter('decider.module', rclpy.parameter.Parameter.Type.STRING, session_config["decider.module"]),
             rclpy.parameter.Parameter('decider.enabled', rclpy.parameter.Parameter.Type.BOOL, session_config["decider.enabled"]),
             rclpy.parameter.Parameter('preprocessor.module', rclpy.parameter.Parameter.Type.STRING, session_config["preprocessor.module"]),
@@ -263,7 +263,7 @@ class SessionConfiguratorNode(Node):
         """Build and publish session config from dict."""
         config = SessionConfig()
         
-        config.subject_id = session_config.get('subject_id', '')
+        config.subject_id = session_config.get('subject_id', 1)
         config.notes = session_config.get('notes', '')
         
         config.decider_module = session_config.get('decider.module', '')

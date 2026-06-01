@@ -19,7 +19,7 @@ To add more libraries, modify `src/preprocessor/Dockerfile` and run `build-neuro
 Initializes the preprocessor with device configuration parameters automatically provided by the pipeline.
 
 **Parameters:**
-- `subject_id` (str): Subject identifier
+- `subject_id` (int): Subject identifier (1–999)
 - `num_eeg_channels` (int): Number of EEG channels
 - `num_emg_channels` (int): Number of EMG channels
 - `sampling_frequency` (int): Sampling frequency in Hz

@@ -7,7 +7,7 @@ string module_filename
 bool enabled
 
 # Metadata
-string subject_id
+int32 subject_id
 ---
 # Result: Initialization outcome
 bool success

@@ -78,7 +78,7 @@ export const ExperimentPanel: React.FC = () => {
     })
   }
 
-  const handleSubjectIdCommit = (value: string) => {
+  const handleSubjectIdCommit = (value: number) => {
     setSubjectId(value, () => {
       console.log('Subject ID set to ' + value)
     })

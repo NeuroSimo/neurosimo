@@ -42,7 +42,7 @@ class SessionStorageManager:
     def initialize_session_config(self, project_name):
         config = {
             "notes": '',
-            "subject_id": 'S001',
+            "subject_id": 1,
             "decider.module": 'example.py',
             "decider.enabled": False,
             "preprocessor.module": 'example.py',

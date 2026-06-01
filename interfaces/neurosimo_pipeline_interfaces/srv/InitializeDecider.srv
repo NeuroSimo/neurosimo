@@ -13,7 +13,7 @@ bool preprocessor_enabled
 neurosimo_eeg_interfaces/StreamInfo stream_info
 
 # Metadata
-string subject_id
+int32 subject_id
 
 # Safety configuration
 float64 minimum_trial_interval

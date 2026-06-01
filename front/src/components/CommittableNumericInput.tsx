@@ -38,8 +38,8 @@ const NumericInput = styled.input<{ width?: string; disabled?: boolean }>`
 `
 
 interface CommittableNumericInputProps {
-  value: string
-  onCommit: (value: string) => void
+  value: number
+  onCommit: (value: number) => void
   prefix: string
   maxLength: number
   placeholder?: string
@@ -56,34 +56,29 @@ export const CommittableNumericInput: React.FC<CommittableNumericInputProps> = (
   disabled = false,
   width,
 }) => {
-  // Extract the numeric part from value (remove prefix if present)
-  const getNumericPart = (fullValue: string) => {
-    return fullValue.startsWith(prefix) ? fullValue.substring(prefix.length) : fullValue
+  const formatNumericPart = (numericValue: number) => {
+    if (!numericValue || numericValue <= 0) {
+      return ''
+    }
+    return String(numericValue).padStart(maxLength, '0')
   }
 
-  // State for the input field (only the numeric part)
-  const [inputValue, setInputValue] = useState(getNumericPart(value || ''))
+  const [inputValue, setInputValue] = useState(formatNumericPart(value))
 
-  // Sync input value when external value changes
   useEffect(() => {
-    setInputValue(getNumericPart(value || ''))
-  }, [value, prefix])
+    setInputValue(formatNumericPart(value))
+  }, [value, maxLength])
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.value
-    // Only allow digits and limit to maxLength characters
     const filteredValue = newValue.replace(/\D/g, '').substring(0, maxLength)
     setInputValue(filteredValue)
   }
 
   const handleCommit = () => {
-    // Always commit the padded value.
     const paddedValue = inputValue.padStart(maxLength, '0')
-    const fullValue = prefix + paddedValue
-    onCommit(fullValue)
-
-    // Immediately update the input to show the formatted value
-    // This provides instant visual feedback before the async parameter update
+    const numericValue = parseInt(paddedValue, 10)
+    onCommit(numericValue)
     setInputValue(paddedValue)
   }
 

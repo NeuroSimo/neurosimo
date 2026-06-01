@@ -1,6 +1,7 @@
 #ifndef PROTOCOL_LOADER_H
 #define PROTOCOL_LOADER_H
 
+#include <cstdint>
 #include <string>
 #include <optional>
 #include "protocol.h"
@@ -39,7 +40,7 @@ public:
    * @param filepath Path to the YAML file
    * @return LoadResult containing protocol or error
    */
-  LoadResult load_from_file(const std::string& filepath, const std::string& subject_id = "");
+  LoadResult load_from_file(const std::string& filepath, int32_t subject_id = 0);
 
   /**
    * @brief Load protocol from project directory
@@ -53,7 +54,7 @@ public:
     const std::string& projects_directory,
     const std::string& project_name,
     const std::string& protocol_filename,
-    const std::string& subject_id = "");
+    int32_t subject_id = 0);
   
   /**
    * @brief Get protocol info as ROS message

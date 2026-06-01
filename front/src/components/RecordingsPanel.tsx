@@ -481,7 +481,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
 
           <CompactRow>
             <ConfigLabel>Subject ID</ConfigLabel>
-            <ConfigValue>{selectedRecordingInfo.subject_id}</ConfigValue>
+            <ConfigValue>S{String(selectedRecordingInfo.subject_id).padStart(3, '0')}</ConfigValue>
           </CompactRow>
           <CompactRow>
             <ConfigLabel>Data Source</ConfigLabel>

@@ -1,5 +1,4 @@
 import rclpy
-import re
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.action import ActionClient
@@ -481,8 +480,8 @@ class SessionManagerNode(Node):
         """Validate session configuration."""
         # Subject ID validation: S[0-9][0-9][0-9]
         subject_id = config.subject_id
-        if not re.match(r"^S[0-9]{3}$", subject_id):
-            self.logger.error(f"Invalid subject ID: {subject_id}. Must be 'S' followed by 3 digits.")
+        if not (1 <= subject_id <= 999):
+            self.logger.error(f"Invalid subject ID: {subject_id}. Must be an integer from 1 to 999.")
             return False
 
         # Module validations: must end with .py if not empty

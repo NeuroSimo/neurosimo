@@ -1,5 +1,5 @@
 # Session metadata
-string subject_id
+int32 subject_id
 string notes
 
 # Module configuration

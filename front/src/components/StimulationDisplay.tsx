@@ -83,20 +83,20 @@ export const StimulationDisplay: React.FC = () => {
   }, [attemptTrace])
 
   // Decision trace
-  const formattedTotalDuration = decisionTrace?.total_duration
-    ? (decisionTrace.total_duration * 1000).toFixed(1) + ' ms'
+  const formattedTotalDuration = decisionTrace?.total_duration != null
+    ? formatDurationFromSeconds(decisionTrace.total_duration)
     : '\u2013'
-  const formattedEegDeviceProcessingDuration = decisionTrace?.eeg_device_processing_duration
-    ? (decisionTrace.eeg_device_processing_duration * 1000).toFixed(1) + ' ms'
+  const formattedEegDeviceProcessingDuration = decisionTrace?.eeg_device_processing_duration != null
+    ? formatDurationFromSeconds(decisionTrace.eeg_device_processing_duration)
     : '\u2013'
-  const formattedPreprocessorDuration = decisionTrace?.preprocessor_duration
-    ? (decisionTrace.preprocessor_duration * 1000).toFixed(1) + ' ms'
+  const formattedPreprocessorDuration = decisionTrace?.preprocessor_duration != null
+    ? formatDurationFromSeconds(decisionTrace.preprocessor_duration)
     : '\u2013'
-  const formattedDeciderDuration = decisionTrace?.decider_duration
-    ? (decisionTrace.decider_duration * 1000).toFixed(1) + ' ms'
+  const formattedDeciderDuration = decisionTrace?.decider_duration != null
+    ? formatDurationFromSeconds(decisionTrace.decider_duration)
     : '\u2013'
-  const formattedOverheadDuration = decisionTrace?.overhead_duration
-    ? (decisionTrace.overhead_duration * 1000).toFixed(1) + ' ms'
+  const formattedOverheadDuration = decisionTrace?.overhead_duration != null
+    ? formatDurationFromSeconds(decisionTrace.overhead_duration)
     : '\u2013'
 
   const formattedPulseProcessingTime =

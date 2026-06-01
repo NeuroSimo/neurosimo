@@ -37,7 +37,10 @@ ENV PIP_BREAK_SYSTEM_PACKAGES=1
 # Python dependencies
 WORKDIR /app
 
-RUN pip3 install --no-cache-dir --ignore-installed --upgrade pip setuptools wheel
+RUN pip3 install --no-cache-dir --ignore-installed --upgrade \
+    pip \
+    setuptools==79.0.1 \
+    wheel
 
 # Install the PyTorch stack from the CUDA 12.8 wheel index.
 # The +cu128 local-version pins prevent accidental cu126/cu130 resolution.
@@ -119,7 +122,7 @@ RUN pip3 install --no-cache-dir \
 # Check declared dependency consistency before intentionally overriding dependencies with --no-deps.
 RUN pip3 check
 
-# --no-deps is required: mneflow pins mne<=1.7 (would downgrade our mne==1.12.0),
+# --no-deps is required: mneflow pins mne<=1.7 (would downgrade our mne==1.12.1),
 # and py_neuromodulation forces scipy to backtrack to a version with no prebuilt
 # wheel, causing a source build that fails without a Fortran compiler.
 # All runtime requirements are satisfied by previously installed packages.

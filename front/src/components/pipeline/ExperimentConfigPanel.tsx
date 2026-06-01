@@ -139,6 +139,7 @@ export const ExperimentPanel: React.FC = () => {
           onCommit={handleSubjectIdCommit}
           prefix="S"
           maxLength={3}
+          min={1}
           placeholder="001"
           disabled={isSessionRunning}
           width="20px"

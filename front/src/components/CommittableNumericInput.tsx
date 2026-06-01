@@ -42,6 +42,7 @@ interface CommittableNumericInputProps {
   onCommit: (value: number) => void
   prefix: string
   maxLength: number
+  min?: number
   placeholder?: string
   disabled?: boolean
   width?: string
@@ -52,6 +53,7 @@ export const CommittableNumericInput: React.FC<CommittableNumericInputProps> = (
   onCommit,
   prefix,
   maxLength,
+  min,
   placeholder,
   disabled = false,
   width,
@@ -77,9 +79,12 @@ export const CommittableNumericInput: React.FC<CommittableNumericInputProps> = (
 
   const handleCommit = () => {
     const paddedValue = inputValue.padStart(maxLength, '0')
-    const numericValue = parseInt(paddedValue, 10)
+    let numericValue = parseInt(paddedValue, 10)
+    if (min !== undefined && numericValue < min) {
+      numericValue = min
+    }
     onCommit(numericValue)
-    setInputValue(paddedValue)
+    setInputValue(String(numericValue).padStart(maxLength, '0'))
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {

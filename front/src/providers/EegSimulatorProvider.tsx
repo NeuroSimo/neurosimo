@@ -48,6 +48,7 @@ interface EegSimulatorContextType {
   datasetList: string[]
   dataset: string
   startTime: number
+  playbackSpeed: number
   dataSourceState: DataSourceStateValue
 }
 
@@ -55,6 +56,7 @@ const defaultDatasetState: EegSimulatorContextType = {
   datasetList: [],
   dataset: '',
   startTime: 0,
+  playbackSpeed: 1,
   dataSourceState: DataSourceStateValue.READY,
 }
 
@@ -70,9 +72,9 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const [datasetList, setDatasetList] = useState<string[]>([])
   const [dataSourceState, setDataSourceState] = useState<DataSourceStateValue>(DataSourceStateValue.READY)
 
-  // Get parameter values from structured parameter store
   const dataset = simulator.dataset_filename
   const startTime = simulator.start_time
+  const playbackSpeed = simulator.playback_speed
 
   useEffect(() => {
     /* Subscriber for dataset list. */
@@ -110,6 +112,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
         datasetList,
         dataset,
         startTime,
+        playbackSpeed,
         dataSourceState,
       }}
     >

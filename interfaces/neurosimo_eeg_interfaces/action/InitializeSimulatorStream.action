@@ -5,6 +5,7 @@ uint8[16] session_id
 string project_name
 string dataset_filename
 float64 start_time
+float64 playback_speed
 ---
 # Result: Initialization outcome
 StreamInfo stream_info

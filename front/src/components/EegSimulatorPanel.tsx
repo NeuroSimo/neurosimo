@@ -49,11 +49,12 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     datasetList,
     dataset,
     startTime,
+    playbackSpeed,
     dataSourceState,
   } = useContext(EegSimulatorContext)
   const { experimentState } = useContext(ExperimentContext)
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setSimulatorDataset, setSimulatorStartTime } = useSessionConfig()
+  const { setSimulatorDataset, setSimulatorStartTime, setSimulatorPlaybackSpeed } = useSessionConfig()
   const { sessionState } = useSession()
 
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
@@ -135,6 +136,16 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     })
   }
 
+  const setPlaybackSpeed = (speed: number) => {
+    if (speed <= 0) {
+      console.error('Playback speed must be greater than 0')
+      return
+    }
+    setSimulatorPlaybackSpeed(speed, () => {
+      console.log('Playback speed set to ' + speed)
+    })
+  }
+
   const dataSourceStateLabel =
     dataSourceState === DataSourceStateValue.RUNNING
       ? 'Running'
@@ -194,6 +205,20 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
             min={0}
             max={selectedDatasetInfo?.duration || 0}
             onChange={setStartTime}
+            disabled={isSessionRunning || isEegStreaming}
+            width="60px"
+          />
+        </div>
+      </CompactRow>
+      <CompactRow style={{ justifyContent: 'space-between' }}>
+        <ConfigLabel>Playback speed</ConfigLabel>
+        <div style={{ marginRight: 20 }}>
+          <ValidatedInput
+            type='number'
+            value={playbackSpeed}
+            min={0.01}
+            step={0.1}
+            onChange={setPlaybackSpeed}
             disabled={isSessionRunning || isEegStreaming}
             width="60px"
           />

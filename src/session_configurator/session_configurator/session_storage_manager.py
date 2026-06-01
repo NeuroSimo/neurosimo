@@ -51,6 +51,7 @@ class SessionStorageManager:
             "presenter.enabled": False,
             "simulator.dataset_filename": 'random_data_1_khz.json',
             "simulator.start_time": 0.0,
+            "simulator.playback_speed": 1.0,
             "experiment.protocol": 'example.yaml',
             "replay.bag_id": '',
             "replay.play_preprocessed": False,

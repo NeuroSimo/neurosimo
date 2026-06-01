@@ -521,12 +521,14 @@ class SessionManagerNode(Node):
         if data_source == 'simulator':
             dataset_filename = session_config.simulator_dataset_filename
             start_time = session_config.simulator_start_time
+            playback_speed = session_config.simulator_playback_speed
 
             goal = InitializeSimulatorStream.Goal()
             goal.session_id = session_id
             goal.project_name = project_name
             goal.dataset_filename = dataset_filename
             goal.start_time = start_time
+            goal.playback_speed = playback_speed
 
             result = self.call_action(self.simulator_stream_init_client, goal, '/eeg_simulator/initialize')
             if result is None:

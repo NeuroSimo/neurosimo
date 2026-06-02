@@ -24,6 +24,18 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     dos2unix \
     wget \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libxrandr2 \
+    v4l-utils \
+    libasound2t64 \
+    libasound2-dev \
+    portaudio19-dev \
+    libportaudiocpp0 \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # CUDA env. NOTE: we deliberately do NOT set LD_LIBRARY_PATH=/usr/local/cuda/lib64.

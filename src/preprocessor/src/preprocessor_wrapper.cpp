@@ -4,6 +4,7 @@
 #include <pybind11/numpy.h>
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 
 #include "preprocessor_wrapper.h"
 #include <neurosimo_eeg_interfaces/msg/sample.hpp>
@@ -31,6 +32,40 @@ void rotate_sample_buffers_if_referenced(
   rotate_if_referenced(time_offsets, {num_samples});
   rotate_if_referenced(eeg, {num_samples, eeg_channels});
   rotate_if_referenced(emg, {num_samples, emg_channels});
+}
+
+py::module load_python_file_module(
+    const std::filesystem::path& module_directory,
+    const std::string& module_name,
+    const std::string& loaded_module_suffix = "_wrapper") {
+  const std::string loaded_module_name = module_name + loaded_module_suffix;
+  const std::filesystem::path module_path = module_directory / (module_name + ".py");
+
+  py::module importlib_util = py::module::import("importlib.util");
+  py::object spec = importlib_util.attr("spec_from_file_location")(
+    loaded_module_name,
+    module_path.string());
+  if (spec.is_none()) {
+    throw std::runtime_error(
+      "Failed to create module spec for '" + loaded_module_name +
+      "' from path '" + module_path.string() + "'.");
+  }
+
+  py::object module = importlib_util.attr("module_from_spec")(spec);
+
+  py::module sys_module = py::module::import("sys");
+  py::dict sys_modules = sys_module.attr("modules");
+  sys_modules[py::str(loaded_module_name)] = module;
+
+  py::object loader = spec.attr("loader");
+  if (loader.is_none()) {
+    throw std::runtime_error(
+      "Import spec for '" + loaded_module_name +
+      "' has no loader (path: '" + module_path.string() + "').");
+  }
+
+  loader.attr("exec_module")(module);
+  return module.cast<py::module>();
 }
 
 }  // namespace
@@ -97,7 +132,8 @@ bool PreprocessorWrapper::initialize_module(
 
   /* Import the module and initialize the Preprocessor instance. */
   try {
-    auto imported_module = py::module::import(module_name.c_str());
+    auto imported_module =
+      load_python_file_module(std::filesystem::path(directory), module_name);
     preprocessor_module = std::make_unique<py::module>(imported_module);
     auto instance = preprocessor_module->attr("Preprocessor")(subject_id, eeg_size, emg_size, sampling_frequency);
     preprocessor_instance = std::make_unique<py::object>(instance);

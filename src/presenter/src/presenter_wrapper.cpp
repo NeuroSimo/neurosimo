@@ -2,10 +2,49 @@
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <filesystem>
 
 #include "presenter_wrapper.h"
 
 namespace py = pybind11;
+
+namespace {
+
+py::module load_python_file_module(
+    const std::filesystem::path& module_directory,
+    const std::string& module_name,
+    const std::string& loaded_module_suffix = "_wrapper") {
+  const std::string loaded_module_name = module_name + loaded_module_suffix;
+  const std::filesystem::path module_path = module_directory / (module_name + ".py");
+
+  py::module importlib_util = py::module::import("importlib.util");
+  py::object spec = importlib_util.attr("spec_from_file_location")(
+    loaded_module_name,
+    module_path.string());
+  if (spec.is_none()) {
+    throw std::runtime_error(
+      "Failed to create module spec for '" + loaded_module_name +
+      "' from path '" + module_path.string() + "'.");
+  }
+
+  py::object module = importlib_util.attr("module_from_spec")(spec);
+
+  py::module sys_module = py::module::import("sys");
+  py::dict sys_modules = sys_module.attr("modules");
+  sys_modules[py::str(loaded_module_name)] = module;
+
+  py::object loader = spec.attr("loader");
+  if (loader.is_none()) {
+    throw std::runtime_error(
+      "Import spec for '" + loaded_module_name +
+      "' has no loader (path: '" + module_path.string() + "').");
+  }
+
+  loader.attr("exec_module")(module);
+  return module.cast<py::module>();
+}
+
+}  // namespace
 
 PresenterWrapper::PresenterWrapper(rclcpp::Logger& logger) {
   logger_ptr = &logger;
@@ -56,7 +95,8 @@ bool PresenterWrapper::initialize_module(
 
   /* Import the module and initialize the presenter instance. */
   try {
-    auto imported_module = py::module::import(module_name.c_str());
+    auto imported_module =
+      load_python_file_module(std::filesystem::path(directory), module_name);
     presenter_module = std::make_unique<py::module>(imported_module);
     auto instance = presenter_module->attr("Presenter")(subject_id);
     presenter_instance = std::make_unique<py::object>(instance);

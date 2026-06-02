@@ -139,7 +139,7 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_config["experiment.protocol"]),
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
-            rclpy.parameter.Parameter('simulator.playback_speed', rclpy.parameter.Parameter.Type.DOUBLE, session_config.get("simulator.playback_speed", 1.0)),
+            rclpy.parameter.Parameter('simulator.playback_speed', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.playback_speed"]),
             rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
             rclpy.parameter.Parameter('replay.bag_id', rclpy.parameter.Parameter.Type.STRING, session_config["replay.bag_id"]),
             rclpy.parameter.Parameter('replay.play_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["replay.play_preprocessed"]),

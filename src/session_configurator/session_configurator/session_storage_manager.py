@@ -16,6 +16,9 @@ class SessionStorageManager:
                 return json.load(f)
         except FileNotFoundError:
             return None
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON in session config at {path}: {e}")
+            return None
 
     def _save_json(self, path, state):
         tmp = path + ".tmp"
@@ -61,20 +64,37 @@ class SessionStorageManager:
         return config
 
     def validate_session_config(self, config):
-        required_keys = [
-            "notes", "subject_id",
-            "decider.module", "decider.enabled",
-            "preprocessor.module", "preprocessor.enabled",
-            "presenter.module", "presenter.enabled",
-            "simulator.dataset_filename", "simulator.start_time",
-            "experiment.protocol",
-            "replay.bag_id",
-            "replay.play_preprocessed",
-            "data_source"
-        ]
-        for key in required_keys:
+        if not isinstance(config, dict):
+            self.logger.error("Config content is not a JSON object")
+            return False
+
+        expected_types = {
+            "notes": str,
+            "subject_id": int,
+            "decider.module": str,
+            "decider.enabled": bool,
+            "preprocessor.module": str,
+            "preprocessor.enabled": bool,
+            "presenter.module": str,
+            "presenter.enabled": bool,
+            "simulator.dataset_filename": str,
+            "simulator.start_time": (int, float),
+            "simulator.playback_speed": (int, float),
+            "experiment.protocol": str,
+            "replay.bag_id": str,
+            "replay.play_preprocessed": bool,
+            "data_source": str,
+        }
+
+        for key, expected in expected_types.items():
             if key not in config:
                 self.logger.error(f"Config file is missing required key: {key}")
+                return False
+            if not isinstance(config[key], expected):
+                self.logger.error(
+                    f"Config key '{key}' has invalid type: "
+                    f"expected {expected}, got {type(config[key]).__name__}"
+                )
                 return False
 
         return True

@@ -10,6 +10,7 @@ The `project_template/decider/` directory contains several example decider modul
 
 - **`example.py`**: Basic periodic processing with event handling
 - **`example_predetermined.py`**: Demonstrates predetermined trial timing with per-trial ITI scheduling
+- **`example_task.py`**: Demonstrates protocol tasks (e.g. offline training between stages)
 - **`example_sensory_stimuli.py`**: Demonstrates both predefined and dynamic sensory stimuli
 - **`phastimate.py`**: Real-time phase estimation for brain state-dependent stimulation
 
@@ -321,6 +322,33 @@ def process_predetermined(
     return {'trigger_offset': iti}
 ```
 
+### `process_task(task_name)`
+
+Optional method for protocols that include a `task` element (see [protocols README](../protocols/README.md#task)).
+
+Called **synchronously** when the experiment coordinator advances to a task. The coordinator does not advance the protocol
+until `process_task` returns. While a task runs, no `process_periodic`, `process_pulse`, and `process_event` are invoked for incoming samples.
+
+Not called during warm-up rounds.
+
+**Parameters:**
+
+#### `task_name` (str)
+The `name` from the protocol task entry (e.g. `"train_classifier"`). Use this string to branch on which task to run.
+
+**Return value:** None. The return value is ignored.
+
+**Example:**
+```python
+def process_task(self, task_name: str) -> None:
+    if task_name == 'train_classifier':
+        self.train_classifier()
+    else:
+        raise ValueError(f"Unknown task: {task_name}")
+```
+
+For an example, see `example_task.py` and `protocols/example_task.yaml`.
+
 ## Example Workflows
 
 ### Predetermined Trial Timing
@@ -339,6 +367,16 @@ def process_predetermined(
 ```
 
 For a complete example, see `example_predetermined.py`.
+
+### Protocol Tasks
+```python
+def process_task(self, task_name: str) -> None:
+    """Run offline work between stages (e.g. train a classifier)."""
+    if task_name == 'train_classifier':
+        self.train_classifier()
+```
+
+Define tasks in the protocol YAML between stages; see `protocols/example_task.yaml` and the [protocols README](../protocols/README.md#task).
 
 ### Continuous Monitoring
 ```python

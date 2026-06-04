@@ -47,10 +47,13 @@ Called by the pipeline during initialization. Must return a dictionary with conf
 #### `periodic_processing_interval` (float, optional)
 How frequently the `process_periodic()` method is called, in seconds. Must be greater than `0.0`. Defaults to `0.1` (10 times per second) if not specified.
 
+Use this as the step size when you analyze data with a rolling window: set `sample_window` to the window length and `periodic_processing_interval` to how often you want a new analysis pass (how far the window advances between calls).
+
 **Examples:**
 - `0.1`: Process 10 times per second (default)
 - `1.0`: Process once per second
 - `0.01`: Process 100 times per second
+- `0.5` with `sample_window: [-2.0, 0.0]`: 2 s lookback, re-analyzed every 0.5 s
 
 #### `sample_window` (list)
 Two-element list `[earliest_seconds, latest_seconds]` defining the buffer size relative to current sample, expressed in **seconds**.
@@ -120,6 +123,11 @@ List of pre-defined sensory stimuli sent to the presenter at initialization. Can
 ### `process_periodic(...)`
 
 Main processing method called by the pipeline for periodic processing of EEG/EMG samples.
+
+During periodic protocol stages, the decider schedules `process_periodic()` on a fixed cadence given by `periodic_processing_interval`. That schedule is independent of pulse and event callbacks (see the timeline under `process_event`).
+
+The experiment [protocol](../protocols/README.md) requires `safety.minimum_trial_interval`: the minimum seconds between consecutive trials/pulses. The `process_periodic()` method is **not called until that interval has elapsed since the previous stimulation**. The next call
+happens only after the interval ends.
 
 **Parameters:**
 
@@ -402,14 +410,16 @@ def process_event(self, reference_time, reference_index, time_offsets,
     # ...
 ```
 
-### Regular Interval Processing
+### Rolling Window Processing
 ```python
 def get_configuration(self):
     return {
-        'sample_window': [-1.000, 0.0],  # Last second
-        # periodic_processing_interval defaults to 0.1 (10 times per second)
+        'sample_window': [-2.0, 0.0],           # 2 s lookback ending at current sample
+        'periodic_processing_interval': 0.25,  # advance analysis every 250 ms
     }
 ```
+
+Between pulses, `process_periodic()` runs on that 250 ms cadence. After a pulse, calls are suppressed until `minimum_trial_interval` (from the protocol) has passed.
 
 ### Sensory Stimuli Example
 For a complete example demonstrating both predefined and dynamic sensory stimuli, see `example_sensory_stimuli.py`.

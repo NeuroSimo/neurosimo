@@ -15,6 +15,12 @@ const StyledInput = styled.input<{ valid?: boolean; width?: string }>`
     border-color: ${(props) => (props.valid ? '#007bff' : 'red')};
     box-shadow: 0 0 0 2px ${(props) => (props.valid ? 'rgba(0, 123, 255, 0.25)' : 'rgba(255, 0, 0, 0.25)')};
   }
+
+  &:disabled {
+    background-color: #f5f5f5;
+    color: #ccc;
+    cursor: not-allowed;
+  }
 `
 
 interface ValidatedInputProps {

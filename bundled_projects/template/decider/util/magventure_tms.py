@@ -22,9 +22,9 @@ Default TBS-like settings are:
 which correspond to a conventional theta-burst element:
     3 pulses at 50 Hz intra-burst frequency.
 
-This module does not fire pulses, start trains, or generate timing. It only
-sets the device configuration and verifies the resulting state by reading it
-back from the stimulator.
+This module does not fire pulses, start trains, generate timing, or switch the
+visible page/tab on the MagPro screen. It only sets the device configuration and
+verifies the resulting state by reading it back from the stimulator.
 
 Observed devices
 ----------------
@@ -41,9 +41,9 @@ R30-specific readback note
 --------------------------
 On the R30, get_status() reports the model cleanly as "R30". However, the
 get_settings() response contains a byte that this parser does not interpret as
-a standard model code; it may appear as something like "unknown(88)" in debug
-versions of the parser. This module deliberately does not use the model field
-from get_settings() for validation. It uses get_status() for device identity and
+a standard model code; in debug versions this may appear as something like
+"unknown(88)". This module deliberately does not use the model field from
+get_settings() for validation. It uses get_status() for device identity and
 get_settings() only for the fields that matter for burst validation:
 
     - Waveform
@@ -80,6 +80,18 @@ Therefore this module uses the more robust pattern:
 This makes the final success criterion explicit readback verification, not the
 return value of the write command.
 
+Frame-synchronized serial reading
+---------------------------------
+When the stimulator is armed or has just delivered a pulse, the serial stream
+may contain stale or asynchronous frames. A fixed-length read can accidentally
+combine the end of one frame with the start of the next, for example:
+
+    FE 04 02 00 00 1C 39 FF FE 09 00 1C 00 ...
+
+The first part is a complete 8-byte frame, followed by the start of a status
+frame. To avoid this, this module reads complete FE...FF frames and ignores
+frames whose command byte is not the response currently requested.
+
 Timing note
 -----------
 The default config_settle_s=0.30 is intentional. The configuration command has
@@ -87,6 +99,16 @@ no acknowledgement, and immediately sending another command can occasionally
 miss the next response, especially in Docker/USB-serial setups. The settle delay
 is small relative to experimental flow and does not affect pulse timing, because
 actual stimulation timing is controlled by the external BNC trigger.
+
+Screen/page note
+----------------
+Earlier test scripts called a "set Train page" command before configuring TBS.
+That command switched the visible tab/page on the MagPro screen. It is not used
+here. The direct configuration command is sufficient for external-triggered
+single-pulse/burst switching, and readback verification confirms the actual
+mode/settings. The displayed waveform may still update because the real device
+configuration changes, but this module does not intentionally switch the screen
+page/tab.
 
 Docker note
 -----------
@@ -163,19 +185,8 @@ WAVEFORM_BIPHASIC = 0x01
 WAVEFORM_BIPHASIC_BURST = 0x03
 
 # MagVenture/MAGIC encodes burst count in reverse order.
-BURST_TO_BYTE = {
-    2: 0x03,
-    3: 0x02,
-    4: 0x01,
-    5: 0x00,
-}
-
-BYTE_TO_BURST = {
-    0x03: 2,
-    0x02: 3,
-    0x01: 4,
-    0x00: 5,
-}
+BURST_TO_BYTE = {2: 0x03, 3: 0x02, 4: 0x01, 5: 0x00}
+BYTE_TO_BURST = {0x03: 2, 0x02: 3, 0x01: 4, 0x00: 5}
 
 
 def _crc8_maxim(command_bytes: bytes) -> int:
@@ -341,7 +352,7 @@ class MagVentureTMS:
         Return basic device status, including model, waveform, enable status,
         serial number, temperature, coil type, and amplitudes.
         """
-        response = self._send([0x00], response_len=13)
+        response = self._send_and_read_response([0x00], expected_command=0x00)
         return _parse_status(response)
 
     def get_settings(self) -> dict[str, Any]:
@@ -351,7 +362,10 @@ class MagVentureTMS:
         On R30, do not use the get_settings model byte as a device identity
         source. Use get_status()["Model"] for that.
         """
-        response = self._send([0x09, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0], response_len=14)
+        response = self._send_and_read_response(
+            [0x09, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            expected_command=0x09,
+        )
         return _parse_settings(response)
 
     def set_single_pulse(self, amplitude: int) -> dict[str, Any]:
@@ -365,12 +379,6 @@ class MagVentureTMS:
         -------
         dict
             Verified status dictionary.
-
-        Raises
-        ------
-        MagVentureError
-            If readback does not confirm Biphasic waveform and requested
-            amplitude.
         """
         self._validate_amplitude(amplitude)
 
@@ -416,37 +424,19 @@ class MagVentureTMS:
         If iTBS timing is needed, the external trigger source should send one
         trigger per burst, e.g. 5 Hz during the active period.
 
-        Parameters
-        ----------
-        amplitude:
-            Stimulation amplitude in percent MSO, 0..100.
-
-        burst_pulses:
-            Number of pulses per burst. Supported values are 2, 3, 4, or 5.
-
-        ipi_ms:
-            Intra-burst inter-pulse interval in milliseconds. This module
-            validates readback against the requested value. Values supported by
-            the stimulator depend on the MagPro model/firmware; if an unsupported
-            value is requested, readback validation should fail.
-
         Returns
         -------
         dict
             {"status": ..., "settings": ...}
-
-        Raises
-        ------
-        MagVentureError
-            If readback does not confirm Biphasic Burst, requested pulses per
-            burst, requested IPI, and requested amplitude.
         """
         self._validate_amplitude(amplitude)
         self._validate_burst_pulses(burst_pulses)
         self._validate_ipi_ms(ipi_ms)
 
         status_before = self.get_status()
-        self._set_page_train()
+
+        # Intentionally no set-page command here. We do not switch the visible
+        # tab/page on the MagPro screen.
         self._write_config(
             model_byte=status_before["_raw_model"],
             waveform_byte=WAVEFORM_BIPHASIC_BURST,
@@ -485,35 +475,95 @@ class MagVentureTMS:
         body = bytes(command_bytes)
         return bytes([0xFE, len(body)]) + body + bytes([_crc8_maxim(body), 0xFF])
 
-    def _send(self, command_bytes: list[int], *, response_len: Optional[int]) -> bytes:
-        frame = self._frame(command_bytes)
-
-        # Keep this here rather than only at connection time: if a previous
-        # no-ACK command left any stale bytes, do not let them corrupt readback.
-        self._ser.reset_input_buffer()
-
-        self._ser.write(frame)
+    def _send_no_response(self, command_bytes: list[int]) -> None:
+        self._ser.write(self._frame(command_bytes))
         self._ser.flush()
 
-        if response_len is None:
-            return b""
+    def _send_and_read_response(self, command_bytes: list[int], *, expected_command: int) -> bytes:
+        self._ser.write(self._frame(command_bytes))
+        self._ser.flush()
+        return self._read_matching_frame(expected_command=expected_command)
 
-        response = self._ser.read(response_len)
-        if len(response) != response_len:
+    def _read_matching_frame(self, *, expected_command: int) -> bytes:
+        """
+        Read complete FE...FF frames until one has the requested command byte.
+
+        This prevents stale/asynchronous frames from corrupting the next parsed
+        response. Example failure this avoids:
+
+            FE 04 02 00 00 1C 39 FF FE 09 00 1C 00 ...
+
+        where a stale 8-byte frame is followed by the beginning of a status
+        frame. A fixed 13-byte read would incorrectly combine them.
+        """
+        deadline = time.monotonic() + self.timeout
+
+        last_frame: Optional[bytes] = None
+        while time.monotonic() < deadline:
+            frame = self._read_one_frame(deadline)
+            if frame is None:
+                continue
+
+            last_frame = frame
+            if len(frame) >= 3 and frame[2] == expected_command:
+                return frame
+
+            # Otherwise ignore unrelated/stale frame and keep looking.
+
+        if last_frame is not None:
             raise MagVentureError(
-                f"expected {response_len} response bytes, got {len(response)}: {_hex(response)}"
+                f"timed out waiting for response command 0x{expected_command:02X}; "
+                f"last unrelated frame: {_hex(last_frame)}"
             )
-        return response
+        raise MagVentureError(f"timed out waiting for response command 0x{expected_command:02X}")
+
+    def _read_one_frame(self, deadline: float) -> Optional[bytes]:
+        """
+        Read one complete frame:
+            FE <length> <length command bytes> <crc> FF
+
+        Returns None if no start byte is seen before the deadline.
+        """
+        # Find FE.
+        while time.monotonic() < deadline:
+            b = self._ser.read(1)
+            if not b:
+                continue
+            if b == b"\xFE":
+                break
+        else:
+            return None
+
+        length_b = self._ser.read(1)
+        if not length_b:
+            return None
+
+        length = length_b[0]
+        rest = self._read_exact(length + 2, deadline)
+        if rest is None:
+            return None
+
+        frame = b"\xFE" + length_b + rest
+        if frame[-1] != 0xFF:
+            # Bad framing. Return it so the eventual error can show what happened.
+            return frame
+
+        return frame
+
+    def _read_exact(self, n: int, deadline: float) -> Optional[bytes]:
+        chunks = bytearray()
+        while len(chunks) < n and time.monotonic() < deadline:
+            part = self._ser.read(n - len(chunks))
+            if part:
+                chunks.extend(part)
+        if len(chunks) != n:
+            return None
+        return bytes(chunks)
 
     def _set_amplitude(self, amplitude: int) -> None:
-        response = self._send([0x01, amplitude], response_len=8)
-        if response[0] != 0xFE or response[-1] != 0xFF or response[2] != 0x01:
+        response = self._send_and_read_response([0x01, amplitude], expected_command=0x01)
+        if response[0] != 0xFE or response[-1] != 0xFF:
             raise MagVentureError(f"bad amplitude response: {_hex(response)}")
-
-    def _set_page_train(self) -> None:
-        response = self._send([0x07, 0x02, 0x00], response_len=8)
-        if response[0] != 0xFE or response[-1] != 0xFF or response[2] != 0x08:
-            raise MagVentureError(f"bad page response: {_hex(response)}")
 
     def _write_config(
         self,
@@ -545,7 +595,7 @@ class MagVentureTMS:
             ba_m,
             ba_l,
         ]
-        self._send(command, response_len=None)
+        self._send_no_response(command)
         time.sleep(self.config_settle_s)
 
     @staticmethod

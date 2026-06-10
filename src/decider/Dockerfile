@@ -119,6 +119,12 @@ RUN pip3 install --no-cache-dir \
     mne-realtime==0.3.0 \
     mne_icalabel==0.9.0
 
+# Install pyserial separately
+RUN pip3 install --no-cache-dir \
+    --constraint /tmp/torch-constraints.txt \
+    --extra-index-url ${PYTORCH_INDEX_URL} \
+    pyserial==3.5.0
+
 # Check declared dependency consistency before intentionally overriding dependencies with --no-deps.
 RUN pip3 check
 

@@ -29,6 +29,7 @@ export const PresenterNode: React.FC = () => {
       onToggle={handleToggle}
       onModuleChange={handleModuleChange}
       folderName="presenter"
+      disabledLabel="DISABLED"
     />
   )
 }

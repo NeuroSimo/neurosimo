@@ -29,6 +29,7 @@ export const DeciderNode: React.FC = () => {
       onToggle={handleToggle}
       onModuleChange={handleModuleChange}
       folderName="decider"
+      disabledLabel="DISABLED"
     />
   )
 }

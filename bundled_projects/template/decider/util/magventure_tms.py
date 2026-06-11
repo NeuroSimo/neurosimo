@@ -302,7 +302,7 @@ class MagVentureTMS:
 
     def __init__(
         self,
-        usb_device: str,
+        usb_device: str = "/dev/ttyUSB0",
         *,
         timeout: float = 1.0,
         config_settle_s: float = 0.30,

@@ -8,7 +8,6 @@ import numpy as np
 from util.magventure_tms import MagVentureTMS
 
 
-USB_DEVICE = "/dev/ttyUSB0"
 AMPLITUDE = 50
 
 
@@ -22,7 +21,7 @@ class Decider:
         # Initialize multiprocessing pool for background computations
         self.pool = multiprocessing.Pool(processes=1)
 
-        self.tms = MagVentureTMS(USB_DEVICE)
+        self.tms = MagVentureTMS()
         self._use_single_pulse = True  # alternates between single pulse and TBS
 
         print("Decider initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")

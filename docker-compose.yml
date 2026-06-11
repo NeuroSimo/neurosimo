@@ -103,10 +103,19 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
+    # Allow access to USB-serial devices (major 188 = ttyUSB*) without requiring
+    # the device to be present at startup. Combined with the /dev bind mount below,
+    # this also makes hot-plugged devices visible inside the container on the fly.
+    device_cgroup_rules:
+      - 'c 188:* rmw'
+    group_add:
+      - dialout
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
+      # Share host /dev so ttyUSB* nodes appear/disappear live (USB hotplug).
+      - '/dev:/dev'
     network_mode: host
     profiles:
       - non-gpu
@@ -130,14 +139,19 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
-    devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0
+    # Allow access to USB-serial devices (major 188 = ttyUSB*) without requiring
+    # the device to be present at startup. Combined with the /dev bind mount below,
+    # this also makes hot-plugged devices visible inside the container on the fly.
+    device_cgroup_rules:
+      - 'c 188:* rmw'
     group_add:
       - dialout
     volumes:
       - "$PROJECTS_ROOT:/app/projects"
       - '/etc/localtime:/etc/localtime:ro'
       - '/etc/timezone:/etc/timezone:ro'
+      # Share host /dev so ttyUSB* nodes appear/disappear live (USB hotplug).
+      - '/dev:/dev'
     network_mode: host
     deploy:
       resources:

@@ -28,11 +28,42 @@ const Title = styled(SmallerTitle)<{ $enabled: boolean }>`
   color: ${props => props.$enabled ? 'inherit' : '#999'};
 `
 
+const PIPELINE_CONTROL_HEIGHT = 31
+
 const PipelineSelect = styled(Select)`
   margin-left: 40px;
   width: 200px;
   min-width: 200px;
+  height: ${PIPELINE_CONTROL_HEIGHT}px;
+  box-sizing: border-box;
   flex-shrink: 0;
+`
+
+const DisabledSlot = styled.div`
+  margin-left: 40px;
+  margin-right: 17px;
+  width: 200px;
+  min-width: 200px;
+  height: ${PIPELINE_CONTROL_HEIGHT}px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+`
+
+const DisabledPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid #a0a0a0;
+  border-radius: 11px;
+  background-color: #e4e4e4;
+  color: #4d4d4d;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 `
 
 interface PipelineNodeProps {
@@ -43,6 +74,7 @@ interface PipelineNodeProps {
   onToggle: (enabled: boolean) => void
   onModuleChange: (module: string) => void
   folderName: string
+  disabledLabel?: string
 }
 
 export const PipelineNode: React.FC<PipelineNodeProps> = ({
@@ -53,6 +85,7 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
   onToggle,
   onModuleChange,
   folderName,
+  disabledLabel,
 }) => {
   const { sessionState } = useSession()
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
@@ -66,13 +99,19 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
       <HorizontalRow>
         <Title $enabled={enabled}>{title}:</Title>
         <ToggleSwitch type='flat' checked={enabled} onChange={onToggle} disabled={isSessionRunning} />
-        <PipelineSelect onChange={handleModuleChange} value={module} disabled={isSessionRunning}>
-          {modules.map((mod, index) => (
-            <option key={index} value={mod}>
-              {mod}
-            </option>
-          ))}
-        </PipelineSelect>
+        {enabled ? (
+          <PipelineSelect onChange={handleModuleChange} value={module} disabled={isSessionRunning}>
+            {modules.map((mod, index) => (
+              <option key={index} value={mod}>
+                {mod}
+              </option>
+            ))}
+          </PipelineSelect>
+        ) : (
+          <DisabledSlot>
+            <DisabledPill>{disabledLabel}</DisabledPill>
+          </DisabledSlot>
+        )}
         <FolderTerminalButtons folderName={folderName} />
       </HorizontalRow>
     </Container>

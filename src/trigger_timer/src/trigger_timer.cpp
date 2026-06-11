@@ -389,6 +389,7 @@ void TriggerTimer::reset_state() {
 
   /* Reset configuration */
   this->data_source = "";
+  this->enable_labjack = false;
 
   /* Reset loopback monitoring flags */
   this->loopback_received = false;

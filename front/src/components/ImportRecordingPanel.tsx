@@ -6,7 +6,6 @@ import {
   Select,
   ConfigRow,
   ConfigLabel,
-  ConfigValue,
   CONFIG_PANEL_WIDTH,
   StyledButton,
   ConfigTitle,
@@ -34,6 +33,23 @@ const ImportSelect = styled(Select)`
 const CompactRow = styled(ConfigRow)`
   margin-bottom: 2px;
   gap: 4px;
+`
+
+const ErrorRow = styled(CompactRow)`
+  margin-top: 2px;
+  margin-bottom: 0;
+`
+
+const LabelSpacer = styled.div`
+  width: 185px;
+  flex-shrink: 0;
+`
+
+const ErrorText = styled.div`
+  font-size: 11px;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  color: #c0392b;
+  margin-left: 6px;
 `
 
 export const ImportRecordingPanel: React.FC = () => {
@@ -85,6 +101,12 @@ export const ImportRecordingPanel: React.FC = () => {
           }
         </ImportSelect>
       </CompactRow>
+      {importError && (
+        <ErrorRow>
+          <LabelSpacer />
+          <ErrorText>{importError}</ErrorText>
+        </ErrorRow>
+      )}
       <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '10px', gap: '6px', marginTop: '6px' }}>
         <StyledButton
           onClick={confirmImport}
@@ -93,11 +115,6 @@ export const ImportRecordingPanel: React.FC = () => {
           {isImporting ? 'Importing…' : 'Import'}
         </StyledButton>
       </CompactRow>
-      {importError && (
-        <CompactRow>
-          <ConfigValue style={{ fontSize: '11px', color: 'red' }}>{importError}</ConfigValue>
-        </CompactRow>
-      )}
     </ImportPanel>
   )
 }

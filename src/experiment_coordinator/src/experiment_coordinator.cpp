@@ -141,18 +141,13 @@ void ExperimentCoordinator::publish_attempt_commit() {
   }
 
   const auto& stage = element.stage.value();
-  if (state.trial_in_stage >= stage.trial_order.size()) {
+  if (state.trial_in_stage >= stage.trials) {
     return;
   }
-
-  size_t type_idx = stage.trial_order[state.trial_in_stage];
-  const auto& trial_entry = stage.trial_types[type_idx];
 
   auto msg = neurosimo_pipeline_interfaces::msg::AttemptCommit();
   msg.session_id = this->session_id;
   msg.attempt_in_session = state.attempt_in_session;
-  msg.trial_timing = trial_entry.timing;
-  msg.trial_type = trial_entry.type;
 
   this->attempt_commit_publisher->publish(msg);
 }
@@ -363,7 +358,7 @@ void ExperimentCoordinator::handle_initialize_protocol(
     request->project_name.c_str(), request->protocol_filename.c_str());
 
   LoadResult result = this->protocol_loader.load_from_project(
-    PROJECTS_DIRECTORY, request->project_name, request->protocol_filename, request->subject_id);
+    PROJECTS_DIRECTORY, request->project_name, request->protocol_filename);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load protocol: %s",

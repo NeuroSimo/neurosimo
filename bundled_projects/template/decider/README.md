@@ -9,7 +9,7 @@ The Decider module processes real-time EEG/EMG data and makes decisions about wh
 The `project_template/decider/` directory contains several example decider modules:
 
 - **`example.py`**: Basic periodic processing with event handling
-- **`example_predetermined.py`**: Demonstrates predetermined trial timing with per-trial ITI scheduling
+- **`example_predetermined.py`**: Demonstrates predetermined trial timing via `prepare_trial` with per-trial ITI scheduling
 - **`example_task.py`**: Demonstrates protocol tasks (e.g. offline training between stages)
 - **`example_sensory_stimuli.py`**: Demonstrates both predefined and dynamic sensory stimuli
 - **`example_targeted_pulses.py`**: Demonstrates targeted-pulse (mTMS) output
@@ -296,42 +296,6 @@ With periodic_processing_interval=3.0:
 
 In this example, even though events occurred at 4.0s and 7.0s, the periodic processing schedule (3.0s, 6.0s, 9.0s, ...) remains consistent and unaffected.
 
-### `process_predetermined(reference_time, stage_name, trial, trial_type)`
-
-Called once per **predetermined** trial (protocol stages with `timing: predetermined`) when the trial counter advances. The method must return the trigger schedule for that trial upfront; the pipeline then schedules the trigger accordingly without waiting for the next periodic cycle.
-
-Not called during warm-up rounds.
-
-**Parameters:**
-
-#### `reference_time` (float)
-Current sample time in seconds since recording start. Use this as the base time when computing the trigger offset.
-
-#### `stage_name` (str)
-Name of the current protocol stage.
-
-#### `trial` (int)
-Zero-based index of the current trial within the stage.
-
-#### `trial_type` (str)
-The `type` string from the protocol entry that owns this trial (e.g. `"low_iti"`, `"open_loop_fast"`). An empty string if no `type` was specified in the protocol.
-
-**Return value:** Same format as `process_periodic()` — a dictionary with `trigger_offset` or `targeted_pulses`. Returning `None` skips the trial.
-
-**Example:**
-```python
-def process_predetermined(
-        self, reference_time: float, stage_name: str, trial: int, trial_type: str) -> dict[str, Any] | None:
-    if trial_type == 'low_iti':
-        iti = self.rng.uniform(3.0, 5.0)
-    elif trial_type == 'high_iti':
-        iti = self.rng.uniform(5.0, 7.0)
-    else:
-        assert False, f"Unknown trial type: {trial_type}"
-
-    return {'trigger_offset': iti}
-```
-
 ### `process_task(task_name)`
 
 Optional method for protocols that include a `task` element (see [protocols README](../protocols/README.md#task)).
@@ -359,9 +323,12 @@ def process_task(self, task_name: str) -> None:
 
 For an example, see `example_task.py` and `protocols/example_task.yaml`.
 
-### `prepare_trial(stage_name, trial_in_stage, is_predetermined)`
+### `prepare_trial(stage_name, trial_in_stage)`
 
-Optional hook called **once per committed attempt, at the very start of the inter-trial interval** — before the `minimum_trial_interval` gate elapses and before `process_periodic` / `process_predetermined` are called for that trial. Use it for slow, blocking setup work (e.g. arming a TMS device for a specific pulse mode) that would otherwise add latency on the trigger critical path.
+Optional hook called **once per committed attempt, at the very start of the inter-trial interval** — before the `minimum_trial_interval` gate elapses and before `process_periodic` is called for that trial. Use it for:
+
+- **Slow, blocking setup work** (e.g. arming a TMS device for a specific pulse mode) that would otherwise add latency on the trigger critical path.
+- **Upfront trigger scheduling**: if `prepare_trial` returns a dictionary with a `trigger_offset` key, the backend schedules the trigger directly and skips `process_periodic` for that trial entirely. This is the mechanism for predetermined (open-loop) trial timing — the decider decides per-trial whether to use periodic (closed-loop) or predetermined timing.
 
 Not called during warm-up rounds.
 
@@ -373,21 +340,21 @@ Name of the **upcoming** trial's protocol stage.
 #### `trial_in_stage` (int)
 Zero-based index of the **upcoming** trial within the stage.
 
-#### `is_predetermined` (bool)
-`True` when the upcoming trial uses predetermined timing; `False` for periodic (closed-loop) trials.
-
-**Return value:** `None`. The return value is ignored. Must not request triggers or pulses.
+**Return value:**
+- `None` — proceed with periodic (closed-loop) processing for this trial.
+- `{'trigger_offset': <float>}` — schedule a trigger at the given offset (in seconds) from the attempt reference time and skip periodic processing for this trial.
 
 **Guarantees:**
 - Called once per trial.
 - Arguments always describe the **upcoming** trial, not the one that just finished.
 - The method may block for up to ~1 s; the backend calls it from within the sample-processing loop during the dead window, so blocking here does not delay the trigger for that trial.
 - If the method raises an exception the session is aborted, exactly like any other Python error path.
-- If your decider does not define this method, the backend silently skips it.
+- If your decider does not define this method, the backend silently skips it and uses periodic processing.
+- When `prepare_trial` returns a `trigger_offset`, the `minimum_trial_interval` safety gate still applies — the backend clamps the trigger against it regardless of the requested offset.
 
-**Example:**
+**Example (setup only):**
 ```python
-def prepare_trial(self, stage_name: str, trial_in_stage: int, is_predetermined: bool) -> None:
+def prepare_trial(self, stage_name: str, trial_in_stage: int) -> None:
     """Arm TMS device for the next trial's pulse mode."""
     if stage_name == 'intervention':
         if trial_in_stage % 2 == 0:
@@ -396,7 +363,17 @@ def prepare_trial(self, stage_name: str, trial_in_stage: int, is_predetermined: 
             self.tms.set_single_pulse(amplitude=50)
 ```
 
-For an example, see `example_magventure.py`.
+**Example (predetermined timing):**
+```python
+def prepare_trial(self, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
+    """Schedule trigger upfront for the 'open_loop' stage, use periodic for others."""
+    if stage_name == 'open_loop':
+        iti = self.rng.uniform(3.0, 7.0)
+        return {'trigger_offset': iti}
+    return None
+```
+
+For examples, see `example_magventure.py` and `example_predetermined.py`.
 
 ## Example Workflows
 ```python
@@ -406,11 +383,12 @@ def get_configuration(self):
         'warm_up_rounds': 2,
     }
 
-def process_predetermined(
-        self, reference_time: float, stage_name: str, trial: int, trial_type: str):
-    """Called once per predetermined trial to schedule its trigger upfront."""
-    iti = self.rng.uniform(3.0, 5.0)
-    return {'trigger_offset': iti}
+def prepare_trial(self, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
+    """Schedule trigger upfront for predetermined stages."""
+    if stage_name == 'open_loop':
+        iti = self.rng.uniform(3.0, 5.0)
+        return {'trigger_offset': iti}
+    return None
 ```
 
 For a complete example, see `example_predetermined.py`.

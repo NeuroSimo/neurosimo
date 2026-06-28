@@ -31,10 +31,9 @@ class Decider:
             # 'event_sample_window': [-1.5, 0.3],
         }
 
-    def prepare_trial(self, stage_name: str, trial_in_stage: int, is_predetermined: bool) -> None:
+    def prepare_trial(self, stage_name: str, trial_in_stage: int) -> None:
         """Called once at the beginning of a new trial."""
-        print(f"Preparing trial {trial_in_stage} in '{stage_name}' "
-              f"({'predetermined' if is_predetermined else 'periodic'})")
+        print(f"Preparing trial {trial_in_stage} in '{stage_name}'")
 
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,

@@ -371,12 +371,6 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_DEBUG(*logger_ptr, "Registered event processor (process_event)");
   }
 
-  /* Detect process_predetermined method by convention. */
-  if (py::hasattr(*decider_instance, "process_predetermined")) {
-    this->has_predetermined_processor_ = true;
-    RCLCPP_DEBUG(*logger_ptr, "Registered predetermined processor (process_predetermined)");
-  }
-
   /* Detect prepare_trial method by convention. */
   if (py::hasattr(*decider_instance, "prepare_trial")) {
     this->has_prepare_trial_processor_ = true;
@@ -488,12 +482,6 @@ bool DeciderWrapper::initialize_module(
     RCLCPP_INFO(*logger_ptr, "  - Event processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
     RCLCPP_INFO(*logger_ptr, "    - Event processor window: %s[%.3f s, %.3f s]%s",
                 bold_on.c_str(), event_sample_window_start_seconds, event_sample_window_end_seconds, bold_off.c_str());
-  }
-
-  if (!this->has_predetermined_processor_) {
-    RCLCPP_INFO(*logger_ptr, "  - Deterministic processor: %sDisabled%s (no process_predetermined method)", bold_on.c_str(), bold_off.c_str());
-  } else {
-    RCLCPP_INFO(*logger_ptr, "  - Deterministic processor: %sEnabled%s", bold_on.c_str(), bold_off.c_str());
   }
 
   if (!this->has_prepare_trial_processor_) {
@@ -1093,41 +1081,6 @@ ProcessResult DeciderWrapper::process_event(
   return parse_result_dict(py_result, false, sensory_stimuli, event_queue);
 }
 
-ProcessResult DeciderWrapper::process_predetermined(
-    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
-    double_t reference_time,
-    const std::string& stage_name,
-    uint32_t trial_in_stage,
-    const std::string& trial_type) {
-
-  if (!has_predetermined_processor_) {
-    log_error("process_predetermined called but Python Decider has no process_predetermined method.");
-    return ProcessResult::failure();
-  }
-
-  py::object py_result;
-  try {
-    set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PREDETERMINED);
-    py_result = decider_instance->attr("process_predetermined")(
-      reference_time, stage_name, trial_in_stage, trial_type);
-
-  } catch(const py::error_already_set& e) {
-    std::string error_msg = std::string("Python error in process_predetermined: ") + e.what();
-    log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-    return ProcessResult::failure();
-
-  } catch(const std::exception& e) {
-    std::string error_msg = std::string("C++ error in process_predetermined: ") + e.what();
-    log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-    return ProcessResult::failure();
-  }
-
-  return parse_result_dict(py_result, true, sensory_stimuli, event_queue);
-}
-
 bool DeciderWrapper::has_pulse_processor() const {
   return this->has_pulse_processor_;
 }
@@ -1136,38 +1089,54 @@ bool DeciderWrapper::has_event_processor() const {
   return this->has_event_processor_;
 }
 
-bool DeciderWrapper::has_predetermined_processor() const {
-  return this->has_predetermined_processor_;
-}
-
-bool DeciderWrapper::prepare_trial(
+PrepareTrialResult DeciderWrapper::prepare_trial(
     const std::string& stage_name,
-    uint64_t trial_in_stage,
-    bool is_predetermined) {
+    uint64_t trial_in_stage) {
 
   if (!has_prepare_trial_processor_) {
-    return true;
+    return PrepareTrialResult::success_empty();
   }
 
+  py::object py_result;
   try {
     set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PREPARE_TRIAL);
-    decider_instance->attr("prepare_trial")(
-      stage_name, trial_in_stage, is_predetermined);
+    py_result = decider_instance->attr("prepare_trial")(
+      stage_name, trial_in_stage);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error in prepare_trial: ") + e.what();
     log_error(error_msg);
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-    return false;
+    return PrepareTrialResult::failure();
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error in prepare_trial: ") + e.what();
     log_error(error_msg);
     log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
-    return false;
+    return PrepareTrialResult::failure();
   }
 
-  return true;
+  /* If the return value is None, no trigger offset — proceed with periodic processing. */
+  if (py_result.is_none()) {
+    return PrepareTrialResult::success_empty();
+  }
+
+  /* If a dict is returned, look for trigger_offset. */
+  if (py::isinstance<py::dict>(py_result)) {
+    py::dict dict_result = py_result.cast<py::dict>();
+
+    PrepareTrialResult result;
+    result.success = true;
+
+    if (dict_result.contains("trigger_offset")) {
+      result.trigger_offset = std::make_shared<double_t>(dict_result["trigger_offset"].cast<double_t>());
+    }
+
+    return result;
+  }
+
+  log_error("prepare_trial must return None or a dictionary.");
+  return PrepareTrialResult::failure();
 }
 
 bool DeciderWrapper::has_prepare_trial_processor() const {

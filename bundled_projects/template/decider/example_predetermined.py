@@ -24,10 +24,21 @@ class Decider:
             'warm_up_rounds': 2,
         }
 
-    def prepare_trial(self, stage_name: str, trial_in_stage: int, is_predetermined: bool) -> None:
-        """Called once at the beginning of a new trial."""
-        print(f"Preparing trial {trial_in_stage} in '{stage_name}' "
-              f"({'predetermined' if is_predetermined else 'periodic'})")
+    def prepare_trial(self, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
+        """Called once at the beginning of a new trial.
+
+        For the 'predetermined_block' stage, returns a trigger_offset to schedule
+        the trigger upfront (no periodic processing). For other stages, returns
+        None to fall through to process_periodic.
+        """
+        if stage_name == 'predetermined_block':
+            iti = self.rng.uniform(3.0, 7.0)
+            print(f"[prepare_trial] Trial {trial_in_stage} in '{stage_name}': "
+                  f"scheduling trigger at +{iti:.2f} s")
+            return {'trigger_offset': iti}
+
+        print(f"[prepare_trial] Trial {trial_in_stage} in '{stage_name}': periodic")
+        return None
 
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
@@ -39,35 +50,4 @@ class Decider:
 
         return {
             'trigger_offset': trigger_offset,
-        }
-
-    def process_predetermined(
-            self, reference_time: float, stage_name: str, trial: int, trial_type: str) -> dict[str, Any] | None:
-        """Return the next trial for predetermined timing.
-
-        Called once per predetermined trial when the trial counter changes.
-
-        Args:
-            reference_time: Current sample time in seconds since recording start.
-            stage_name: Name of the current protocol stage.
-            trial: Current trial index within the stage (0-based).
-            trial_type: Stimulation type string from the protocol (e.g. "low_iti" or "high_iti").
-
-        Returns:
-            Dictionary with 'trigger_offset' or 'targeted_pulses' key,
-            same format as process_periodic.
-        """
-        # Randomize inter-trial interval based on trial type
-        if trial_type == 'low_iti':
-            iti = self.rng.uniform(3.0, 5.0)
-        elif trial_type == 'high_iti':
-            iti = self.rng.uniform(5.0, 7.0)
-        else:
-            assert False, f"Unknown trial type: {trial_type}"
-
-        print(f"[predetermined] Trial {trial} in '{stage_name}' (type={trial_type}): "
-              f"scheduling trigger at +{iti:.2f} s")
-
-        return {
-            'trigger_offset': iti,
         }

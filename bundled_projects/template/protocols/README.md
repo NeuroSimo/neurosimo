@@ -45,21 +45,10 @@ The `safety` section is required and defines safety constraints for the protocol
 ### Stage
 A stage represents a period where stimuli are delivered. Each stage has:
 - `name`: Unique identifier for the stage
-- `trials`: Specifies the trials in the stage. Two forms are supported:
-  - **Shorthand** — a plain integer, equivalent to a single periodic trial group:
-    ```yaml
-    trials: 100
-    ```
-  - **List form** — one or more trial groups, each with:
-    - `count` (required): Number of trials in the group
-    - `timing` (optional): `periodic` (default) or `predetermined`
-    - `type` (optional): An arbitrary string identifying the trial type, passed to the decider's `process_predetermined` method (only meaningful for `predetermined` trials)
-    ```yaml
-    trials:
-      - { count: 150 }                                           # periodic (default)
-      - { count: 50, timing: predetermined, type: low_iti }      # predetermined
-    ```
-- `order` (optional): When using the list form, set to `"random"` to shuffle the individual trials across all groups randomly. The shuffle is seeded by the subject ID for reproducibility.
+- `trials`: Number of trials in the stage (a positive integer)
+  ```yaml
+  trials: 100
+  ```
 - `max_failures` (optional): Maximum number of invalid trials allowed in this stage before the stage ends early. Must be greater than `0`. When omitted, invalid trials can be retried without a failure cap (the stage still ends only after the required number of **valid** trials). Invalid trials are reported by the decider's `process_pulse()` return value (`trial_invalid: true`); they do not advance the stage trial counter.
 - `notes`: Optional description
 
@@ -74,14 +63,11 @@ A stage completes when either:
 
 Without `max_failures`, only condition (1) applies: invalid trials are retried until enough valid trials are recorded.
 
-#### Trial timing modes
+#### Trial timing
 
-| Mode | How it works |
-|------|-------------|
-| `periodic` | The decider's `process_periodic` is called on every decider cycle. On each call it decides whether to trigger a pulse or not. |
-| `predetermined` | The decider's `process_predetermined` is called once per trial with `(reference_time, stage_name, trial, trial_type)`. It returns the `trigger_offset` for that trial upfront, and the trigger is scheduled accordingly. |
+By default, the decider's `process_periodic` is called on every decider cycle during a trial, and each call decides whether to trigger a pulse or not. The decider can override this per-trial via `prepare_trial`: if `prepare_trial` returns a `trigger_offset`, the trigger is scheduled directly and periodic processing is skipped for that trial. See the [decider README](../decider/README.md#prepare_trial) for details.
 
-For an example decider implementing `process_predetermined`, see `decider/example_predetermined.py`.
+For an example decider using `prepare_trial` to schedule triggers upfront, see `decider/example_predetermined.py`.
 
 ### Rest
 A rest period where no stimuli are delivered. Can be defined in two ways:

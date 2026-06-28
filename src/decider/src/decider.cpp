@@ -946,11 +946,10 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
   this->attempt_commit_received = true;
   this->stimulation_requested = false;
   this->committed_attempt_in_session = msg->attempt_in_session;
-  this->current_attempt_type = msg->trial_timing;
-  this->current_trial_type = msg->trial_type;
 
   /* A new attempt has been committed; the upcoming trial has not been prepared yet. */
   this->trial_prepared = false;
+  this->prepare_trial_trigger_offset = nullptr;
 }
 
 void EegDecider::handle_task_start(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TaskStart> msg) {
@@ -1056,28 +1055,29 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
 
   /* If attempt commit is active and stimulation has not been requested, handle the attempt. */
   if (attempt_commit_active && !this->stimulation_requested && !msg->in_task && !msg->in_rest) {
-    bool is_periodic = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC);
-    bool is_predetermined = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PREDETERMINED);
 
-    /* Possibly slow trial setup, called once per trial at the start of the dead
-       window, before the minimum_trial_interval gate and before process_periodic /
-       process_predetermined. The arguments describe the upcoming trial. */
+    /* Call prepare_trial once per trial. If it returns a trigger_offset, the
+       trigger is scheduled directly (no periodic processing for this trial). */
     if (!this->trial_prepared) {
-      bool success = this->decider_wrapper->prepare_trial(msg->stage_name, msg->trial_in_stage, is_predetermined);
-      if (!success) {
+      auto prepare_result = this->decider_wrapper->prepare_trial(msg->stage_name, msg->trial_in_stage);
+      if (!prepare_result.success) {
         RCLCPP_ERROR(this->get_logger(), "prepare_trial failed at time %.3f (s).", msg->time);
         this->error_occurred = true;
         this->abort_session("Error in prepare_trial method");
         return;
       }
+      this->prepare_trial_trigger_offset = prepare_result.trigger_offset;
       this->trial_prepared = true;
+
+      /* If prepare_trial returned a trigger_offset, schedule the trigger now. */
+      if (this->prepare_trial_trigger_offset) {
+        handle_prepare_trial_trigger(msg);
+      }
     }
 
-    if (is_periodic) {
+    /* If no trigger was scheduled by prepare_trial, run periodic processing. */
+    if (!this->prepare_trial_trigger_offset) {
       handle_periodic_trial(msg);
-    }
-    if (is_predetermined) {
-      handle_predetermined_trial(msg);
     }
   }
 
@@ -1138,65 +1138,30 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   }
 }
 
-void EegDecider::handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
-  RCLCPP_INFO(this->get_logger(), "Predetermined trial %u in stage '%s' (type: '%s') at time %.3f (s)",
-    msg->trial_in_stage, msg->stage_name.c_str(), this->current_trial_type.c_str(), msg->time);
+void EegDecider::handle_prepare_trial_trigger(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
+  RCLCPP_INFO(this->get_logger(), "Scheduling trigger from prepare_trial for trial %u in stage '%s' at time %.3f (s)",
+    msg->trial_in_stage, msg->stage_name.c_str(), msg->time);
 
   /* Use the reference time tracked from the most recent is_attempt_start sample. */
   double_t reference_time = this->attempt_reference_time;
   double_t reference_eeg_device_timestamp = this->attempt_reference_eeg_device_timestamp;
 
   if (std::isnan(reference_time)) {
-    RCLCPP_ERROR(this->get_logger(), "No reference time available for predetermined trial at time %.3f (s).", msg->time);
+    RCLCPP_ERROR(this->get_logger(), "No reference time available for prepare_trial trigger at time %.3f (s).", msg->time);
     this->error_occurred = true;
-    this->abort_session("Missing reference time for predetermined trial");
+    this->abort_session("Missing reference time for prepare_trial trigger");
     return;
   }
 
-  /* Call process_predetermined on the Python side. */
-  auto result = this->decider_wrapper->process_predetermined(
-    this->sensory_stimuli,
-    this->event_queue,
-    reference_time,
-    msg->stage_name,
-    msg->trial_in_stage,
-    this->current_trial_type);
-
-  if (!result.success) {
-    RCLCPP_ERROR(this->get_logger(), "process_predetermined failed at time %.3f (s).", msg->time);
-    this->error_occurred = true;
-    this->abort_session("Error in process_predetermined method");
-    return;
-  }
-
-  /* Publish sensory stimuli if any. */
-  if (!this->sensory_stimuli.empty()) {
-    for (const auto& sensory_stimulus : this->sensory_stimuli) {
-      this->sensory_stimulus_publisher->publish(sensory_stimulus);
-    }
-    this->sensory_stimuli.clear();
-  }
-
-  /* Publish coil target if set. */
-  if (!result.coil_target.empty()) {
-    auto coil_target_msg = shared_stimulation_interfaces::msg::CoilTarget();
-    coil_target_msg.target_name = result.coil_target;
-    this->coil_target_publisher->publish(coil_target_msg);
-  }
-
-  bool stimulation_requested = result.trigger_offset != nullptr || !result.targeted_pulses.empty();
-
-  if (!stimulation_requested) {
-    RCLCPP_ERROR(this->get_logger(), "No stimulation requested for predetermined trial at time %.3f (s).", msg->time);
-    this->error_occurred = true;
-    this->abort_session("No stimulation requested for predetermined trial");
-    return;
-  }
+  /* Build a ProcessResult from the trigger_offset returned by prepare_trial. */
+  ProcessResult result;
+  result.success = true;
+  result.trigger_offset = this->prepare_trial_trigger_offset;
 
   handle_stimulation_request(
     result, reference_time, reference_eeg_device_timestamp,
     neurosimo_pipeline_interfaces::msg::AttemptTrace::ATTEMPT_TIMING_PREDETERMINED,
-    this->current_trial_type);
+    "");
 }
 
 bool EegDecider::detect_backpressure(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {

@@ -135,8 +135,8 @@ private:
     uint8_t attempt_timing,
     const std::string& attempt_type = "",
     uint64_t decision_id = 0);
-    
-  void handle_predetermined_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
+
+  void handle_prepare_trial_trigger(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
   void handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg);
 
   rclcpp::Logger logger;
@@ -206,13 +206,14 @@ private:
 
   /* Stored from AttemptCommit; used in process_sample only when sample attempt_in_session matches. */
   uint64_t committed_attempt_in_session = 0;
-  uint8_t current_attempt_type = 0;
-  std::string current_trial_type;
   bool stimulation_requested = false;
   bool attempt_commit_received = false;
 
   /* Whether prepare_trial has already been called for the currently committed attempt. */
   bool trial_prepared = false;
+
+  /* If prepare_trial returned a trigger_offset, store it here for scheduling. */
+  std::shared_ptr<double_t> prepare_trial_trigger_offset = nullptr;
 
   /* Reference time tracked from the most recent is_attempt_start sample. */
   double_t attempt_reference_time = std::numeric_limits<double_t>::quiet_NaN();

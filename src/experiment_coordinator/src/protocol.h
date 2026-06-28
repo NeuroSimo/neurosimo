@@ -9,29 +9,15 @@
 #include <limits>
 #include <cstdint>
 
-#include "neurosimo_pipeline_interfaces/msg/attempt_commit.hpp"
-
 namespace experiment_coordinator {
-
-/**
- * @brief Describes one group of trials within a stage
- */
-struct TrialTypeEntry {
-  uint8_t timing = neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC;
-  std::string type;        // e.g. "low_iti", empty for periodic
-  uint32_t count = 0;
-};
 
 /**
  * @brief Represents a stage with trials in the protocol
  */
 struct Stage {
   std::string name;
-  uint32_t trials;                              // total trial count (sum of all trial_types counts)
+  uint32_t trials;                              // total trial count
   std::string notes;
-  std::vector<TrialTypeEntry> trial_types;      // breakdown by timing/type
-  std::string order = "sequential";             // "sequential" or "random"
-  std::vector<size_t> trial_order;              // indices into trial_types, length == trials
   std::optional<uint32_t> max_failures;         // per-stage cap on failed trials; absent means no retries
 };
 

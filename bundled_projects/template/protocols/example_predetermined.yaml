@@ -1,23 +1,19 @@
 name: "Example protocol with predetermined trials"
-description: "Demonstrates mixing periodic and predetermined trial timings"
+description: "Demonstrates predetermined trial timing via prepare_trial"
 
 safety:
   minimum_trial_interval: 2.0
 
 stages:
   - stage:
-      name: "predetermined_only"
-      trials:
-        - { count: 10, timing: predetermined, type: high_iti }
-      notes: "All predetermined trials"
+      name: "predetermined_block"
+      trials: 10
+      notes: "Trials whose timing is determined upfront by prepare_trial"
 
   - rest:
       duration: 10.0
 
   - stage:
-      name: "mixed_block"
-      trials:
-        - { count: 5 }
-        - { count: 5, timing: predetermined, type: low_iti }
-      order: "random"
-      notes: "50% periodic, 50% predetermined (randomized order)"
+      name: "periodic_block"
+      trials: 5
+      notes: "Trials using periodic (closed-loop) timing"

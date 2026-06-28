@@ -62,6 +62,14 @@ struct ProcessResult {
   static ProcessResult success_empty() { return {true, nullptr, {}, {}, false}; }
 };
 
+struct PrepareTrialResult {
+  bool success = false;
+  std::shared_ptr<double_t> trigger_offset = nullptr;  // If set, schedule trigger directly (no periodic processing)
+
+  static PrepareTrialResult failure() { return {false, nullptr}; }
+  static PrepareTrialResult success_empty() { return {true, nullptr}; }
+};
+
 class DeciderWrapper {
 public:
   DeciderWrapper(rclcpp::Logger& logger);
@@ -111,27 +119,18 @@ public:
     const std::string& stage_name,
     uint64_t trial_in_stage);
 
-  /* Call Python process_predetermined for predetermined trials. */
-  ProcessResult process_predetermined(
-    std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
-    std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
-    double_t reference_time,
+  /* Call Python prepare_trial for trial setup and routing.
+     Returns PrepareTrialResult; if trigger_offset is set, the backend
+     schedules the trigger directly instead of calling process_periodic. */
+  PrepareTrialResult prepare_trial(
     const std::string& stage_name,
-    uint32_t trial_in_stage,
-    const std::string& trial_type);
-
-  /* Call Python prepare_trial for possibly slow setup before a trial. */
-  bool prepare_trial(
-    const std::string& stage_name,
-    uint64_t trial_in_stage,
-    bool is_predetermined);
+    uint64_t trial_in_stage);
 
   /* Call Python process_task for task in the protocol. */
   bool process_task(const std::string& task_name);
 
   bool has_pulse_processor() const;
   bool has_event_processor() const;
-  bool has_predetermined_processor() const;
   bool has_prepare_trial_processor() const;
   bool has_task_processor() const;
 
@@ -184,10 +183,9 @@ private:
 
   std::unique_ptr<py::scoped_interpreter> interpreter;
 
-  /* Whether the decider defines process_pulse / process_event / process_predetermined / prepare_trial / process_task methods */
+  /* Whether the decider defines process_pulse / process_event / prepare_trial / process_task methods */
   bool has_pulse_processor_ = false;
   bool has_event_processor_ = false;
-  bool has_predetermined_processor_ = false;
   bool has_prepare_trial_processor_ = false;
   bool has_task_processor_ = false;
 

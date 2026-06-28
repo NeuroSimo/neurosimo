@@ -39,7 +39,7 @@ class Decider:
             # 'event_sample_window': [-1.5, 0.3],
         }
 
-    def prepare_trial(self, stage_name: str, trial_in_stage: int, is_predetermined: bool) -> None:
+    def prepare_trial(self, stage_name: str, trial_in_stage: int) -> None:
         """Arm TMS device for the upcoming trial. Alternates between single pulse and TBS."""
         if self._use_single_pulse:
             print(f"Preparing trial {trial_in_stage} in '{stage_name}' — setting single pulse at {AMPLITUDE}% MSO")

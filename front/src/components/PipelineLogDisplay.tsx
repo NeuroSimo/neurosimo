@@ -145,13 +145,15 @@ const Timestamp = styled.span<{ $phase: number; $level: number }>`
 const LogText = styled.span<{ $processingPath: number }>`
   padding: 3px 13px;
   background-color: ${props => {
-    if (props.$processingPath === 1) return '#e8f4f8'  // PULSE - light blue
-    if (props.$processingPath === 2) return '#f0f9e8'  // EVENT - light green
+    if (props.$processingPath === ProcessingPath.PULSE) return '#e8f4f8'  // PULSE - light blue
+    if (props.$processingPath === ProcessingPath.EVENT) return '#f0f9e8'  // EVENT - light green
+    if (props.$processingPath === ProcessingPath.PREPARE_TRIAL) return '#f3e8f8'  // PREPARE_TRIAL - light purple
     return 'transparent'  // UNDETERMINED and PERIODIC - no background
   }};
   border-left: ${props => {
-    if (props.$processingPath === 1) return '4px solid #3498db'  // PULSE - blue border
-    if (props.$processingPath === 2) return '4px solid #27ae60'  // EVENT - green border
+    if (props.$processingPath === ProcessingPath.PULSE) return '4px solid #3498db'  // PULSE - blue border
+    if (props.$processingPath === ProcessingPath.EVENT) return '4px solid #27ae60'  // EVENT - green border
+    if (props.$processingPath === ProcessingPath.PREPARE_TRIAL) return '4px solid #9b59b6'  // PREPARE_TRIAL - purple border
     return 'none'  // UNDETERMINED and PERIODIC - no border
   }};
 `

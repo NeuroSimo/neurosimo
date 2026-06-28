@@ -13,11 +13,23 @@ export interface DatasetInfo extends ROSLIB.Message {
   trial_count: number
 }
 
+export interface ImportResult {
+  success: boolean
+  dataset_filename: string
+}
+
 /* Get dataset info service */
 const getDatasetInfoService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/eeg_simulator/dataset/get_info',
   serviceType: 'neurosimo_project_interfaces/GetDatasetInfo',
+})
+
+/* Import recording service */
+const importRecordingService = new ROSLIB.Service({
+  ros: ros,
+  name: '/neurosimo/eeg_simulator/import_recording',
+  serviceType: 'neurosimo_project_interfaces/ImportRecording',
 })
 
 export const getDatasetInfoRos = (
@@ -40,6 +52,27 @@ export const getDatasetInfoRos = (
     },
     (error) => {
       console.log('ERROR: Failed to get dataset info, error:')
+      console.log(error)
+      callback(null)
+    }
+  )
+}
+
+export const importRecordingRos = (
+  filename: string,
+  callback: (result: ImportResult | null) => void
+) => {
+  const request = new ROSLIB.ServiceRequest({
+    filename: filename
+  }) as any
+
+  importRecordingService.callService(
+    request,
+    (response: ImportResult) => {
+      callback(response)
+    },
+    (error) => {
+      console.log('ERROR: Failed to import recording, error:')
       console.log(error)
       callback(null)
     }

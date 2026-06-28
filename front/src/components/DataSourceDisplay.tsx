@@ -2,6 +2,7 @@ import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { EegSimulatorPanel } from 'components/EegSimulatorPanel'
+import { ImportRecordingPanel } from 'components/ImportRecordingPanel'
 import { RecordingsPanel } from 'components/RecordingsPanel'
 import { EegDevicePanel } from 'components/EegDevicePanel'
 import { EegStreamContext } from 'providers/EegStreamProvider'
@@ -16,7 +17,8 @@ export const DataSourceContext = React.createContext<{
 
 const DataSourcePanel = styled(ConfigPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
-  height: 710px;
+  height: auto;
+  min-height: 710px;
   position: static;
   display: flex;
   flex-direction: column;
@@ -95,6 +97,7 @@ export const DataSourceDisplay: React.FC = () => {
         </TabContainer>
 
         {activeTab === 'simulator' && <EegSimulatorPanel isGrayedOut={false} />}
+        {activeTab === 'simulator' && <ImportRecordingPanel />}
         {activeTab === 'recording' && <RecordingsPanel isGrayedOut={false} />}
         {activeTab === 'eeg_device' && <EegDevicePanel />}
 

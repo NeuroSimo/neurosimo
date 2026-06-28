@@ -36,6 +36,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetDatasetInfo.srv"
   "srv/GetRecordingInfo.srv"
   "srv/DeleteRecording.srv"
+  "srv/ImportRecording.srv"
 )
 
 ament_package()

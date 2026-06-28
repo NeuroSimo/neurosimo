@@ -67,6 +67,10 @@ class ProjectManagerNode(Node):
         recordings_dir = os.path.join(project_dir, 'recordings')
         os.makedirs(recordings_dir, exist_ok=True)
 
+        # Create external_recordings directory
+        external_recordings_dir = os.path.join(project_dir, 'external_recordings')
+        os.makedirs(external_recordings_dir, exist_ok=True)
+
         # Create a single generator instance
         generator = RandomDataGenerator()
 

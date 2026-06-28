@@ -2,3 +2,4 @@ string filename
 ---
 bool success
 string dataset_filename
+string message

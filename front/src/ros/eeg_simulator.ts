@@ -16,6 +16,7 @@ export interface DatasetInfo extends ROSLIB.Message {
 export interface ImportResult {
   success: boolean
   dataset_filename: string
+  message: string
 }
 
 /* Get dataset info service */

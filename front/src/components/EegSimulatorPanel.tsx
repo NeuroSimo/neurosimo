@@ -12,7 +12,6 @@ import {
   ConfigValue,
   CONFIG_PANEL_WIDTH,
   StyledButton,
-  StyledRedButton,
 } from 'styles/General'
 
 import { EegSimulatorContext, DataSourceStateValue } from 'providers/EegSimulatorProvider'
@@ -226,8 +225,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         <ConfigLabel>Status</ConfigLabel>
         <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
-      <div style={{ height: '8px' }} />
-      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '10px' }}>
+      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '10px', gap: '6px' }}>
         <FolderTerminalButtons folderName="eeg_simulator" />
       </CompactRow>
     </SimulatorPanel>

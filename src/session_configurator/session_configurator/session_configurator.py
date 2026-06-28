@@ -78,6 +78,7 @@ class SessionConfiguratorNode(Node):
         self.protocol_list_publisher = self.create_publisher(FilenameList, "/neurosimo/experiment/protocol/list", qos)
         self.dataset_list_publisher = self.create_publisher(FilenameList, "/neurosimo/eeg_simulator/dataset/list", qos)
         self.recordings_list_publisher = self.create_publisher(FilenameList, "/neurosimo/recording/recordings/list", qos)
+        self.external_recordings_list_publisher = self.create_publisher(FilenameList, "/neurosimo/eeg_simulator/external_recordings/list", qos)
         
         # Session config publisher
         self.session_config_publisher = self.create_publisher(SessionConfig, "/neurosimo/session_configurator/config", qos)
@@ -93,6 +94,7 @@ class SessionConfiguratorNode(Node):
             ("protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol", "experiment.protocol"),
             ("eeg_simulator", [".json"], self.dataset_list_publisher, "dataset", "simulator.dataset_filename"),
             ("recordings", [".json"], self.recordings_list_publisher, "recordings", "replay.bag_id"),
+            ("external_recordings", [".vhdr"], self.external_recordings_list_publisher, "external_recordings", None),
         ]
 
         # Add parameter change callback to save changes to session state
@@ -121,7 +123,8 @@ class SessionConfiguratorNode(Node):
 
         # Reconcile stored selections against the available files.
         for _, _, _, component_name, param_name in self.watch_configs:
-            self.reconcile_config_value(session_config, param_name, component_name, filename_lists[component_name])
+            if param_name is not None:
+                self.reconcile_config_value(session_config, param_name, component_name, filename_lists[component_name])
 
         # Persist any reconciliation so that parameter_change_callback, when it reloads
         # from disk below, sees a consistent baseline.
@@ -255,7 +258,8 @@ class SessionConfiguratorNode(Node):
         """
         modules = self.compute_filename_list(project_name, subdirectory, file_extensions, component_name)
         self.publish_filename_list(project_name, publisher, component_name, modules)
-        self.reconcile_parameter(param_name, component_name, modules)
+        if param_name is not None:
+            self.reconcile_parameter(param_name, component_name, modules)
 
     # Service callbacks
 

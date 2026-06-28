@@ -46,6 +46,7 @@ interface RosDataSourceState extends ROSLIB.Message {
 
 interface EegSimulatorContextType {
   datasetList: string[]
+  externalRecordingsList: string[]
   dataset: string
   startTime: number
   playbackSpeed: number
@@ -54,6 +55,7 @@ interface EegSimulatorContextType {
 
 const defaultDatasetState: EegSimulatorContextType = {
   datasetList: [],
+  externalRecordingsList: [],
   dataset: '',
   startTime: 0,
   playbackSpeed: 1,
@@ -70,6 +72,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const { simulator } = useSessionConfig()
 
   const [datasetList, setDatasetList] = useState<string[]>([])
+  const [externalRecordingsList, setExternalRecordingsList] = useState<string[]>([])
   const [dataSourceState, setDataSourceState] = useState<DataSourceStateValue>(DataSourceStateValue.READY)
 
   const dataset = simulator.dataset_filename
@@ -99,10 +102,22 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       setDataSourceState(message.state)
     })
 
+    /* Subscriber for external recordings list. */
+    const externalRecordingsListSubscriber = new Topic<FilenameList>({
+      ros: ros,
+      name: '/neurosimo/eeg_simulator/external_recordings/list',
+      messageType: 'neurosimo_project_interfaces/FilenameList',
+    })
+
+    externalRecordingsListSubscriber.subscribe((message: FilenameList) => {
+      setExternalRecordingsList(message.filenames)
+    })
+
     /* Unsubscribers */
     return () => {
       datasetListSubscriber.unsubscribe()
       stateSubscriber.unsubscribe()
+      externalRecordingsListSubscriber.unsubscribe()
     }
   }, [])
 
@@ -110,6 +125,7 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
     <EegSimulatorContext.Provider
       value={{
         datasetList,
+        externalRecordingsList,
         dataset,
         startTime,
         playbackSpeed,

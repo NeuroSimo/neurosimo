@@ -6,4 +6,5 @@ source /app/install/setup.bash
 
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml \
   port:=$ROSBRIDGE_PORT \
-  namespace:=neurosimo
+  namespace:=neurosimo \
+  default_call_service_timeout:=300.0

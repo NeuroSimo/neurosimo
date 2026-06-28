@@ -39,6 +39,17 @@ class Decider:
             # 'event_sample_window': [-1.5, 0.3],
         }
 
+    def prepare_trial(self, stage_name: str, trial_in_stage: int, is_predetermined: bool) -> None:
+        """Arm TMS device for the upcoming trial. Alternates between single pulse and TBS."""
+        if self._use_single_pulse:
+            print(f"Preparing trial {trial_in_stage} in '{stage_name}' — setting single pulse at {AMPLITUDE}% MSO")
+            self.tms.set_single_pulse(AMPLITUDE)
+        else:
+            print(f"Preparing trial {trial_in_stage} in '{stage_name}' — setting TBS burst at {AMPLITUDE}% MSO")
+            self.tms.set_tbs(AMPLITUDE)
+
+        self._use_single_pulse = not self._use_single_pulse
+
     def process_periodic(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray,
@@ -65,15 +76,6 @@ class Decider:
     def process_pulse(
             self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
             eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
-        """Process pulse event. Alternates between single pulse and TBS for the next trigger."""
-
-        if self._use_single_pulse:
-            print(f"Pulse received — setting single pulse at {AMPLITUDE}% MSO for next trigger")
-            self.tms.set_single_pulse(AMPLITUDE)
-        else:
-            print(f"Pulse received — setting TBS burst at {AMPLITUDE}% MSO for next trigger")
-            self.tms.set_tbs(AMPLITUDE)
-
-        self._use_single_pulse = not self._use_single_pulse
-
+        """Process pulse event."""
+        print(f"Pulse received at time {reference_time:.3f} s.")
         return None

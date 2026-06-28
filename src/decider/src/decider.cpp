@@ -948,6 +948,9 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
   this->committed_attempt_in_session = msg->attempt_in_session;
   this->current_attempt_type = msg->trial_timing;
   this->current_trial_type = msg->trial_type;
+
+  /* A new attempt has been committed; the upcoming trial has not been prepared yet. */
+  this->trial_prepared = false;
 }
 
 void EegDecider::handle_task_start(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::TaskStart> msg) {
@@ -1055,6 +1058,21 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   if (attempt_commit_active && !this->stimulation_requested && !msg->in_task && !msg->in_rest) {
     bool is_periodic = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PERIODIC);
     bool is_predetermined = (this->current_attempt_type == neurosimo_pipeline_interfaces::msg::AttemptCommit::TRIAL_TIMING_PREDETERMINED);
+
+    /* Possibly slow trial setup, called once per trial at the start of the dead
+       window, before the minimum_trial_interval gate and before process_periodic /
+       process_predetermined. The arguments describe the upcoming trial. */
+    if (!this->trial_prepared) {
+      bool success = this->decider_wrapper->prepare_trial(msg->stage_name, msg->trial_in_stage, is_predetermined);
+      if (!success) {
+        RCLCPP_ERROR(this->get_logger(), "prepare_trial failed at time %.3f (s).", msg->time);
+        this->error_occurred = true;
+        this->abort_session("Error in prepare_trial method");
+        return;
+      }
+      this->trial_prepared = true;
+    }
+
     if (is_periodic) {
       handle_periodic_trial(msg);
     }

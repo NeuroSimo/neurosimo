@@ -211,6 +211,9 @@ private:
   bool stimulation_requested = false;
   bool attempt_commit_received = false;
 
+  /* Whether prepare_trial has already been called for the currently committed attempt. */
+  bool trial_prepared = false;
+
   /* Reference time tracked from the most recent is_attempt_start sample. */
   double_t attempt_reference_time = std::numeric_limits<double_t>::quiet_NaN();
   double_t attempt_reference_eeg_device_timestamp = std::numeric_limits<double_t>::quiet_NaN();

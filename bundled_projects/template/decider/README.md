@@ -12,6 +12,8 @@ The `project_template/decider/` directory contains several example decider modul
 - **`example_predetermined.py`**: Demonstrates predetermined trial timing with per-trial ITI scheduling
 - **`example_task.py`**: Demonstrates protocol tasks (e.g. offline training between stages)
 - **`example_sensory_stimuli.py`**: Demonstrates both predefined and dynamic sensory stimuli
+- **`example_targeted_pulses.py`**: Demonstrates targeted-pulse (mTMS) output
+- **`example_magventure.py`**: Demonstrates TMS device arming via `prepare_trial`
 - **`phastimate.py`**: Real-time phase estimation for brain state-dependent stimulation
 
 ## Available Libraries
@@ -357,9 +359,46 @@ def process_task(self, task_name: str) -> None:
 
 For an example, see `example_task.py` and `protocols/example_task.yaml`.
 
-## Example Workflows
+### `prepare_trial(stage_name, trial_in_stage, is_predetermined)`
 
-### Predetermined Trial Timing
+Optional hook called **once per committed attempt, at the very start of the inter-trial interval** — before the `minimum_trial_interval` gate elapses and before `process_periodic` / `process_predetermined` are called for that trial. Use it for slow, blocking setup work (e.g. arming a TMS device for a specific pulse mode) that would otherwise add latency on the trigger critical path.
+
+Not called during warm-up rounds.
+
+**Parameters:**
+
+#### `stage_name` (str)
+Name of the **upcoming** trial's protocol stage.
+
+#### `trial_in_stage` (int)
+Zero-based index of the **upcoming** trial within the stage.
+
+#### `is_predetermined` (bool)
+`True` when the upcoming trial uses predetermined timing; `False` for periodic (closed-loop) trials.
+
+**Return value:** `None`. The return value is ignored. Must not request triggers or pulses.
+
+**Guarantees:**
+- Called once per trial.
+- Arguments always describe the **upcoming** trial, not the one that just finished.
+- The method may block for up to ~1 s; the backend calls it from within the sample-processing loop during the dead window, so blocking here does not delay the trigger for that trial.
+- If the method raises an exception the session is aborted, exactly like any other Python error path.
+- If your decider does not define this method, the backend silently skips it.
+
+**Example:**
+```python
+def prepare_trial(self, stage_name: str, trial_in_stage: int, is_predetermined: bool) -> None:
+    """Arm TMS device for the next trial's pulse mode."""
+    if stage_name == 'intervention':
+        if trial_in_stage % 2 == 0:
+            self.tms.set_tbs(amplitude=50)   # ~1 s serial write+readback
+        else:
+            self.tms.set_single_pulse(amplitude=50)
+```
+
+For an example, see `example_magventure.py`.
+
+## Example Workflows
 ```python
 def get_configuration(self):
     return {

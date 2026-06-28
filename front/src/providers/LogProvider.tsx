@@ -32,6 +32,9 @@ export const ProcessingPath = {
   PULSE: 1,
   EVENT: 2,
   PERIODIC: 3,
+  PREDETERMINED: 4,
+  TASK: 5,
+  PREPARE_TRIAL: 6,
 } as const
 
 interface LogContextType {

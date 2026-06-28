@@ -69,7 +69,9 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     }
     setSelectedDatasetInfo(null)
     setIsLoadingDatasetInfo(true)
+    let cancelled = false
     getDatasetInfoRos(dataset, (datasetInfo) => {
+      if (cancelled) return
       if (!datasetInfo) {
         console.error('Failed to get dataset info for:', dataset)
         setSelectedDatasetInfo(null)
@@ -79,6 +81,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       setSelectedDatasetInfo(datasetInfo)
       setIsLoadingDatasetInfo(false)
     })
+    return () => { cancelled = true }
   }, [dataset])
 
   // Handle arrow key navigation for dataset selection

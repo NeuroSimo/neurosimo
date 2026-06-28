@@ -40,16 +40,12 @@ const ErrorRow = styled(CompactRow)`
   margin-bottom: 0;
 `
 
-const LabelSpacer = styled.div`
-  width: 185px;
-  flex-shrink: 0;
-`
-
 const ErrorText = styled.div`
   font-size: 11px;
   font-family: 'Roboto', 'Segoe UI', sans-serif;
   color: #c0392b;
   margin-left: 6px;
+  min-height: 16px;
 `
 
 export const ImportRecordingPanel: React.FC = () => {
@@ -101,13 +97,10 @@ export const ImportRecordingPanel: React.FC = () => {
           }
         </ImportSelect>
       </CompactRow>
-      {importError && (
-        <ErrorRow>
-          <LabelSpacer />
-          <ErrorText>{importError}</ErrorText>
-        </ErrorRow>
-      )}
-      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '10px', gap: '6px', marginTop: '6px' }}>
+      <ErrorRow style={{ justifyContent: 'flex-end', paddingRight: '17px', visibility: importError ? 'visible' : 'hidden' }}>
+        <ErrorText>{importError}</ErrorText>
+      </ErrorRow>
+      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '17px', gap: '6px', marginTop: '6px' }}>
         <StyledButton
           onClick={confirmImport}
           disabled={isImporting || isSessionRunning || isEegStreaming || externalRecordingsList.length === 0}

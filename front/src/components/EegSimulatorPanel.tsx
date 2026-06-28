@@ -55,6 +55,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   const { sessionState } = useSession()
 
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
+  const [isLoadingDatasetInfo, setIsLoadingDatasetInfo] = useState(false)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
@@ -63,15 +64,20 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   useEffect(() => {
     if (!dataset || dataset.trim() === '') {
       setSelectedDatasetInfo(null)
+      setIsLoadingDatasetInfo(false)
       return
     }
+    setSelectedDatasetInfo(null)
+    setIsLoadingDatasetInfo(true)
     getDatasetInfoRos(dataset, (datasetInfo) => {
       if (!datasetInfo) {
         console.error('Failed to get dataset info for:', dataset)
         setSelectedDatasetInfo(null)
+        setIsLoadingDatasetInfo(false)
         return
       }
       setSelectedDatasetInfo(datasetInfo)
+      setIsLoadingDatasetInfo(false)
     })
   }, [dataset])
 
@@ -167,7 +173,9 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       <CompactRow>
         <ConfigLabel>Duration</ConfigLabel>
         <ConfigValue>
-          {selectedDatasetInfo?.loop
+          {isLoadingDatasetInfo
+            ? '...'
+            : selectedDatasetInfo?.loop
             ? 'Continuous'
             : `${formatTime(selectedDatasetInfo?.duration)}${selectedDatasetInfo?.trial_count ? `, ${selectedDatasetInfo.trial_count} pulses` : ''}`}
         </ConfigValue>
@@ -177,18 +185,18 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
 
       <CompactRow>
         <ConfigLabel>Sampling rate</ConfigLabel>
-        <ConfigValue>{formatFrequency(selectedDatasetInfo?.sampling_frequency)}</ConfigValue>
+        <ConfigValue>{isLoadingDatasetInfo ? '' : formatFrequency(selectedDatasetInfo?.sampling_frequency)}</ConfigValue>
       </CompactRow>
       <CompactRow>
         <ConfigLabel>Channels</ConfigLabel>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EEG</ConfigLabel>
-        <ConfigValue>{selectedDatasetInfo?.num_eeg_channels}</ConfigValue>
+        <ConfigValue>{isLoadingDatasetInfo ? '' : selectedDatasetInfo?.num_eeg_channels}</ConfigValue>
       </CompactRow>
       <CompactRow>
         <ConfigLabel style={{ paddingLeft: 10 }}>EMG</ConfigLabel>
-        <ConfigValue>{selectedDatasetInfo?.num_emg_channels}</ConfigValue>
+        <ConfigValue>{isLoadingDatasetInfo ? '' : selectedDatasetInfo?.num_emg_channels}</ConfigValue>
       </CompactRow>
 
       <div style={{ height: '8px' }} />

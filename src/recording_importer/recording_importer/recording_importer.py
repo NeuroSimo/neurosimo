@@ -52,6 +52,7 @@ class RecordingImporterNode(Node):
         if not self.active_project:
             response.success = False
             response.dataset_filename = ''
+            response.message = 'No active project'
             return response
 
         # Construct the path to the file in external_recordings
@@ -64,6 +65,7 @@ class RecordingImporterNode(Node):
             self.logger.error(f'File not found: {filename}')
             response.success = False
             response.dataset_filename = ''
+            response.message = f'File not found: {filename}'
             return response
 
         try:
@@ -106,7 +108,7 @@ class RecordingImporterNode(Node):
             duration = raw.n_times / sampling_frequency
 
             # Generate output filename based on input
-            base_name = Path(vhdr_filename).stem
+            base_name = Path(filename).stem
             csv_filename = f'{base_name}.csv'
             json_filename = f'{base_name}.json'
 
@@ -157,12 +159,14 @@ class RecordingImporterNode(Node):
 
             response.success = True
             response.dataset_filename = json_filename
+            response.message = ''
             return response
 
         except Exception as e:
             self.logger.error(f'Failed to import {filename}: {e}')
             response.success = False
             response.dataset_filename = ''
+            response.message = str(e)
             return response
 
 

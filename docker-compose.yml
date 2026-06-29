@@ -76,6 +76,9 @@ services:
     env_file:
       - .env
     environment:
+      # HOME must be set explicitly: containers run as HOST_UID which has no /etc/passwd entry,
+      # so without it the shell resolves HOME to '/' and ROS tries to create /.ros at startup.
+      - HOME=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
@@ -98,6 +101,7 @@ services:
     env_file:
       - .env
     environment:
+      - HOME=/tmp
       - USE_GPU=false
       # ROS configuration
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
@@ -133,6 +137,7 @@ services:
     env_file:
       - .env
     environment:
+      - HOME=/tmp
       - USE_GPU=true
       - NVIDIA_VISIBLE_DEVICES=all
       # ROS configuration
@@ -187,6 +192,7 @@ services:
     env_file:
       - .env
     environment:
+      - HOME=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
@@ -205,6 +211,7 @@ services:
     env_file:
       - .env
     environment:
+      - HOME=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
@@ -225,6 +232,7 @@ services:
     env_file:
       - .env
     environment:
+      - HOME=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
@@ -252,6 +260,7 @@ services:
       - '~/.config/pipewire:/root/.config/pipewire'
       - '/run/user/${UID:-1000}/pipewire-0:/run/user/0/pipewire-0'
     environment:
+      - HOME=/tmp
       # Needed for X11 forwarding.
       - DISPLAY
       # PipeWire/PulseAudio compatibility
@@ -314,6 +323,7 @@ services:
     env_file:
       - .env
     environment:
+      - HOME=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
@@ -347,6 +357,7 @@ services:
       - .env
       - .git_provenance.env
     environment:
+      - HOME=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
@@ -364,6 +375,7 @@ services:
     env_file:
       - .env
     environment:
+      - HOME=/tmp
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE

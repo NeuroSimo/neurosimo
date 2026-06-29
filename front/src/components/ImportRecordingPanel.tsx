@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 import {
@@ -62,6 +62,10 @@ export const ImportRecordingPanel: React.FC = () => {
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
 
   const selectedFile = importFile || externalRecordingsList[0] || ''
+
+  useEffect(() => {
+    setImportError('')
+  }, [selectedFile, sessionState.state])
 
   const confirmImport = () => {
     if (!selectedFile) return

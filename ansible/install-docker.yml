@@ -157,6 +157,7 @@
           - "docker-buildx-plugin={{ buildx_version }}"
           - "docker-compose-plugin={{ compose_version }}"
         state: present
+        allow_downgrade: yes
 
     # -------------------------------------------------------------------------
     # 7) Ensure user is in docker group

@@ -64,6 +64,10 @@ export const ImportRecordingPanel: React.FC = () => {
   const selectedFile = importFile || externalRecordingsList[0] || ''
 
   useEffect(() => {
+    setImportFile('')
+  }, [externalRecordingsList])
+
+  useEffect(() => {
     setImportError('')
   }, [selectedFile, sessionState.state])
 

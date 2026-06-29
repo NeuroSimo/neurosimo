@@ -1090,6 +1090,7 @@ bool DeciderWrapper::has_event_processor() const {
 }
 
 PrepareTrialResult DeciderWrapper::prepare_trial(
+    double_t trial_start_time,
     const std::string& stage_name,
     uint64_t trial_in_stage) {
 
@@ -1101,7 +1102,7 @@ PrepareTrialResult DeciderWrapper::prepare_trial(
   try {
     set_current_processing_path(neurosimo_pipeline_interfaces::msg::LogMessage::PROCESSING_PATH_PREPARE_TRIAL);
     py_result = decider_instance->attr("prepare_trial")(
-      stage_name, trial_in_stage);
+      trial_start_time, stage_name, trial_in_stage);
 
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error in prepare_trial: ") + e.what();

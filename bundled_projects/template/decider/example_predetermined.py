@@ -24,7 +24,7 @@ class Decider:
             'warm_up_rounds': 2,
         }
 
-    def prepare_trial(self, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
+    def prepare_trial(self, start_time: float, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
         """Called once at the beginning of a new trial.
 
         For the 'predetermined_block' stage, returns a trigger_offset to schedule

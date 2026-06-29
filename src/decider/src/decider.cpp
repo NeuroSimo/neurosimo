@@ -1059,7 +1059,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     /* Call prepare_trial once per trial. If it returns a trigger_offset, the
        trigger is scheduled directly (no periodic processing for this trial). */
     if (!this->trial_prepared) {
-      auto prepare_result = this->decider_wrapper->prepare_trial(msg->stage_name, msg->trial_in_stage);
+      auto prepare_result = this->decider_wrapper->prepare_trial(msg->time, msg->stage_name, msg->trial_in_stage);
       if (!prepare_result.success) {
         RCLCPP_ERROR(this->get_logger(), "prepare_trial failed at time %.3f (s).", msg->time);
         this->error_occurred = true;

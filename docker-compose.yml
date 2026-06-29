@@ -69,7 +69,7 @@ services:
     build:
       context: .
       dockerfile: src/experiment_coordinator/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     ulimits:
       rtprio: 99
       memlock: -1
@@ -91,7 +91,7 @@ services:
     build:  # Only build if the image is not present
       context: .
       dockerfile: src/decider/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     ulimits:
       rtprio: 99
       memlock: -1
@@ -126,7 +126,7 @@ services:
     build:  # Only build if the image is not present
       context: .
       dockerfile: src/decider/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     ulimits:
       rtprio: 99
       memlock: -1
@@ -183,7 +183,7 @@ services:
     build:
       context: .
       dockerfile: src/project_manager/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     env_file:
       - .env
     environment:
@@ -201,7 +201,7 @@ services:
     build:
       context: .
       dockerfile: src/recording_importer/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     env_file:
       - .env
     environment:
@@ -218,7 +218,7 @@ services:
     build:
       context: .
       dockerfile: src/preprocessor/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     ulimits:
       rtprio: 99
       memlock: -1
@@ -238,7 +238,7 @@ services:
     build:
       context: .
       dockerfile: src/presenter/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     ulimits:
       rtprio: 99
       memlock: -1
@@ -310,7 +310,7 @@ services:
     build:
       context: .
       dockerfile: src/session_exporter/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     env_file:
       - .env
     environment:
@@ -342,7 +342,7 @@ services:
     build:
       context: .
       dockerfile: src/session_recorder/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     env_file:
       - .env
       - .git_provenance.env
@@ -360,7 +360,7 @@ services:
     build:
       context: .
       dockerfile: src/recording_manager/Dockerfile
-    user: "1000:1000"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     env_file:
       - .env
     environment:

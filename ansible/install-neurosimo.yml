@@ -382,3 +382,15 @@
         group: "{{ target_user }}"
         mode: "0644"
       when: not env_file_status.stat.exists
+
+    - name: Set HOST_UID in .env to the installing user's UID
+      lineinfile:
+        path: "{{ repo_root }}/.env"
+        regexp: '^HOST_UID='
+        line: "HOST_UID={{ ansible_user_uid }}"
+
+    - name: Set HOST_GID in .env to the installing user's GID
+      lineinfile:
+        path: "{{ repo_root }}/.env"
+        regexp: '^HOST_GID='
+        line: "HOST_GID={{ ansible_user_gid }}"

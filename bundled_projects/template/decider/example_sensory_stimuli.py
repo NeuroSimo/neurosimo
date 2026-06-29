@@ -59,7 +59,7 @@ class Decider:
             ],
         }
 
-    def prepare_trial(self, stage_name: str, trial_in_stage: int) -> None:
+    def prepare_trial(self, start_time: float, stage_name: str, trial_in_stage: int) -> None:
         """Called once at the beginning of a new trial."""
         print(f"Preparing trial {trial_in_stage} in '{stage_name}'")
 

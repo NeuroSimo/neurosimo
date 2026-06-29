@@ -123,6 +123,7 @@ public:
      Returns PrepareTrialResult; if trigger_offset is set, the backend
      schedules the trigger directly instead of calling process_periodic. */
   PrepareTrialResult prepare_trial(
+    double_t trial_start_time,
     const std::string& stage_name,
     uint64_t trial_in_stage);
 

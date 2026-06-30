@@ -28,7 +28,6 @@ export interface RuntimeParameterInfo extends ROSLIB.Message {
   label: string
   type: string  // 'float', 'int', 'string', or 'bool'
   unit: string
-  required: boolean
   has_min: boolean
   min: number
   has_max: boolean

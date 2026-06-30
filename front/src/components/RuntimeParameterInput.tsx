@@ -114,7 +114,7 @@ export const RuntimeParameterInput: React.FC<RuntimeParameterInputProps> = ({
         onChange={(event) => setInputValue(event.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={handleCommit}
-        placeholder={descriptor.required ? 'required' : ''}
+        placeholder="required"
         disabled={disabled}
       />
       {descriptor.unit && <Unit disabled={disabled}>{descriptor.unit}</Unit>}

@@ -84,9 +84,6 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath) {
         if (definition["unit"]) {
           param.unit = definition["unit"].as<std::string>();
         }
-        if (definition["required"]) {
-          param.required = definition["required"].as<bool>();
-        }
         if (definition["min"]) {
           param.min = definition["min"].as<double>();
         }
@@ -421,7 +418,6 @@ neurosimo_pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_inf
     param_msg.label = param.label;
     param_msg.type = param.type;
     param_msg.unit = param.unit;
-    param_msg.required = param.required;
 
     param_msg.has_min = param.min.has_value();
     param_msg.min = param.min.value_or(0.0);

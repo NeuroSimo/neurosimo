@@ -7,18 +7,16 @@ safety:
 # Runtime parameters set in the UI and passed to the decider.
 runtime_parameters:
   conditioning_intensity:
-    label: Intensity 1
+    label: Conditioning intensity
     type: float
     unit: "% MSO"
-    required: true
     min: 0
     max: 100
 
   test_intensity:
-    label: Intensity 2
+    label: Test intensity
     type: float
     unit: "% MSO"
-    required: true
     min: 0
     max: 100
 

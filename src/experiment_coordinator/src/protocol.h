@@ -91,7 +91,6 @@ struct RuntimeParameter {
   std::string label;                // Human-readable label shown in the UI
   std::string type;                 // 'float', 'int', 'string', or 'bool'
   std::string unit;                 // Optional unit shown next to the input
-  bool required = false;            // Whether a value must be provided before starting
   std::optional<double> min;        // Optional minimum (numeric types)
   std::optional<double> max;        // Optional maximum (numeric types)
 };

@@ -36,6 +36,15 @@ const IconButtonWrapper = styled.div`
   }
 `
 
+const RuntimeParametersContainer = styled.div`
+  margin-top: 10px;
+
+  ${ConfigLabel} {
+    padding-left: 12px;
+    box-sizing: border-box;
+  }
+`
+
 const InfoIcon = styled.span<{ disabled: boolean }>`
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   color: #007bff;
@@ -191,19 +200,21 @@ export const ExperimentPanel: React.FC = () => {
         </IconButtonWrapper>
       </ConfigRow>
 
-      {runtimeParameterInfos.map((descriptor) => (
-        <ConfigRow key={descriptor.name}>
-          <ConfigLabel>{descriptor.label || descriptor.name}:</ConfigLabel>
-          <IconButtonWrapper>
-            <RuntimeParameterInput
-              descriptor={descriptor}
-              value={runtimeParameters[descriptor.name]}
-              onCommit={(value) => handleRuntimeParameterCommit(descriptor.name, value)}
-              disabled={isSessionRunning}
-            />
-          </IconButtonWrapper>
-        </ConfigRow>
-      ))}
+      <RuntimeParametersContainer>
+        {runtimeParameterInfos.map((descriptor) => (
+          <ConfigRow key={descriptor.name}>
+            <ConfigLabel>{descriptor.label || descriptor.name}:</ConfigLabel>
+            <IconButtonWrapper>
+              <RuntimeParameterInput
+                descriptor={descriptor}
+                value={runtimeParameters[descriptor.name]}
+                onCommit={(value) => handleRuntimeParameterCommit(descriptor.name, value)}
+                disabled={isSessionRunning}
+              />
+            </IconButtonWrapper>
+          </ConfigRow>
+        ))}
+      </RuntimeParametersContainer>
 
       <CreateProjectModal
         isOpen={isCreateModalOpen}

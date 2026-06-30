@@ -15,7 +15,7 @@ import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { RuntimeParameterInput } from 'components/RuntimeParameterInput'
 import { listProjects } from 'ros/project'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
-import { getProtocolInfoRos, ProtocolInfo, RuntimeParameterInfo } from 'ros/experiment'
+import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
 import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
 
 const Container = styled(ConfigPanel)`
@@ -50,7 +50,7 @@ const InfoIcon = styled.span<{ disabled: boolean }>`
 `
 
 export const ExperimentPanel: React.FC = () => {
-  const { protocolName, protocolList } = useContext(ModuleListContext)
+  const { protocolName, protocolList, runtimeParameterInfos } = useContext(ModuleListContext)
   const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject, setActiveProject } = useGlobalConfig()
@@ -58,7 +58,6 @@ export const ExperimentPanel: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isProtocolInfoModalOpen, setIsProtocolInfoModalOpen] = useState(false)
   const [protocolInfo, setProtocolInfo] = useState<ProtocolInfo | null>(null)
-  const [runtimeParameterInfos, setRuntimeParameterInfos] = useState<RuntimeParameterInfo[]>([])
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isElectron = !!(window as any).electronAPI
@@ -67,20 +66,14 @@ export const ExperimentPanel: React.FC = () => {
     listProjects(setProjects)
   }, [])
 
-  /* Fetch the runtime parameter descriptors whenever the selected protocol changes. */
-  useEffect(() => {
-    if (!protocolName || protocolName.trim() === '' || !activeProject) {
-      setRuntimeParameterInfos([])
-      return
+  const handleRuntimeParameterCommit = (name: string, value: RuntimeParameterValue | undefined) => {
+    const updated = { ...runtimeParameters }
+    if (value === undefined) {
+      delete updated[name]
+    } else {
+      updated[name] = value
     }
-
-    getProtocolInfoRos(activeProject, protocolName, (info) => {
-      setRuntimeParameterInfos(info?.runtime_parameters ?? [])
-    })
-  }, [protocolName, activeProject])
-
-  const handleRuntimeParameterCommit = (name: string, value: RuntimeParameterValue) => {
-    setRuntimeParameters({ ...runtimeParameters, [name]: value }, () => {
+    setRuntimeParameters(updated, () => {
       console.log(`Runtime parameter '${name}' set to ${value}`)
     })
   }

@@ -97,6 +97,7 @@ public:
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
+    uint64_t reference_sample_index,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
@@ -106,6 +107,7 @@ public:
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
+    uint64_t reference_sample_index,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
@@ -115,6 +117,7 @@ public:
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
+    uint64_t reference_sample_index,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
@@ -252,7 +255,7 @@ private:
 
   void fill_arrays_from_buffer(
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
-    double_t sample_window_base_time,
+    int64_t reference_sample_index,
     py::array_t<double>& timestamps,
     py::array_t<double>& eeg,
     py::array_t<double>& emg,

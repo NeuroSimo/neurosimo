@@ -876,7 +876,7 @@ bool DeciderWrapper::process_targeted_pulses_list(
 
 void DeciderWrapper::fill_arrays_from_buffer(
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
-    double_t reference_time,
+    int64_t reference_sample_index,
     py::array_t<double>& time_offsets,
     py::array_t<double>& eeg,
     py::array_t<double>& emg,
@@ -887,13 +887,16 @@ void DeciderWrapper::fill_arrays_from_buffer(
   auto eeg_ptr = eeg.mutable_data();
   auto emg_ptr = emg.mutable_data();
 
+  const double inv_fs = 1.0 / static_cast<double>(sampling_frequency);
+
   size_t ring_idx = 0;
   size_t out_idx = 0;
   buffer.process_elements([&](const auto& sample_ptr) {
     /* Check if this sample is in the range we want */
     if (ring_idx >= start_offset && out_idx < num_samples) {
       const auto& sample = *sample_ptr;
-      time_offsets_ptr[out_idx] = sample.time - reference_time;
+      time_offsets_ptr[out_idx] =
+          (static_cast<int64_t>(sample.sample_index) - reference_sample_index) * inv_fs;
       std::memcpy(eeg_ptr + out_idx * eeg_size, sample.eeg.data(), eeg_size * sizeof(double));
       std::memcpy(emg_ptr + out_idx * emg_size, sample.emg.data(), emg_size * sizeof(double));
       out_idx++;
@@ -1012,6 +1015,7 @@ ProcessResult DeciderWrapper::process_periodic(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
+    uint64_t reference_sample_index,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
@@ -1020,7 +1024,7 @@ ProcessResult DeciderWrapper::process_periodic(
   int reference_index = -this->periodic_sample_window_start;
   size_t num_samples = this->periodic_sample_window_end - this->periodic_sample_window_start + 1;
 
-  fill_arrays_from_buffer(buffer, reference_time,
+  fill_arrays_from_buffer(buffer, static_cast<int64_t>(reference_sample_index),
     *periodic_time_offsets, *periodic_eeg, *periodic_emg,
     this->periodic_window_start_offset_in_envelope, num_samples);
 
@@ -1054,6 +1058,7 @@ ProcessResult DeciderWrapper::process_pulse(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
+    uint64_t reference_sample_index,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
@@ -1066,7 +1071,7 @@ ProcessResult DeciderWrapper::process_pulse(
   int reference_index = -this->pulse_sample_window_start;
   size_t num_samples = this->pulse_sample_window_end - this->pulse_sample_window_start + 1;
 
-  fill_arrays_from_buffer(buffer, reference_time,
+  fill_arrays_from_buffer(buffer, static_cast<int64_t>(reference_sample_index),
     *pulse_time_offsets, *pulse_eeg, *pulse_emg,
     this->pulse_window_start_offset_in_envelope, num_samples);
 
@@ -1100,6 +1105,7 @@ ProcessResult DeciderWrapper::process_event(
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
     double_t reference_time,
+    uint64_t reference_sample_index,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue,
     bool is_coil_at_target,
     const std::string& stage_name,
@@ -1112,7 +1118,7 @@ ProcessResult DeciderWrapper::process_event(
   int reference_index = -this->event_sample_window_start;
   size_t num_samples = this->event_sample_window_end - this->event_sample_window_start + 1;
 
-  fill_arrays_from_buffer(buffer, reference_time,
+  fill_arrays_from_buffer(buffer, static_cast<int64_t>(reference_sample_index),
     *event_time_offsets, *event_eeg, *event_emg,
     this->event_window_start_offset_in_envelope, num_samples);
 

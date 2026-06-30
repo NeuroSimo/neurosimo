@@ -327,6 +327,7 @@ void EegPreprocessor::process_deferred_request(const DeferredProcessingRequest& 
       preprocessed_sample,
       this->sample_buffer,
       sample_time,
+      triggering_sample->sample_index,
       triggering_sample->pulse_trigger);
 
     if (!success) {

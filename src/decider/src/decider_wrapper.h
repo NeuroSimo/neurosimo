@@ -83,6 +83,7 @@ public:
       const size_t eeg_size,
       const size_t emg_size,
       const uint16_t sampling_frequency,
+      const std::string& runtime_parameters_json,
       std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
       std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue);
 

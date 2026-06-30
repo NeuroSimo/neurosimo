@@ -582,6 +582,9 @@ class SessionManagerNode(Node):
         # Safety configuration from protocol
         request.minimum_trial_interval = minimum_trial_interval
 
+        # Optional protocol runtime parameters (JSON object, name -> value)
+        request.runtime_parameters = session_config.runtime_parameters
+
         response = self.call_service(self.decider_init_client, request, '/neurosimo/pipeline/decider/initialize')
 
         if response is None or not response.success:

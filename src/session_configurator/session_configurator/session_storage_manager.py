@@ -56,6 +56,7 @@ class SessionStorageManager:
             "simulator.start_time": 0.0,
             "simulator.playback_speed": 1.0,
             "experiment.protocol": 'example.yaml',
+            "experiment.runtime_parameters": '{}',
             "replay.bag_id": '',
             "replay.play_preprocessed": False,
             "data_source": 'simulator',

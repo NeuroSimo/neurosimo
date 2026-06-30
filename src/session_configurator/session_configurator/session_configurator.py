@@ -47,6 +47,8 @@ class SessionConfiguratorNode(Node):
 
         # Experiment parameters
         self.declare_parameter('experiment.protocol', '')
+        # Protocol runtime parameters, encoded as a JSON object (name -> value)
+        self.declare_parameter('experiment.runtime_parameters', '{}')
 
         # Simulator parameters
         self.declare_parameter('simulator.dataset_filename', '')
@@ -140,6 +142,7 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('presenter.module', rclpy.parameter.Parameter.Type.STRING, session_config["presenter.module"]),
             rclpy.parameter.Parameter('presenter.enabled', rclpy.parameter.Parameter.Type.BOOL, session_config["presenter.enabled"]),
             rclpy.parameter.Parameter('experiment.protocol', rclpy.parameter.Parameter.Type.STRING, session_config["experiment.protocol"]),
+            rclpy.parameter.Parameter('experiment.runtime_parameters', rclpy.parameter.Parameter.Type.STRING, session_config.get("experiment.runtime_parameters", '{}')),
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
             rclpy.parameter.Parameter('simulator.playback_speed', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.playback_speed"]),
@@ -280,6 +283,7 @@ class SessionConfiguratorNode(Node):
         config.presenter_enabled = session_config.get('presenter.enabled', False)
         
         config.protocol_filename = session_config.get('experiment.protocol', '')
+        config.runtime_parameters = session_config.get('experiment.runtime_parameters', '{}')
         config.data_source = session_config.get('data_source', 'simulator')
         config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
         config.simulator_start_time = session_config.get('simulator.start_time', 0.0)

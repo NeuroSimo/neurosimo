@@ -13,6 +13,9 @@ bool presenter_enabled
 # Experiment configuration
 string protocol_filename
 
+# Optional protocol runtime parameters, encoded as a JSON object (name -> value)
+string runtime_parameters
+
 # Data source info
 string data_source
 

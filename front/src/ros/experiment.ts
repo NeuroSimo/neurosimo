@@ -23,11 +23,24 @@ export interface ProtocolElementInfo extends ROSLIB.Message {
   task: ProtocolTaskInfo
 }
 
+export interface RuntimeParameterInfo extends ROSLIB.Message {
+  name: string
+  label: string
+  type: string  // 'float', 'int', 'string', or 'bool'
+  unit: string
+  required: boolean
+  has_min: boolean
+  min: number
+  has_max: boolean
+  max: number
+}
+
 export interface ProtocolInfo extends ROSLIB.Message {
   yaml_filename: string
   name: string
   description: string
   elements: ProtocolElementInfo[]
+  runtime_parameters: RuntimeParameterInfo[]
 }
 
 export const PROTOCOL_ELEMENT_TYPE = {

@@ -27,6 +27,10 @@ interface PipelineParameters {
   }
 }
 
+export type RuntimeParameterValue = number | string | boolean
+
+export type RuntimeParameters = Record<string, RuntimeParameterValue>
+
 interface SimulatorParameters {
   dataset_filename: string
   start_time: number
@@ -39,6 +43,7 @@ interface SessionConfigContextType {
   pipeline: PipelineParameters
   simulator: SimulatorParameters
   dataSource: string
+  runtimeParameters: RuntimeParameters
 
   // Convenience setters
   setSubjectId: (subjectId: number, callback?: () => void) => Promise<void>
@@ -56,6 +61,7 @@ interface SessionConfigContextType {
   setBagId: (bagId: string, callback?: () => void) => Promise<void>
   setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => Promise<void>
   setDataSource: (dataSource: string, callback?: () => void) => Promise<void>
+  setRuntimeParameters: (params: RuntimeParameters, callback?: () => void) => Promise<void>
 }
 
 // ESLint disable for intentionally empty functions used as defaults
@@ -80,6 +86,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
     playback_speed: 1,
   },
   dataSource: 'simulator',
+  runtimeParameters: {},
   setSubjectId: asyncNoop,
   setNotes: asyncNoop,
   setDeciderModule: asyncNoop,
@@ -95,6 +102,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   setBagId: asyncNoop,
   setPlayPreprocessed: asyncNoop,
   setDataSource: asyncNoop,
+  setRuntimeParameters: asyncNoop,
 }
 
 export const SessionConfigContext = createContext<SessionConfigContextType>(defaultSessionConfigState)
@@ -138,6 +146,17 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
 
   const dataSource = (sessionConfig.get('data_source') as string) || 'simulator'
 
+  const runtimeParameters: RuntimeParameters = (() => {
+    const raw = (sessionConfig.get('experiment.runtime_parameters') as string) || '{}'
+    try {
+      const parsed = JSON.parse(raw)
+      return parsed && typeof parsed === 'object' ? parsed : {}
+    } catch {
+      console.warn('Failed to parse runtime parameters JSON:', raw)
+      return {}
+    }
+  })()
+
   useEffect(() => {
     /* Subscriber for session config topic (latched). */
     const sessionConfigSubscriber = new Topic({
@@ -162,6 +181,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         newConfig.set('presenter.module', msg.presenter_module)
         newConfig.set('presenter.enabled', msg.presenter_enabled)
         newConfig.set('experiment.protocol', msg.protocol_filename)
+        newConfig.set('experiment.runtime_parameters', msg.runtime_parameters)
         newConfig.set('simulator.dataset_filename', msg.simulator_dataset_filename)
         newConfig.set('simulator.start_time', msg.simulator_start_time)
         newConfig.set('simulator.playback_speed', msg.simulator_playback_speed)
@@ -242,6 +262,10 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
     const { setParameterRos } = await import('../ros/parameters')
     setParameterRos('data_source', dataSource, callback || noop)
   }
+  const setRuntimeParameters = async (params: RuntimeParameters, callback?: () => void): Promise<void> => {
+    const { setParameterRos } = await import('../ros/parameters')
+    setParameterRos('experiment.runtime_parameters', JSON.stringify(params), callback || noop)
+  }
 
   return (
     <SessionConfigContext.Provider
@@ -250,6 +274,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         pipeline,
         simulator,
         dataSource,
+        runtimeParameters,
         setSubjectId,
         setNotes,
         setDeciderModule,
@@ -265,6 +290,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         setBagId,
         setPlayPreprocessed,
         setDataSource,
+        setRuntimeParameters,
       }}
     >
       {children}

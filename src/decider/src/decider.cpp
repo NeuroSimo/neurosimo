@@ -304,6 +304,7 @@ void EegDecider::handle_initialize_decider(
     request->stream_info.num_eeg_channels,
     request->stream_info.num_emg_channels,
     request->stream_info.sampling_frequency,
+    request->runtime_parameters,
     this->sensory_stimuli,
     this->event_queue);
 

@@ -84,6 +84,19 @@ struct ProtocolElement {
 };
 
 /**
+ * @brief Descriptor for an optional runtime parameter set in the UI before a session starts
+ */
+struct RuntimeParameter {
+  std::string name;                 // Key used to look up the value
+  std::string label;                // Human-readable label shown in the UI
+  std::string type;                 // 'float', 'int', 'string', or 'bool'
+  std::string unit;                 // Optional unit shown next to the input
+  bool required = false;            // Whether a value must be provided before starting
+  std::optional<double> min;        // Optional minimum (numeric types)
+  std::optional<double> max;        // Optional maximum (numeric types)
+};
+
+/**
  * @brief Complete protocol definition
  */
 struct Protocol {
@@ -91,6 +104,7 @@ struct Protocol {
   std::string description;
   double minimum_trial_interval;
   std::vector<ProtocolElement> elements;
+  std::vector<RuntimeParameter> runtime_parameters;
 };
 
 /**

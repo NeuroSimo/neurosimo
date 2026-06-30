@@ -131,6 +131,7 @@ bool DeciderWrapper::initialize_module(
     const size_t eeg_size,
     const size_t emg_size,
     const uint16_t sampling_frequency,
+    const std::string& runtime_parameters_json,
     std::vector<neurosimo_pipeline_interfaces::msg::SensoryStimulus>& sensory_stimuli,
     std::priority_queue<double, std::vector<double>, std::greater<double>>& event_queue) {
 
@@ -164,9 +165,64 @@ bool DeciderWrapper::initialize_module(
     return false;
   }
 
-  /* Initialize Decider instance. */
+  /* Parse the optional runtime parameters (JSON object) into a Python dict.
+     Using Python's json module preserves value types (float/int/bool/str)
+     and avoids a C++ JSON dependency. */
+  py::dict runtime_params;
+  if (!runtime_parameters_json.empty()) {
+    try {
+      py::object parsed = py::module::import("json").attr("loads")(runtime_parameters_json);
+      if (!py::isinstance<py::dict>(parsed)) {
+        log_error("runtime_parameters must be a JSON object (name -> value).");
+        return false;
+      }
+      runtime_params = parsed.cast<py::dict>();
+
+    } catch (const py::error_already_set &e) {
+      log_error(std::string("Failed to parse runtime_parameters JSON: ") + e.what());
+      return false;
+    }
+  }
+
+  /* Initialize Decider instance.
+
+     For backward compatibility, only pass runtime_params if the Decider constructor
+     accepts it (i.e. declares a 'runtime_params' parameter or accepts **kwargs).
+     Older modules with the legacy signature continue to work unchanged. */
   try {
-    auto instance = decider_module->attr("Decider")(subject_id, eeg_size, emg_size, sampling_frequency);
+    py::object decider_class = decider_module->attr("Decider");
+
+    bool accepts_runtime_params = false;
+    try {
+      py::module inspect = py::module::import("inspect");
+      py::object signature = inspect.attr("signature")(decider_class);
+      py::object parameters = signature.attr("parameters");  // name -> inspect.Parameter
+
+      /* The constructor accepts runtime_params if it declares a parameter with that
+         name, or if it accepts arbitrary keyword arguments (**kwargs). The string form
+         of Parameter.kind is e.g. "VAR_KEYWORD" for a **kwargs parameter. */
+      for (py::handle handle : parameters.attr("values")()) {
+        py::object param = py::reinterpret_borrow<py::object>(handle);
+        std::string name = param.attr("name").cast<std::string>();
+        std::string kind = py::str(param.attr("kind")).cast<std::string>();
+        if (name == "runtime_params" || kind == "VAR_KEYWORD") {
+          accepts_runtime_params = true;
+          break;
+        }
+      }
+    } catch (const py::error_already_set &) {
+      /* If signature introspection fails (e.g. C-implemented), fall back to the legacy call. */
+      accepts_runtime_params = false;
+    }
+
+    py::object instance;
+    if (accepts_runtime_params) {
+      using namespace pybind11::literals;
+      instance = decider_class(
+        subject_id, eeg_size, emg_size, sampling_frequency, "runtime_params"_a = runtime_params);
+    } else {
+      instance = decider_class(subject_id, eeg_size, emg_size, sampling_frequency);
+    }
     decider_instance = std::make_unique<py::object>(instance);
 
   } catch (const py::error_already_set &e) {

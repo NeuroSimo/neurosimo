@@ -1,0 +1,72 @@
+from typing import Any
+
+import multiprocessing
+import time
+
+import numpy as np
+
+
+class Decider:
+    def __init__(self, subject_id: int, num_eeg_channels: int, num_emg_channels: int, sampling_frequency: int,
+                 runtime_params: dict[str, Any]):
+        self.subject_id = subject_id
+        self.num_eeg_channels = num_eeg_channels
+        self.num_emg_channels = num_emg_channels
+        self.sampling_frequency = sampling_frequency
+
+        # Runtime parameters defined in the protocol
+        self.runtime_params = runtime_params
+
+        # Initialize multiprocessing pool for background computations
+        self.pool = multiprocessing.Pool(processes=1)
+
+        print("Decider initialized for subject", subject_id, "with sampling frequency", sampling_frequency, "Hz.")
+        print("Runtime parameters:", self.runtime_params)
+
+    def get_configuration(self) -> dict[str, Any]:
+        """Return configuration dictionary for the pipeline."""
+        return {
+            # Data configuration
+            'sample_window': [-1.0, 0.0],
+            'warm_up_rounds': 2,  # Number of warm-up rounds to perform (0 to disable)
+
+            # Optional: custom sample windows for pulse/event processing
+            # (defaults to sample_window if omitted)
+            # 'pulse_sample_window': [-2.0, 0.5],
+            # 'event_sample_window': [-1.5, 0.3],
+        }
+
+    def prepare_trial(self, start_time: float, stage_name: str, trial_in_stage: int) -> None:
+        """Called once at the beginning of a new trial."""
+        print(f"Preparing trial {trial_in_stage} in '{stage_name}'")
+
+    def process_periodic(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray,
+            is_coil_at_target: bool, stage_name: str, trial_in_stage: int, is_warm_up: bool) -> dict[str, Any] | None:
+        """Process EEG/EMG buffer periodically."""
+
+        # Trigger TMS device after 5ms delay relative to reference sample time
+        trigger_offset = 0.005
+
+        print(f"Creating trigger for +{trigger_offset * 1000:.1f} ms")
+
+        return {
+            'trigger_offset': trigger_offset,
+        }
+
+    def process_event(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
+        """Process event."""
+        print(f"Event received at time {reference_time}.")
+        # This example doesn't process events, just log them
+        return None
+
+    def process_pulse(
+            self, reference_time: float, reference_index: int, time_offsets: np.ndarray,
+            eeg_buffer: np.ndarray, emg_buffer: np.ndarray, is_coil_at_target: bool, stage_name: str, trial_in_stage: int) -> dict[str, Any] | None:
+        """Process pulse event."""
+        print(f"Pulse event received at time {reference_time}.")
+        # Add your pulse event handling logic here
+        return None

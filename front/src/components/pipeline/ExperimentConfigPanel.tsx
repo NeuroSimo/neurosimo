@@ -12,9 +12,11 @@ import { CommittableNumericInput } from 'components/CommittableNumericInput'
 import { CreateProjectModal } from 'components/CreateProjectModal'
 import { ProtocolInfoModal } from 'components/ProtocolInfoModal'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
+import { RuntimeParameterInput } from 'components/RuntimeParameterInput'
 import { listProjects } from 'ros/project'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
-import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
+import { getProtocolInfoRos, ProtocolInfo, RuntimeParameterInfo } from 'ros/experiment'
+import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
 
 const Container = styled(ConfigPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
@@ -49,13 +51,14 @@ const InfoIcon = styled.span<{ disabled: boolean }>`
 
 export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList } = useContext(ModuleListContext)
-  const { metadata, setExperimentProtocol, setSubjectId, setNotes } = useSessionConfig()
+  const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject, setActiveProject } = useGlobalConfig()
   const [projects, setProjects] = useState<string[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isProtocolInfoModalOpen, setIsProtocolInfoModalOpen] = useState(false)
   const [protocolInfo, setProtocolInfo] = useState<ProtocolInfo | null>(null)
+  const [runtimeParameterInfos, setRuntimeParameterInfos] = useState<RuntimeParameterInfo[]>([])
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isElectron = !!(window as any).electronAPI
@@ -63,6 +66,24 @@ export const ExperimentPanel: React.FC = () => {
   useEffect(() => {
     listProjects(setProjects)
   }, [])
+
+  /* Fetch the runtime parameter descriptors whenever the selected protocol changes. */
+  useEffect(() => {
+    if (!protocolName || protocolName.trim() === '' || !activeProject) {
+      setRuntimeParameterInfos([])
+      return
+    }
+
+    getProtocolInfoRos(activeProject, protocolName, (info) => {
+      setRuntimeParameterInfos(info?.runtime_parameters ?? [])
+    })
+  }, [protocolName, activeProject])
+
+  const handleRuntimeParameterCommit = (name: string, value: RuntimeParameterValue) => {
+    setRuntimeParameters({ ...runtimeParameters, [name]: value }, () => {
+      console.log(`Runtime parameter '${name}' set to ${value}`)
+    })
+  }
 
   const handleProjectCreated = (projectName: string) => {
     listProjects(setProjects)
@@ -176,6 +197,20 @@ export const ExperimentPanel: React.FC = () => {
           </Select>
         </IconButtonWrapper>
       </ConfigRow>
+
+      {runtimeParameterInfos.map((descriptor) => (
+        <ConfigRow key={descriptor.name}>
+          <ConfigLabel>{descriptor.label || descriptor.name}:</ConfigLabel>
+          <IconButtonWrapper>
+            <RuntimeParameterInput
+              descriptor={descriptor}
+              value={runtimeParameters[descriptor.name]}
+              onCommit={(value) => handleRuntimeParameterCommit(descriptor.name, value)}
+              disabled={isSessionRunning}
+            />
+          </IconButtonWrapper>
+        </ConfigRow>
+      ))}
 
       <CreateProjectModal
         isOpen={isCreateModalOpen}

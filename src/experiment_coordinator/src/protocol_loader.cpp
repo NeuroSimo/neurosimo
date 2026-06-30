@@ -47,6 +47,62 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath) {
       return result;
     }
     
+    // Parse runtime_parameters (optional)
+    if (yaml["runtime_parameters"]) {
+      const YAML::Node& runtime_parameters = yaml["runtime_parameters"];
+      if (!runtime_parameters.IsMap()) {
+        result.error_message = "Protocol 'runtime_parameters' must be a mapping";
+        return result;
+      }
+
+      const std::set<std::string> allowed_types = {"float", "int", "string", "bool"};
+
+      for (auto it = runtime_parameters.begin(); it != runtime_parameters.end(); ++it) {
+        RuntimeParameter param;
+        param.name = it->first.as<std::string>();
+        const YAML::Node& definition = it->second;
+
+        if (!definition.IsMap()) {
+          result.error_message = "Runtime parameter '" + param.name + "' must be a mapping";
+          return result;
+        }
+
+        if (!definition["type"]) {
+          result.error_message = "Runtime parameter '" + param.name + "' missing required field 'type'";
+          return result;
+        }
+        param.type = definition["type"].as<std::string>();
+        if (allowed_types.count(param.type) == 0) {
+          result.error_message = "Runtime parameter '" + param.name + "' has invalid type '" + param.type +
+            "' (allowed: float, int, string, bool)";
+          return result;
+        }
+
+        if (definition["label"]) {
+          param.label = definition["label"].as<std::string>();
+        }
+        if (definition["unit"]) {
+          param.unit = definition["unit"].as<std::string>();
+        }
+        if (definition["required"]) {
+          param.required = definition["required"].as<bool>();
+        }
+        if (definition["min"]) {
+          param.min = definition["min"].as<double>();
+        }
+        if (definition["max"]) {
+          param.max = definition["max"].as<double>();
+        }
+
+        if (param.min.has_value() && param.max.has_value() && param.min.value() > param.max.value()) {
+          result.error_message = "Runtime parameter '" + param.name + "' has 'min' greater than 'max'";
+          return result;
+        }
+
+        protocol.runtime_parameters.push_back(param);
+      }
+    }
+
     // Parse stages
     if (!yaml["stages"]) {
       result.error_message = "Protocol missing required field 'stages'";
@@ -356,7 +412,26 @@ neurosimo_pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_inf
     
     info_msg.elements.push_back(element_msg);
   }
-  
+
+  /* Convert runtime parameter descriptors to ROS message. */
+  for (const auto& param : protocol.runtime_parameters) {
+    neurosimo_pipeline_interfaces::msg::RuntimeParameterInfo param_msg;
+
+    param_msg.name = param.name;
+    param_msg.label = param.label;
+    param_msg.type = param.type;
+    param_msg.unit = param.unit;
+    param_msg.required = param.required;
+
+    param_msg.has_min = param.min.has_value();
+    param_msg.min = param.min.value_or(0.0);
+
+    param_msg.has_max = param.max.has_value();
+    param_msg.max = param.max.value_or(0.0);
+
+    info_msg.runtime_parameters.push_back(param_msg);
+  }
+
   return info_msg;
 }
 

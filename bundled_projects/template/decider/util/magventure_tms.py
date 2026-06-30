@@ -325,15 +325,21 @@ class MagVentureTMS:
         self.usb_device = usb_device
         self.timeout = timeout
         self.config_settle_s = config_settle_s
-        self._ser = serial.Serial(
-            usb_device,
-            baudrate=38400,
-            bytesize=serial.EIGHTBITS,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            timeout=timeout,
-            write_timeout=timeout,
-        )
+        try:
+            self._ser = serial.Serial(
+                usb_device,
+                baudrate=38400,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                timeout=timeout,
+                write_timeout=timeout,
+            )
+        except serial.SerialException as exc:
+            raise MagVentureError(
+                f"Cannot open MagVenture serial port {usb_device!r}. "
+                "Check that the USB-serial adapter is connected and the device path is correct."
+            ) from exc
         self._ser.reset_input_buffer()
         self._ser.reset_output_buffer()
 

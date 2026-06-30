@@ -45,7 +45,6 @@ enum EegDevice {
   TURBOLINK,
 };
 
-const double_t UNSET_TIME = std::numeric_limits<double_t>::quiet_NaN();
 const uint64_t UNSET_PREVIOUS_SAMPLE_INDEX = std::numeric_limits<uint64_t>::max();
 
 /**
@@ -73,7 +72,7 @@ private:
   neurosimo_eeg_interfaces::msg::Sample create_ros_sample(const AdapterSample& adapter_sample,
                                           const neurosimo_eeg_interfaces::msg::EegDeviceInfo& device_info);
 
-  void handle_sample(neurosimo_eeg_interfaces::msg::Sample sample);
+  void handle_sample(neurosimo_eeg_interfaces::msg::Sample sample, uint32_t sampling_frequency);
   bool check_for_dropped_samples(uint64_t device_sample_index);
   void check_for_sample_timeout();
 
@@ -150,8 +149,6 @@ private:
   
   /* Streaming sample index (starts at 0 for each streaming run) */
   uint64_t session_sample_index = 0;
-
-  double_t time_offset = UNSET_TIME;     // in seconds
 
   /* XXHash state for data fingerprinting */
   uint64_t data_source_fingerprint = 0;

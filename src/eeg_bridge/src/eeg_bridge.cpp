@@ -1,5 +1,4 @@
 #include <chrono>
-#include <cmath>
 #include <cstdio>
 #include <functional>
 #include <memory>
@@ -251,7 +250,6 @@ void EegBridge::publish_cumulative_dropped_samples() {
 
 bool EegBridge::reset_state() {
   this->session_sample_index = 0;
-  this->time_offset = UNSET_TIME;
   this->previous_device_sample_index = UNSET_PREVIOUS_SAMPLE_INDEX;
   this->cumulative_dropped_samples = 0;
   this->is_session_start = false;
@@ -399,19 +397,13 @@ neurosimo_eeg_interfaces::msg::Sample EegBridge::create_ros_sample(const Adapter
   return sample;
 }
 
-void EegBridge::handle_sample(neurosimo_eeg_interfaces::msg::Sample sample) {
-  /* If this is the first sample, set the time offset. */
-  if (std::isnan(this->time_offset)) {
-    this->time_offset = sample.time;
-  }
-
-  sample.time -= this->time_offset;
-
+void EegBridge::handle_sample(neurosimo_eeg_interfaces::msg::Sample sample, uint32_t sampling_frequency) {
   /* Set session start flag. */
   sample.is_session_start = this->is_session_start;
 
-  /* Set the streaming sample index. */
+  /* Set the streaming sample index and derive an exact grid-aligned timestamp from it. */
   sample.sample_index = this->session_sample_index;
+  sample.time = (double)this->session_sample_index / (double)sampling_frequency;
   this->session_sample_index++;
 
   /* Mark the sample as valid by default. The preprocessor can later mark it as invalid if needed. */
@@ -519,7 +511,7 @@ void EegBridge::process_eeg_packet() {
     auto ros_sample = create_ros_sample(this->packet.sample, device_info);
 
     // Always handle the sample
-    handle_sample(ros_sample);
+    handle_sample(ros_sample, device_info.sampling_frequency);
     break;
   }
 

@@ -656,6 +656,7 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
 
   auto result = this->decider_wrapper->process_pulse(
     this->sensory_stimuli, this->sample_buffer, sample_time,
+    request.triggering_sample->sample_index,
     this->event_queue, this->is_coil_at_target, stage_name,
     request.triggering_sample->trial_in_stage);
 
@@ -716,6 +717,7 @@ void EegDecider::process_event_request(const DeferredProcessingRequest& request)
 
   auto result = this->decider_wrapper->process_event(
     this->sensory_stimuli, this->sample_buffer, sample_time,
+    request.triggering_sample->sample_index,
     this->event_queue, this->is_coil_at_target, stage_name,
     request.triggering_sample->trial_in_stage);
 
@@ -768,6 +770,7 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
 
   auto result = this->decider_wrapper->process_periodic(
     this->sensory_stimuli, this->sample_buffer, reference_time,
+    request.triggering_sample->sample_index,
     this->event_queue, this->is_coil_at_target, stage_name,
     request.triggering_sample->trial_in_stage);
 

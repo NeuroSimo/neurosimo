@@ -49,6 +49,7 @@ public:
       neurosimo_eeg_interfaces::msg::Sample& output_sample,
       const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
       double_t reference_time,
+      uint64_t reference_sample_index,
       bool pulse_given);
 
   std::size_t get_buffer_size() const;
@@ -99,7 +100,7 @@ private:
 
   void fill_arrays_from_buffer(
     const RingBuffer<std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>>& buffer,
-    double_t reference_time,
+    int64_t reference_sample_index,
     py::array_t<double>& time_offsets,
     py::array_t<double>& eeg,
     py::array_t<double>& emg,

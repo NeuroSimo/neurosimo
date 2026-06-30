@@ -35,7 +35,7 @@ const Unit = styled.span<{ disabled?: boolean }>`
 interface RuntimeParameterInputProps {
   descriptor: RuntimeParameterInfo
   value: RuntimeParameterValue | undefined
-  onCommit: (value: RuntimeParameterValue) => void
+  onCommit: (value: RuntimeParameterValue | undefined) => void
   disabled?: boolean
 }
 
@@ -83,7 +83,7 @@ export const RuntimeParameterInput: React.FC<RuntimeParameterInputProps> = ({
     }
 
     if (inputValue.trim() === '') {
-      /* Leave the field empty (value cleared) so required validation can flag it. */
+      onCommit(undefined)
       return
     }
 

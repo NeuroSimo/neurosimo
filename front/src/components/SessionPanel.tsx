@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { ConfigPanel, ConfigTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
+import { ModuleListContext } from 'providers/ModuleListProvider'
 import { RecordingContext } from 'providers/RecordingProvider'
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
 import { LogContext } from 'providers/LogProvider'
@@ -34,6 +35,7 @@ const getStateDisplayText = (stateValue: SessionStateValue): string => {
 export const SessionPanel: React.FC = () => {
   const { sessionState, startSession, abortSession } = useSession()
   const { dataSource } = useSessionConfig()
+  const { runtimeParametersValid } = useContext(ModuleListContext)
   const { recordingsList } = useContext(RecordingContext)
   const { datasetList } = useContext(EegSimulatorContext)
   const { clearAllLogs } = useContext(LogContext)
@@ -102,7 +104,12 @@ export const SessionPanel: React.FC = () => {
     (dataSource === 'simulator' && datasetList.length === 0)
   )
 
+  /* Block starting a session until every (always required) runtime parameter is set. */
+  const isRuntimeParametersIncomplete =
+    sessionState.state !== SessionStateValue.RUNNING && !runtimeParametersValid
+
   const isButtonDisabled = isNoDataAvailable ||
+    isRuntimeParametersIncomplete ||
     sessionState.state === SessionStateValue.INITIALIZING ||
     sessionState.state === SessionStateValue.FINALIZING
 

@@ -2,10 +2,31 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
-import { useSessionConfig } from './SessionConfigProvider'
+import { useSessionConfig, RuntimeParameterValue } from './SessionConfigProvider'
+import { useGlobalConfig } from './GlobalConfigProvider'
+import { getProtocolInfoRos, RuntimeParameterInfo } from 'ros/experiment'
 
 export interface FilenameList extends ROSLIB.Message {
   filenames: string[]
+}
+
+/* A runtime parameter counts as "set" when the user has provided a usable value.
+   Booleans always have a value (the checkbox is either on or off). */
+const isRuntimeParameterSet = (
+  descriptor: RuntimeParameterInfo,
+  value: RuntimeParameterValue | undefined,
+): boolean => {
+  if (descriptor.type === 'bool') {
+    return true
+  }
+  if (value === undefined || value === null) {
+    return false
+  }
+  if (descriptor.type === 'string') {
+    return String(value).trim() !== ''
+  }
+  /* Numeric types (float, int). */
+  return typeof value === 'number' && !Number.isNaN(value)
 }
 
 interface ModuleListContextType {
@@ -23,6 +44,11 @@ interface ModuleListContextType {
 
   protocolList: string[]
   protocolName: string
+
+  /* Runtime parameter descriptors for the selected protocol, plus whether every
+     one of them currently has a usable value (all are required). */
+  runtimeParameterInfos: RuntimeParameterInfo[]
+  runtimeParametersValid: boolean
 }
 
 const defaultModuleListState: ModuleListContextType = {
@@ -40,6 +66,9 @@ const defaultModuleListState: ModuleListContextType = {
 
   protocolList: [],
   protocolName: '',
+
+  runtimeParameterInfos: [],
+  runtimeParametersValid: true,
 }
 
 export const ModuleListContext = React.createContext<ModuleListContextType>(defaultModuleListState)
@@ -49,12 +78,14 @@ interface ModuleListProviderProps {
 }
 
 export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children }) => {
-  const { pipeline } = useSessionConfig()
+  const { pipeline, runtimeParameters } = useSessionConfig()
+  const { activeProject } = useGlobalConfig()
 
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
   const [deciderList, setDeciderList] = useState<string[]>([])
   const [presenterList, setPresenterList] = useState<string[]>([])
   const [protocolList, setProtocolList] = useState<string[]>([])
+  const [runtimeParameterInfos, setRuntimeParameterInfos] = useState<RuntimeParameterInfo[]>([])
 
   // Get parameter values from structured parameter store
   const preprocessorModule = pipeline.preprocessor.module
@@ -64,6 +95,24 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const presenterModule = pipeline.presenter.module
   const presenterEnabled = pipeline.presenter.enabled
   const protocolName = pipeline.experiment.protocol
+
+  /* Fetch the runtime parameter descriptors whenever the selected protocol changes. */
+  useEffect(() => {
+    if (!protocolName || protocolName.trim() === '' || !activeProject) {
+      setRuntimeParameterInfos([])
+      return
+    }
+
+    getProtocolInfoRos(activeProject, protocolName, (info) => {
+      setRuntimeParameterInfos(info?.runtime_parameters ?? [])
+    })
+  }, [protocolName, activeProject])
+
+  /* Every runtime parameter is required, so the session can only start once all of
+     them have a usable value. */
+  const runtimeParametersValid = runtimeParameterInfos.every((descriptor) =>
+    isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name]),
+  )
 
   useEffect(() => {
     /* Subscriber for preprocessor list. */
@@ -133,6 +182,8 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
         presenterEnabled,
         protocolList,
         protocolName,
+        runtimeParameterInfos,
+        runtimeParametersValid,
       }}
     >
       {children}

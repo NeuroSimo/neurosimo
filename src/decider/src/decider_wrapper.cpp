@@ -258,9 +258,14 @@ bool DeciderWrapper::initialize_module(
     return false;
   }
 
-  /* Helper lambdas to convert seconds to sample counts. */
+  /* Helper lambdas to convert seconds to sample counts.
+     Snap to nearest integer when within 1e-6 samples of it, so that floating-point
+     arithmetic in window expressions (e.g. end - start) doesn't cause off-by-one errors
+     relative to an exact specification of the same value. */
   const auto to_samples = [this](double seconds) -> int {
-    return static_cast<int>(std::ceil(seconds * static_cast<double>(this->sampling_frequency)));
+    double samples = seconds * static_cast<double>(this->sampling_frequency);
+    double nearest = std::round(samples);
+    return static_cast<int>(std::abs(samples - nearest) < 1e-6 ? nearest : std::ceil(samples));
   };
 
   /* Validate that only allowed keys are present */

@@ -77,7 +77,7 @@ export const ExperimentStatePanel: React.FC = () => {
 
   const formatSeconds = (value?: number | null) => {
     if (value === undefined || value === null || value === 0) return '—'
-    return `${value.toFixed(1)}s`
+    return `${value.toFixed(0)}s`
   }
 
   const handlePauseResume = () => {

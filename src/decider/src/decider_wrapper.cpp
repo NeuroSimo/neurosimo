@@ -712,6 +712,14 @@ double DeciderWrapper::get_periodic_processing_interval() const {
   return this->periodic_processing_interval;
 }
 
+double DeciderWrapper::get_periodic_window_duration() const {
+  if (this->sampling_frequency == 0) {
+    return 0.0;
+  }
+  return static_cast<double>(this->periodic_sample_window_end - this->periodic_sample_window_start) /
+         static_cast<double>(this->sampling_frequency);
+}
+
 int DeciderWrapper::get_periodic_look_ahead_samples() const {
   return std::max(this->periodic_sample_window_end, 0);
 }

@@ -760,12 +760,22 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
     return;
   }
 
+  double_t reference_time = request.triggering_sample->time;
+
+  /* Require that at least the periodic window's time range has elapsed since the attempt start.
+     Otherwise the periodic window would reach back into samples from before the attempt began,
+     which may include rests and pauses. */
+  if (!std::isnan(this->attempt_start_time) &&
+      reference_time - this->attempt_start_time <
+        this->decider_wrapper->get_periodic_window_duration() - this->TOLERANCE) {
+    return;
+  }
+
   /* Capture timing for decision trace */
   auto start_time = std::chrono::high_resolution_clock::now();
   uint64_t system_time_decider_received = std::chrono::duration_cast<std::chrono::nanoseconds>(
     start_time.time_since_epoch()).count();
 
-  double_t reference_time = request.triggering_sample->time;
   double_t reference_eeg_device_timestamp = request.triggering_sample->eeg_device_timestamp;
 
   auto result = this->decider_wrapper->process_periodic(

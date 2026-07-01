@@ -205,9 +205,6 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   /* Create enriched sample. */
   auto enriched = *msg;
 
-  enriched.in_rest = state.in_rest;
-  enriched.in_task = state.in_task;
-  enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
 
   /* Add system timestamp for when experiment coordinator published this sample. */

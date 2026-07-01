@@ -286,22 +286,13 @@ void EegPreprocessor::process_ready_deferred_requests(double_t current_sample_ti
 bool EegPreprocessor::is_sample_window_valid() const {
   /* Check that all samples in the current buffer window are valid for processing.
      A window is invalid if:
-     1. The buffer is not yet full (not enough samples)
-     2. Any sample in the window is paused
-     3. Any sample in the window is in a rest period */
+     1. The buffer is not yet full (not enough samples) */
 
   if (!this->sample_buffer.is_full()) {
     return false;
   }
 
-  bool has_invalid_sample = false;
-  this->sample_buffer.process_elements([&has_invalid_sample](const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample>& sample) {
-    if (sample->paused || sample->in_rest) {
-      has_invalid_sample = true;
-    }
-  });
-
-  return !has_invalid_sample;
+  return true;
 }
 
 void EegPreprocessor::abort_session(const std::string& reason) {

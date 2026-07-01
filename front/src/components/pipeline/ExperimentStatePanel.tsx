@@ -154,7 +154,7 @@ export const ExperimentStatePanel: React.FC = () => {
         </StateRow>
         <SectionSpacer />
         <StateRow>
-          <StateTitle>Step</StateTitle>
+          <StateTitle>Stage</StateTitle>
           <StateValue>
             {experimentState?.ongoing ? stepLabel : '—'}
           </StateValue>

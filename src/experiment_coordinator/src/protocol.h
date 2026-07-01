@@ -145,9 +145,6 @@ struct ExperimentState {
   uint64_t attempt_in_session = 0;
   uint32_t attempt_in_trial = 0;
   uint32_t failures_in_stage = 0;          // number of failed trials in current stage (for retry logic)
-  
-  // Pending event flags (set when transition occurs, consumed on the next sample)
-  bool is_new_stage_pending = false;
 
   // Timing anchor for the current attempt, sent to the decider in AttemptCommit.
   // Set at session/stage start, on an observed pulse, on rest end, and on resume.

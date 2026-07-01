@@ -204,8 +204,12 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Identity of the currently committed attempt, from AttemptCommit; used when publishing attempt trace. */
+  /* Identity of the currently committed attempt, from AttemptCommit; used when publishing attempt trace
+     and passed to the Python decider as context. Constant for the whole attempt. */
   uint64_t committed_attempt_in_session = 0;
+  std::string committed_stage_name;
+  uint32_t committed_trial_in_stage = 0;
+  uint64_t committed_trial_in_session = 0;
   bool stimulation_requested = false;
   bool attempt_commit_received = false;
 

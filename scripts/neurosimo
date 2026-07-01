@@ -22,16 +22,8 @@ if [ ! -f "$ELECTRON_APP" ]; then
     npm run electron-pack-linux
 fi
 
-# Focus existing instance if already running
-if pgrep -f "dist-electron/linux-unpacked/neurosimo" > /dev/null; then
-    if command -v wmctrl &> /dev/null; then
-        wmctrl -xa "neurosimo" 2>/dev/null || wmctrl -a "NeuroSimo"
-    else
-        echo "Cannot focus window: install wmctrl"
-    fi
-    exit 0
-fi
-
-# Launch the app
+# Launch the app. If an instance is already running, Electron's single-instance
+# lock (see front/public/electron.js) focuses the existing window and this
+# process exits, so it is safe to always launch here.
 echo "Launching NeuroSimo..."
 "$ELECTRON_APP" &

@@ -907,17 +907,48 @@ void EegDecider::enqueue_deferred_request(const std::shared_ptr<neurosimo_eeg_in
 void EegDecider::request_timed_trigger(std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request) {
   using ServiceResponseFuture = rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest;
 
-  auto response_received_callback = [this](ServiceResponseFuture future) {
-    this->timed_trigger_callback(future);
+  double_t pulse_time = request->reference_sample_time + request->trigger_offset;
+
+  if (!this->timed_trigger_client->service_is_ready()) {
+    RCLCPP_ERROR(this->get_logger(),
+      "Timed trigger service is not available; request for pulse time %.4f (s) (attempt %lu) may never be answered.",
+      pulse_time, request->attempt_in_session);
+  }
+
+  RCLCPP_INFO(this->get_logger(),
+    "Sending timed trigger request: reference_sample_time=%.4f (s), trigger_offset=%.4f (s), pulse_time=%.4f (s), attempt_in_session=%lu.",
+    request->reference_sample_time, request->trigger_offset, pulse_time, request->attempt_in_session);
+
+  auto system_time_sent = std::chrono::high_resolution_clock::now();
+
+  auto response_received_callback = [this, system_time_sent](ServiceResponseFuture future) {
+    this->timed_trigger_callback(future, system_time_sent);
   };
 
   auto future_result = this->timed_trigger_client->async_send_request(request, response_received_callback);
 }
 
-void EegDecider::timed_trigger_callback(rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future) {
-  auto result = future.get().second;
+void EegDecider::timed_trigger_callback(
+    rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future,
+    std::chrono::high_resolution_clock::time_point system_time_sent) {
+  auto [request, result] = future.get();
+
+  auto system_time_received = std::chrono::high_resolution_clock::now();
+  double_t round_trip_latency = std::chrono::duration<double_t>(system_time_received - system_time_sent).count();
+
+  double_t pulse_time = request->reference_sample_time + request->trigger_offset;
+
   if (!result->success) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to send timed trigger.");
+    RCLCPP_ERROR(this->get_logger(),
+      "Failed to send timed trigger for pulse time %.4f (s) (reference_sample_time=%.4f, trigger_offset=%.4f, attempt_in_session=%lu). "
+      "Service round-trip latency: %.1f ms. Check trigger_timer logs at this timestamp for the rejection reason "
+      "(e.g. LabJack not connected, minimum trial interval not met, trigger already scheduled, loopback latency exceeded, or trigger time too late).",
+      pulse_time, request->reference_sample_time, request->trigger_offset, request->attempt_in_session,
+      round_trip_latency * 1000.0);
+  } else {
+    RCLCPP_INFO(this->get_logger(),
+      "Timed trigger scheduled for pulse time %.4f (s) (attempt_in_session=%lu, service round-trip latency: %.1f ms).",
+      pulse_time, request->attempt_in_session, round_trip_latency * 1000.0);
   }
 }
 

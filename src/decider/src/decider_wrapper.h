@@ -142,6 +142,9 @@ public:
   std::size_t get_envelope_buffer_size() const;
   double get_periodic_processing_interval() const;
 
+  /* Time range (in seconds) spanned by the periodic sample window. */
+  double get_periodic_window_duration() const;
+
 
   int get_periodic_look_ahead_samples() const;
   int get_pulse_look_ahead_samples() const;

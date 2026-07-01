@@ -988,10 +988,10 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
   this->committed_trial_in_stage = msg->trial_in_stage;
   this->committed_trial_in_session = msg->trial_in_session;
 
-  /* The commit carries the attempt's timing anchor. This is the reference time from which
-     predetermined pulse offsets are computed, and it re-aligns periodic processing so the
-     first periodic decision occurs one interval after the attempt start. */
-  this->attempt_reference_time = msg->attempt_start_time;
+  /* Attempt start time is the time from which predetermined pulse offsets are computed,
+     and it re-aligns periodic processing so the first periodic decision occurs one interval
+     after the attempt start. */
+  this->attempt_start_time = msg->attempt_start_time;
   this->next_periodic_processing_time =
     msg->attempt_start_time + this->decider_wrapper->get_periodic_processing_interval();
 
@@ -1093,13 +1093,9 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   if (this->active_attempt && !msg->in_task && !msg->in_rest) {
 
     /* Call prepare_trial once per trial. If it returns a trigger_offset, the
-       trigger is scheduled directly (no periodic processing for this trial).
-
-       Pass the trial start time (attempt_reference_time, from the AttemptCommit's
-       attempt_start_time) rather than the current sample time, which can be later
-       if the attempt is committed only after the trial has already started. */
+       trigger is scheduled directly (no periodic processing for this trial). */
     if (!this->trial_prepared) {
-      auto prepare_result = this->decider_wrapper->prepare_trial(this->attempt_reference_time, this->committed_stage_name, this->committed_trial_in_stage);
+      auto prepare_result = this->decider_wrapper->prepare_trial(this->attempt_start_time, this->committed_stage_name, this->committed_trial_in_stage);
       if (!prepare_result.success) {
         RCLCPP_ERROR(this->get_logger(), "prepare_trial failed at time %.3f (s).", msg->time);
         this->error_occurred = true;
@@ -1178,10 +1174,7 @@ void EegDecider::handle_prepare_trial_trigger(const std::shared_ptr<neurosimo_ee
   RCLCPP_INFO(this->get_logger(), "Scheduling trigger from prepare_trial for trial %u in stage '%s' at time %.3f (s)",
     this->committed_trial_in_stage, this->committed_stage_name.c_str(), msg->time);
 
-  /* Use the attempt's timing anchor from the AttemptCommit. */
-  double_t reference_time = this->attempt_reference_time;
-
-  if (std::isnan(reference_time)) {
+  if (std::isnan(this->attempt_start_time)) {
     RCLCPP_ERROR(this->get_logger(), "No reference time available for prepare_trial trigger at time %.3f (s).", msg->time);
     this->error_occurred = true;
     this->abort_session("Missing reference time for prepare_trial trigger");
@@ -1196,7 +1189,7 @@ void EegDecider::handle_prepare_trial_trigger(const std::shared_ptr<neurosimo_ee
   result.trigger_offset = this->prepare_trial_trigger_offset;
 
   handle_stimulation_request(
-    result, reference_time, std::numeric_limits<double_t>::quiet_NaN(),
+    result, this->attempt_start_time, std::numeric_limits<double_t>::quiet_NaN(),
     neurosimo_pipeline_interfaces::msg::AttemptTrace::ATTEMPT_TIMING_PREDETERMINED,
     "");
 }

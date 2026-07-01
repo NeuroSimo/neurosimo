@@ -34,9 +34,7 @@ string stage_name               # Current stage name from protocol
 uint32 stage_index              # Current stage index (0-based)
 uint32 trial_in_stage           # Current trial slot within stage (0-based), advances on success
 uint64 trial_in_session         # Total successful trials in session
-uint64 attempt_in_session       # Total attempts in session (advances every trigger)
 bool is_new_stage               # True on the first sample of each stage
-bool is_attempt_start           # Attempt boundary: fires on session start, after a pulse, or after rest ends
 
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)

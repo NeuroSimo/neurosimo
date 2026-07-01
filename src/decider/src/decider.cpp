@@ -585,7 +585,7 @@ void EegDecider::handle_stimulation_request(
   /* Publish attempt trace. */
   auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   attempt_trace.session_id = this->session_id;
-  attempt_trace.attempt_in_session = this->current_attempt_in_session;
+  attempt_trace.attempt_in_session = this->committed_attempt_in_session;
   attempt_trace.requested_stimulation_time = earliest_pulse_time;
   attempt_trace.reference_time = reference_time;
   attempt_trace.attempt_timing = attempt_timing;
@@ -618,7 +618,7 @@ void EegDecider::handle_stimulation_request(
     auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
     request_msg->trigger_offset = *result.trigger_offset;
     request_msg->session_id = this->session_id;
-    request_msg->attempt_in_session = this->current_attempt_in_session;
+    request_msg->attempt_in_session = this->committed_attempt_in_session;
     request_msg->reference_sample_time = reference_time;
     this->request_timed_trigger(request_msg);
   }
@@ -696,7 +696,7 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   /* Publish attempt trace with STATUS_PULSE_PROCESSED. */
   auto pulse_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   pulse_trace.session_id = this->session_id;
-  pulse_trace.attempt_in_session = this->current_attempt_in_session;
+  pulse_trace.attempt_in_session = this->committed_attempt_in_session;
   pulse_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED;
   pulse_trace.actual_stimulation_time = sample_time;
   pulse_trace.actual_stimulation_sample_index = request.triggering_sample->sample_index;
@@ -982,6 +982,13 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
   this->stimulation_requested = false;
   this->committed_attempt_in_session = msg->attempt_in_session;
 
+  /* The commit carries the attempt's timing anchor. This is the reference time from which
+     predetermined pulse offsets are computed, and it re-aligns periodic processing so the
+     first periodic decision occurs one interval after the attempt start. */
+  this->attempt_reference_time = msg->attempt_start_time;
+  this->next_periodic_processing_time =
+    msg->attempt_start_time + this->decider_wrapper->get_periodic_processing_interval();
+
   /* A new attempt has been committed; the upcoming trial has not been prepared yet. */
   this->trial_prepared = false;
   this->prepare_trial_trigger_offset = nullptr;
@@ -1066,16 +1073,6 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     return;
   }
 
-  /* Cache attempt counter for use when publishing attempt trace. */
-  this->current_attempt_in_session = msg->attempt_in_session;
-
-  /* Track attempt reference: update on every is_attempt_start sample.
-     This is the timing anchor from which predetermined pulse offsets are computed. */
-  if (msg->is_attempt_start) {
-    this->attempt_reference_time = msg->time;
-    this->attempt_reference_eeg_device_timestamp = msg->eeg_device_timestamp;
-  }
-
   /* Check for sample index discontinuity and handle gaps. */
   detect_and_handle_sample_gap(msg);
 
@@ -1085,8 +1082,9 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* Attempt commit is active if it has been received and the attempt in sample matches the committed attempt. */
-  bool attempt_commit_active = this->attempt_commit_received && msg->attempt_in_session == this->committed_attempt_in_session;
+  /* Attempt commit is active once it has been received; its identity and timing anchor
+     come entirely from the AttemptCommit message, not from the sample stream. */
+  bool attempt_commit_active = this->attempt_commit_received;
 
   /* If attempt commit is active and stimulation has not been requested, handle the attempt. */
   if (attempt_commit_active && !this->stimulation_requested && !msg->in_task && !msg->in_rest) {
@@ -1094,8 +1092,8 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
     /* Call prepare_trial once per trial. If it returns a trigger_offset, the
        trigger is scheduled directly (no periodic processing for this trial).
 
-       Pass the trial start time (attempt_reference_time, tracked from the most recent
-       is_attempt_start sample) rather than the current sample time, which can be later
+       Pass the trial start time (attempt_reference_time, from the AttemptCommit's
+       attempt_start_time) rather than the current sample time, which can be later
        if the attempt is committed only after the trial has already started. */
     if (!this->trial_prepared) {
       auto prepare_result = this->decider_wrapper->prepare_trial(this->attempt_reference_time, msg->stage_name, msg->trial_in_stage);
@@ -1147,14 +1145,10 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   auto sample_time = msg->time;
   bool periodic_processing_triggered = false;
 
-  // Initialize next periodic processing time if not already set.
+  // Initialize next periodic processing time if not already set. Normally handle_attempt_commit
+  // sets this to the attempt start plus one interval; this is a defensive fallback.
   if (std::isnan(this->next_periodic_processing_time)) {
     this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
-  }
-
-  /* Reset periodic processing time at the start of a new attempt to ensure alignment with attempt start. */
-  if (msg->is_attempt_start) {
-    this->next_periodic_processing_time = sample_time + this->decider_wrapper->get_periodic_processing_interval();
   }
 
   // Check if it's time to trigger periodic processing.
@@ -1181,9 +1175,8 @@ void EegDecider::handle_prepare_trial_trigger(const std::shared_ptr<neurosimo_ee
   RCLCPP_INFO(this->get_logger(), "Scheduling trigger from prepare_trial for trial %u in stage '%s' at time %.3f (s)",
     msg->trial_in_stage, msg->stage_name.c_str(), msg->time);
 
-  /* Use the reference time tracked from the most recent is_attempt_start sample. */
+  /* Use the attempt's timing anchor from the AttemptCommit. */
   double_t reference_time = this->attempt_reference_time;
-  double_t reference_eeg_device_timestamp = this->attempt_reference_eeg_device_timestamp;
 
   if (std::isnan(reference_time)) {
     RCLCPP_ERROR(this->get_logger(), "No reference time available for prepare_trial trigger at time %.3f (s).", msg->time);
@@ -1192,13 +1185,15 @@ void EegDecider::handle_prepare_trial_trigger(const std::shared_ptr<neurosimo_ee
     return;
   }
 
-  /* Build a ProcessResult from the trigger_offset returned by prepare_trial. */
+  /* Build a ProcessResult from the trigger_offset returned by prepare_trial. This path only
+     schedules a timed trigger (no targeted pulses), so no reference EEG device timestamp is
+     needed; pass NaN, which handle_stimulation_request ignores unless targeted pulses are set. */
   ProcessResult result;
   result.success = true;
   result.trigger_offset = this->prepare_trial_trigger_offset;
 
   handle_stimulation_request(
-    result, reference_time, reference_eeg_device_timestamp,
+    result, reference_time, std::numeric_limits<double_t>::quiet_NaN(),
     neurosimo_pipeline_interfaces::msg::AttemptTrace::ATTEMPT_TIMING_PREDETERMINED,
     "");
 }

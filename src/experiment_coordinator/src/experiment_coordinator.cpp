@@ -145,6 +145,19 @@ void ExperimentCoordinator::publish_attempt_commit() {
     return;
   }
 
+  /* Gate on pause: a trial only starts when we have both committed to it (we are here)
+     and resumed. Reaching this point is a trial boundary, so a requested pause becomes
+     effective now; if we are (now) paused, defer the commit until resume. */
+  if (state.pause_requested) {
+    activate_pause();
+  }
+  if (state.paused) {
+    state.pending_attempt_commit = true;
+    return;
+  }
+
+  state.trial_in_progress = true;
+
   auto msg = neurosimo_pipeline_interfaces::msg::AttemptCommit();
   msg.session_id = this->session_id;
   msg.attempt_in_session = state.attempt_in_session;
@@ -258,6 +271,15 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
   const auto& stage = element.stage.value();
   bool invalid_trial = msg->invalid_trial;
 
+  /* The trial's verdict is now known: this is a trial boundary. If a pause was requested
+     while the trial was running, it becomes effective now. (For the within-stage case the
+     same activation also happens inside publish_attempt_commit; doing it here covers the
+     stage-complete case where the next call is advance_to_next_element instead.) */
+  state.trial_in_progress = false;
+  if (state.pause_requested) {
+    activate_pause();
+  }
+
   if (invalid_trial) {
     /* Invalid trial: increment failure counter, do not advance trial position. */
     state.failures_in_stage++;
@@ -305,23 +327,46 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
   }
 }
 
+void ExperimentCoordinator::activate_pause() {
+  state.paused = true;
+  state.pause_requested = false;
+  state.pause_start_time = state.last_sample_time;
+
+  RCLCPP_INFO(this->get_logger(), "Experiment paused at %.2f s",
+    get_experiment_time(state.last_sample_time));
+}
+
 void ExperimentCoordinator::handle_pause(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void)request;  // Unused
-  
+
   if (state.paused) {
     response->success = false;
     response->message = "Already paused";
     return;
   }
-  
-  state.paused = true;
-  state.pause_start_time = state.last_sample_time;
-  
-  RCLCPP_INFO(this->get_logger(), "Experiment paused at %.2f s", 
-    get_experiment_time(state.last_sample_time));
-  
+
+  if (state.pause_requested) {
+    response->success = false;
+    response->message = "Already pausing";
+    return;
+  }
+
+  if (state.trial_in_progress) {
+    /* A trial is running: defer the pause until the current trial finishes. */
+    state.pause_requested = true;
+
+    RCLCPP_INFO(this->get_logger(), "Pause requested; pausing after current trial");
+
+    response->success = true;
+    response->message = "Pausing after current trial";
+    return;
+  }
+
+  /* Not in a trial (between trials, in rest, or in task): pause immediately. */
+  activate_pause();
+
   response->success = true;
   response->message = "Experiment paused";
 }
@@ -330,6 +375,15 @@ void ExperimentCoordinator::handle_resume(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   (void)request;  // Unused
+
+  if (state.pause_requested && !state.paused) {
+    /* Pause was requested but never became effective; cancel the request.
+       (The UI disables the button in this state, so this is a defensive path.) */
+    state.pause_requested = false;
+    response->success = true;
+    response->message = "Pause request cancelled";
+    return;
+  }
 
   if (!state.paused) {
     response->success = false;
@@ -343,6 +397,15 @@ void ExperimentCoordinator::handle_resume(
 
   RCLCPP_INFO(this->get_logger(), "Experiment resumed at %.2f s (paused for %.2f s)",
     get_experiment_time(state.last_sample_time), pause_duration);
+
+  /* If a trial start was deferred while paused, start it now. Re-anchor the trial timing
+     to the resume moment by raising is_attempt_start again (the original anchor from the
+     previous pulse was consumed during the pause), so the resumed trial starts at resume. */
+  if (state.pending_attempt_commit) {
+    state.pending_attempt_commit = false;
+    state.is_attempt_start_pending = true;
+    publish_attempt_commit();
+  }
 
   response->success = true;
   response->message = "Experiment resumed";
@@ -661,6 +724,7 @@ void ExperimentCoordinator::publish_experiment_state() {
     msg.in_task = false;
     msg.task_name = "";
     msg.paused = false;
+    msg.pause_requested = false;
     msg.experiment_time = 0.0;
     msg.session_time = 0.0;
     msg.stage_name = "";
@@ -691,6 +755,7 @@ void ExperimentCoordinator::publish_experiment_state() {
   msg.in_task = state.in_task;
   msg.task_name = state.task_name;
   msg.paused = state.paused;
+  msg.pause_requested = state.pause_requested;
   msg.experiment_time = experiment_time;
   msg.session_time = current_time;
   

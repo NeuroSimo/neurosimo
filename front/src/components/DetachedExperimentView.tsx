@@ -70,6 +70,17 @@ export const DetachedExperimentView: React.FC = () => {
     )
   }
 
+  if (experimentState.pause_requested) {
+    return (
+      <>
+        <DragBar />
+        <FullScreenContainer>
+          Pausing…
+        </FullScreenContainer>
+      </>
+    )
+  }
+
   if (experimentState.in_rest) {
     return (
       <>

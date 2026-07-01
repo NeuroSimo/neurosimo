@@ -72,6 +72,7 @@ export const ExperimentStatePanel: React.FC = () => {
 
   const isExperimentOngoing = experimentState?.ongoing ?? false
   const isPaused = experimentState?.paused ?? false
+  const isPausing = experimentState?.pause_requested ?? false
   const isElectron = !!(window as any).electronAPI
 
   const formatSeconds = (value?: number | null) => {
@@ -97,7 +98,7 @@ export const ExperimentStatePanel: React.FC = () => {
   }
 
   const PauseResumeButton = isPaused ? StyledButton : StyledRedButton
-  const pauseResumeLabel = isPaused ? 'Resume' : 'Pause'
+  const pauseResumeLabel = isPaused ? 'Resume' : isPausing ? 'Pausing…' : 'Pause'
 
   const totalSteps = experimentState?.total_steps ?? 0
   const stepIndex = experimentState?.step_index ?? 0
@@ -145,7 +146,9 @@ export const ExperimentStatePanel: React.FC = () => {
             {experimentState?.ongoing
               ? (isPaused
                   ? 'Paused'
-                  : 'Running'
+                  : isPausing
+                    ? 'Pausing…'
+                    : 'Running'
               ): 'Ready'}
           </StateValue>
         </StateRow>
@@ -223,7 +226,7 @@ export const ExperimentStatePanel: React.FC = () => {
         </VariableContentContainer>
         <SectionSpacer $height={14} />
         <StateRow style={{ justifyContent: 'center', paddingRight: 12 }}>
-          <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing}>
+          <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing || isPausing}>
             {pauseResumeLabel}
           </PauseResumeButton>
         </StateRow>

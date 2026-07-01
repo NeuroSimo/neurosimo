@@ -88,6 +88,7 @@ private:
   void handle_resume(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void activate_pause();
   void handle_initialize_protocol(
     const std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeProtocol::Request> request,
     std::shared_ptr<neurosimo_pipeline_interfaces::srv::InitializeProtocol::Response> response);

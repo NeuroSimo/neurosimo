@@ -19,6 +19,7 @@ export interface ExperimentState extends ROSLIB.Message {
   in_task: boolean
   task_name: string
   paused: boolean
+  pause_requested: boolean
   experiment_time: number
   session_time: number
   stage_start_time: number

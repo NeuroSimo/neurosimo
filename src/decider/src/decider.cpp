@@ -613,7 +613,7 @@ void EegDecider::handle_stimulation_request(
 
   /* If timed triggers are requested, send them. */
   if (request_timed_trigger) {
-    RCLCPP_INFO(this->get_logger(), "Timing trigger at time %.3f (s).", earliest_pulse_time);
+    RCLCPP_INFO(this->get_logger(), "Timing trigger for time %.3f (s).", earliest_pulse_time);
 
     auto request_msg = std::make_shared<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request>();
     request_msg->trigger_offset = *result.trigger_offset;

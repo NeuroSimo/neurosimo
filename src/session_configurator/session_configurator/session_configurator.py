@@ -1,4 +1,5 @@
 import os
+import re
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
@@ -86,17 +87,20 @@ class SessionConfiguratorNode(Node):
         self.session_config_publisher = self.create_publisher(SessionConfig, "/neurosimo/session_configurator/config", qos)
 
         # Define directory watch configurations.
-        # Each entry: (subdirectory, extensions, publisher, component_name, selection_param_name)
+        # Each entry: (subdirectory, extensions, publisher, component_name, selection_param_name, reverse)
         # selection_param_name is the session-config / ROS parameter whose value must be
         # one of the entries in the published list; if not, it is reconciled.
+        # reverse controls sort direction: False for naturally-ordered module/protocol
+        # filenames (e.g. "0_hotspot", "1_baseline", ...), True for timestamp-based
+        # filenames where the newest entry should be listed first.
         self.watch_configs = [
-            ("decider", [".py"], self.decider_list_publisher, "decider", "decider.module"),
-            ("preprocessor", [".py"], self.preprocessor_list_publisher, "preprocessor", "preprocessor.module"),
-            ("presenter", [".py"], self.presenter_list_publisher, "presenter", "presenter.module"),
-            ("protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol", "experiment.protocol"),
-            ("eeg_simulator", [".json"], self.dataset_list_publisher, "dataset", "simulator.dataset_filename"),
-            ("recordings", [".json"], self.recordings_list_publisher, "recordings", "replay.bag_id"),
-            ("external_recordings", [".vhdr"], self.external_recordings_list_publisher, "external_recordings", None),
+            ("decider", [".py"], self.decider_list_publisher, "decider", "decider.module", False),
+            ("preprocessor", [".py"], self.preprocessor_list_publisher, "preprocessor", "preprocessor.module", False),
+            ("presenter", [".py"], self.presenter_list_publisher, "presenter", "presenter.module", False),
+            ("protocols", [".yaml", ".yml"], self.protocol_list_publisher, "protocol", "experiment.protocol", False),
+            ("eeg_simulator", [".json"], self.dataset_list_publisher, "dataset", "simulator.dataset_filename", True),
+            ("recordings", [".json"], self.recordings_list_publisher, "recordings", "replay.bag_id", True),
+            ("external_recordings", [".vhdr"], self.external_recordings_list_publisher, "external_recordings", None, True),
         ]
 
         # Add parameter change callback to save changes to session state
@@ -119,12 +123,12 @@ class SessionConfiguratorNode(Node):
         # Compute available filename lists for this project before setting parameters,
         # so selections that no longer match available files can be reconciled first.
         filename_lists = {
-            component_name: self.compute_filename_list(project_name, subdirectory, file_extensions, component_name)
-            for subdirectory, file_extensions, _, component_name, _ in self.watch_configs
+            component_name: self.compute_filename_list(project_name, subdirectory, file_extensions, component_name, reverse)
+            for subdirectory, file_extensions, _, component_name, _, reverse in self.watch_configs
         }
 
         # Reconcile stored selections against the available files.
-        for _, _, _, component_name, param_name in self.watch_configs:
+        for _, _, _, component_name, param_name, _ in self.watch_configs:
             if param_name is not None:
                 self.reconcile_config_value(session_config, param_name, component_name, filename_lists[component_name])
 
@@ -157,7 +161,12 @@ class SessionConfiguratorNode(Node):
         # Publish the lists of modules for the new project and setup watches
         self.publish_and_watch_directories(project_name, filename_lists)
 
-    def list_files(self, project_name, subdirectory, file_extensions):
+    @staticmethod
+    def natural_sort_key(filename):
+        """Split filename into text/number chunks so numeric prefixes sort by value (e.g. "2_" before "10_")."""
+        return [int(chunk) if chunk.isdigit() else chunk.lower() for chunk in re.split(r'(\d+)', filename)]
+
+    def list_files(self, project_name, subdirectory, file_extensions, reverse=False):
         """List all files with specified extensions in the subdirectory of the specified project."""
         module_dir = os.path.join(self.storage_manager.PROJECTS_ROOT, project_name, subdirectory)
 
@@ -172,8 +181,9 @@ class SessionConfiguratorNode(Node):
                 matching_files.extend([f for f in os.listdir(module_dir)
                                      if os.path.isfile(os.path.join(module_dir, f)) and f.endswith(ext)])
 
-            # Sort files alphabetically (chronological order for timestamp-based names)
-            matching_files.sort(reverse=True)
+            # Natural sort so numeric prefixes order by value; reverse for timestamp-based
+            # names where the newest entry should be listed first.
+            matching_files.sort(key=self.natural_sort_key, reverse=reverse)
 
             self.logger.info(f"Found {len(matching_files)} modules in project '{project_name}'/{subdirectory}: {matching_files}")
             return matching_files
@@ -182,9 +192,9 @@ class SessionConfiguratorNode(Node):
             self.logger.error(f"Error listing modules for project '{project_name}'/{subdirectory}: {e}")
             return []
 
-    def compute_filename_list(self, project_name, subdirectory, file_extensions, component_name):
+    def compute_filename_list(self, project_name, subdirectory, file_extensions, component_name, reverse=False):
         """Compute the list of filenames for the specified project and component."""
-        modules = self.list_files(project_name, subdirectory, file_extensions)
+        modules = self.list_files(project_name, subdirectory, file_extensions, reverse)
 
         # For recordings, expose bag_ids (base name without .json) instead of JSON filenames
         if component_name == "recordings":
@@ -242,24 +252,24 @@ class SessionConfiguratorNode(Node):
         """Publish filename lists and setup file system watches for all directories."""
         self.directory_watcher.unwatch_all()
 
-        for subdirectory, file_extensions, publisher, component_name, param_name in self.watch_configs:
+        for subdirectory, file_extensions, publisher, component_name, param_name, reverse in self.watch_configs:
             self.publish_filename_list(project_name, publisher, component_name, filename_lists[component_name])
 
             directory_path = os.path.join(self.storage_manager.PROJECTS_ROOT, project_name, subdirectory)
 
-            def create_callback(proj, subdir, exts, pub, comp, param):
-                return lambda: self.handle_directory_change(proj, subdir, exts, pub, comp, param)
+            def create_callback(proj, subdir, exts, pub, comp, param, rev):
+                return lambda: self.handle_directory_change(proj, subdir, exts, pub, comp, param, rev)
 
-            callback = create_callback(project_name, subdirectory, file_extensions, publisher, component_name, param_name)
+            callback = create_callback(project_name, subdirectory, file_extensions, publisher, component_name, param_name, reverse)
             self.directory_watcher.watch_directory(directory_path, file_extensions, callback)
 
-    def handle_directory_change(self, project_name, subdirectory, file_extensions, publisher, component_name, param_name):
+    def handle_directory_change(self, project_name, subdirectory, file_extensions, publisher, component_name, param_name, reverse=False):
         """Callback invoked when a watched directory changes.
 
         Recomputes and republishes the filename list, then reconciles the associated
         parameter so the UI never displays a stale selection that is no longer available.
         """
-        modules = self.compute_filename_list(project_name, subdirectory, file_extensions, component_name)
+        modules = self.compute_filename_list(project_name, subdirectory, file_extensions, component_name, reverse)
         self.publish_filename_list(project_name, publisher, component_name, modules)
         if param_name is not None:
             self.reconcile_parameter(param_name, component_name, modules)

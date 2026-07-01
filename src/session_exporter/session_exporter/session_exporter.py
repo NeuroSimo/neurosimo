@@ -65,7 +65,6 @@ EEG_FIELDS_ENRICHED = EEG_FIELDS_RAW + [
     'stage_index',
     'trial_in_stage',
     'trial_in_session',
-    'attempt_in_session',
 ]
 
 EEG_FIELDS_PREPROCESSED = EEG_FIELDS_ENRICHED + [

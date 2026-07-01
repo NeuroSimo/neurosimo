@@ -204,10 +204,7 @@ private:
   /* Used for detecting sample index discontinuities (gaps due to Python processing delays). */
   int64_t previous_sample_index = -1;
 
-  /* Cache of the latest sample's attempt counter, used when publishing attempt trace. */
-  uint64_t current_attempt_in_session = 0;
-
-  /* Stored from AttemptCommit; used in process_sample only when sample attempt_in_session matches. */
+  /* Identity of the currently committed attempt, from AttemptCommit; used when publishing attempt trace. */
   uint64_t committed_attempt_in_session = 0;
   bool stimulation_requested = false;
   bool attempt_commit_received = false;
@@ -218,9 +215,8 @@ private:
   /* If prepare_trial returned a trigger_offset, store it here for scheduling. */
   std::shared_ptr<double_t> prepare_trial_trigger_offset = nullptr;
 
-  /* Reference time tracked from the most recent is_attempt_start sample. */
+  /* Timing anchor for the current attempt, from AttemptCommit.attempt_start_time. */
   double_t attempt_reference_time = std::numeric_limits<double_t>::quiet_NaN();
-  double_t attempt_reference_eeg_device_timestamp = std::numeric_limits<double_t>::quiet_NaN();
 
   StreamInfo stream_info;
 

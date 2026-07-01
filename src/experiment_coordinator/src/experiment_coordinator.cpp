@@ -161,6 +161,7 @@ void ExperimentCoordinator::publish_attempt_commit() {
   auto msg = neurosimo_pipeline_interfaces::msg::AttemptCommit();
   msg.session_id = this->session_id;
   msg.attempt_in_session = state.attempt_in_session;
+  msg.attempt_start_time = state.attempt_start_time;
 
   this->attempt_commit_publisher->publish(msg);
 }
@@ -187,17 +188,15 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   /* Update experiment state based on sample time. */
   update_experiment_state(sample_time);
 
-  /* Detect attempt boundaries: session start, pulse trigger, or rest ending.
-     An attempt boundary marks the temporal start of a new attempt window,
-     even if we don't yet know which attempt it is. */
-  if (msg->is_session_start) {
-    state.is_attempt_start_pending = true;
-  }
+  /* Record the timing anchor for the next attempt. An attempt boundary marks the
+     temporal start of a new attempt window; the recorded time is carried to the
+     decider in the next AttemptCommit. Session/stage start is anchored in start_stage.
+     A pulse or the end of a rest re-anchors here, at the sample where it occurs. */
   if (msg->pulse_trigger) {
-    state.is_attempt_start_pending = true;
+    state.attempt_start_time = sample_time;
   }
   if (was_in_rest && !state.in_rest) {
-    state.is_attempt_start_pending = true;
+    state.attempt_start_time = sample_time;
   }
 
   /* Create enriched sample. */
@@ -210,13 +209,10 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   enriched.experiment_time = get_experiment_time(sample_time);
   enriched.trial_in_stage = state.trial_in_stage;
   enriched.trial_in_session = state.trial_in_session;
-  enriched.attempt_in_session = state.attempt_in_session;
 
   /* Copy and consume pending event flags (true on exactly one sample per transition). */
   enriched.is_new_stage = state.is_new_stage_pending;
-  enriched.is_attempt_start = state.is_attempt_start_pending;
   state.is_new_stage_pending = false;
-  state.is_attempt_start_pending = false;
 
   /* Add stage information. */
   if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
@@ -399,11 +395,11 @@ void ExperimentCoordinator::handle_resume(
     get_experiment_time(state.last_sample_time), pause_duration);
 
   /* If a trial start was deferred while paused, start it now. Re-anchor the trial timing
-     to the resume moment by raising is_attempt_start again (the original anchor from the
-     previous pulse was consumed during the pause), so the resumed trial starts at resume. */
+     to the resume moment (the original anchor from the previous pulse is stale after the
+     pause), so the resumed trial starts at resume. */
   if (state.pending_attempt_commit) {
     state.pending_attempt_commit = false;
-    state.is_attempt_start_pending = true;
+    state.attempt_start_time = state.last_sample_time;
     publish_attempt_commit();
   }
 
@@ -647,7 +643,7 @@ void ExperimentCoordinator::start_stage(const Stage& stage, double current_time)
   state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
 
   state.is_new_stage_pending = true;
-  state.is_attempt_start_pending = true;
+  state.attempt_start_time = current_time;
   publish_attempt_commit();
 
   RCLCPP_INFO(this->get_logger(), "Stage '%s' started (%u trials)", 

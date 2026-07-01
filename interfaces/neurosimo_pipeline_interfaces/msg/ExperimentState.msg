@@ -16,6 +16,7 @@ bool ongoing
 bool in_rest
 bool in_task
 bool paused
+bool pause_requested          # Pause requested but not yet effective (UI shows "Pausing...")
 
 # Task info (if in_task)
 string task_name

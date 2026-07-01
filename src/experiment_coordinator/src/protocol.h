@@ -131,6 +131,9 @@ struct ExperimentState {
   
   // Pause tracking
   bool paused = false;
+  bool pause_requested = false;            // Pause asked for while a trial runs ("Pausing...")
+  bool trial_in_progress = false;          // True between a trial's commit and its verdict
+  bool pending_attempt_commit = false;     // A trial start deferred due to pause; fire on resume
   double total_pause_duration = 0.0;
   double pause_start_time = 0.0;  // Sample time when pause started
   

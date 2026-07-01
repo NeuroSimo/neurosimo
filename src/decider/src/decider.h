@@ -218,8 +218,7 @@ private:
   /* If prepare_trial returned a trigger_offset, store it here for scheduling. */
   std::shared_ptr<double_t> prepare_trial_trigger_offset = nullptr;
 
-  /* Timing anchor for the current attempt, from AttemptCommit.attempt_start_time. */
-  double_t attempt_reference_time = std::numeric_limits<double_t>::quiet_NaN();
+  double_t attempt_start_time = std::numeric_limits<double_t>::quiet_NaN();
 
   StreamInfo stream_info;
 

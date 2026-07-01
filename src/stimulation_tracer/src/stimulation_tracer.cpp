@@ -141,6 +141,13 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
     if (!trace.attempt_type.empty()) final_trace.attempt_type = trace.attempt_type;
     if (trace.decision_id != 0) final_trace.decision_id = trace.decision_id;
 
+    /* Stage/trial identity (from Decider). trial_in_stage / trial_in_session may
+       legitimately be 0 (first trial); the default is also 0, so guarding on
+       non-zero here never drops a correct value. */
+    if (!trace.stage_name.empty()) final_trace.stage_name = trace.stage_name;
+    if (trace.trial_in_stage != 0) final_trace.trial_in_stage = trace.trial_in_stage;
+    if (trace.trial_in_session != 0) final_trace.trial_in_session = trace.trial_in_session;
+
     /* TriggerTimer fields */
     if (trace.system_time_trigger_timer_received != 0) final_trace.system_time_trigger_timer_received = trace.system_time_trigger_timer_received;
     if (trace.system_time_trigger_timer_finished != 0) final_trace.system_time_trigger_timer_finished = trace.system_time_trigger_timer_finished;

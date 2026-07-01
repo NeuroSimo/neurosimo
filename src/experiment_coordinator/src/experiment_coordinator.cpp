@@ -162,6 +162,9 @@ void ExperimentCoordinator::publish_attempt_commit() {
   msg.session_id = this->session_id;
   msg.attempt_in_session = state.attempt_in_session;
   msg.attempt_start_time = state.attempt_start_time;
+  msg.stage_name = stage.name;
+  msg.trial_in_stage = state.trial_in_stage;
+  msg.trial_in_session = state.trial_in_session;
 
   this->attempt_commit_publisher->publish(msg);
 }
@@ -202,26 +205,10 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
   /* Create enriched sample. */
   auto enriched = *msg;
 
-  /* Add experiment state fields. */
   enriched.in_rest = state.in_rest;
   enriched.in_task = state.in_task;
   enriched.paused = state.paused;
   enriched.experiment_time = get_experiment_time(sample_time);
-  enriched.trial_in_stage = state.trial_in_stage;
-  enriched.trial_in_session = state.trial_in_session;
-
-  /* Copy and consume pending event flags (true on exactly one sample per transition). */
-  enriched.is_new_stage = state.is_new_stage_pending;
-  state.is_new_stage_pending = false;
-
-  /* Add stage information. */
-  if (!state.in_rest && state.current_element_index < protocol->elements.size()) {
-    const auto& element = protocol->elements[state.current_element_index];
-    if (element.type == ProtocolElement::Type::STAGE) {
-      const auto& stage = element.stage.value();
-      enriched.stage_name = stage.name;
-    }
-  }
 
   /* Add system timestamp for when experiment coordinator published this sample. */
   enriched.system_time_experiment_coordinator_published =
@@ -642,7 +629,6 @@ void ExperimentCoordinator::start_stage(const Stage& stage, double current_time)
   state.stage_start_times[stage.name] = current_time;
   state.stage_start_experiment_times[stage.name] = get_experiment_time(current_time);
 
-  state.is_new_stage_pending = true;
   state.attempt_start_time = current_time;
   publish_attempt_commit();
 

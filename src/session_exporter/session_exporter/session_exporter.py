@@ -61,10 +61,6 @@ EEG_FIELDS_ENRICHED = EEG_FIELDS_RAW + [
     'in_rest',
     'paused',
     'experiment_time',
-    'stage_name',
-    'stage_index',
-    'trial_in_stage',
-    'trial_in_session',
 ]
 
 EEG_FIELDS_PREPROCESSED = EEG_FIELDS_ENRICHED + [
@@ -82,6 +78,9 @@ TOPIC_TO_FIELDS = {
 # Decision trace export fields
 ATTEMPT_TRACE_FIELDS = [
     'attempt_in_session',
+    'stage_name',
+    'trial_in_stage',
+    'trial_in_session',
     'status',
     'requested_stimulation_time',
     'system_time_trigger_timer_received',

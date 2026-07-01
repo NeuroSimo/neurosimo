@@ -30,11 +30,6 @@ bool in_rest                    # Protocol-defined rest period
 bool in_task                    # Protocol-defined task period
 bool paused                     # User-initiated pause
 float64 experiment_time         # Pause-adjusted experiment time (seconds)
-string stage_name               # Current stage name from protocol
-uint32 stage_index              # Current stage index (0-based)
-uint32 trial_in_stage           # Current trial slot within stage (0-based), advances on success
-uint64 trial_in_session         # Total successful trials in session
-bool is_new_stage               # True on the first sample of each stage
 
 # ============================================================================
 # Preprocessing (filled by Preprocessor if enabled)

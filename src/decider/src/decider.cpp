@@ -586,6 +586,9 @@ void EegDecider::handle_stimulation_request(
   auto attempt_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   attempt_trace.session_id = this->session_id;
   attempt_trace.attempt_in_session = this->committed_attempt_in_session;
+  attempt_trace.stage_name = this->committed_stage_name;
+  attempt_trace.trial_in_stage = this->committed_trial_in_stage;
+  attempt_trace.trial_in_session = this->committed_trial_in_session;
   attempt_trace.requested_stimulation_time = earliest_pulse_time;
   attempt_trace.reference_time = reference_time;
   attempt_trace.attempt_timing = attempt_timing;
@@ -652,13 +655,12 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   auto start_time = std::chrono::high_resolution_clock::now();
 
   double_t sample_time = request.triggering_sample->time;
-  std::string stage_name = request.triggering_sample->stage_name;
 
   auto result = this->decider_wrapper->process_pulse(
     this->sensory_stimuli, this->sample_buffer, sample_time,
     request.triggering_sample->sample_index,
-    this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trial_in_stage);
+    this->event_queue, this->is_coil_at_target, this->committed_stage_name,
+    this->committed_trial_in_stage);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during pulse processing at time %.3f (s).", sample_time);
@@ -697,6 +699,9 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   auto pulse_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   pulse_trace.session_id = this->session_id;
   pulse_trace.attempt_in_session = this->committed_attempt_in_session;
+  pulse_trace.stage_name = this->committed_stage_name;
+  pulse_trace.trial_in_stage = this->committed_trial_in_stage;
+  pulse_trace.trial_in_session = this->committed_trial_in_session;
   pulse_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED;
   pulse_trace.actual_stimulation_time = sample_time;
   pulse_trace.actual_stimulation_sample_index = request.triggering_sample->sample_index;
@@ -713,13 +718,12 @@ void EegDecider::process_event_request(const DeferredProcessingRequest& request)
   auto start_time = std::chrono::high_resolution_clock::now();
 
   double_t sample_time = request.triggering_sample->time;
-  std::string stage_name = request.triggering_sample->stage_name;
 
   auto result = this->decider_wrapper->process_event(
     this->sensory_stimuli, this->sample_buffer, sample_time,
     request.triggering_sample->sample_index,
-    this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trial_in_stage);
+    this->event_queue, this->is_coil_at_target, this->committed_stage_name,
+    this->committed_trial_in_stage);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during event processing at time %.3f (s).", sample_time);
@@ -766,13 +770,12 @@ void EegDecider::process_periodic_request(const DeferredProcessingRequest& reque
 
   double_t reference_time = request.triggering_sample->time;
   double_t reference_eeg_device_timestamp = request.triggering_sample->eeg_device_timestamp;
-  std::string stage_name = request.triggering_sample->stage_name;
 
   auto result = this->decider_wrapper->process_periodic(
     this->sensory_stimuli, this->sample_buffer, reference_time,
     request.triggering_sample->sample_index,
-    this->event_queue, this->is_coil_at_target, stage_name,
-    request.triggering_sample->trial_in_stage);
+    this->event_queue, this->is_coil_at_target, this->committed_stage_name,
+    this->committed_trial_in_stage);
 
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Python call failed during periodic processing at time %.3f (s).", reference_time);
@@ -982,6 +985,10 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
   this->stimulation_requested = false;
   this->committed_attempt_in_session = msg->attempt_in_session;
 
+  this->committed_stage_name = msg->stage_name;
+  this->committed_trial_in_stage = msg->trial_in_stage;
+  this->committed_trial_in_session = msg->trial_in_session;
+
   /* The commit carries the attempt's timing anchor. This is the reference time from which
      predetermined pulse offsets are computed, and it re-aligns periodic processing so the
      first periodic decision occurs one interval after the attempt start. */
@@ -1096,7 +1103,7 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
        attempt_start_time) rather than the current sample time, which can be later
        if the attempt is committed only after the trial has already started. */
     if (!this->trial_prepared) {
-      auto prepare_result = this->decider_wrapper->prepare_trial(this->attempt_reference_time, msg->stage_name, msg->trial_in_stage);
+      auto prepare_result = this->decider_wrapper->prepare_trial(this->attempt_reference_time, this->committed_stage_name, this->committed_trial_in_stage);
       if (!prepare_result.success) {
         RCLCPP_ERROR(this->get_logger(), "prepare_trial failed at time %.3f (s).", msg->time);
         this->error_occurred = true;
@@ -1173,7 +1180,7 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
 
 void EegDecider::handle_prepare_trial_trigger(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg) {
   RCLCPP_INFO(this->get_logger(), "Scheduling trigger from prepare_trial for trial %u in stage '%s' at time %.3f (s)",
-    msg->trial_in_stage, msg->stage_name.c_str(), msg->time);
+    this->committed_trial_in_stage, this->committed_stage_name.c_str(), msg->time);
 
   /* Use the attempt's timing anchor from the AttemptCommit. */
   double_t reference_time = this->attempt_reference_time;

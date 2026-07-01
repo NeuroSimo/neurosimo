@@ -35,6 +35,11 @@ string attempt_type               # Attempt type (e.g. "low_iti"), empty for per
 
 uint64 decision_id                # Only set for periodic attempts
 
+# Stage/trial identity of the attempt (from AttemptCommit).
+string stage_name                 # Stage name from protocol
+uint32 trial_in_stage             # Trial slot within stage (0-based)
+uint64 trial_in_session           # Total successful trials in session
+
 # ----------------------------------------------------------------------------
 # Requested stimulation (filled by Decider)
 # ----------------------------------------------------------------------------

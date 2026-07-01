@@ -210,10 +210,9 @@ private:
   std::string committed_stage_name;
   uint32_t committed_trial_in_stage = 0;
   uint64_t committed_trial_in_session = 0;
-  bool stimulation_requested = false;
-  bool attempt_commit_received = false;
+  bool active_attempt = false;
 
-  /* Whether prepare_trial has already been called for the currently committed attempt. */
+  /* Whether prepare_trial has already been called for the current attempt. */
   bool trial_prepared = false;
 
   /* If prepare_trial returned a trigger_offset, store it here for scheduling. */

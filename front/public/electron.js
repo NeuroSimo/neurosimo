@@ -136,11 +136,31 @@ ipcMain.handle('toggle-detached-experiment-window', async () => {
   return null;
 });
 
-// This method will be called when Electron has finished initialization
-app.whenReady().then(() => {
-  Menu.setApplicationMenu(null);
-  createWindow();
-});
+// Ensure only a single instance runs; focus the existing window instead of
+// starting a second (windowless) process.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.show();
+      mainWindow.focus();
+    } else {
+      createWindow();
+    }
+  });
+
+  // This method will be called when Electron has finished initialization
+  app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
+    createWindow();
+  });
+}
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {

@@ -72,7 +72,6 @@
         name:
           - net-tools
           - wireshark
-          - wmctrl
           - python3-pip
         state: present
 

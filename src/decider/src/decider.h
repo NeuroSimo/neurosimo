@@ -5,6 +5,7 @@
 #ifndef EEG_PROCESSOR_DECIDER_H
 #define EEG_PROCESSOR_DECIDER_H
 
+#include <chrono>
 #include <deque>
 #include <cmath>
 #include <queue>
@@ -97,7 +98,9 @@ private:
   void handle_loopback_latency(const std::shared_ptr<neurosimo_pipeline_interfaces::msg::LoopbackLatency> msg);
 
   void request_timed_trigger(std::shared_ptr<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger::Request> request);
-  void timed_trigger_callback(rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future);
+  void timed_trigger_callback(
+    rclcpp::Client<neurosimo_pipeline_interfaces::srv::RequestTimedTrigger>::SharedFutureWithRequest future,
+    std::chrono::high_resolution_clock::time_point system_time_sent);
 
   void abort_session(const std::string& reason);
 

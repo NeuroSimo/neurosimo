@@ -263,9 +263,29 @@ void TriggerSimulator::handle_request_timed_trigger(
   } else {
     attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_ERROR;
 
-    if (rejection_reason == neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_TOO_LATE) {
-      attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_TOO_LATE;
+    std::string rejection_reason_str;
+    switch (rejection_reason) {
+      case neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_TOO_LATE:
+        rejection_reason_str = "TOO_LATE";
+        attempt_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_TOO_LATE;
+        break;
+      case neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_NOT_PLAYING:
+        rejection_reason_str = "NOT_PLAYING";
+        break;
+      case neurosimo_eeg_interfaces::srv::InjectTrigger::Response::REJECTION_INTERNAL_ERROR:
+        rejection_reason_str = "INTERNAL_ERROR";
+        break;
+      default:
+        rejection_reason_str = inject_response->success ? "UNKNOWN (inject reported success but with a rejection reason)"
+                                                          : "UNKNOWN";
+        break;
     }
+
+    RCLCPP_ERROR(logger,
+      "InjectTrigger rejected for desired pulse time %.4f s: %s (simulator playback time: %.4f s, error: %.4f s).",
+      desired_pulse_time, rejection_reason_str.c_str(), inject_response->current_playback_time,
+      desired_pulse_time - inject_response->current_playback_time);
+
     response->success = false;
   }
 

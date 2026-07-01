@@ -134,7 +134,7 @@ RESET_COLOR_CMD="sed \"s/$/${COLOR_RESET}/\" --unbuffered"
 FORMAT_CMD="$REMOVE_SUFFIX_CMD | $FORMAT_TIMESTAMP_CMD | $CLEAN_LABELS_CMD | $REMOVE_ROS_TIMESTAMPS_CMD | $PAD_MESSAGE_TYPES_CMD | $HIGHLIGHT_AFTER_THIRD_COLON_CMD | $ADD_DEFAULT_COLOR_CMD | $RESET_COLOR_CMD"
 
 # Filter out known-noise
-NOISE_FILTER="grep -v 'Failed to parse type hash'"
+NOISE_FILTER="grep --line-buffered -v 'Failed to parse type hash'"
 
 # ---- Logging logic ----
 # Rationale:
@@ -171,7 +171,7 @@ else
     # If service name is provided, filter by the prefix compose uses in its logs output.
     # Compose logs output typically includes "<service>-1  | ..." or "<service>-1 | ...".
     if [[ -n "$CONTAINER_NAME" ]]; then
-        CMD="$CMD | grep -E \"^${CONTAINER_NAME}-[0-9]+\\s+\\|\""
+        CMD="$CMD | grep --line-buffered -E \"^${CONTAINER_NAME}-[0-9]+\\s+\\|\""
     fi
 
     CMD="$CMD | $FORMAT_CMD | $NOISE_FILTER"

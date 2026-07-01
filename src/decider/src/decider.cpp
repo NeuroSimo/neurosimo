@@ -644,7 +644,7 @@ void EegDecider::handle_stimulation_request(
   }
 
   this->previous_stimulation_time = latest_pulse_time;
-  this->stimulation_requested = true;
+  this->active_attempt = false;
 }
 
 void EegDecider::process_pulse_request(const DeferredProcessingRequest& request) {
@@ -981,8 +981,7 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
     return;
   }
 
-  this->attempt_commit_received = true;
-  this->stimulation_requested = false;
+  this->active_attempt = true;
   this->committed_attempt_in_session = msg->attempt_in_session;
 
   this->committed_stage_name = msg->stage_name;
@@ -1089,8 +1088,9 @@ void EegDecider::process_sample(const std::shared_ptr<neurosimo_eeg_interfaces::
   /* Process any deferred requests that are now ready (have enough look-ahead samples). */
   process_ready_deferred_requests(sample_time);
 
-  /* If attempt commit is received and stimulation has not been requested, handle the attempt. */
-  if (this->attempt_commit_received && !this->stimulation_requested && !msg->in_task && !msg->in_rest) {
+  /* If there is an active attempt (= an attempt commit has been received and stimulation has not been
+     requested yet), handle the attempt. */
+  if (this->active_attempt && !msg->in_task && !msg->in_rest) {
 
     /* Call prepare_trial once per trial. If it returns a trigger_offset, the
        trigger is scheduled directly (no periodic processing for this trial).

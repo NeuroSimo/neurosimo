@@ -38,6 +38,8 @@ export interface ProtocolInfo extends ROSLIB.Message {
   yaml_filename: string
   name: string
   description: string
+  minimum_trial_interval: number
+  repeat_failed_trials: boolean
   elements: ProtocolElementInfo[]
   runtime_parameters: RuntimeParameterInfo[]
 }

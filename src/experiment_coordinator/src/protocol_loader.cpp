@@ -385,7 +385,9 @@ neurosimo_pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_inf
   info_msg.yaml_filename = yaml_filename;
   info_msg.name = protocol.name;
   info_msg.description = protocol.description;
-  
+  info_msg.minimum_trial_interval = protocol.minimum_trial_interval;
+  info_msg.repeat_failed_trials = protocol.repeat_failed_trials;
+
   /* Convert each protocol element to ROS message. */
   for (const auto& element : protocol.elements) {
     neurosimo_pipeline_interfaces::msg::ProtocolElementInfo element_msg;

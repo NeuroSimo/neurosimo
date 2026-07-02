@@ -120,7 +120,7 @@ export const StimulationDisplay: React.FC = () => {
       ? formatDurationFromSeconds(requestedStimulationOffsetSeconds, true)
       : '\u2013'
   const formattedTimingError =
-    latestAttemptTrace?.timing_error !== undefined && latestAttemptTrace.timing_error !== 0
+    latestAttemptTrace?.has_timing_error
       ? formatDurationFromSeconds(latestAttemptTrace.timing_error)
       : '\u2013'
   const formattedStatus = latestAttemptTrace?.status !== undefined ? getStatusLabel(latestAttemptTrace.status) : '\u2013'

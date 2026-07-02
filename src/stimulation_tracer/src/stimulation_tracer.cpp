@@ -161,7 +161,10 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
     /* Observed pulse fields */
     if (trace.actual_stimulation_time != 0.0) final_trace.actual_stimulation_time = trace.actual_stimulation_time;
     if (trace.actual_stimulation_sample_index != 0) final_trace.actual_stimulation_sample_index = trace.actual_stimulation_sample_index;
-    if (trace.timing_error != 0.0) final_trace.timing_error = trace.timing_error;
+    if (trace.has_timing_error) {
+      final_trace.timing_error = trace.timing_error;
+      final_trace.has_timing_error = true;
+    }
 
     /* Trial validity - if any trace marks it invalid, the final trace is invalid */
     if (trace.invalid_trial) final_trace.invalid_trial = true;

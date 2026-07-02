@@ -94,6 +94,7 @@ ATTEMPT_TRACE_FIELDS = [
     'actual_stimulation_time',
     'actual_stimulation_sample_index',
     'timing_error',
+    'has_timing_error',
     # Embedded decision fields (flattened with decision_ prefix)
     'decision_id',
     'decision_status',

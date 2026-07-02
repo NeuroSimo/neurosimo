@@ -77,6 +77,7 @@ uint64 actual_stimulation_sample_index
 
 # Timing error (actual - scheduled) in seconds
 float64 timing_error
+bool has_timing_error                     # true once a pulse is observed and timing_error is populated
 
 # ----------------------------------------------------------------------------
 # Trial validity (filled by Decider from process_pulse return value)

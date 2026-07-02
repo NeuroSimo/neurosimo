@@ -210,6 +210,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
           <ValidatedInput
             type='number'
             value={startTime}
+            formatValue={(value) => value.toFixed(1)}
             min={0}
             max={selectedDatasetInfo?.duration || 0}
             onChange={setStartTime}

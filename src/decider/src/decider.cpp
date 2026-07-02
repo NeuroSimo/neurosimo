@@ -563,19 +563,15 @@ void EegDecider::handle_stimulation_request(
   bool request_targeted_pulses = !result.targeted_pulses.empty();
 
   double_t earliest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
-  double_t latest_pulse_time = std::numeric_limits<double_t>::quiet_NaN();
 
   if (request_timed_trigger) {
     earliest_pulse_time = reference_time + *result.trigger_offset;
-    latest_pulse_time = earliest_pulse_time;
   }
 
   if (request_targeted_pulses) {
     earliest_pulse_time = reference_time + result.targeted_pulses.front().time_offset;
-    latest_pulse_time = earliest_pulse_time;
     for (const auto& pulse : result.targeted_pulses) {
       earliest_pulse_time = std::min(earliest_pulse_time, reference_time + pulse.time_offset);
-      latest_pulse_time = std::max(latest_pulse_time, reference_time + pulse.time_offset);
     }
   }
 
@@ -596,15 +592,17 @@ void EegDecider::handle_stimulation_request(
   /* Store for use when computing timing_error on pulse observed. */
   this->last_requested_stimulation_time = earliest_pulse_time;
 
-  /* Check that the minimum trial interval has passed. */
-  auto time_since_previous_trial = earliest_pulse_time - this->previous_stimulation_time;
-  auto has_minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                           time_since_previous_trial >= this->minimum_trial_interval;
+  /* Check that the minimum trial interval has passed since the attempt started. Measuring from the
+     attempt start (rather than the previous pulse) means the first trial after a rest is not a
+     special case; consecutive stimulations stay spaced as long as the coordinator spaces attempts. */
+  auto time_since_attempt_start = earliest_pulse_time - this->attempt_start_time;
+  auto has_minimum_trial_interval_passed = std::isnan(this->attempt_start_time) ||
+                                           time_since_attempt_start >= this->minimum_trial_interval;
 
   if (!has_minimum_trial_interval_passed) {
-    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum trial interval (%.1f s) has not passed (time since previous stimulation: %.3f s).",
+    RCLCPP_ERROR(this->get_logger(), "Stimulation requested but minimum trial interval (%.1f s) has not passed since the attempt start (time since attempt start: %.3f s).",
       this->minimum_trial_interval,
-      time_since_previous_trial);
+      time_since_attempt_start);
 
     this->error_occurred = true;
     this->abort_session("Minimum trial interval not passed");
@@ -640,7 +638,6 @@ void EegDecider::handle_stimulation_request(
     this->targeted_pulses_publisher->publish(targeted_pulses_msg);
   }
 
-  this->previous_stimulation_time = latest_pulse_time;
   this->active_attempt = false;
 }
 
@@ -1165,9 +1162,11 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
     periodic_processing_triggered = true;
   }
 
-  /* Check if minimum trial interval has passed since last trigger. */
-  bool minimum_trial_interval_passed = std::isnan(this->previous_stimulation_time) ||
-                                       sample_time >= this->previous_stimulation_time + this->minimum_trial_interval;
+  /* Only start periodic processing once the minimum trial interval has elapsed since the attempt
+     start. Measuring from the attempt start (rather than the previous pulse) keeps the first trial
+     after a rest from being a special case. */
+  bool minimum_trial_interval_passed = !std::isnan(this->attempt_start_time) &&
+                                       sample_time >= this->attempt_start_time + this->minimum_trial_interval - this->TOLERANCE;
 
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   bool backpressure_detected = detect_backpressure(msg);

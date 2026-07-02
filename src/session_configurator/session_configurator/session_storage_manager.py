@@ -22,9 +22,14 @@ class SessionStorageManager:
 
     def _save_json(self, path, state):
         tmp = path + ".tmp"
-        with open(tmp, 'w') as f:
-            json.dump(state, f, indent=2)
-        os.replace(tmp, path)
+        try:
+            with open(tmp, 'w') as f:
+                json.dump(state, f, indent=2)
+            os.replace(tmp, path)
+        except OSError as e:
+            # e.g. the project directory was deleted underneath us; log and
+            # carry on rather than letting the whole node crash.
+            self.logger.error(f"Failed to save session config to {path}: {e}")
 
     # Session config
 

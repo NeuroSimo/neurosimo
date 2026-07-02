@@ -197,4 +197,4 @@ echo "${BOLD}Building Electron app...${RESET}"
 "$SCRIPT_DIR/build-electron-app"
 
 echo ""
-echo "${BOLD}Update complete.${RESET} Now on: ${BOLD}${TARGET}${RESET}"
+echo "${BOLD}Update completed.${RESET}"

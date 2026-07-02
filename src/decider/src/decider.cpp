@@ -994,11 +994,9 @@ void EegDecider::handle_attempt_commit(const std::shared_ptr<neurosimo_pipeline_
   this->committed_trial_in_session = msg->trial_in_session;
 
   /* Attempt start time is the time from which predetermined pulse offsets are computed,
-     and it re-aligns periodic processing so the first periodic decision occurs one interval
-     after the attempt start. */
+     and the next periodic processing time is set to start at minimum ITI after the attempt start. */
   this->attempt_start_time = msg->attempt_start_time;
-  this->next_periodic_processing_time =
-    msg->attempt_start_time + this->decider_wrapper->get_periodic_processing_interval();
+  this->next_periodic_processing_time = msg->attempt_start_time + this->minimum_trial_interval;
 
   /* A new attempt has been committed; the upcoming trial has not been prepared yet. */
   this->trial_prepared = false;
@@ -1162,17 +1160,11 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
     periodic_processing_triggered = true;
   }
 
-  /* Only start periodic processing once the minimum trial interval has elapsed since the attempt
-     start. Measuring from the attempt start (rather than the previous pulse) keeps the first trial
-     after a rest from being a special case. */
-  bool minimum_trial_interval_passed = !std::isnan(this->attempt_start_time) &&
-                                       sample_time >= this->attempt_start_time + this->minimum_trial_interval - this->TOLERANCE;
-
   /* Check for backpressure by comparing current time to the appropriate upstream timestamp. */
   bool backpressure_detected = detect_backpressure(msg);
 
   /* Check if periodic processing should trigger. */
-  if (periodic_processing_triggered && minimum_trial_interval_passed) {
+  if (periodic_processing_triggered) {
     enqueue_deferred_request(msg, sample_time, ProcessingReason::Periodic);
   }
 }

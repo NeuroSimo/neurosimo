@@ -248,7 +248,12 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
   }
 
   const auto& stage = element.stage.value();
-  bool invalid_trial = msg->invalid_trial;
+
+  /* A trial fails if either the decider judged the processed pulse invalid, or the attempt
+     did not reach a processed pulse at all (e.g. TOO_LATE, ERROR, loopback latency exceeded). */
+  bool trial_failed =
+    msg->invalid_trial ||
+    msg->status != neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED;
 
   /* The trial's verdict is now known: this is a trial boundary. If a pause was requested
      while the trial was running, it becomes effective now. (For the within-stage case the
@@ -259,18 +264,30 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
     activate_pause();
   }
 
-  if (invalid_trial) {
-    /* Invalid trial: increment failure counter, do not advance trial position. */
+  if (trial_failed) {
+    /* Failed trial: increment failure counter. Whether the trial position advances
+       depends on the protocol's repeat_failed_trials setting. */
     state.failures_in_stage++;
 
+    const char* reason = msg->invalid_trial ? "invalid data" : "attempt not completed";
     if (stage.max_failures.has_value()) {
-      RCLCPP_INFO(this->get_logger(), "Trial invalid: Stage '%s' failure %u/%u (trial %u/%u)",
-        stage.name.c_str(), state.failures_in_stage, stage.max_failures.value(),
+      RCLCPP_INFO(this->get_logger(), "Trial failed (%s, status %u): Stage '%s' failure %u/%u (trial %u/%u)",
+        reason, msg->status, stage.name.c_str(), state.failures_in_stage, stage.max_failures.value(),
         state.trial_in_stage, stage.trials);
     } else {
-      RCLCPP_INFO(this->get_logger(), "Trial invalid: Stage '%s' failure %u (trial %u/%u)",
-        stage.name.c_str(), state.failures_in_stage,
+      RCLCPP_INFO(this->get_logger(), "Trial failed (%s, status %u): Stage '%s' failure %u (trial %u/%u)",
+        reason, msg->status, stage.name.c_str(), state.failures_in_stage,
         state.trial_in_stage, stage.trials);
+    }
+
+    if (!this->protocol->repeat_failed_trials) {
+      /* Do not repeat the failed trial: advance the trial position to the next trial. */
+      state.trial_in_stage++;
+      state.trial_in_session++;
+      state.attempt_in_trial = 0;
+
+      RCLCPP_INFO(this->get_logger(), "Not repeating failed trial: advancing to Stage '%s' trial %u/%u",
+        stage.name.c_str(), state.trial_in_stage, stage.trials);
     }
   } else {
     /* Valid trial: advance trial counters. */

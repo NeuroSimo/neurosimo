@@ -1,8 +1,9 @@
 name: "Example protocol with predetermined trials"
 description: "Demonstrates predetermined trial timing via prepare_trial"
 
-safety:
+execution:
   minimum_trial_interval: 2.0
+  repeat_failed_trials: true
 
 stages:
   - stage:

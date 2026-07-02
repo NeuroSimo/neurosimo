@@ -128,7 +128,7 @@ Main processing method called by the pipeline for periodic processing of EEG/EMG
 
 During periodic protocol stages, the decider schedules `process_periodic()` on a fixed cadence given by `periodic_processing_interval`. That schedule is independent of pulse and event callbacks (see the timeline under `process_event`).
 
-The experiment [protocol](../protocols/README.md) requires `safety.minimum_trial_interval`: the minimum seconds between consecutive trials/pulses. The `process_periodic()` method is **not called until that interval has elapsed since the previous stimulation**. The next call
+The experiment [protocol](../protocols/README.md) requires `execution.minimum_trial_interval`: the minimum seconds between consecutive trials/pulses. The `process_periodic()` method is **not called until that interval has elapsed since the previous stimulation**. The next call
 happens only after the interval ends.
 
 **Parameters:**

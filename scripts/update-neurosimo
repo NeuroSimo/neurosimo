@@ -1,0 +1,199 @@
+#!/bin/bash
+
+# Update NeuroSimo to a chosen published version, then re-run the Ansible
+# installation and rebuild everything (ROS interfaces, containers, Electron app).
+
+set -e
+
+# Define the text formatting codes
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+RESET=$(tput sgr0)
+
+# Resolve the repository root (prefer the environment, fall back to script path).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+export NEUROSIMO_ROOT="${NEUROSIMO_ROOT:-$PROJECT_ROOT}"
+
+cd "$NEUROSIMO_ROOT"
+
+# ---------------------------------------------------------------------------
+# 1. Fetch the latest refs and tags from origin.
+# ---------------------------------------------------------------------------
+echo "${BOLD}Fetching latest origin...${RESET}"
+git fetch --tags --prune origin
+
+# ---------------------------------------------------------------------------
+# 2. Refuse to continue on a dirty working tree (tracked changes only, matching
+#    the provenance definition used by build-neurosimo). Offer to stash.
+# ---------------------------------------------------------------------------
+if ! git diff --quiet --no-ext-diff || ! git diff --cached --quiet --no-ext-diff; then
+    echo ""
+    echo "${BOLD}${UNDERLINE}Warning:${RESET} you have uncommitted changes to tracked files:"
+    git status --short --untracked-files=no
+    echo ""
+    read -p "Stash them before updating? They can be restored later with 'git stash pop'. [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        git stash push -m "update-neurosimo autostash $(date '+%Y-%m-%d %H:%M:%S')"
+    else
+        echo "Aborting: refusing to overwrite uncommitted changes."
+        exit 1
+    fi
+fi
+
+# Note (untracked files, e.g. project files, are left untouched; git checkout
+# will only fail if an incoming tracked file would clobber one, in which case
+# git prints an explicit error.)
+
+# ---------------------------------------------------------------------------
+# 3. Let the user choose which version to install.
+# ---------------------------------------------------------------------------
+LATEST_TAG="$(git tag -l 'v*' --sort=-v:refname | head -n1)"
+
+echo ""
+echo "${BOLD}Select NeuroSimo version to install:${RESET}"
+if [ -n "$LATEST_TAG" ]; then
+    echo "  1) latest stable release: ${BOLD}${LATEST_TAG}${RESET}"
+fi
+echo "  2) development version: ${BOLD}origin/main${RESET}"
+echo "  3) other tagged release..."
+echo ""
+read -p "Choice [1]: " CHOICE
+CHOICE=${CHOICE:-1}
+
+TARGET=""      # ref to check out
+TARGET_KIND="" # "branch" or "tag"
+
+case "$CHOICE" in
+    1)
+        if [ -z "$LATEST_TAG" ]; then
+            echo "No tagged releases found."
+            exit 1
+        fi
+        TARGET="$LATEST_TAG"
+        TARGET_KIND="tag"
+        ;;
+    2)
+        TARGET="main"
+        TARGET_KIND="branch"
+        ;;
+    3)
+        mapfile -t TAGS < <(git tag -l 'v*' --sort=-v:refname)
+        if [ ${#TAGS[@]} -eq 0 ]; then
+            echo "No tagged releases found."
+            exit 1
+        fi
+        echo ""
+        echo "${BOLD}Available tagged releases:${RESET}"
+        for i in "${!TAGS[@]}"; do
+            printf "  %2d) %s\n" "$((i + 1))" "${TAGS[$i]}"
+        done
+        echo ""
+        read -p "Choice: " TAG_CHOICE
+        if ! [[ "$TAG_CHOICE" =~ ^[0-9]+$ ]] || \
+           [ "$TAG_CHOICE" -lt 1 ] || [ "$TAG_CHOICE" -gt ${#TAGS[@]} ]; then
+            echo "Invalid choice."
+            exit 1
+        fi
+        TARGET="${TAGS[$((TAG_CHOICE - 1))]}"
+        TARGET_KIND="tag"
+        ;;
+    *)
+        echo "Invalid choice."
+        exit 1
+        ;;
+esac
+
+# ---------------------------------------------------------------------------
+# 4. Check out the chosen version.
+# ---------------------------------------------------------------------------
+echo ""
+echo "${BOLD}Checking out ${TARGET}...${RESET}"
+if [ "$TARGET_KIND" = "branch" ]; then
+    # Land on the branch (pullable), creating a local tracking branch if needed.
+    git checkout main 2>/dev/null || git checkout -b main origin/main
+    git pull --ff-only origin main
+else
+    # Tags check out into a detached HEAD, which is expected for a pinned release.
+    git checkout "$TARGET"
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Re-run the Ansible installation (playbooks occasionally change between
+#    versions). Mirrors the Ansible portion of scripts/install-neurosimo.
+# ---------------------------------------------------------------------------
+if ! command -v ansible-playbook &> /dev/null; then
+    echo "Ansible is not installed. Installing Ansible..."
+    sudo apt update && sudo apt install -y software-properties-common
+    sudo add-apt-repository --yes --update ppa:ansible/ansible
+    sudo apt install -y ansible
+fi
+
+read -s -p "Enter sudo password: " SUDO_PASS
+echo ""
+export ANSIBLE_BECOME_PASS="$SUDO_PASS"
+
+# Function to check if NVIDIA drivers are installed
+has_nvidia_drivers() {
+    if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+if has_nvidia_drivers; then
+    echo "NVIDIA drivers detected, updating NeuroSimo with GPU support."
+    USE_GPU=true
+else
+    echo "No NVIDIA drivers detected, updating NeuroSimo in CPU-only mode."
+    USE_GPU=false
+fi
+
+echo "${BOLD}Running Ansible playbooks...${RESET}"
+ansible-playbook -i 'localhost,' ansible/install-docker.yml \
+  --connection=local --become \
+  --extra-vars "ansible_become_password='$SUDO_PASS'"
+
+ansible-playbook -i 'localhost,' ansible/install-ros.yml \
+  --connection=local --become
+
+if [ "$USE_GPU" = true ]; then
+    ansible-playbook -i 'localhost,' ansible/install-nvidia-container-toolkit.yml \
+      --connection=local --become
+fi
+
+ansible-playbook -i 'localhost,' ansible/install-neurosimo.yml \
+  --connection=local --become \
+  --extra-vars "use_gpu=$USE_GPU"
+
+# ---------------------------------------------------------------------------
+# 6. Rebuild: ROS interfaces, containers, Electron app.
+# ---------------------------------------------------------------------------
+# Clear stale colcon build artifacts so the interfaces rebuild cleanly.
+rm -rf "$NEUROSIMO_ROOT/build" "$NEUROSIMO_ROOT/install" "$NEUROSIMO_ROOT/log"
+
+# Source ROS and the NeuroSimo environment so colcon/ros2 are available.
+if [ -f /opt/ros/jazzy/setup.bash ]; then
+    source /opt/ros/jazzy/setup.bash
+fi
+if [ -f "$HOME/.bash_neurosimo" ]; then
+    source "$HOME/.bash_neurosimo" > /dev/null
+fi
+
+echo "${BOLD}Building ROS interfaces...${RESET}"
+"$SCRIPT_DIR/build-ros-interfaces"
+
+# Pick up the newly built ROS workspace.
+if [ -f "$HOME/.bash_neurosimo" ]; then
+    source "$HOME/.bash_neurosimo" > /dev/null
+fi
+
+echo "${BOLD}Building containers...${RESET}"
+"$SCRIPT_DIR/build-neurosimo"
+
+echo "${BOLD}Building Electron app...${RESET}"
+"$SCRIPT_DIR/build-electron-app"
+
+echo ""
+echo "${BOLD}Update complete.${RESET} Now on: ${BOLD}${TARGET}${RESET}"

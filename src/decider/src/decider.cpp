@@ -703,6 +703,7 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   pulse_trace.actual_stimulation_time = sample_time;
   pulse_trace.actual_stimulation_sample_index = request.triggering_sample->sample_index;
   pulse_trace.timing_error = sample_time - this->last_requested_stimulation_time;
+  pulse_trace.has_timing_error = true;
   pulse_trace.invalid_trial = result.invalid_trial;
   this->attempt_trace_publisher->publish(pulse_trace);
 }

@@ -64,6 +64,7 @@ export interface AttemptTrace extends ROSLIB.Message {
   actual_stimulation_time: number
   actual_stimulation_sample_index: number
   timing_error: number
+  has_timing_error: boolean
   invalid_trial: boolean
 }
 

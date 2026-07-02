@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
@@ -13,7 +13,6 @@ import { CreateProjectModal } from 'components/CreateProjectModal'
 import { ProtocolInfoModal } from 'components/ProtocolInfoModal'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { RuntimeParameterInput } from 'components/RuntimeParameterInput'
-import { listProjects } from 'ros/project'
 import { useGlobalConfig } from 'providers/GlobalConfigProvider'
 import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
 import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
@@ -62,18 +61,13 @@ export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList, runtimeParameterInfos } = useContext(ModuleListContext)
   const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters } = useSessionConfig()
   const { sessionState } = useSession()
-  const { activeProject, setActiveProject } = useGlobalConfig()
-  const [projects, setProjects] = useState<string[]>([])
+  const { activeProject, projects, setActiveProject } = useGlobalConfig()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isProtocolInfoModalOpen, setIsProtocolInfoModalOpen] = useState(false)
   const [protocolInfo, setProtocolInfo] = useState<ProtocolInfo | null>(null)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isElectron = !!(window as any).electronAPI
-
-  useEffect(() => {
-    listProjects(setProjects)
-  }, [])
 
   const handleRuntimeParameterCommit = (name: string, value: RuntimeParameterValue | undefined) => {
     const updated = { ...runtimeParameters }
@@ -88,7 +82,8 @@ export const ExperimentPanel: React.FC = () => {
   }
 
   const handleProjectCreated = (projectName: string) => {
-    listProjects(setProjects)
+    // The project list refreshes automatically via the latched projects topic
+    // once the backend detects the new directory.
     setActiveProject(projectName, () => {
       console.log('Switched to newly created project:', projectName)
     })

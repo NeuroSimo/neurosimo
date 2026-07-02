@@ -87,7 +87,29 @@ class GlobalStorageManager:
         if not self.validate_global_config(config):
             self.logger.error("Reinitializing global config.")
             config = self.initialize_global_config()
+        self.reconcile_active_project(config)
         return config
+
+    def reconcile_active_project(self, config):
+        """Ensure active_project points to a project that still exists on disk.
+
+        If the stored active project has been deleted, fall back to the first
+        available project (or '' if none exist) and persist the correction, so
+        downstream nodes never receive a project name without a directory.
+        """
+        projects = self.list_projects()
+        active_project = config.get("active_project")
+
+        if active_project in projects:
+            return
+
+        fallback = projects[0] if projects else ''
+        self.logger.warning(
+            f"Active project '{active_project}' no longer exists; "
+            f"falling back to '{fallback}'."
+        )
+        config["active_project"] = fallback
+        self.save_global_config(config)
 
     # Project selection
 

@@ -223,18 +223,18 @@ TriggerTimer::SchedulingResult TriggerTimer::schedule_trigger_with_timer(
 
   /* Check if trigger time is in the past */
   if (time_until_trigger < 0.0) {
-    double_t timing_offset = -time_until_trigger;
+    double_t timing_error = -time_until_trigger;
     
-    /* Reject if timing offset exceeds maximum allowed */
-    if (timing_offset > this->maximum_timing_offset) {
+    /* Reject if timing error exceeds maximum allowed */
+    if (timing_error > this->maximum_timing_error) {
       RCLCPP_ERROR(logger, "Trigger time %.4f (pulse time %.4f) is too late (current estimated: %.4f, error: %.4f ms exceeds maximum %.4f ms), rejecting trigger.",
-                   trigger_time, desired_pulse_time, estimated_current_time, timing_offset * 1000, this->maximum_timing_offset * 1000);
+                   trigger_time, desired_pulse_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
       return SchedulingResult::TOO_LATE;
     }
     
     /* Within tolerance, trigger immediately */
     RCLCPP_WARN(logger, "Trigger time %.4f (pulse time %.4f) is in the past (current estimated: %.4f, error: %.4f ms within maximum %.4f ms), triggering immediately.",
-                trigger_time, desired_pulse_time, estimated_current_time, timing_offset * 1000, this->maximum_timing_offset * 1000);
+                trigger_time, desired_pulse_time, estimated_current_time, timing_error * 1000, this->maximum_timing_error * 1000);
     time_until_trigger = 0.0;
   }
 
@@ -339,7 +339,7 @@ void TriggerTimer::handle_request_timed_trigger(
   attempt_trace.system_time_trigger_timer_received = system_time_trigger_timer_received;
   attempt_trace.system_time_trigger_timer_finished = system_time_trigger_timer_finished;
   attempt_trace.loopback_latency_at_scheduling = this->current_loopback_latency;
-  attempt_trace.maximum_timing_offset = this->maximum_timing_offset;
+  attempt_trace.maximum_timing_error = this->maximum_timing_error;
   attempt_trace.maximum_loopback_latency = this->maximum_loopback_latency;
   attempt_trace.trigger_to_pulse_delay = this->trigger_to_pulse_delay;
 
@@ -459,19 +459,19 @@ void TriggerTimer::handle_initialize_trigger_timer(
   this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 
   /* Set configuration from request */
-  this->maximum_timing_offset = request->maximum_timing_offset;
+  this->maximum_timing_error = request->maximum_timing_error;
   this->maximum_loopback_latency = request->maximum_loopback_latency;
   this->trigger_to_pulse_delay = request->trigger_to_pulse_delay;
   this->enable_labjack = request->enable_labjack;
   this->data_source = request->data_source;
   this->minimum_trial_interval = request->minimum_trial_interval;
 
-  /* Validate the maximum timing offset is non-negative */
-  if (this->maximum_timing_offset < 0.0) {
-    RCLCPP_ERROR(this->get_logger(), "Maximum timing offset must be non-negative");
+  /* Validate the maximum timing error is non-negative */
+  if (this->maximum_timing_error < 0.0) {
+    RCLCPP_ERROR(this->get_logger(), "Maximum timing error must be non-negative");
     response->success = false;
     this->_publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::ERROR,
-                                 "Invalid configuration: maximum timing offset must be non-negative");
+                                 "Invalid configuration: maximum timing error must be non-negative");
     return;
   }
 
@@ -496,7 +496,7 @@ void TriggerTimer::handle_initialize_trigger_timer(
   /* Log the configuration */
   RCLCPP_INFO(this->get_logger(), " ");
   RCLCPP_INFO(this->get_logger(), "Configuration:");
-  RCLCPP_INFO(this->get_logger(), "  Timing tolerance (ms): %.1f", 1000 * this->maximum_timing_offset);
+  RCLCPP_INFO(this->get_logger(), "  Timing tolerance (ms): %.1f", 1000 * this->maximum_timing_error);
   RCLCPP_INFO(this->get_logger(), "  Maximum loopback latency (ms): %.1f", 1000 * this->maximum_loopback_latency);
   RCLCPP_INFO(this->get_logger(), "  Trigger to pulse delay (ms): %.1f", 1000 * this->trigger_to_pulse_delay);
   RCLCPP_INFO(this->get_logger(), "  Minimum trial interval (s): %.1f", this->minimum_trial_interval);

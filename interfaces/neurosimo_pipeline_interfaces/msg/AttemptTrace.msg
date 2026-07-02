@@ -21,7 +21,7 @@ uint8 STATUS_SCHEDULED=1                  # trigger timer accepted and scheduled
 uint8 STATUS_FIRED=2                      # trigger timer fired hardware trigger
 uint8 STATUS_PULSE_PROCESSED=3            # pulse observed in EEG stream and corresponding decider processing completed
 uint8 STATUS_LOOPBACK_LATENCY_EXCEEDED=4  # loopback latency exceeds threshold
-uint8 STATUS_TOO_LATE=5                   # trigger time exceeded maximum timing offset
+uint8 STATUS_TOO_LATE=5                   # trigger time exceeded maximum timing error
 uint8 STATUS_ERROR=6                      # error (e.g. LabJack not connected, trigger already scheduled)
 uint8 status
 
@@ -53,7 +53,7 @@ float64 reference_time                    # The reference time used for this att
 # ----------------------------------------------------------------------------
 # TriggerTimer configuration (filled by TriggerTimer)
 # ----------------------------------------------------------------------------
-float64 maximum_timing_offset             # in seconds
+float64 maximum_timing_error             # in seconds
 float64 maximum_loopback_latency          # in seconds
 float64 trigger_to_pulse_delay            # in seconds
 
@@ -75,8 +75,8 @@ float64 latency_corrected_time_at_firing
 float64 actual_stimulation_time           # seconds since recording start
 uint64 actual_stimulation_sample_index
 
-# Timing offset (actual - scheduled) in seconds
-float64 timing_offset
+# Timing error (actual - scheduled) in seconds
+float64 timing_error
 
 # ----------------------------------------------------------------------------
 # Trial validity (filled by Decider from process_pulse return value)

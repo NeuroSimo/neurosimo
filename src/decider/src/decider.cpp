@@ -593,7 +593,7 @@ void EegDecider::handle_stimulation_request(
   attempt_trace.decision_id = decision_id;
   this->attempt_trace_publisher->publish(attempt_trace);
 
-  /* Store for use when computing timing_offset on pulse observed. */
+  /* Store for use when computing timing_error on pulse observed. */
   this->last_requested_stimulation_time = earliest_pulse_time;
 
   /* Check that the minimum trial interval has passed. */
@@ -702,7 +702,7 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   pulse_trace.status = neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED;
   pulse_trace.actual_stimulation_time = sample_time;
   pulse_trace.actual_stimulation_sample_index = request.triggering_sample->sample_index;
-  pulse_trace.timing_offset = sample_time - this->last_requested_stimulation_time;
+  pulse_trace.timing_error = sample_time - this->last_requested_stimulation_time;
   pulse_trace.invalid_trial = result.invalid_trial;
   this->attempt_trace_publisher->publish(pulse_trace);
 }

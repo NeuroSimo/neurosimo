@@ -195,7 +195,7 @@ private:
   /* Used for keeping track of the time of the previous stimulation to ensure that the minimum trial interval is respected. */
   double_t previous_stimulation_time = UNSET_TIME;
 
-  /* Requested stimulation time from the latest stimulation request; used for timing_offset in pulse trace. */
+  /* Requested stimulation time from the latest stimulation request; used for timing_error in pulse trace. */
   double_t last_requested_stimulation_time = std::numeric_limits<double_t>::quiet_NaN();
 
   /* Used for publishing logs from the previous sample at the beginning of the current sample. */

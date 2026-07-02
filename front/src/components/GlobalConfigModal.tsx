@@ -248,7 +248,7 @@ interface GlobalConfigValues {
 
   // Timing Configuration
   maximumLoopbackLatency: number
-  maximumTimingOffset: number
+  maximumTimingError: number
   triggerToPulseDelay: number
   
   // Disk Space Monitoring Configuration
@@ -272,7 +272,7 @@ const emptyConfig: GlobalConfigValues = {
 
   // Timing Configuration
   maximumLoopbackLatency: 0,
-  maximumTimingOffset: 0,
+  maximumTimingError: 0,
   triggerToPulseDelay: 0,
   
   // Disk Space Monitoring Configuration
@@ -336,7 +336,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
         maximumDroppedSamples: globalConfig.maximumDroppedSamples,
         enableLabjack: globalConfig.enableLabjack,
         maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
-        maximumTimingOffset: globalConfig.maximumTimingOffset,
+        maximumTimingError: globalConfig.maximumTimingError,
         triggerToPulseDelay: globalConfig.triggerToPulseDelay,
         diskWarningThreshold: parseDiskThreshold(globalConfig.diskWarningThreshold),
         diskErrorThreshold: parseDiskThreshold(globalConfig.diskErrorThreshold),
@@ -379,7 +379,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
       maximumDroppedSamples: config.maximumDroppedSamples,
       enableLabjack: config.enableLabjack,
       maximumLoopbackLatency: config.maximumLoopbackLatency,
-      maximumTimingOffset: config.maximumTimingOffset,
+      maximumTimingError: config.maximumTimingError,
       triggerToPulseDelay: config.triggerToPulseDelay,
       diskWarningThreshold: `${config.diskWarningThreshold}GiB`,
       diskErrorThreshold: `${config.diskErrorThreshold}GiB`,
@@ -570,12 +570,12 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
 
             <InputGroup>
               <LabelRow>
-                <Label htmlFor="maximumTimingOffset">Maximum Timing Offset (milliseconds):</Label>
-                <InfoTooltip text="Maximum timing offset for triggering" />
+                <Label htmlFor="maximumTimingError">Maximum Timing Error (milliseconds):</Label>
+                <InfoTooltip text="Maximum timing error for triggering" />
               </LabelRow>
               <ValidatedInput
-                value={config.maximumTimingOffset}
-                onChange={(val) => updateConfig('maximumTimingOffset', val)}
+                value={config.maximumTimingError}
+                onChange={(val) => updateConfig('maximumTimingError', val)}
                 formatValue={(val) => formatDecimal(val * 1000)}
                 parseValue={(str) => parseFloat(str) / 1000}
                 min={0}

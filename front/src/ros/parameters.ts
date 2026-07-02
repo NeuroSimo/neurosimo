@@ -12,7 +12,7 @@ interface Parameter {
 // Parameters that should always be sent as DOUBLE type, even if they are whole numbers
 const ALWAYS_DOUBLE_PARAMS = new Set([
   'maximum_loopback_latency',
-  'maximum_timing_offset',
+  'maximum_timing_error',
   'trigger_to_pulse_delay',
   'simulator.start_time',
   'simulator.playback_speed',

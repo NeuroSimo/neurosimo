@@ -14,7 +14,7 @@ interface GlobalConfigContextType {
   maximumDroppedSamples: number
   enableLabjack: boolean
   maximumLoopbackLatency: number
-  maximumTimingOffset: number
+  maximumTimingError: number
   triggerToPulseDelay: number
   diskWarningThreshold: string
   diskErrorThreshold: string
@@ -38,7 +38,7 @@ const defaultGlobalConfigState: GlobalConfigContextType = {
   maximumDroppedSamples: 0,
   enableLabjack: false,
   maximumLoopbackLatency: 0,
-  maximumTimingOffset: 0,
+  maximumTimingError: 0,
   triggerToPulseDelay: 0,
   diskWarningThreshold: '',
   diskErrorThreshold: '',
@@ -63,7 +63,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     maximumDroppedSamples: number
     enableLabjack: boolean
     maximumLoopbackLatency: number
-    maximumTimingOffset: number
+    maximumTimingError: number
     triggerToPulseDelay: number
     diskWarningThreshold: string
     diskErrorThreshold: string
@@ -77,7 +77,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     maximumDroppedSamples: 0,
     enableLabjack: false,
     maximumLoopbackLatency: 0,
-    maximumTimingOffset: 0,
+    maximumTimingError: 0,
     triggerToPulseDelay: 0,
     diskWarningThreshold: '',
     diskErrorThreshold: '',
@@ -106,7 +106,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         maximumDroppedSamples: msg.maximum_dropped_samples,
         enableLabjack: msg.enable_labjack,
         maximumLoopbackLatency: msg.maximum_loopback_latency,
-        maximumTimingOffset: msg.maximum_timing_offset,
+        maximumTimingError: msg.maximum_timing_error,
         triggerToPulseDelay: msg.trigger_to_pulse_delay,
         diskWarningThreshold: msg.disk_warning_threshold,
         diskErrorThreshold: msg.disk_error_threshold,
@@ -156,7 +156,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     if (config.maximumDroppedSamples !== undefined) parameters.push({ name: 'maximum_dropped_samples', value: config.maximumDroppedSamples })
     if (config.enableLabjack !== undefined) parameters.push({ name: 'enable_labjack', value: config.enableLabjack })
     if (config.maximumLoopbackLatency !== undefined) parameters.push({ name: 'maximum_loopback_latency', value: config.maximumLoopbackLatency })
-    if (config.maximumTimingOffset !== undefined) parameters.push({ name: 'maximum_timing_offset', value: config.maximumTimingOffset })
+    if (config.maximumTimingError !== undefined) parameters.push({ name: 'maximum_timing_error', value: config.maximumTimingError })
     if (config.triggerToPulseDelay !== undefined) parameters.push({ name: 'trigger_to_pulse_delay', value: config.triggerToPulseDelay })
     if (config.diskWarningThreshold !== undefined) parameters.push({ name: 'disk_warning_threshold', value: config.diskWarningThreshold })
     if (config.diskErrorThreshold !== undefined) parameters.push({ name: 'disk_error_threshold', value: config.diskErrorThreshold })
@@ -177,7 +177,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
         maximumDroppedSamples: globalConfig.maximumDroppedSamples,
         enableLabjack: globalConfig.enableLabjack,
         maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
-        maximumTimingOffset: globalConfig.maximumTimingOffset,
+        maximumTimingError: globalConfig.maximumTimingError,
         triggerToPulseDelay: globalConfig.triggerToPulseDelay,
         diskWarningThreshold: globalConfig.diskWarningThreshold,
         diskErrorThreshold: globalConfig.diskErrorThreshold,

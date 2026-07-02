@@ -13,7 +13,7 @@ bool enable_labjack
 
 # Timing Configuration
 float64 maximum_loopback_latency
-float64 maximum_timing_offset
+float64 maximum_timing_error
 float64 trigger_to_pulse_delay
 
 # Disk Space Monitoring Configuration

@@ -67,7 +67,7 @@ const InfoRow = styled.div`
 const InfoLabel = styled.span`
   font-weight: 500;
   color: #555;
-  min-width: 120px;
+  min-width: 160px;
 `
 
 const InfoValue = styled.span`
@@ -187,6 +187,14 @@ export const ProtocolInfoModal: React.FC<ProtocolInfoModalProps> = ({
           <InfoRow>
             <InfoLabel>Trials:</InfoLabel>
             <InfoValue>{totalTrials}</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>Minimum trial interval:</InfoLabel>
+            <InfoValue>{protocolInfo.minimum_trial_interval} s</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>Repeat failed trials:</InfoLabel>
+            <InfoValue>{protocolInfo.repeat_failed_trials ? 'Yes' : 'No'}</InfoValue>
           </InfoRow>
         </InfoSection>
 

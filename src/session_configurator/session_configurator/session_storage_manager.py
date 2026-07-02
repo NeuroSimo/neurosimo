@@ -47,7 +47,7 @@ class SessionStorageManager:
             "notes": '',
             "subject_id": 1,
             "decider.module": 'example.py',
-            "decider.enabled": False,
+            "decider.enabled": True,
             "preprocessor.module": 'example.py',
             "preprocessor.enabled": False,
             "presenter.module": 'example.py',

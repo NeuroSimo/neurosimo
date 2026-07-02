@@ -151,6 +151,7 @@ std::tuple<bool, neurosimo_project_interfaces::msg::DatasetInfo, std::vector<dou
 
     /* Get sample count from the data file and compute duration. */
     std::string data_file_path = directory_path + "/" + dataset_msg.data_filename;
+    RCLCPP_INFO(node_->get_logger(), "Computing duration of %s by counting samples...", json_filename.c_str());
     auto [success, sample_count] = get_sample_count(data_file_path);
 
     if (!success) {

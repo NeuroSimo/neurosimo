@@ -224,6 +224,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
           <ValidatedInput
             type='number'
             value={playbackSpeed}
+            formatValue={(value) => value.toFixed(1)}
             min={0.01}
             step={0.1}
             onChange={setPlaybackSpeed}

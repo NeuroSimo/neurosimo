@@ -119,9 +119,8 @@ class MockTMS:
     def _set_mode(self, mode: str) -> None:
         self._require_open()
 
-        if mode != self.mode:
-            time.sleep(self.switch_delay_s)
-            self.mode = mode
+        time.sleep(self.switch_delay_s)
+        self.mode = mode
 
     def _waveform(self) -> str:
         if self.mode == self.MODE_PRIME_TRIPLET:

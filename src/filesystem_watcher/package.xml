@@ -1,20 +1,13 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>session_configurator</name>
+  <name>filesystem_watcher</name>
   <version>0.1.0</version>
-  <description>Project manager</description>
+  <description>Shared directory-watching utility for ROS2 Python nodes (watchdog-based).</description>
   <maintainer email="okahilak@gmail.com">Olli-Pekka Kahilakoski</maintainer>
   <license>GPL-3.0-only</license>
 
   <depend>rclpy</depend>
-  <depend>std_srvs</depend>
-
-  <depend>filesystem_watcher</depend>
-
-  <depend>neurosimo_eeg_interfaces</depend>
-  <depend>neurosimo_project_interfaces</depend>
-  <depend>neurosimo_system_interfaces</depend>
 
   <export>
     <build_type>ament_python</build_type>

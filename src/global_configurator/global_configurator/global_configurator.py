@@ -6,9 +6,12 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from neurosimo_project_interfaces.srv import ListProjects
+from neurosimo_project_interfaces.msg import FilenameList
 from neurosimo_system_interfaces.msg import GlobalConfig
 
 from rcl_interfaces.msg import SetParametersResult
+
+from filesystem_watcher import DirectoryWatcher
 
 from .global_storage_manager import GlobalStorageManager
 
@@ -58,12 +61,20 @@ class GlobalConfiguratorNode(Node):
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
         self.global_config_publisher = self.create_publisher(GlobalConfig, "/neurosimo/global_configurator/config", qos, callback_group=self.callback_group)
+        self.project_list_publisher = self.create_publisher(FilenameList, "/neurosimo/global_configurator/projects", qos, callback_group=self.callback_group)
 
         # Add parameter change callback to save changes to global state
         self.add_on_set_parameters_callback(self.parameter_change_callback)
 
-        # Publish initial global config
+        # Publish initial global config and project list
         self.publish_global_config(global_config)
+        self.publish_project_list()
+
+        # Watch the projects root so that projects added or removed on disk are
+        # reflected live, and the active project is reconciled if it disappears.
+        self.directory_watcher = DirectoryWatcher(self.logger)
+        self.directory_watcher.watch_subdirectories(
+            self.storage_manager.PROJECTS_ROOT, self.handle_projects_change)
 
     def set_active_project(self, project_name):
         """Set the active project and save to storage."""
@@ -108,6 +119,48 @@ class GlobalConfiguratorNode(Node):
         
         self.global_config_publisher.publish(config)
 
+    def publish_project_list(self):
+        """Publish the current list of projects available on disk."""
+        msg = FilenameList()
+        msg.filenames = self.storage_manager.list_projects()
+        self.project_list_publisher.publish(msg)
+        self.logger.info(f"Published project list: {msg.filenames}")
+
+    def handle_projects_change(self):
+        """Watcher callback: the set of project directories on disk changed.
+
+        Republishes the project list and, if the active project no longer exists,
+        reconciles it to an available project and republishes the global config so
+        downstream nodes never keep a project name without a directory.
+        """
+        config = self.storage_manager.load_global_config()
+        previous_active = config.get('active_project')
+
+        # reconcile_active_project persists a corrected active_project (falling back
+        # to the first available project, or '' if none remain) when needed.
+        self.storage_manager.reconcile_active_project(config)
+        new_active = config.get('active_project')
+
+        # Always republish so subscribers stay current with add/remove/rename.
+        self.publish_project_list()
+
+        if new_active == previous_active:
+            return
+
+        self.logger.info(
+            f"Active project reconciled from '{previous_active}' to '{new_active}'")
+        if new_active:
+            # Keep the ROS parameter in sync; this triggers parameter_change_callback,
+            # which persists and republishes the global config.
+            self.set_parameters([
+                rclpy.parameter.Parameter(
+                    'active_project', rclpy.parameter.Parameter.Type.STRING, new_active)
+            ])
+        else:
+            # No projects remain; parameter validation would reject '', so publish the
+            # reconciled config (active_project='') directly.
+            self.publish_global_config(config)
+
     # Service callbacks
 
     def list_projects_callback(self, request, response):
@@ -151,6 +204,11 @@ class GlobalConfiguratorNode(Node):
 
         # Return success to allow parameter changes
         return SetParametersResult(successful=True)
+
+    def destroy_node(self):
+        """Cleanup when node is destroyed."""
+        self.directory_watcher.shutdown()
+        super().destroy_node()
 
 def main(args=None):
     rclpy.init(args=args)

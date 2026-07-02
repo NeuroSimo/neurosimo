@@ -11,7 +11,7 @@ from neurosimo_project_interfaces.msg import FilenameList
 from rcl_interfaces.msg import SetParametersResult
 
 from .session_storage_manager import SessionStorageManager
-from .directory_watcher import DirectoryWatcher
+from filesystem_watcher import DirectoryWatcher
 
 
 class SessionConfiguratorNode(Node):

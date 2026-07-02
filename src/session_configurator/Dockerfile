@@ -22,9 +22,12 @@ COPY interfaces/neurosimo_project_interfaces interfaces/neurosimo_project_interf
 COPY interfaces/neurosimo_system_interfaces interfaces/neurosimo_system_interfaces/
 RUN source /opt/ros/jazzy/setup.bash && colcon build
 
+# Shared packages
+COPY src/filesystem_watcher src/filesystem_watcher/
+
 # ROS node
 COPY src/session_configurator src/session_configurator/
-RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select session_configurator
+RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select filesystem_watcher session_configurator
 
 # Set the Cyclone DDS configuration
 COPY config/cyclonedds.xml /config/

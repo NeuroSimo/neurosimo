@@ -1147,12 +1147,6 @@ void EegDecider::handle_periodic_trial(const std::shared_ptr<neurosimo_eeg_inter
   auto sample_time = msg->time;
   bool periodic_processing_triggered = false;
 
-  // Initialize next periodic processing time if not already set. Normally handle_attempt_commit
-  // sets this to the attempt start plus one interval; this is a defensive fallback.
-  if (std::isnan(this->next_periodic_processing_time)) {
-    this->next_periodic_processing_time = this->decider_wrapper->get_periodic_processing_interval();
-  }
-
   // Check if it's time to trigger periodic processing.
   if (sample_time >= this->next_periodic_processing_time - this->TOLERANCE) {
     /* Move to next processing time and mark that periodic processing should occur. */

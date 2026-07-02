@@ -382,14 +382,20 @@
         mode: "0644"
       when: not env_file_status.stat.exists
 
-    - name: Set HOST_UID in .env to the installing user's UID
+    # Set HOST_UID and HOST_GID in .env to the target user's UID and GID
+    - name: Get target user's passwd entry
+      getent:
+        database: passwd
+        key: "{{ target_user }}"
+
+    - name: Set HOST_UID in .env to the target user's UID
       lineinfile:
         path: "{{ repo_root }}/.env"
         regexp: '^HOST_UID='
-        line: "HOST_UID={{ ansible_user_uid }}"
+        line: "HOST_UID={{ getent_passwd[target_user][1] }}"
 
-    - name: Set HOST_GID in .env to the installing user's GID
+    - name: Set HOST_GID in .env to the target user's GID
       lineinfile:
         path: "{{ repo_root }}/.env"
         regexp: '^HOST_GID='
-        line: "HOST_GID={{ ansible_user_gid }}"
+        line: "HOST_GID={{ getent_passwd[target_user][2] }}"

@@ -2,9 +2,11 @@ import React, { useState, useEffect, ReactNode, createContext, useContext } from
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
+import { FilenameList } from './ModuleListProvider'
 
 interface GlobalConfigContextType {
   activeProject: string
+  projects: string[]
   eegPort: number
   eegDevice: string
   turbolinkSamplingFrequency: number
@@ -28,6 +30,7 @@ const asyncNoop = async () => {}
 
 const defaultGlobalConfigState: GlobalConfigContextType = {
   activeProject: '',
+  projects: [],
   eegPort: 0,
   eegDevice: '',
   turbolinkSamplingFrequency: 0,
@@ -81,6 +84,8 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     locale: '',
   })
 
+  const [projects, setProjects] = useState<string[]>([])
+
   useEffect(() => {
     /* Subscriber for global config topic (latched). */
     const globalConfigSubscriber = new Topic({
@@ -109,9 +114,21 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
       })
     })
 
+    /* Subscriber for the available projects list (latched). */
+    const projectListSubscriber = new Topic<FilenameList>({
+      ros: ros,
+      name: '/neurosimo/global_configurator/projects',
+      messageType: 'neurosimo_project_interfaces/FilenameList',
+    })
+
+    projectListSubscriber.subscribe((message) => {
+      setProjects(message.filenames)
+    })
+
     /* Cleanup */
     return () => {
       globalConfigSubscriber.unsubscribe()
+      projectListSubscriber.unsubscribe()
     }
   }, [])
 
@@ -152,6 +169,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     <GlobalConfigContext.Provider
       value={{
         activeProject: globalConfig.activeProject,
+        projects: projects,
         eegPort: globalConfig.eegPort,
         eegDevice: globalConfig.eegDevice,
         turbolinkSamplingFrequency: globalConfig.turbolinkSamplingFrequency,

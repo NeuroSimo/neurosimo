@@ -31,6 +31,7 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 ### Configuration and Catalog
 
 - `/neurosimo/global_configurator/config` - Active global configuration.
+- `/neurosimo/global_configurator/projects` - Available projects.
 - `/neurosimo/session_configurator/config` - Active session configuration.
 - `/neurosimo/pipeline/decider/list` - Available decider modules.
 - `/neurosimo/pipeline/preprocessor/list` - Available preprocessor modules.

@@ -193,11 +193,10 @@ void ExperimentCoordinator::handle_raw_sample(const std::shared_ptr<neurosimo_ee
 
   /* Record the timing anchor for the next attempt. An attempt boundary marks the
      temporal start of a new attempt window; the recorded time is carried to the
-     decider in the next AttemptCommit. Session/stage start is anchored in start_stage.
-     A pulse or the end of a rest re-anchors here, at the sample where it occurs. */
-  if (msg->pulse_trigger) {
-    state.attempt_start_time = sample_time;
-  }
+     decider in the next AttemptCommit. Session/stage start is anchored in start_stage,
+     and pulse outcomes are anchored from the finalized attempt trace (see
+     handle_attempt_trace_final). The end of a rest re-anchors here, at the sample where
+     it occurs. */
   if (was_in_rest && !state.in_rest) {
     state.attempt_start_time = sample_time;
   }
@@ -281,6 +280,15 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
 
     RCLCPP_INFO(this->get_logger(), "Trial %u: Stage '%s' trial %u/%u (valid)",
       state.trial_in_session, stage.name.c_str(), state.trial_in_stage, stage.trials);
+  }
+
+  /* Anchor the next attempt's timing from this attempt's finalized outcome:
+     - On a processed pulse, anchor at the observed pulse time.
+     - On any other terminal status (e.g. TOO_LATE) no pulse entered the EEG stream, anchor at the current sample. */
+  if (msg->status == neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED) {
+    state.attempt_start_time = msg->actual_stimulation_time;
+  } else {
+    state.attempt_start_time = state.last_sample_time;
   }
 
   /* Check if stage is complete:

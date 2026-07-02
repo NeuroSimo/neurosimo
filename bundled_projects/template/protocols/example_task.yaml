@@ -1,8 +1,9 @@
 name: "Example protocol with stages and rest periods"
 description: "An example protocol demonstrating stages and rest periods"
 
-safety:
+execution:
   minimum_trial_interval: 2.0   # minimum seconds between consecutive trials
+  repeat_failed_trials: true    # if true, a failed trial is repeated; if false, move on to the next trial
 
 stages:
   - stage:

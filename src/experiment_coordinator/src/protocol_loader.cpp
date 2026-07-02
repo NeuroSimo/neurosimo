@@ -31,21 +31,26 @@ LoadResult ProtocolLoader::load_from_file(const std::string& filepath) {
       protocol.description = yaml["description"].as<std::string>();
     }
     
-    // Parse safety section
-    if (!yaml["safety"]) {
-      result.error_message = "Protocol missing required field 'safety'";
+    // Parse execution section
+    if (!yaml["execution"]) {
+      result.error_message = "Protocol missing required field 'execution'";
       return result;
     }
-    const YAML::Node& safety = yaml["safety"];
-    if (!safety["minimum_trial_interval"]) {
-      result.error_message = "Protocol 'safety' section missing required field 'minimum_trial_interval'";
+    const YAML::Node& execution = yaml["execution"];
+    if (!execution["minimum_trial_interval"]) {
+      result.error_message = "Protocol 'execution' section missing required field 'minimum_trial_interval'";
       return result;
     }
-    protocol.minimum_trial_interval = safety["minimum_trial_interval"].as<double>();
+    protocol.minimum_trial_interval = execution["minimum_trial_interval"].as<double>();
     if (protocol.minimum_trial_interval <= 0) {
-      result.error_message = "Protocol 'safety.minimum_trial_interval' must be positive (got " + std::to_string(protocol.minimum_trial_interval) + ")";
+      result.error_message = "Protocol 'execution.minimum_trial_interval' must be positive (got " + std::to_string(protocol.minimum_trial_interval) + ")";
       return result;
     }
+    if (!execution["repeat_failed_trials"]) {
+      result.error_message = "Protocol 'execution' section missing required field 'repeat_failed_trials'";
+      return result;
+    }
+    protocol.repeat_failed_trials = execution["repeat_failed_trials"].as<bool>();
     
     // Parse runtime_parameters (optional)
     if (yaml["runtime_parameters"]) {

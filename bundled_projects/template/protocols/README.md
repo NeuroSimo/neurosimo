@@ -10,8 +10,9 @@ Each protocol file should be a YAML file with the following structure:
 name: "Protocol name"
 description: "Description of the protocol"  # Optional
 
-safety:
+execution:
   minimum_trial_interval: 2.0   # minimum seconds between consecutive trials (required)
+  repeat_failed_trials: true    # whether a failed trial is repeated or skipped (required)
 
 stages:
   - stage:
@@ -34,11 +35,12 @@ stages:
       name: "train_classifier"  # Arbitrary name; must match decider logic
 ```
 
-## Safety
+## Execution
 
-The `safety` section is required and defines safety constraints for the protocol:
+The `execution` section is required and defines execution constraints for the protocol:
 
 - `minimum_trial_interval`: Minimum time in seconds between consecutive trials/pulses. Must be positive. This value is enforced by both the decider (which gates periodic processing after a pulse) and the trigger timer (which rejects triggers that arrive too soon after the previous one).
+- `repeat_failed_trials`: Boolean controlling what happens when a trial fails. A trial fails if the decider judged the processed pulse invalid, or if the attempt never reached a processed pulse (e.g. too late, hardware error, loopback latency exceeded). If `true`, the failed trial is repeated (the trial position stays the same). If `false`, the experiment coordinator moves on to the next trial. Required.
 
 ## Elements
 
@@ -103,7 +105,7 @@ The decider must implement `process_task(self, task_name: str)` for protocols th
 ## Validation
 
 The protocol loader will validate:
-- The `safety` section is present with a positive `minimum_trial_interval`
+- The `execution` section is present with a positive `minimum_trial_interval` and a `repeat_failed_trials` boolean
 - The protocol has at least one element
 - All stage names are unique
 - All task names are unique and do not conflict with stage names

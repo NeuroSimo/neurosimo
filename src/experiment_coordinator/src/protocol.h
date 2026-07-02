@@ -102,6 +102,7 @@ struct Protocol {
   std::string name;
   std::string description;
   double minimum_trial_interval;
+  bool repeat_failed_trials;
   std::vector<ProtocolElement> elements;
   std::vector<RuntimeParameter> runtime_parameters;
 };

@@ -154,14 +154,14 @@ void StimulationTracer::finalize_attempt(uint64_t attempt_in_session) {
     if (trace.system_time_hardware_fired != 0) final_trace.system_time_hardware_fired = trace.system_time_hardware_fired;
     if (trace.loopback_latency_at_scheduling != 0.0) final_trace.loopback_latency_at_scheduling = trace.loopback_latency_at_scheduling;
     if (trace.latency_corrected_time_at_firing != 0.0) final_trace.latency_corrected_time_at_firing = trace.latency_corrected_time_at_firing;
-    if (trace.maximum_timing_offset != 0.0) final_trace.maximum_timing_offset = trace.maximum_timing_offset;
+    if (trace.maximum_timing_error != 0.0) final_trace.maximum_timing_error = trace.maximum_timing_error;
     if (trace.maximum_loopback_latency != 0.0) final_trace.maximum_loopback_latency = trace.maximum_loopback_latency;
     if (trace.trigger_to_pulse_delay != 0.0) final_trace.trigger_to_pulse_delay = trace.trigger_to_pulse_delay;
 
     /* Observed pulse fields */
     if (trace.actual_stimulation_time != 0.0) final_trace.actual_stimulation_time = trace.actual_stimulation_time;
     if (trace.actual_stimulation_sample_index != 0) final_trace.actual_stimulation_sample_index = trace.actual_stimulation_sample_index;
-    if (trace.timing_offset != 0.0) final_trace.timing_offset = trace.timing_offset;
+    if (trace.timing_error != 0.0) final_trace.timing_error = trace.timing_error;
 
     /* Trial validity - if any trace marks it invalid, the final trace is invalid */
     if (trace.invalid_trial) final_trace.invalid_trial = true;

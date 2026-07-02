@@ -119,9 +119,9 @@ export const StimulationDisplay: React.FC = () => {
     requestedStimulationOffsetSeconds !== undefined
       ? formatDurationFromSeconds(requestedStimulationOffsetSeconds, true)
       : '\u2013'
-  const formattedTimingOffset =
-    latestAttemptTrace?.timing_offset !== undefined && latestAttemptTrace.timing_offset !== 0
-      ? formatDurationFromSeconds(latestAttemptTrace.timing_offset)
+  const formattedTimingError =
+    latestAttemptTrace?.timing_error !== undefined && latestAttemptTrace.timing_error !== 0
+      ? formatDurationFromSeconds(latestAttemptTrace.timing_error)
       : '\u2013'
   const formattedStatus = latestAttemptTrace?.status !== undefined ? getStatusLabel(latestAttemptTrace.status) : '\u2013'
 
@@ -170,7 +170,7 @@ export const StimulationDisplay: React.FC = () => {
         <SectionSpacer />
         <StateRow>
           <IndentedStateTitle>Timing error</IndentedStateTitle>
-          <StateValue>{experimentState?.ongoing ? formattedTimingOffset : '\u2013'}</StateValue>
+          <StateValue>{experimentState?.ongoing ? formattedTimingError : '\u2013'}</StateValue>
         </StateRow>
         <StateRow>
           <IndentedStateTitle>Status</IndentedStateTitle>

@@ -58,7 +58,7 @@ private:
   bool use_mock_labjack = false;
 
   // Configuration parameters
-  double_t maximum_timing_offset = 0.0;
+  double_t maximum_timing_error = 0.0;
   double_t maximum_loopback_latency = 0.0;
   double_t trigger_to_pulse_delay = 0.0;
   double_t minimum_trial_interval = 0.0;

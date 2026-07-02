@@ -52,7 +52,7 @@ class GlobalStorageManager:
             "enable_labjack": True,
             # Timing Configuration
             "maximum_loopback_latency": 0.005,
-            "maximum_timing_offset": 0.0,
+            "maximum_timing_error": 0.0,
             "trigger_to_pulse_delay": 0.0,
             # Disk Space Monitoring Configuration
             "disk_warning_threshold": '100GiB',
@@ -71,7 +71,7 @@ class GlobalStorageManager:
             "maximum_dropped_samples",
             "enable_labjack",
             "maximum_loopback_latency",
-            "maximum_timing_offset", "trigger_to_pulse_delay",
+            "maximum_timing_error", "trigger_to_pulse_delay",
             "disk_warning_threshold", "disk_error_threshold",
             "locale"
         ]

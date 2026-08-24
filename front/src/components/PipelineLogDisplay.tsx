@@ -118,26 +118,29 @@ const LogEntry = styled.div`
 
 const Timestamp = styled.span<{ $phase: number; $level: number }>`
   color: ${props => {
+    // Check error level first so errors during init/finalize show correctly
+    if (props.$level === 2) return '#fff'  // ERROR - white
     if (props.$phase === 0) return '#000'  // INITIALIZATION - black
     if (props.$phase === 2) return '#000'  // FINALIZATION - black
-    if (props.$level === 2) return '#fff'  // ERROR - white
     return '#555'  // INFO/WARNING - dark gray
   }};
   font-weight: bold;
   text-align: right;
   background-color: ${props => {
-    if (props.$phase === 0) return '#d46c0b'  // INITIALIZATION - orange
-    if (props.$phase === 2) return '#6c757d'  // FINALIZATION - gray
+    // Check error level first so errors during init/finalize show correctly
     if (props.$level === 2) return '#dc3545'  // ERROR - red
     if (props.$level === 1) return '#ffc107'  // WARNING - yellow
+    if (props.$phase === 0) return '#d46c0b'  // INITIALIZATION - orange
+    if (props.$phase === 2) return '#6c757d'  // FINALIZATION - gray
     return '#e8e8e8'  // INFO - light gray
   }};
   padding: 3px 4px;
   border-right: 2px solid ${props => {
-    if (props.$phase === 0) return '#b85a09'  // INITIALIZATION - darker orange
-    if (props.$phase === 2) return '#545b62'  // FINALIZATION - darker gray
+    // Check error level first so errors during init/finalize show correctly
     if (props.$level === 2) return '#c82333'  // ERROR - darker red
     if (props.$level === 1) return '#e0a800'  // WARNING - darker yellow
+    if (props.$phase === 0) return '#b85a09'  // INITIALIZATION - darker orange
+    if (props.$phase === 2) return '#545b62'  // FINALIZATION - darker gray
     return '#ccc'  // INFO - gray
   }};
 `
@@ -192,9 +195,10 @@ export const PipelineLogDisplay: React.FC = () => {
   }, [preprocessorLogs, deciderLogs, presenterLogs, selectedSource])
 
   const getTimestampLabel = (log: LogMessage): string => {
+    // Check error level first so errors during init/finalize still show as "Error"
+    if (log.level === LogLevel.ERROR) return 'Error'
     if (log.phase === LogPhase.INITIALIZATION) return 'Init'
     if (log.phase === LogPhase.FINALIZATION) return 'Final'
-    if (log.level === LogLevel.ERROR) return 'Error'
     // If the sample time is NaN in the backend, it will be null here. This shouldn't happen unless there is a bug,
     // but if it does, we'll show a question mark.
     if (log.sample_time == null) return '?'

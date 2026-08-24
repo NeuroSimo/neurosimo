@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactNode } from 'react'
+import React, { useState, useEffect, useRef, ReactNode } from 'react'
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
@@ -78,8 +78,15 @@ interface ModuleListProviderProps {
 }
 
 export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children }) => {
-  const { pipeline, runtimeParameters } = useSessionConfig()
+  const { pipeline, runtimeParameters, setRuntimeParameters } = useSessionConfig()
   const { activeProject } = useGlobalConfig()
+
+  /* Keep the latest runtime-parameter values in a ref so the fetch effect can prune
+     stale entries without having to depend on (and thus refetch on) every value edit. */
+  const runtimeParametersRef = useRef(runtimeParameters)
+  useEffect(() => {
+    runtimeParametersRef.current = runtimeParameters
+  }, [runtimeParameters])
 
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
   const [deciderList, setDeciderList] = useState<string[]>([])
@@ -108,7 +115,20 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     }
 
     getProtocolInfoRos(activeProject, protocolName, (info) => {
-      setRuntimeParameterInfos(info?.runtime_parameters ?? [])
+      const infos = info?.runtime_parameters ?? []
+      setRuntimeParameterInfos(infos)
+
+      /* Drop any stored values whose descriptor no longer exists in the protocol
+         (e.g. a parameter was removed or renamed on disk) so the session config does
+         not keep stale entries around. */
+      const validNames = new Set(infos.map((descriptor) => descriptor.name))
+      const currentValues = runtimeParametersRef.current
+      const staleNames = Object.keys(currentValues).filter((name) => !validNames.has(name))
+      if (staleNames.length > 0) {
+        const pruned = { ...currentValues }
+        staleNames.forEach((name) => delete pruned[name])
+        setRuntimeParameters(pruned)
+      }
     })
   }, [protocolName, activeProject, protocolList])
 

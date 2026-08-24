@@ -108,6 +108,7 @@ builtins.print = _print
 
 void PreprocessorWrapper::log_error(const std::string& message) {
   RCLCPP_ERROR(*logger_ptr, "%s", message.c_str());
+  std::lock_guard<std::mutex> lock(log_buffer_mutex);
   log_buffer.push_back({message, LogLevel::ERROR});
 }
 

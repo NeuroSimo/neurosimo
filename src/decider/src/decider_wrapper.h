@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <string>
 #include <vector>
@@ -177,8 +178,16 @@ private:
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */
   static rclcpp::Logger* logger_ptr;
 
-  /* Buffer for Python logs - static to be accessible from static log functions */
+  /* Buffer for Python logs - static to be accessible from static log functions.
+     Only ever touched from the main thread. */
   static std::vector<LogEntry> log_buffer;
+
+  /* Separate buffer for logs arriving via IPC. handle_ipc_log_message() is
+     invoked from the LogIpcServer background thread (and from the main thread
+     via drain()), so it must not write to log_buffer directly. This buffer is
+     guarded by ipc_log_mutex and merged into log_buffer in get_and_clear_logs(). */
+  static std::vector<LogEntry> ipc_log_buffer;
+  static std::mutex ipc_log_mutex;
 
   /* Current processing path for log messages */
   static uint8_t current_processing_path;

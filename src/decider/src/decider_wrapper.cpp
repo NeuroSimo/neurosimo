@@ -685,6 +685,15 @@ DeciderWrapper::~DeciderWrapper() {
 }
 
 std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
+  /* Merge any logs collected via IPC (worker processes / background thread)
+     into the main buffer before returning. Runs on the main thread. */
+  {
+    std::lock_guard<std::mutex> lock(ipc_log_mutex);
+    for (auto& entry : ipc_log_buffer) {
+      log_buffer.push_back(std::move(entry));
+    }
+    ipc_log_buffer.clear();
+  }
   std::vector<LogEntry> logs = std::move(log_buffer);
   log_buffer.clear();
   return logs;
@@ -701,7 +710,11 @@ void DeciderWrapper::set_current_processing_path(uint8_t processing_path) {
 }
 
 void DeciderWrapper::handle_ipc_log_message(std::string&& msg) {
-  log_buffer.push_back({std::move(msg), LogLevel::INFO, current_processing_path});
+  /* Called from the LogIpcServer background thread as well as from the main
+     thread via drain(). Use a dedicated buffer + mutex so it never races with
+     the main thread's direct writes to log_buffer. */
+  std::lock_guard<std::mutex> lock(ipc_log_mutex);
+  ipc_log_buffer.push_back({std::move(msg), LogLevel::INFO, current_processing_path});
 }
 
 std::size_t DeciderWrapper::get_envelope_buffer_size() const {
@@ -1251,4 +1264,6 @@ bool DeciderWrapper::has_task_processor() const {
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
 std::vector<LogEntry> DeciderWrapper::log_buffer;
+std::vector<LogEntry> DeciderWrapper::ipc_log_buffer;
+std::mutex DeciderWrapper::ipc_log_mutex;
 uint8_t DeciderWrapper::current_processing_path;

@@ -56,79 +56,51 @@ const StatusMessage = styled.div`
 `
 
 export const DataSourceDisplay: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState<'simulator' | 'recording' | 'eeg_device'>('simulator')
-  const [previousTab, setPreviousTab] = React.useState<'simulator' | 'recording'>('simulator')
-  const [hasInitialized, setHasInitialized] = React.useState(false)
   const { eegDeviceInfo } = useContext(EegStreamContext)
   const { dataSource, setDataSource } = useSessionConfig()
 
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
 
-  // Sync activeTab from session config's dataSource (e.g., when switching projects)
-  // This runs when dataSource changes from backend (project load/switch)
+  // Remembers the user's simulator/recording choice so it can be restored
+  // when EEG streaming stops (streaming forces the data source to 'eeg_device').
+  const preStreamSource = React.useRef<'simulator' | 'recording'>('simulator')
+
+  // The tab that is actually shown/used. Device streaming always wins; if the
+  // config says 'eeg_device' but nothing is streaming, fall back to the
+  // remembered simulator/recording choice.
+  const activeTab: 'simulator' | 'recording' | 'eeg_device' = isEegStreaming
+    ? 'eeg_device'
+    : dataSource === 'eeg_device' || !dataSource
+      ? preStreamSource.current
+      : (dataSource as 'simulator' | 'recording')
+
+  // Keep the backend session config consistent with the actual device state.
+  // This is the single source of the two bugs: on project switch / device
+  // (un)availability, the stored data_source could disagree with reality.
   React.useEffect(() => {
     if (!dataSource) return
 
-    const configDataSource = dataSource as 'simulator' | 'recording' | 'eeg_device'
-    
-    // Determine the effective tab based on device availability
-    // Priority: actual device state overrides config
-    let effectiveTab: 'simulator' | 'recording' | 'eeg_device'
     if (isEegStreaming) {
-      // Device is streaming - must use eeg_device regardless of config
-      effectiveTab = 'eeg_device'
-      // Remember what the config wanted as the previous tab (for when streaming stops)
-      if (configDataSource !== 'eeg_device') {
-        setPreviousTab(configDataSource as 'simulator' | 'recording')
+      // Streaming is active: config must say 'eeg_device'.
+      if (dataSource !== 'eeg_device') {
+        preStreamSource.current = dataSource as 'simulator' | 'recording'
+        setDataSource('eeg_device')
       }
-    } else if (configDataSource === 'eeg_device') {
-      // EEG device requested but not available - fallback to simulator
-      effectiveTab = 'simulator'
     } else {
-      effectiveTab = configDataSource
-    }
-
-    // Sync activeTab from effective tab
-    if (effectiveTab !== activeTab) {
-      setActiveTab(effectiveTab)
-      if (effectiveTab !== 'eeg_device') {
-        setPreviousTab(effectiveTab)
+      // Not streaming: config must not say 'eeg_device'.
+      if (dataSource === 'eeg_device') {
+        setDataSource(preStreamSource.current)
       }
     }
-
-    // If session config doesn't match the effective tab, update it
-    // This ensures the backend config always matches what the UI is showing
-    if (configDataSource !== effectiveTab) {
-      setDataSource(effectiveTab, () => {
-        console.log('Data source corrected to ' + effectiveTab)
-      })
-    }
-    
-    setHasInitialized(true)
   }, [dataSource, isEegStreaming])
 
-  React.useEffect(() => {
-    if (isEegStreaming) {
-      // Remember the current tab before switching to EEG Device
-      setPreviousTab(activeTab as 'simulator' | 'recording')
-      setActiveTab('eeg_device')
-    } else {
-      // Restore the previous tab when streaming stops
-      setActiveTab(previousTab)
+  // Tabs are only user-selectable when not streaming; a selection is written
+  // straight to the backend config.
+  const setActiveTab = (tab: 'simulator' | 'recording' | 'eeg_device') => {
+    if (!isEegStreaming && (tab === 'simulator' || tab === 'recording')) {
+      setDataSource(tab)
     }
-  }, [isEegStreaming])
-
-  // Sync session config when user manually changes tab (after initialization)
-  React.useEffect(() => {
-    if (!hasInitialized) return
-    
-    // Only update if the current tab differs from what's in the session config
-    if (activeTab !== dataSource) {
-      setDataSource(activeTab, () => {
-        console.log('Data source set to ' + activeTab)
-      })
-    }
-  }, [activeTab, hasInitialized])
+  }
 
   return (
     <DataSourceContext.Provider value={{ setActiveTab, activeTab }}>

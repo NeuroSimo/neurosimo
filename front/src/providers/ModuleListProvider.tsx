@@ -96,7 +96,11 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const presenterEnabled = pipeline.presenter.enabled
   const protocolName = pipeline.experiment.protocol
 
-  /* Fetch the runtime parameter descriptors whenever the selected protocol changes. */
+  /* Fetch the runtime parameter descriptors whenever the selected protocol changes.
+     protocolList is also a dependency: the backend re-publishes the protocol list
+     (giving a new array reference) on any change to the protocols directory, including
+     in-place edits of the currently selected protocol file. Re-fetching on that keeps
+     the runtime-parameter UI in sync without having to switch protocols to refresh. */
   useEffect(() => {
     if (!protocolName || protocolName.trim() === '' || !activeProject) {
       setRuntimeParameterInfos([])
@@ -106,7 +110,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     getProtocolInfoRos(activeProject, protocolName, (info) => {
       setRuntimeParameterInfos(info?.runtime_parameters ?? [])
     })
-  }, [protocolName, activeProject])
+  }, [protocolName, activeProject, protocolList])
 
   /* Every runtime parameter is required, so the session can only start once all of
      them have a usable value. */

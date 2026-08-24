@@ -59,7 +59,11 @@ class SessionConfiguratorNode(Node):
         self.declare_parameter('replay.bag_id', '')
         self.declare_parameter('replay.play_preprocessed', False)
 
-        # Data source parameter
+        # Data source parameter.
+        #
+        # This is ephemeral UI state (which data source tab the UI is showing) and is
+        # deliberately NOT persisted per-project: switching projects keeps whatever the
+        # UI currently shows. It defaults to 'simulator' on node startup.
         self.declare_parameter('data_source', 'simulator')
 
 
@@ -150,7 +154,6 @@ class SessionConfiguratorNode(Node):
             rclpy.parameter.Parameter('simulator.dataset_filename', rclpy.parameter.Parameter.Type.STRING, session_config["simulator.dataset_filename"]),
             rclpy.parameter.Parameter('simulator.start_time', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.start_time"]),
             rclpy.parameter.Parameter('simulator.playback_speed', rclpy.parameter.Parameter.Type.DOUBLE, session_config["simulator.playback_speed"]),
-            rclpy.parameter.Parameter('data_source', rclpy.parameter.Parameter.Type.STRING, session_config["data_source"]),
             rclpy.parameter.Parameter('replay.bag_id', rclpy.parameter.Parameter.Type.STRING, session_config["replay.bag_id"]),
             rclpy.parameter.Parameter('replay.play_preprocessed', rclpy.parameter.Parameter.Type.BOOL, session_config["replay.play_preprocessed"]),
         ])
@@ -276,8 +279,13 @@ class SessionConfiguratorNode(Node):
 
     # Service callbacks
 
-    def publish_session_config(self, session_config: dict):
-        """Build and publish session config from dict."""
+    def publish_session_config(self, session_config: dict, data_source: str = None):
+        """Build and publish session config from dict.
+
+        data_source is ephemeral UI state kept in a runtime-only ROS parameter (never
+        persisted per-project). If not provided explicitly, the current live value of
+        the 'data_source' parameter is used.
+        """
         config = SessionConfig()
         
         config.subject_id = session_config.get('subject_id', 1)
@@ -294,7 +302,9 @@ class SessionConfiguratorNode(Node):
         
         config.protocol_filename = session_config.get('experiment.protocol', '')
         config.runtime_parameters = session_config.get('experiment.runtime_parameters', '{}')
-        config.data_source = session_config.get('data_source', 'simulator')
+        if data_source is None:
+            data_source = self.get_parameter('data_source').get_parameter_value().string_value
+        config.data_source = data_source
         config.simulator_dataset_filename = session_config.get('simulator.dataset_filename', '')
         config.simulator_start_time = session_config.get('simulator.start_time', 0.0)
         config.simulator_playback_speed = session_config.get('simulator.playback_speed', 1.0)
@@ -313,7 +323,14 @@ class SessionConfiguratorNode(Node):
 
             session_config = self.storage_manager.load_session_config(self.active_project)
 
+            # data_source is ephemeral UI state and is never persisted per-project.
+            # Track its (possibly new) value for publishing, but keep it out of the
+            # dict that gets written to disk.
+            data_source = self.get_parameter('data_source').get_parameter_value().string_value
             for param in params:
+                if param.name == 'data_source':
+                    data_source = param.value
+                    continue
                 session_config[param.name] = param.value
 
             # Save the updated session config
@@ -321,7 +338,7 @@ class SessionConfiguratorNode(Node):
             self.logger.info(f"Updated session config for project '{self.active_project}' with parameter changes")
 
             # Publish the updated session config immediately (from the dict, not from ROS params)
-            self.publish_session_config(session_config)
+            self.publish_session_config(session_config, data_source)
 
         except Exception as e:
             self.logger.error(f"Error handling parameter changes: {e}")

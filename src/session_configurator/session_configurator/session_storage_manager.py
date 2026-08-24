@@ -40,6 +40,10 @@ class SessionStorageManager:
         if config is None:
             self.logger.info(f"Session config not found for project: {project_name}, initializing new one.")
             config = self.initialize_session_config(project_name)
+        else:
+            # data_source is ephemeral UI state and is never persisted per-project;
+            # strip it from any legacy config files so it is not loaded or saved.
+            config.pop('data_source', None)
 
         return config
 
@@ -64,7 +68,6 @@ class SessionStorageManager:
             "experiment.runtime_parameters": '{}',
             "replay.bag_id": '',
             "replay.play_preprocessed": False,
-            "data_source": 'simulator',
         }
         self.save_session_config(project_name, config)
         return config
@@ -89,7 +92,6 @@ class SessionStorageManager:
             "experiment.protocol": str,
             "replay.bag_id": str,
             "replay.play_preprocessed": bool,
-            "data_source": str,
         }
 
         for key, expected in expected_types.items():

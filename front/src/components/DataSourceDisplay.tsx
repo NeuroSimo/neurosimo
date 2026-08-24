@@ -58,10 +58,46 @@ const StatusMessage = styled.div`
 export const DataSourceDisplay: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<'simulator' | 'recording' | 'eeg_device'>('simulator')
   const [previousTab, setPreviousTab] = React.useState<'simulator' | 'recording'>('simulator')
+  const [hasInitialized, setHasInitialized] = React.useState(false)
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setDataSource } = useSessionConfig()
+  const { dataSource, setDataSource } = useSessionConfig()
 
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
+
+  // Sync activeTab from session config's dataSource (e.g., when switching projects)
+  // This runs when dataSource changes from backend (project load/switch)
+  React.useEffect(() => {
+    if (!dataSource) return
+
+    const configDataSource = dataSource as 'simulator' | 'recording' | 'eeg_device'
+    
+    // Determine the effective tab based on device availability
+    let effectiveTab: 'simulator' | 'recording' | 'eeg_device'
+    if (configDataSource === 'eeg_device' && !isEegStreaming) {
+      // EEG device requested but not available - fallback to simulator
+      effectiveTab = 'simulator'
+    } else {
+      effectiveTab = configDataSource
+    }
+
+    // Sync activeTab from session config
+    if (effectiveTab !== activeTab) {
+      setActiveTab(effectiveTab)
+      if (effectiveTab !== 'eeg_device') {
+        setPreviousTab(effectiveTab)
+      }
+    }
+
+    // If session config doesn't match the effective tab, update it
+    // This handles the case where eeg_device is in config but device isn't available
+    if (configDataSource !== effectiveTab) {
+      setDataSource(effectiveTab, () => {
+        console.log('Data source corrected to ' + effectiveTab)
+      })
+    }
+    
+    setHasInitialized(true)
+  }, [dataSource, isEegStreaming])
 
   React.useEffect(() => {
     if (isEegStreaming) {
@@ -74,11 +110,17 @@ export const DataSourceDisplay: React.FC = () => {
     }
   }, [isEegStreaming])
 
+  // Sync session config when user manually changes tab (after initialization)
   React.useEffect(() => {
-    setDataSource(activeTab, () => {
-      console.log('Data source set to ' + activeTab)
-    })
-  }, [activeTab])
+    if (!hasInitialized) return
+    
+    // Only update if the current tab differs from what's in the session config
+    if (activeTab !== dataSource) {
+      setDataSource(activeTab, () => {
+        console.log('Data source set to ' + activeTab)
+      })
+    }
+  }, [activeTab, hasInitialized])
 
   return (
     <DataSourceContext.Provider value={{ setActiveTab, activeTab }}>

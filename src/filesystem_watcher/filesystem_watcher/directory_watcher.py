@@ -64,9 +64,17 @@ class DirectoryWatcherHandler(FileSystemEventHandler):
             self._trigger_callback()
 
     def on_moved(self, event):
-        # Renames only matter in directory mode (e.g. a project directory renamed).
-        # File mode preserves the original create/modify/delete-only behaviour.
-        if self.watch_directories and event.is_directory:
+        # A rename fires a move event with the old path as src and the new path
+        # as dest. Both need to be considered so that renaming a file into or out
+        # of the watched set updates the listing.
+        if self.watch_directories:
+            if event.is_directory:
+                self.logger.debug(f"Moved: {event.src_path} -> {event.dest_path}")
+                self._trigger_callback()
+            return
+        if event.is_directory:
+            return
+        if self._has_watched_extension(event.src_path) or self._has_watched_extension(event.dest_path):
             self.logger.debug(f"Moved: {event.src_path} -> {event.dest_path}")
             self._trigger_callback()
 

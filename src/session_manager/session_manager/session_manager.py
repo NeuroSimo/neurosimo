@@ -543,6 +543,12 @@ class SessionManagerNode(Node):
                 return None
             stream_info = response.stream_info
 
+            # Validate EEG device is actually available (connected and streaming)
+            if stream_info.sampling_frequency == 0:
+                self.logger.error('EEG device is not available. No device is connected or streaming. '
+                                  'Please connect an EEG device or switch to simulator/recording data source.')
+                return None
+
         elif data_source == 'recording':
             bag_id = session_config.replay_bag_id
             play_preprocessed = session_config.replay_play_preprocessed

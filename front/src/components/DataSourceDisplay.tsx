@@ -72,15 +72,23 @@ export const DataSourceDisplay: React.FC = () => {
     const configDataSource = dataSource as 'simulator' | 'recording' | 'eeg_device'
     
     // Determine the effective tab based on device availability
+    // Priority: actual device state overrides config
     let effectiveTab: 'simulator' | 'recording' | 'eeg_device'
-    if (configDataSource === 'eeg_device' && !isEegStreaming) {
+    if (isEegStreaming) {
+      // Device is streaming - must use eeg_device regardless of config
+      effectiveTab = 'eeg_device'
+      // Remember what the config wanted as the previous tab (for when streaming stops)
+      if (configDataSource !== 'eeg_device') {
+        setPreviousTab(configDataSource as 'simulator' | 'recording')
+      }
+    } else if (configDataSource === 'eeg_device') {
       // EEG device requested but not available - fallback to simulator
       effectiveTab = 'simulator'
     } else {
       effectiveTab = configDataSource
     }
 
-    // Sync activeTab from session config
+    // Sync activeTab from effective tab
     if (effectiveTab !== activeTab) {
       setActiveTab(effectiveTab)
       if (effectiveTab !== 'eeg_device') {
@@ -89,7 +97,7 @@ export const DataSourceDisplay: React.FC = () => {
     }
 
     // If session config doesn't match the effective tab, update it
-    // This handles the case where eeg_device is in config but device isn't available
+    // This ensures the backend config always matches what the UI is showing
     if (configDataSource !== effectiveTab) {
       setDataSource(effectiveTab, () => {
         console.log('Data source corrected to ' + effectiveTab)

@@ -51,6 +51,13 @@ def test_nonterminal_export_is_rejected():
         analyze_attempts(rows)
 
 
+def test_obsolete_missed_status_is_rejected():
+    rows = load_attempts(FIXTURE)
+    rows[0]["status"] = "missed"
+    with pytest.raises(QualificationError, match="finalized"):
+        analyze_attempts(rows)
+
+
 def test_missing_columns_are_actionable(tmp_path):
     path = tmp_path / "bad.csv"
     path.write_text("status,timing_error\npulse_observed,0.001\n")

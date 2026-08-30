@@ -24,7 +24,6 @@ REQUIRED_COLUMNS = {
 }
 TERMINAL_STATUSES = {
     "pulse_observed",
-    "missed",
     "loopback_latency_exceeded",
     "too_late",
     "error",

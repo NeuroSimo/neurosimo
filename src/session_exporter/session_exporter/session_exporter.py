@@ -110,14 +110,14 @@ ATTEMPT_TRACE_FIELDS = [
 ]
 
 # Status mapping for human-readable export
+# Values must match neurosimo_pipeline_interfaces/msg/AttemptTrace.msg
 ATTEMPT_TRACE_STATUS_MAP = {
     1: 'scheduled',
     2: 'fired',
     3: 'pulse_observed',
-    4: 'missed',
-    5: 'loopback_latency_exceeded',
-    6: 'too_late',
-    7: 'error',
+    4: 'loopback_latency_exceeded',
+    5: 'too_late',
+    6: 'error',
 }
 
 DECISION_TRACE_STATUS_MAP = {

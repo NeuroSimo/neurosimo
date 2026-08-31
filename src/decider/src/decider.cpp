@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <signal.h>
 #include <execinfo.h>
+#include <unistd.h>
 #include <limits>
 
 #define XXH_INLINE_ALL
@@ -44,7 +45,14 @@ void crash_handler(int sig) {
   // Print out all the frames to stderr
   fprintf(stderr, "Error: signal %d:\n", sig);
   backtrace_symbols_fd(array, size, STDERR_FILENO);
-  exit(1);
+
+  /* Use _exit rather than exit: this handler may run for SIGABRT raised from
+     inside free() (e.g. heap corruption detected by glibc) while the malloc
+     arena lock is held by this very thread. exit() would run atexit handlers
+     and static destructors that call malloc/free, deadlocking on that lock and
+     hanging the process, which prevents the entrypoint's restart loop from
+     ever restarting it. _exit is async-signal-safe and terminates immediately. */
+  _exit(1);
 }
 
 EegDecider::EegDecider() : Node("decider"), logger(rclcpp::get_logger("decider")) {

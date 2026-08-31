@@ -120,14 +120,21 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
 
       /* Drop any stored values whose descriptor no longer exists in the protocol
          (e.g. a parameter was removed or renamed on disk) so the session config does
-         not keep stale entries around. */
+         not keep stale entries around. Also initialize any boolean params that don't
+         have a value yet — booleans default to false. */
       const validNames = new Set(infos.map((descriptor) => descriptor.name))
       const currentValues = runtimeParametersRef.current
       const staleNames = Object.keys(currentValues).filter((name) => !validNames.has(name))
-      if (staleNames.length > 0) {
-        const pruned = { ...currentValues }
-        staleNames.forEach((name) => delete pruned[name])
-        setRuntimeParameters(pruned)
+      const uninitializedBooleans = infos.filter(
+        (descriptor) => descriptor.type === 'bool' && currentValues[descriptor.name] === undefined,
+      )
+      if (staleNames.length > 0 || uninitializedBooleans.length > 0) {
+        const updated = { ...currentValues }
+        staleNames.forEach((name) => delete updated[name])
+        uninitializedBooleans.forEach((descriptor) => {
+          updated[descriptor.name] = false
+        })
+        setRuntimeParameters(updated)
       }
     })
   }, [protocolName, activeProject, protocolList])

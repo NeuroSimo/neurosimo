@@ -27,6 +27,10 @@ See the [Hardware configuration guide](md/hardware-guide.md) for instructions on
 
 See the [Getting started guide](md/getting-started.md) for instructions on how to use NeuroSimo.
 
+## Related tools
+
+* [NeuroSimo qualification](https://github.com/ZyntZ/neurosimo-qualification): community-maintained tool for analyzing timing information from NeuroSimo recordings.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a list of changes in each release.

@@ -120,7 +120,7 @@ void DeciderWrapper::log_section_header(const std::string& title) {
 
 void DeciderWrapper::log_error(const std::string& message) {
   RCLCPP_ERROR(*logger_ptr, "%s", message.c_str());
-  log_buffer.push_back({message, LogLevel::ERROR, current_processing_path});
+  append_log_entry({message, LogLevel::ERROR, current_processing_path});
 }
 
 bool DeciderWrapper::initialize_module(
@@ -647,7 +647,7 @@ bool DeciderWrapper::warm_up() {
       RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
 
       // Add error to log buffer so it can be published to UI
-      log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+      append_log_entry({error_msg, LogLevel::ERROR, current_processing_path});
 
       return false;
     } catch (const std::exception& e) {
@@ -655,7 +655,7 @@ bool DeciderWrapper::warm_up() {
       RCLCPP_WARN(*logger_ptr, "  Round %d/%d: FAILED (%s)", round + 1, this->warm_up_rounds, error_msg.c_str());
 
       // Add error to log buffer so it can be published to UI
-      log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
+      append_log_entry({error_msg, LogLevel::ERROR, current_processing_path});
 
       return false;
     }
@@ -684,16 +684,13 @@ DeciderWrapper::~DeciderWrapper() {
   interpreter.release();
 }
 
+void DeciderWrapper::append_log_entry(LogEntry entry) {
+  std::lock_guard<std::mutex> lock(log_mutex);
+  log_buffer.push_back(std::move(entry));
+}
+
 std::vector<LogEntry> DeciderWrapper::get_and_clear_logs() {
-  /* Merge any logs collected via IPC (worker processes / background thread)
-     into the main buffer before returning. Runs on the main thread. */
-  {
-    std::lock_guard<std::mutex> lock(ipc_log_mutex);
-    for (auto& entry : ipc_log_buffer) {
-      log_buffer.push_back(std::move(entry));
-    }
-    ipc_log_buffer.clear();
-  }
+  std::lock_guard<std::mutex> lock(log_mutex);
   std::vector<LogEntry> logs = std::move(log_buffer);
   log_buffer.clear();
   return logs;
@@ -711,10 +708,8 @@ void DeciderWrapper::set_current_processing_path(uint8_t processing_path) {
 
 void DeciderWrapper::handle_ipc_log_message(std::string&& msg) {
   /* Called from the LogIpcServer background thread as well as from the main
-     thread via drain(). Use a dedicated buffer + mutex so it never races with
-     the main thread's direct writes to log_buffer. */
-  std::lock_guard<std::mutex> lock(ipc_log_mutex);
-  ipc_log_buffer.push_back({std::move(msg), LogLevel::INFO, current_processing_path});
+     thread via drain(). append_log_entry() serializes access with log_mutex. */
+  append_log_entry({std::move(msg), LogLevel::INFO, current_processing_path});
 }
 
 std::size_t DeciderWrapper::get_envelope_buffer_size() const {
@@ -1059,13 +1054,11 @@ ProcessResult DeciderWrapper::process_periodic(
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return ProcessResult::failure();
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return ProcessResult::failure();
   }
 
@@ -1106,13 +1099,11 @@ ProcessResult DeciderWrapper::process_pulse(
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return ProcessResult::failure();
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return ProcessResult::failure();
   }
 
@@ -1153,13 +1144,11 @@ ProcessResult DeciderWrapper::process_event(
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return ProcessResult::failure();
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return ProcessResult::failure();
   }
 
@@ -1195,13 +1184,11 @@ PrepareTrialResult DeciderWrapper::prepare_trial(
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error in prepare_trial: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return PrepareTrialResult::failure();
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error in prepare_trial: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return PrepareTrialResult::failure();
   }
 
@@ -1245,13 +1232,11 @@ bool DeciderWrapper::process_task(const std::string& task_name) {
   } catch(const py::error_already_set& e) {
     std::string error_msg = std::string("Python error in process_task: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return false;
 
   } catch(const std::exception& e) {
     std::string error_msg = std::string("C++ error in process_task: ") + e.what();
     log_error(error_msg);
-    log_buffer.push_back({error_msg, LogLevel::ERROR, current_processing_path});
     return false;
   }
 
@@ -1264,6 +1249,5 @@ bool DeciderWrapper::has_task_processor() const {
 
 rclcpp::Logger* DeciderWrapper::logger_ptr = nullptr;
 std::vector<LogEntry> DeciderWrapper::log_buffer;
-std::vector<LogEntry> DeciderWrapper::ipc_log_buffer;
-std::mutex DeciderWrapper::ipc_log_mutex;
+std::mutex DeciderWrapper::log_mutex;
 uint8_t DeciderWrapper::current_processing_path;

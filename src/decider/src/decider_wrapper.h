@@ -175,19 +175,22 @@ public:
 
 private:
   void log_error(const std::string& message);
+
+  /* Append an entry to log_buffer under log_mutex. Safe to call from any thread. */
+  void append_log_entry(LogEntry entry);
+
   /* XXX: Have a static ROS2 logger to expose it more easily to the Python side (see cpp_bindings.cpp). */
   static rclcpp::Logger* logger_ptr;
 
   /* Buffer for Python logs - static to be accessible from static log functions.
-     Only ever touched from the main thread. */
+     Written from several threads: the ROS executor thread (log_error and the
+     process_* / warm_up handlers) and the LogIpcServer background thread
+     (handle_ipc_log_message, also invoked on the executor thread via drain()).
+     It is drained by get_and_clear_logs(), which is called from both the
+     executor thread and the periodic log thread. All accesses must therefore be
+     serialized by log_mutex. */
   static std::vector<LogEntry> log_buffer;
-
-  /* Separate buffer for logs arriving via IPC. handle_ipc_log_message() is
-     invoked from the LogIpcServer background thread (and from the main thread
-     via drain()), so it must not write to log_buffer directly. This buffer is
-     guarded by ipc_log_mutex and merged into log_buffer in get_and_clear_logs(). */
-  static std::vector<LogEntry> ipc_log_buffer;
-  static std::mutex ipc_log_mutex;
+  static std::mutex log_mutex;
 
   /* Current processing path for log messages */
   static uint8_t current_processing_path;

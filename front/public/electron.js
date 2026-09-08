@@ -47,6 +47,14 @@ function createWindow() {
   // Emitted when the window is closed.
   mainWindow.on('closed', () => {
     mainWindow = null;
+
+    /* The detached view is a participant-facing window with no controls of its own, so
+       leaving it behind after the main window is gone would strand it on screen (and keep
+       the app alive, since 'window-all-closed' would not fire). Close it along with the
+       main window; that close is what then triggers the quit. */
+    if (detachedWindow) {
+      detachedWindow.close();
+    }
   });
 }
 

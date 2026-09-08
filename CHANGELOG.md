@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Show the fixation cross as the default screen in the detached participant view, instead of leaving it blank outside rests and tasks.
 
+### Fixed
+- Fixed the detached participant view staying open after the main window is closed.
+
 ## [1.0.0-rc2] – 2026-05-14
 ### Changed
 - Renamed `pulse_count` to `trial_count` in decider methods.

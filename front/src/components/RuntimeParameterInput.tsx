@@ -4,10 +4,11 @@ import styled from 'styled-components'
 import { RuntimeParameterInfo } from 'ros/experiment'
 import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
 
-const TextInput = styled.input<{ disabled?: boolean }>`
+const TextInput = styled.input<{ disabled?: boolean; $missing?: boolean }>`
   width: 90px;
   padding: 5px;
-  border: 1px solid #ccc;
+  border: 1px solid ${props => (props.$missing ? '#d32f2f' : '#ccc')};
+  background-color: ${props => (props.$missing ? '#fdecea' : '#fff')};
   border-radius: 3px;
   outline: none;
   transition: background-color 0.2s;
@@ -16,6 +17,10 @@ const TextInput = styled.input<{ disabled?: boolean }>`
 
   &:focus {
     background-color: #f0f8ff;
+  }
+
+  &::placeholder {
+    color: ${props => (props.$missing ? '#d32f2f' : '#999')};
   }
 
   &:disabled {
@@ -37,6 +42,8 @@ interface RuntimeParameterInputProps {
   value: RuntimeParameterValue | undefined
   onCommit: (value: RuntimeParameterValue | undefined) => void
   disabled?: boolean
+  /* Highlight the input to point out that a required value is missing. */
+  missing?: boolean
 }
 
 const clampNumber = (value: number, descriptor: RuntimeParameterInfo): number => {
@@ -55,6 +62,7 @@ export const RuntimeParameterInput: React.FC<RuntimeParameterInputProps> = ({
   value,
   onCommit,
   disabled = false,
+  missing = false,
 }) => {
   const isNumeric = descriptor.type === 'float' || descriptor.type === 'int'
 
@@ -116,6 +124,7 @@ export const RuntimeParameterInput: React.FC<RuntimeParameterInputProps> = ({
         onBlur={handleCommit}
         placeholder="required"
         disabled={disabled}
+        $missing={missing && !disabled}
       />
       {descriptor.unit && <Unit disabled={disabled}>{descriptor.unit}</Unit>}
     </>

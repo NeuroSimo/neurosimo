@@ -38,11 +38,12 @@ const IconButtonWrapper = styled.div`
 
 const RuntimeParametersContainer = styled.div`
   margin-top: 10px;
+`
 
-  ${ConfigLabel} {
-    padding-left: 12px;
-    box-sizing: border-box;
-  }
+const RuntimeParameterLabel = styled(ConfigLabel)<{ $missing: boolean }>`
+  padding-left: 12px;
+  box-sizing: border-box;
+  color: ${props => (props.$missing ? '#d32f2f' : '#333')};
 `
 
 const InfoIcon = styled.span<{ disabled: boolean }>`
@@ -59,7 +60,13 @@ const InfoIcon = styled.span<{ disabled: boolean }>`
 `
 
 export const ExperimentPanel: React.FC = () => {
-  const { protocolName, protocolList, runtimeParameterInfos } = useContext(ModuleListContext)
+  const {
+    protocolName,
+    protocolList,
+    runtimeParameterInfos,
+    missingRuntimeParameters,
+    showMissingRuntimeParameters,
+  } = useContext(ModuleListContext)
   const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters, isDraftLoaded } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject, projects, setActiveProject } = useSystemConfig()
@@ -206,19 +213,29 @@ export const ExperimentPanel: React.FC = () => {
       </ConfigRow>
 
       <RuntimeParametersContainer>
-        {runtimeParameterInfos.map((descriptor) => (
-          <ConfigRow key={descriptor.name}>
-            <ConfigLabel>{descriptor.label || descriptor.name}:</ConfigLabel>
-            <IconButtonWrapper>
-              <RuntimeParameterInput
-                descriptor={descriptor}
-                value={runtimeParameters[descriptor.name]}
-                onCommit={(value) => handleRuntimeParameterCommit(descriptor.name, value)}
-                disabled={isSessionRunning}
-              />
-            </IconButtonWrapper>
-          </ConfigRow>
-        ))}
+        {runtimeParameterInfos.map((descriptor) => {
+          const isMissing =
+            showMissingRuntimeParameters &&
+            !isSessionRunning &&
+            missingRuntimeParameters.includes(descriptor.name)
+
+          return (
+            <ConfigRow key={descriptor.name}>
+              <RuntimeParameterLabel $missing={isMissing}>
+                {descriptor.label || descriptor.name}:
+              </RuntimeParameterLabel>
+              <IconButtonWrapper>
+                <RuntimeParameterInput
+                  descriptor={descriptor}
+                  value={runtimeParameters[descriptor.name]}
+                  onCommit={(value) => handleRuntimeParameterCommit(descriptor.name, value)}
+                  disabled={isSessionRunning}
+                  missing={isMissing}
+                />
+              </IconButtonWrapper>
+            </ConfigRow>
+          )
+        })}
       </RuntimeParametersContainer>
 
       <CreateProjectModal

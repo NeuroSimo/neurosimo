@@ -44,6 +44,13 @@ interface ModuleListContextType {
      one of them currently has a usable value (all are required). */
   runtimeParameterInfos: RuntimeParameterInfo[]
   runtimeParametersValid: boolean
+
+  /* Names of the runtime parameters that are still missing a value, and whether they
+     should currently be pointed out to the user (set when a session start is attempted
+     while some of them are unset). */
+  missingRuntimeParameters: string[]
+  showMissingRuntimeParameters: boolean
+  flagMissingRuntimeParameters: () => void
 }
 
 const defaultModuleListState: ModuleListContextType = {
@@ -64,6 +71,10 @@ const defaultModuleListState: ModuleListContextType = {
 
   runtimeParameterInfos: [],
   runtimeParametersValid: true,
+
+  missingRuntimeParameters: [],
+  showMissingRuntimeParameters: false,
+  flagMissingRuntimeParameters: () => undefined,
 }
 
 export const ModuleListContext = React.createContext<ModuleListContextType>(defaultModuleListState)
@@ -128,9 +139,22 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   /* Every runtime parameter is required, so the session can only start once all of them have
      a value. This mirrors the check the session manager makes when it compiles the session
      spec; it exists to keep the user from starting a session that would fail there. */
-  const runtimeParametersValid = runtimeParameterInfos.every((descriptor) =>
-    isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name]),
-  )
+  const missingRuntimeParameters = runtimeParameterInfos
+    .filter((descriptor) => !isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name]))
+    .map((descriptor) => descriptor.name)
+
+  const runtimeParametersValid = missingRuntimeParameters.length === 0
+
+  const [showMissingRuntimeParameters, setShowMissingRuntimeParameters] = useState(false)
+
+  /* Stop pointing out the missing parameters once they have all been filled in. */
+  useEffect(() => {
+    if (runtimeParametersValid) {
+      setShowMissingRuntimeParameters(false)
+    }
+  }, [runtimeParametersValid])
+
+  const flagMissingRuntimeParameters = () => setShowMissingRuntimeParameters(true)
 
   return (
     <ModuleListContext.Provider
@@ -148,6 +172,9 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
         protocolName,
         runtimeParameterInfos,
         runtimeParametersValid,
+        missingRuntimeParameters,
+        showMissingRuntimeParameters,
+        flagMissingRuntimeParameters,
       }}
     >
       {children}

@@ -35,7 +35,7 @@ const getStateDisplayText = (stateValue: SessionStateValue): string => {
 export const SessionPanel: React.FC = () => {
   const { sessionState, startSession, abortSession } = useSession()
   const { dataSource } = useSessionConfig()
-  const { runtimeParametersValid } = useContext(ModuleListContext)
+  const { runtimeParametersValid, flagMissingRuntimeParameters } = useContext(ModuleListContext)
   const { recordingsList } = useContext(RecordingContext)
   const { datasetList } = useContext(EegSimulatorContext)
   const { clearAllLogs } = useContext(LogContext)
@@ -52,6 +52,13 @@ export const SessionPanel: React.FC = () => {
   }, [sessionState.state])
 
   const handleStartSession = () => {
+    /* Every runtime parameter is required. Rather than disabling the button, point out
+       the ones that are still unset so that the user can see what is blocking the start. */
+    if (!runtimeParametersValid) {
+      flagMissingRuntimeParameters()
+      return
+    }
+
     // Clear pipeline logs before starting the session
     clearAllLogs()
 
@@ -104,12 +111,7 @@ export const SessionPanel: React.FC = () => {
     (dataSource === 'simulator' && datasetList.length === 0)
   )
 
-  /* Block starting a session until every (always required) runtime parameter is set. */
-  const isRuntimeParametersIncomplete =
-    sessionState.state !== SessionStateValue.RUNNING && !runtimeParametersValid
-
   const isButtonDisabled = isNoDataAvailable ||
-    isRuntimeParametersIncomplete ||
     sessionState.state === SessionStateValue.INITIALIZING ||
     sessionState.state === SessionStateValue.FINALIZING
 

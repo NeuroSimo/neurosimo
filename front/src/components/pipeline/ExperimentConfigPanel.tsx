@@ -15,6 +15,7 @@ import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { RuntimeParameterInput } from 'components/RuntimeParameterInput'
 import { useSystemConfig } from 'providers/SystemConfigProvider'
 import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
+import { useDefaultToFirstOption } from 'utils/useDefaultToFirstOption'
 import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
 
 const Container = styled(ConfigPanel)`
@@ -89,11 +90,15 @@ export const ExperimentPanel: React.FC = () => {
     })
   }
 
-  const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const protocol = event.target.value
+  const selectProtocol = (protocol: string) =>
     setExperimentProtocol(protocol, () => {
       console.log('Protocol set to ' + protocol)
     })
+
+  const hasProtocol = useDefaultToFirstOption(protocolName, protocolList, selectProtocol, !isSessionRunning)
+
+  const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    selectProtocol(event.target.value)
   }
 
   const handleSubjectIdCommit = (value: number) => {
@@ -185,7 +190,12 @@ export const ExperimentPanel: React.FC = () => {
           >
             <FontAwesomeIcon icon={faInfoCircle} />
           </InfoIcon>
-          <Select onChange={handleProtocolChange} value={protocolName} disabled={isSessionRunning}>
+          <Select onChange={handleProtocolChange} value={hasProtocol ? protocolName : ''} disabled={isSessionRunning}>
+            {!hasProtocol && (
+              <option value="" disabled>
+                {protocolList.length === 0 ? 'No protocols in project' : 'Select protocol...'}
+              </option>
+            )}
             {protocolList.map((protocol, index) => (
               <option key={index} value={protocol}>
                 {protocol}

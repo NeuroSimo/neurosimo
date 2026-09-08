@@ -19,6 +19,7 @@ import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { formatTime, formatFrequency } from 'utils/utils'
+import { useDefaultToFirstOption } from 'utils/useDefaultToFirstOption'
 import { HealthcheckContext } from 'providers/HealthProvider'
 import { getDatasetInfoRos, DatasetInfo } from 'ros/eeg_simulator'
 
@@ -59,6 +60,18 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
+
+  const selectDataset = (filename: string) =>
+    setSimulatorDataset(filename, () => {
+      console.log('Dataset set to ' + filename)
+    })
+
+  const hasDataset = useDefaultToFirstOption(
+    dataset,
+    datasetList,
+    selectDataset,
+    !isSessionRunning && !isEegStreaming
+  )
 
   // Fetch dataset info when dataset changes
   useEffect(() => {
@@ -125,11 +138,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   }, [dataset, datasetList, isSessionRunning, isEegStreaming, setSimulatorDataset])
 
   const setDataset = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newDataset = event.target.value
-
-    setSimulatorDataset(newDataset, () => {
-      console.log('Dataset set to ' + newDataset)
-    })
+    selectDataset(event.target.value)
   }
 
   const setStartTime = (startTime: number) => {
@@ -161,11 +170,18 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       ? 'Error'
       : 'Ready'
 
+  /* A value that is not among the options makes the browser display the first option while
+     the configuration still holds the original value. Show the mismatch instead. */
   return (
     <SimulatorPanel isGrayedOut={isGrayedOut}>
       <ConfigRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Dataset</ConfigLabel>
-        <DatasetSelect onChange={setDataset} value={dataset} disabled={isSessionRunning || isEegStreaming}>
+        <DatasetSelect onChange={setDataset} value={hasDataset ? dataset : ''} disabled={isSessionRunning || isEegStreaming}>
+          {!hasDataset && (
+            <option value="" disabled>
+              {datasetList.length === 0 ? 'No datasets in project' : 'Select dataset...'}
+            </option>
+          )}
           {datasetList.map((datasetFilename: typeof datasetList[number], index: number) => (
             <option key={index} value={datasetFilename}>
               {datasetFilename}

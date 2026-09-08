@@ -23,12 +23,30 @@ from neurosimo_eeg_interfaces.msg import StreamInfo, EegDeviceInfo
 
 from std_msgs.msg import String
 from threading import Lock, Event, Thread, current_thread
+from copy import deepcopy
+import json
 import time
 import uuid
 import subprocess
 import signal
 import os
 import docker
+
+
+def runtime_parameter_has_type(value, declared_type):
+    """Check a runtime parameter value against the type declared by the protocol.
+
+    Booleans are checked before the numeric types, since in Python bool is a subclass of int.
+    """
+    if declared_type == 'bool':
+        return isinstance(value, bool)
+    if declared_type == 'int':
+        return isinstance(value, int) and not isinstance(value, bool)
+    if declared_type == 'float':
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if declared_type == 'string':
+        return isinstance(value, str)
+    return False
 
 
 class SessionManagerNode(Node):
@@ -298,40 +316,48 @@ class SessionManagerNode(Node):
         }
 
         # Initialize protocol
-        minimum_trial_interval = self.initialize_protocol(session_id, global_config, session_config)
-        if minimum_trial_interval is None:
+        protocol_result = self.initialize_protocol(session_id, global_config, session_config)
+        if protocol_result is None:
             self.logger.error('Protocol initialization failed')
             return initialized
+        minimum_trial_interval, runtime_parameter_infos = protocol_result
         initialized['protocol'] = True
         self.minimum_trial_interval = minimum_trial_interval
 
+        # Compile the stored configuration into the spec for this session, now that the
+        # protocol it has to agree with has been loaded. Everything below uses the spec.
+        session_spec = self.compile_session_spec(session_config, runtime_parameter_infos)
+        if session_spec is None:
+            self.logger.error('Session spec compilation failed')
+            return initialized
+
         # Initialize presenter (must be before decider)
-        if not self.initialize_presenter(global_config, session_config, session_id, stream_info):
+        if not self.initialize_presenter(global_config, session_spec, session_id, stream_info):
             self.logger.error('Presenter initialization failed')
             return initialized
         initialized['presenter'] = True
 
         # Initialize decider
-        if not self.initialize_decider(global_config, session_config, session_id, stream_info, self.minimum_trial_interval):
+        if not self.initialize_decider(global_config, session_spec, session_id, stream_info, self.minimum_trial_interval):
             self.logger.error('Decider initialization failed')
             return initialized
         initialized['decider'] = True
 
         # Initialize preprocessor
-        if not self.initialize_preprocessor(global_config, session_config, session_id, stream_info):
+        if not self.initialize_preprocessor(global_config, session_spec, session_id, stream_info):
             self.logger.error('Preprocessor initialization failed')
             return initialized
         initialized['preprocessor'] = True
 
         # Initialize stimulation tracer
-        if not self.initialize_stimulation_tracer(session_id, session_config.data_source):
+        if not self.initialize_stimulation_tracer(session_id, session_spec.data_source):
             self.logger.error('StimulationTracer initialization failed')
             return initialized
         initialized['stimulation_tracer'] = True
 
         # Initialize trigger timer or trigger simulator based on data source
-        if session_config.data_source == 'eeg_device':
-            if not self.initialize_trigger_timer(session_id, global_config, session_config, self.minimum_trial_interval):
+        if session_spec.data_source == 'eeg_device':
+            if not self.initialize_trigger_timer(session_id, global_config, session_spec, self.minimum_trial_interval):
                 self.logger.error('TriggerTimer initialization failed')
                 return initialized
             initialized['trigger_timer'] = True
@@ -342,13 +368,13 @@ class SessionManagerNode(Node):
             initialized['trigger_simulator'] = True
 
         # Start recording
-        if not self.start_recording(session_id, global_config, session_config, stream_info):
+        if not self.start_recording(session_id, global_config, session_spec, stream_info):
             self.logger.error('Recording start failed')
             return initialized
         initialized['recording'] = True
 
         # Start data streaming
-        if not self.start_data_streaming(session_config, session_id):
+        if not self.start_data_streaming(session_spec, session_id):
             self.logger.error('Data streaming start failed')
             return initialized
         initialized['streaming'] = True
@@ -509,6 +535,65 @@ class SessionManagerNode(Node):
 
         return True
 
+    def compile_session_spec(self, session_config, runtime_parameter_infos):
+        """Compile the stored session configuration into the spec used to run the session.
+
+        The stored configuration is a draft: it holds whatever the UI currently has, so its
+        runtime parameters may be missing values, or carry values belonging to a protocol
+        that has since been edited or deselected. The spec resolves them against the protocol
+        as it was just loaded from disk, which is the authoritative statement of what the
+        session needs. Everything downstream, including the recording, uses the spec.
+
+        Returns a session config message holding the resolved values, or None if they cannot
+        be resolved.
+        """
+        try:
+            stored = json.loads(session_config.runtime_parameters or '{}')
+        except json.JSONDecodeError as error:
+            self.logger.error(f'Failed to parse runtime parameters: {error}')
+            return None
+
+        if not isinstance(stored, dict):
+            self.logger.error('Runtime parameters must be a JSON object (name -> value)')
+            return None
+
+        resolved = {}
+        missing = []
+        for info in runtime_parameter_infos:
+            if info.name not in stored:
+                if info.type == 'bool':
+                    # An unticked checkbox is never stored, so absence means false.
+                    resolved[info.name] = False
+                else:
+                    missing.append(info.name)
+                continue
+
+            value = stored[info.name]
+            if not runtime_parameter_has_type(value, info.type):
+                # Refuse rather than coerce: a wrong-typed value means the stored draft
+                # disagrees with the protocol, and guessing what was meant could silently
+                # change how the session runs.
+                self.logger.error(
+                    f"Runtime parameter '{info.name}' is declared as {info.type} "
+                    f'but the stored value is {value!r}')
+                return None
+
+            resolved[info.name] = value
+
+        if missing:
+            self.logger.error(
+                f'Protocol requires runtime parameter(s) with no value set: {", ".join(missing)}')
+            return None
+
+        ignored = sorted(set(stored) - set(resolved))
+        if ignored:
+            self.logger.info(
+                f'Ignoring stored runtime parameter(s) not declared by the protocol: {", ".join(ignored)}')
+
+        spec = deepcopy(session_config)
+        spec.runtime_parameters = json.dumps(resolved)
+        return spec
+
     def initialize_stream(self, session_id, global_config, session_config):
         """Initialize the data stream source (simulator, device, or recording)."""
         data_source = session_config.data_source
@@ -588,7 +673,7 @@ class SessionManagerNode(Node):
         # Safety configuration from protocol
         request.minimum_trial_interval = minimum_trial_interval
 
-        # Optional protocol runtime parameters (JSON object, name -> value)
+        # Protocol runtime parameters, resolved against the protocol (JSON object, name -> value)
         request.runtime_parameters = session_config.runtime_parameters
 
         response = self.call_service(self.decider_init_client, request, '/neurosimo/pipeline/decider/initialize')
@@ -692,7 +777,10 @@ class SessionManagerNode(Node):
         return True
 
     def initialize_protocol(self, session_id, global_config, session_config):
-        """Initialize protocol. Returns minimum_trial_interval on success, None on failure."""
+        """Initialize protocol.
+
+        Returns (minimum_trial_interval, runtime_parameter_infos) on success, None on failure.
+        """
         protocol_filename = session_config.protocol_filename
         project_name = global_config.active_project
 
@@ -708,7 +796,7 @@ class SessionManagerNode(Node):
             return None
 
         self.logger.info(f'Protocol initialized successfully (minimum_trial_interval={response.minimum_trial_interval}s)')
-        return response.minimum_trial_interval
+        return response.minimum_trial_interval, response.runtime_parameters
 
     def restart_container(self, container_name):
         """Restart Docker containers matching the given name filter using Docker SDK."""

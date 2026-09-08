@@ -450,6 +450,13 @@ void ExperimentCoordinator::handle_initialize_protocol(
   this->publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
   response->success = true;
   response->minimum_trial_interval = this->protocol->minimum_trial_interval;
+
+  /* Return the declared runtime parameters so that the session manager can resolve the
+     values it sends to the pipeline components against the protocol just loaded. */
+  for (const auto& param : this->protocol->runtime_parameters) {
+    response->runtime_parameters.push_back(
+      experiment_coordinator::ProtocolLoader::to_runtime_parameter_info_msg(param));
+  }
 }
 
 void ExperimentCoordinator::handle_finalize_protocol(

@@ -7,6 +7,7 @@
 #include "protocol.h"
 #include "rclcpp/rclcpp.hpp"
 #include "neurosimo_pipeline_interfaces/msg/protocol_info.hpp"
+#include "neurosimo_pipeline_interfaces/msg/runtime_parameter_info.hpp"
 
 namespace experiment_coordinator {
 
@@ -75,6 +76,14 @@ public:
   static neurosimo_pipeline_interfaces::msg::ProtocolInfo to_protocol_info_msg(
     const Protocol& protocol, 
     const std::string& yaml_filename);
+
+  /**
+   * @brief Convert a runtime parameter descriptor to ROS RuntimeParameterInfo message
+   * @param param Runtime parameter descriptor to convert
+   * @return ROS RuntimeParameterInfo message
+   */
+  static neurosimo_pipeline_interfaces::msg::RuntimeParameterInfo to_runtime_parameter_info_msg(
+    const RuntimeParameter& param);
   
 private:
   rclcpp::Logger logger;

@@ -419,23 +419,29 @@ neurosimo_pipeline_interfaces::msg::ProtocolInfo ProtocolLoader::to_protocol_inf
 
   /* Convert runtime parameter descriptors to ROS message. */
   for (const auto& param : protocol.runtime_parameters) {
-    neurosimo_pipeline_interfaces::msg::RuntimeParameterInfo param_msg;
-
-    param_msg.name = param.name;
-    param_msg.label = param.label;
-    param_msg.type = param.type;
-    param_msg.unit = param.unit;
-
-    param_msg.has_min = param.min.has_value();
-    param_msg.min = param.min.value_or(0.0);
-
-    param_msg.has_max = param.max.has_value();
-    param_msg.max = param.max.value_or(0.0);
-
-    info_msg.runtime_parameters.push_back(param_msg);
+    info_msg.runtime_parameters.push_back(to_runtime_parameter_info_msg(param));
   }
 
   return info_msg;
+}
+
+neurosimo_pipeline_interfaces::msg::RuntimeParameterInfo ProtocolLoader::to_runtime_parameter_info_msg(
+    const RuntimeParameter& param) {
+
+  neurosimo_pipeline_interfaces::msg::RuntimeParameterInfo param_msg;
+
+  param_msg.name = param.name;
+  param_msg.label = param.label;
+  param_msg.type = param.type;
+  param_msg.unit = param.unit;
+
+  param_msg.has_min = param.min.has_value();
+  param_msg.min = param.min.value_or(0.0);
+
+  param_msg.has_max = param.max.has_value();
+  param_msg.max = param.max.value_or(0.0);
+
+  return param_msg;
 }
 
 } // namespace experiment_coordinator

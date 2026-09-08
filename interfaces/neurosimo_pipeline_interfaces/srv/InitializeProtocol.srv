@@ -6,3 +6,7 @@ int32 subject_id
 ---
 bool success
 float64 minimum_trial_interval
+
+# Runtime parameters declared by the protocol, as loaded from disk by this call. The session
+# manager resolves the values it sends to the pipeline components against these.
+RuntimeParameterInfo[] runtime_parameters

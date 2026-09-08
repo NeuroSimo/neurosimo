@@ -10,18 +10,17 @@ export interface FilenameList extends ROSLIB.Message {
   filenames: string[]
 }
 
-/* A runtime parameter counts as "set" when the user has provided a usable value.
-   Booleans are usable as soon as they have a value; they are defaulted to false rather
-   than being asked from the user. */
+/* A runtime parameter counts as "set" when it has a value the session can run with.
+   A boolean is always set: an unticked checkbox is simply false. */
 const isRuntimeParameterSet = (
   descriptor: RuntimeParameterInfo,
   value: RuntimeParameterValue | undefined,
 ): boolean => {
+  if (descriptor.type === 'bool') {
+    return true
+  }
   if (value === undefined || value === null) {
     return false
-  }
-  if (descriptor.type === 'bool') {
-    return typeof value === 'boolean'
   }
   if (descriptor.type === 'string') {
     return String(value).trim() !== ''
@@ -79,7 +78,7 @@ interface ModuleListProviderProps {
 }
 
 export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children }) => {
-  const { pipeline, runtimeParameters, setRuntimeParameters } = useSessionConfig()
+  const { pipeline, runtimeParameters } = useSessionConfig()
   const { activeProject } = useGlobalConfig()
 
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
@@ -87,14 +86,13 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const [presenterList, setPresenterList] = useState<string[]>([])
   const [protocolList, setProtocolList] = useState<string[]>([])
 
-  /* Runtime parameter descriptors, tagged with the project/protocol they were fetched for.
-     The tag is needed because the fetch is asynchronous: while switching projects the
-     descriptors briefly still describe the previously selected protocol, and applying
-     them to the newly loaded session config would write the wrong parameters.
+  /* Runtime parameter descriptors, tagged with the project/protocol they were fetched for,
+     so that the inputs of a previously selected protocol are not rendered against the values
+     of the current one while a fetch is in flight.
 
-     null means the descriptors for the current protocol are not known: either nothing has
-     been fetched yet, or the fetch failed. That is deliberately distinct from a successful
-     fetch returning an empty list, which means the protocol declares no runtime parameters. */
+     null means the descriptors are not known: either nothing has been fetched yet, or the
+     fetch failed. That is distinct from a successful fetch returning an empty list, which
+     means the protocol declares no runtime parameters. */
   const [fetchedRuntimeParameters, setFetchedRuntimeParameters] = useState<{
     key: string
     infos: RuntimeParameterInfo[]
@@ -124,9 +122,6 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     }
 
     getProtocolInfoRos(activeProject, protocolName, (info) => {
-      /* A failed fetch leaves the descriptors unknown. Treating the failure as "this
-         protocol has no runtime parameters" would prune every stored value and leave the
-         session startable with parameters the decider requires still missing. */
       setFetchedRuntimeParameters(info ? { key: protocolKey, infos: info.runtime_parameters ?? [] } : null)
     })
   }, [protocolKey, protocolList])
@@ -135,44 +130,12 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const descriptorsReady = fetchedRuntimeParameters !== null && fetchedRuntimeParameters.key === protocolKey
   const runtimeParameterInfos = descriptorsReady ? fetchedRuntimeParameters.infos : []
 
-  /* Reconcile the stored values against the descriptors: drop values whose descriptor no
-     longer exists in the protocol (e.g. a parameter was removed or renamed on disk), and
-     initialize any boolean parameter that has no value yet, since booleans default to false.
-
-     This is keyed on the stored values as well as the descriptors, so it also runs when a
-     session config is loaded from disk (e.g. after switching projects) rather than only when
-     the protocol selection changes; otherwise a config that predates a parameter would keep
-     that parameter unset until the user toggled it by hand. */
-  const runtimeParametersKey = JSON.stringify(runtimeParameters)
-  useEffect(() => {
-    if (!descriptorsReady) {
-      return
-    }
-
-    const validNames = new Set(runtimeParameterInfos.map((descriptor) => descriptor.name))
-    const staleNames = Object.keys(runtimeParameters).filter((name) => !validNames.has(name))
-    const uninitializedBooleans = runtimeParameterInfos.filter(
-      (descriptor) => descriptor.type === 'bool' && runtimeParameters[descriptor.name] === undefined,
-    )
-    if (staleNames.length === 0 && uninitializedBooleans.length === 0) {
-      return
-    }
-
-    const updated = { ...runtimeParameters }
-    staleNames.forEach((name) => delete updated[name])
-    uninitializedBooleans.forEach((descriptor) => {
-      updated[descriptor.name] = false
-    })
-    setRuntimeParameters(updated)
-  }, [fetchedRuntimeParameters, protocolKey, runtimeParametersKey])
-
   /* Every runtime parameter is required, so the session can only start once all of them have
-     a usable value. Until the descriptors for the selected protocol are known, the parameters
-     count as invalid: an empty descriptor list would otherwise look vacuously valid. */
-  const runtimeParametersValid =
-    protocolKey === '' ||
-    (descriptorsReady &&
-      runtimeParameterInfos.every((descriptor) => isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name])))
+     a value. This mirrors the check the session manager makes when it compiles the session
+     spec; it exists to keep the user from starting a session that would fail there. */
+  const runtimeParametersValid = runtimeParameterInfos.every((descriptor) =>
+    isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name]),
+  )
 
   useEffect(() => {
     /* Subscriber for preprocessor list. */

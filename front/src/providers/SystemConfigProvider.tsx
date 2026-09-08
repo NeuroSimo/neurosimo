@@ -3,7 +3,12 @@ import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
 import { setSystemConfigRos, SystemConfigMessage } from 'ros/systemConfig'
-import { FilenameList } from 'utils/useProjectFilenameList'
+
+/* The list of projects available. Not to be confused with ProjectFileList, which lists the
+   files within one project. */
+interface ProjectList extends ROSLIB.Message {
+  projects: string[]
+}
 
 /* The camelCase mirror of neurosimo_system_interfaces/SystemConfig. */
 export interface SystemConfigValues {
@@ -121,14 +126,14 @@ export const SystemConfigProvider: React.FC<SystemConfigProviderProps> = ({ chil
     })
 
     /* Subscriber for the available projects list (latched). */
-    const projectListSubscriber = new Topic<FilenameList>({
+    const projectListSubscriber = new Topic<ProjectList>({
       ros: ros,
       name: '/neurosimo/system_configurator/projects',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
+      messageType: 'neurosimo_project_interfaces/ProjectList',
     })
 
     projectListSubscriber.subscribe((message) => {
-      setProjects(message.filenames)
+      setProjects(message.projects)
     })
 
     /* Cleanup */

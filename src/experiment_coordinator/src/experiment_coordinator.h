@@ -12,7 +12,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
-#include "neurosimo_project_interfaces/msg/filename_list.hpp"
 #include "neurosimo_project_interfaces/srv/set_module.hpp"
 #include "neurosimo_pipeline_interfaces/msg/experiment_state.hpp"
 #include "neurosimo_pipeline_interfaces/msg/attempt_trace.hpp"

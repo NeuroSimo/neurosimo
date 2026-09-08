@@ -6,7 +6,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from neurosimo_project_interfaces.srv import ListProjects
-from neurosimo_project_interfaces.msg import FilenameList
+from neurosimo_project_interfaces.msg import ProjectList
 from neurosimo_system_interfaces.msg import SystemConfig
 from neurosimo_system_interfaces.srv import GetSystemConfig, SetSystemConfig
 
@@ -68,7 +68,7 @@ class SystemConfiguratorNode(Node):
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
         self.system_config_publisher = self.create_publisher(SystemConfig, "/neurosimo/system_configurator/config", qos, callback_group=self.callback_group)
-        self.project_list_publisher = self.create_publisher(FilenameList, "/neurosimo/system_configurator/projects", qos, callback_group=self.callback_group)
+        self.project_list_publisher = self.create_publisher(ProjectList, "/neurosimo/system_configurator/projects", qos, callback_group=self.callback_group)
 
         # Publish initial system config and project list
         self.publish_system_config(system_config)
@@ -116,10 +116,10 @@ class SystemConfiguratorNode(Node):
 
     def publish_project_list(self):
         """Publish the current list of projects available on disk."""
-        msg = FilenameList()
-        msg.filenames = self.storage_manager.list_projects()
+        msg = ProjectList()
+        msg.projects = self.storage_manager.list_projects()
         self.project_list_publisher.publish(msg)
-        self.logger.info(f"Published project list: {msg.filenames}")
+        self.logger.info(f"Published project list: {msg.projects}")
 
     def handle_projects_change(self):
         """Watcher callback: the set of project directories on disk changed.

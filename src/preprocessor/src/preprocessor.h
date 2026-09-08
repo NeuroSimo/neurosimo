@@ -21,7 +21,6 @@
 #include "neurosimo_system_interfaces/msg/component_health.hpp"
 #include "neurosimo_system_interfaces/srv/abort_session.hpp"
 
-#include "neurosimo_project_interfaces/msg/filename_list.hpp"
 #include "neurosimo_project_interfaces/srv/set_module.hpp"
 
 #include "std_srvs/srv/set_bool.hpp"

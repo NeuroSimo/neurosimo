@@ -7,7 +7,7 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from rclpy.executors import SingleThreadedExecutor
 
 from neurosimo_system_interfaces.msg import SystemConfig
-from neurosimo_project_interfaces.msg import FilenameList
+from neurosimo_project_interfaces.msg import ProjectFileList
 
 from directory_utils import DirectoryWatcher
 
@@ -43,13 +43,13 @@ class ProjectWatcherNode(Node):
         )
 
         # Publishers
-        self.decider_list_publisher = self.create_publisher(FilenameList, "/neurosimo/pipeline/decider/list", qos)
-        self.preprocessor_list_publisher = self.create_publisher(FilenameList, "/neurosimo/pipeline/preprocessor/list", qos)
-        self.presenter_list_publisher = self.create_publisher(FilenameList, "/neurosimo/pipeline/presenter/list", qos)
-        self.protocol_list_publisher = self.create_publisher(FilenameList, "/neurosimo/experiment/protocol/list", qos)
-        self.dataset_list_publisher = self.create_publisher(FilenameList, "/neurosimo/eeg_simulator/dataset/list", qos)
-        self.recordings_list_publisher = self.create_publisher(FilenameList, "/neurosimo/recording/recordings/list", qos)
-        self.external_recordings_list_publisher = self.create_publisher(FilenameList, "/neurosimo/eeg_simulator/external_recordings/list", qos)
+        self.decider_list_publisher = self.create_publisher(ProjectFileList, "/neurosimo/pipeline/decider/list", qos)
+        self.preprocessor_list_publisher = self.create_publisher(ProjectFileList, "/neurosimo/pipeline/preprocessor/list", qos)
+        self.presenter_list_publisher = self.create_publisher(ProjectFileList, "/neurosimo/pipeline/presenter/list", qos)
+        self.protocol_list_publisher = self.create_publisher(ProjectFileList, "/neurosimo/experiment/protocol/list", qos)
+        self.dataset_list_publisher = self.create_publisher(ProjectFileList, "/neurosimo/eeg_simulator/dataset/list", qos)
+        self.recordings_list_publisher = self.create_publisher(ProjectFileList, "/neurosimo/recording/recordings/list", qos)
+        self.external_recordings_list_publisher = self.create_publisher(ProjectFileList, "/neurosimo/eeg_simulator/external_recordings/list", qos)
 
         # Define directory watch configurations.
         # Each entry: (subdirectory, extensions, publisher, component_name, reverse)
@@ -128,7 +128,8 @@ class ProjectWatcherNode(Node):
 
     def publish_filename_list(self, project_name, publisher, component_name, modules):
         """Publish a precomputed filename list for the specified component."""
-        msg = FilenameList()
+        msg = ProjectFileList()
+        msg.project = project_name
         msg.filenames = modules
         publisher.publish(msg)
 

@@ -37,6 +37,7 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 - `/neurosimo/pipeline/presenter/list` - Available presenter modules.
 - `/neurosimo/experiment/protocol/list` - Available experiment protocols.
 - `/neurosimo/eeg_simulator/dataset/list` - Available simulator datasets.
+- `/neurosimo/eeg_simulator/external_recordings/list` - Available external recordings.
 - `/neurosimo/recording/recordings/list` - Available recordings list.
 
 ### Pipeline, Control, and Logs

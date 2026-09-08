@@ -4,7 +4,7 @@ import { Topic, Message } from '@foxglove/roslibjs'
 import { ros } from 'ros/ros'
 import { useSessionConfig } from './SessionConfigProvider'
 import { useSystemConfig } from './SystemConfigProvider'
-import { useProjectFilenameList } from 'utils/useProjectFilenameList'
+import { useProjectFileList } from 'utils/useProjectFileList'
 
 export enum DataSourceStateValue {
   READY = 0,
@@ -73,8 +73,8 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const { simulator } = useSessionConfig()
   const { activeProject } = useSystemConfig()
 
-  const datasetList = useProjectFilenameList('/neurosimo/eeg_simulator/dataset/list', activeProject)
-  const externalRecordingsList = useProjectFilenameList(
+  const datasetList = useProjectFileList('/neurosimo/eeg_simulator/dataset/list', activeProject)
+  const externalRecordingsList = useProjectFileList(
     '/neurosimo/eeg_simulator/external_recordings/list',
     activeProject,
   )

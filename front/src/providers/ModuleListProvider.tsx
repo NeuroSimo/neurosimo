@@ -3,7 +3,7 @@ import React, { useState, useEffect, ReactNode } from 'react'
 import { useSessionConfig, RuntimeParameterValue } from './SessionConfigProvider'
 import { useSystemConfig } from './SystemConfigProvider'
 import { getProtocolInfoRos, RuntimeParameterInfo } from 'ros/experiment'
-import { useProjectFilenameList } from 'utils/useProjectFilenameList'
+import { useProjectFileList } from 'utils/useProjectFileList'
 
 /* A runtime parameter counts as "set" when it has a value the session can run with.
    A boolean is always set: an unticked checkbox is simply false. */
@@ -76,10 +76,10 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const { pipeline, runtimeParameters } = useSessionConfig()
   const { activeProject } = useSystemConfig()
 
-  const preprocessorList = useProjectFilenameList('/neurosimo/pipeline/preprocessor/list', activeProject)
-  const deciderList = useProjectFilenameList('/neurosimo/pipeline/decider/list', activeProject)
-  const presenterList = useProjectFilenameList('/neurosimo/pipeline/presenter/list', activeProject)
-  const protocolList = useProjectFilenameList('/neurosimo/experiment/protocol/list', activeProject)
+  const preprocessorList = useProjectFileList('/neurosimo/pipeline/preprocessor/list', activeProject)
+  const deciderList = useProjectFileList('/neurosimo/pipeline/decider/list', activeProject)
+  const presenterList = useProjectFileList('/neurosimo/pipeline/presenter/list', activeProject)
+  const protocolList = useProjectFileList('/neurosimo/experiment/protocol/list', activeProject)
 
   /* Runtime parameter descriptors, tagged with the project/protocol they were fetched for,
      so that the inputs of a previously selected protocol are not rendered against the values

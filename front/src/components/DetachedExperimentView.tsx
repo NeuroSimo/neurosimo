@@ -50,42 +50,23 @@ export const DetachedExperimentView: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  if (!experimentState || !experimentState.ongoing) {
-    return (
-      <>
-        <DragBar />
-        <FullScreenContainer />
-      </>
-    )
-  }
+  /* The messages below replace the fixation cross only while the experiment is in a state
+     that the participant needs to be told about. Everything else - trials, a session that
+     has not started yet or has already finished, and protocols that contain no rests or
+     tasks at all (e.g. baseline and evaluation) - falls through to the fixation cross, so
+     the participant always has something to fixate on rather than a blank screen. */
+  const renderContent = () => {
+    if (experimentState?.ongoing) {
+      if (experimentState.paused) {
+        return 'Paused'
+      }
 
-  if (experimentState.paused) {
-    return (
-      <>
-        <DragBar />
-        <FullScreenContainer>
-          Paused
-        </FullScreenContainer>
-      </>
-    )
-  }
+      if (experimentState.pause_requested) {
+        return 'Pausing…'
+      }
 
-  if (experimentState.pause_requested) {
-    return (
-      <>
-        <DragBar />
-        <FullScreenContainer>
-          Pausing…
-        </FullScreenContainer>
-      </>
-    )
-  }
-
-  if (experimentState.in_rest) {
-    return (
-      <>
-        <DragBar />
-        <FullScreenContainer>
+      if (experimentState.in_rest) {
+        return (
           <div>
             <RestText>Rest</RestText>
             <RestText style={{ fontSize: '48px', marginTop: '10px' }}>
@@ -93,32 +74,29 @@ export const DetachedExperimentView: React.FC = () => {
             </RestText>
             <Timer>{formatTime(experimentState.rest_remaining)}</Timer>
           </div>
-        </FullScreenContainer>
-      </>
-    )
-  }
+        )
+      }
 
-  if (experimentState.in_task) {
-    return (
-      <>
-        <DragBar />
-        <FullScreenContainer>
+      if (experimentState.in_task) {
+        return (
           <div>
             <RestText>Task</RestText>
             <RestText style={{ fontSize: '48px', marginTop: '10px' }}>
               {experimentState.task_name || ''}
             </RestText>
           </div>
-        </FullScreenContainer>
-      </>
-    )
+        )
+      }
+    }
+
+    return <Cross>+</Cross>
   }
 
   return (
     <>
       <DragBar />
       <FullScreenContainer>
-        <Cross>+</Cross>
+        {renderContent()}
       </FullScreenContainer>
     </>
   )

@@ -6,7 +6,6 @@ import { useSystemConfig } from './SystemConfigProvider'
 // Structured parameter interfaces
 interface MetadataParameters {
   subject_id: number
-  notes: string
 }
 
 interface ModuleSelection {
@@ -47,6 +46,10 @@ interface SessionDraft {
   simulator: SimulatorParameters
   replay: ReplayParameters
 
+  /* Notes, kept per subject so that switching between subjects retains what was written
+     for each. */
+  notesBySubject: Record<string, string>
+
   /* Runtime parameter values, kept per subject and protocol so that switching between
      subjects or protocols retains what was entered for each. Entries for combinations that
      are not currently selected are harmless: only the selected one is ever read. */
@@ -56,7 +59,6 @@ interface SessionDraft {
 const defaultDraft: SessionDraft = {
   metadata: {
     subject_id: 1,
-    notes: '',
   },
   pipeline: {
     decider: { module: 'example.py', enabled: true },
@@ -73,11 +75,15 @@ const defaultDraft: SessionDraft = {
     bag_id: '',
     play_preprocessed: false,
   },
+  notesBySubject: {},
   runtimeParametersBySubjectAndProtocol: {},
 }
 
 /* Subject ids are numbers, but object keys are strings. */
 const subjectKey = (subjectId: number) => String(subjectId)
+
+/* The notes written for the subject the draft currently names. */
+const notesFor = (draft: SessionDraft): string => draft.notesBySubject[subjectKey(draft.metadata.subject_id)] ?? ''
 
 /* The values entered for a given protocol, for the subject the draft currently names. */
 const runtimeParametersFor = (draft: SessionDraft, protocol: string): RuntimeParameters =>
@@ -92,14 +98,21 @@ const loadDraft = (project: string): SessionDraft => {
       return defaultDraft
     }
     const parsed = JSON.parse(stored)
+    /* Notes used to be a single value in the metadata; keep them by attributing them to the
+       subject the draft was written for. */
+    const { notes: legacyNotes, ...parsedMetadata } = parsed.metadata ?? {}
+    const metadata = { ...defaultDraft.metadata, ...parsedMetadata }
+    const legacyNotesBySubject =
+      typeof legacyNotes === 'string' && legacyNotes !== '' ? { [subjectKey(metadata.subject_id)]: legacyNotes } : {}
     /* Merge over the defaults, so that a draft written before a field existed still loads. */
     return {
       ...defaultDraft,
       ...parsed,
-      metadata: { ...defaultDraft.metadata, ...parsed.metadata },
+      metadata,
       pipeline: { ...defaultDraft.pipeline, ...parsed.pipeline },
       simulator: { ...defaultDraft.simulator, ...parsed.simulator },
       replay: { ...defaultDraft.replay, ...parsed.replay },
+      notesBySubject: parsed.notesBySubject ?? legacyNotesBySubject,
       runtimeParametersBySubjectAndProtocol: parsed.runtimeParametersBySubjectAndProtocol ?? {},
     }
   } catch (error) {
@@ -123,6 +136,9 @@ interface SessionConfigContextType {
   simulator: SimulatorParameters
   replay: ReplayParameters
   dataSource: string
+
+  /* The notes written for the currently selected subject. */
+  notes: string
 
   /* Runtime parameter values are addressed by protocol rather than only for the selected one,
      so that a caller showing a protocol's inputs can read and write that protocol's values even
@@ -185,6 +201,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   simulator: defaultDraft.simulator,
   replay: defaultDraft.replay,
   dataSource: 'simulator',
+  notes: '',
   getRuntimeParameters: () => ({}),
   isDraftLoaded: false,
   setSubjectId: noop,
@@ -251,6 +268,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
   }
 
   const protocol = draft.pipeline.experiment.protocol
+  const notes = notesFor(draft)
   const runtimeParameters = runtimeParametersFor(draft, protocol)
 
   const getRuntimeParameters = (forProtocol: string) => runtimeParametersFor(draft, forProtocol)
@@ -258,8 +276,14 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
   const setSubjectId = (subjectId: number, callback?: () => void) =>
     updateDraft((current) => ({ ...current, metadata: { ...current.metadata, subject_id: subjectId } }), callback)
 
-  const setNotes = (notes: string, callback?: () => void) =>
-    updateDraft((current) => ({ ...current, metadata: { ...current.metadata, notes: notes } }), callback)
+  const setNotes = (nextNotes: string, callback?: () => void) =>
+    updateDraft(
+      (current) => ({
+        ...current,
+        notesBySubject: { ...current.notesBySubject, [subjectKey(current.metadata.subject_id)]: nextNotes },
+      }),
+      callback,
+    )
 
   const setModuleSelection = (
     component: 'decider' | 'preprocessor' | 'presenter',
@@ -350,7 +374,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
 
   const buildSessionConfigMessage = (): SessionConfigMessage => ({
     subject_id: draft.metadata.subject_id,
-    notes: draft.metadata.notes,
+    notes: notes,
     decider_module: draft.pipeline.decider.module,
     decider_enabled: draft.pipeline.decider.enabled,
     preprocessor_module: draft.pipeline.preprocessor.module,
@@ -375,6 +399,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         simulator: draft.simulator,
         replay: draft.replay,
         dataSource,
+        notes,
         getRuntimeParameters,
         isDraftLoaded,
         setSubjectId,

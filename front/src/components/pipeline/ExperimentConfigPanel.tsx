@@ -69,7 +69,7 @@ export const ExperimentPanel: React.FC = () => {
     missingRuntimeParameters,
     showMissingRuntimeParameters,
   } = useContext(ModuleListContext)
-  const { metadata, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters, isDraftLoaded } = useSessionConfig()
+  const { metadata, notes, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters, isDraftLoaded } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject, projects, setActiveProject } = useSystemConfig()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -180,7 +180,7 @@ export const ExperimentPanel: React.FC = () => {
       <ConfigRow>
         <ConfigLabel>Notes:</ConfigLabel>
         <CommittableTextInput
-          value={metadata.notes}
+          value={notes}
           onCommit={handleNotesCommit}
           placeholder="Enter notes"
           disabled={isSessionRunning}

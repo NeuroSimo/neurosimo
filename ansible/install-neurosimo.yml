@@ -232,7 +232,58 @@
       ignore_errors: yes
 
     ########################################################################
-    # 9. Configure PipeWire/PulseAudio over TCP
+    # 9. Disable suspend
+    #
+    # Suspend/resume is unreliable on machines with NVIDIA GPUs and can leave
+    # the GPU, network interfaces, and real-time CPU settings in a broken state,
+    # so an experiment session may silently fail after the machine has slept.
+    ########################################################################
+    - name: Mask systemd sleep targets
+      systemd:
+        name: "{{ item }}"
+        enabled: no
+        masked: yes
+      loop:
+        - sleep.target
+        - suspend.target
+        - hibernate.target
+        - hybrid-sleep.target
+
+    - name: Create logind configuration directory
+      file:
+        path: /etc/systemd/logind.conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Configure logind to ignore idle and lid-close suspend triggers
+      copy:
+        dest: /etc/systemd/logind.conf.d/10-disable-suspend.conf
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Login]
+          IdleAction=ignore
+          HandleSuspendKey=ignore
+          HandleHibernateKey=ignore
+          HandleLidSwitch=ignore
+          HandleLidSwitchExternalPower=ignore
+          HandleLidSwitchDocked=ignore
+
+    - name: Disable GNOME automatic suspend for all users
+      copy:
+        dest: /usr/share/glib-2.0/schemas/90-neurosimo-no-suspend.gschema.override
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [org.gnome.settings-daemon.plugins.power]
+          sleep-inactive-ac-type='nothing'
+          sleep-inactive-battery-type='nothing'
+      notify: Compile GLib schemas
+
+    ########################################################################
+    # 10. Configure PipeWire/PulseAudio over TCP
     ########################################################################
     - name: Create PipeWire TCP audio configuration directory
       file:
@@ -272,7 +323,7 @@
         XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.user_uid }}"
 
     ########################################################################
-    # 10. Give the user passwordless sudo for specific commands
+    # 11. Give the user passwordless sudo for specific commands
     ########################################################################
     - name: Allow user to restart NeuroSimo without sudo password
       lineinfile:
@@ -289,7 +340,7 @@
         mode: "0440"
 
     ########################################################################
-    # 11. Create a projects directory
+    # 12. Create a projects directory
     ########################################################################
     - name: Create projects directory
       file:
@@ -300,7 +351,7 @@
         mode: "0755"
 
     ########################################################################
-    # 12. Create .bash_neurosimo from scratch
+    # 13. Create .bash_neurosimo from scratch
     ########################################################################
     - name: Create fresh .bash_neurosimo file
       copy:
@@ -366,7 +417,7 @@
         insertafter: EOF
     
     ########################################################################
-    # 13. Set up the environment
+    # 14. Set up the environment
     ########################################################################
     - name: Check if .env exists
       stat:
@@ -399,3 +450,7 @@
         path: "{{ repo_root }}/.env"
         regexp: '^HOST_GID='
         line: "HOST_GID={{ getent_passwd[target_user][2] }}"
+
+  handlers:
+    - name: Compile GLib schemas
+      command: glib-compile-schemas /usr/share/glib-2.0/schemas/

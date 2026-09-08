@@ -1,5 +1,6 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
 import { startSessionRos, abortSessionRos, subscribeToSessionState } from 'ros/session'
+import { useSessionConfig } from './SessionConfigProvider'
 
 export enum SessionStateValue {
   STOPPED = 0,
@@ -38,6 +39,7 @@ interface SessionProviderProps {
 }
 
 export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) => {
+  const { buildSessionConfigMessage } = useSessionConfig()
   const [sessionState, setSessionState] = useState<SessionState>({
     state: SessionStateValue.STOPPED,
     abortReason: '',
@@ -58,7 +60,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({ children }) =>
   }, [])
 
   const startSession = (callback: (success: boolean, message?: string) => void = noopCallback) => {
-    startSessionRos(callback)
+    startSessionRos(buildSessionConfigMessage(), callback)
   }
 
   const abortSession = (callback: (success: boolean) => void = noopCallback) => {

@@ -7,9 +7,9 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from neurosimo_system_interfaces.msg import SessionState
-from neurosimo_system_interfaces.srv import StartRecording, StopRecording, AbortSession
+from neurosimo_system_interfaces.srv import StartRecording, StopRecording, AbortSession, StartSession
 from std_srvs.srv import Trigger
-from neurosimo_system_interfaces.msg import SessionConfig, GlobalConfig
+from neurosimo_system_interfaces.msg import GlobalConfig
 from neurosimo_pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
@@ -57,7 +57,7 @@ class SessionManagerNode(Node):
 
         # Create service servers for session management
         self.create_service(
-            Trigger,
+            StartSession,
             '/neurosimo/session/start',
             self.start_session_callback,
             callback_group=self.callback_group
@@ -150,7 +150,8 @@ class SessionManagerNode(Node):
         self.eeg_device_streaming_stop_client = self.create_client(
             StopStreaming, '/neurosimo/eeg_device/streaming/stop', callback_group=self.callback_group)
 
-        # Subscribe to config topics
+        # Subscribe to the global config topic. The session config is not subscribed to:
+        # it arrives with the start request, so there is no cached copy to go stale.
         config_qos = QoSProfile(
             depth=1,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -158,20 +159,11 @@ class SessionManagerNode(Node):
         )
         
         self.global_config = None
-        self.session_config = None
         
         self.global_config_subscription = self.create_subscription(
             GlobalConfig,
             '/neurosimo/global_configurator/config',
             self.global_config_callback,
-            config_qos,
-            callback_group=self.callback_group
-        )
-        
-        self.session_config_subscription = self.create_subscription(
-            SessionConfig,
-            '/neurosimo/session_configurator/config',
-            self.session_config_callback,
             config_qos,
             callback_group=self.callback_group
         )
@@ -235,27 +227,42 @@ class SessionManagerNode(Node):
         """Handle global config updates."""
         self.global_config = msg
         self.logger.info(f'Received global config: active_project={msg.active_project}')
-    
-    def session_config_callback(self, msg):
-        """Handle session config updates."""
-        self.session_config = msg
-        self.logger.info(f'Received session config: subject={msg.subject_id}, data_source={msg.data_source}')
 
     # Service callbacks
     def start_session_callback(self, request, response):
         """Handle start session service calls."""
-        self.logger.info('Received start session request')
+        session_config = request.config
+        self.logger.info(
+            f'Received start session request: subject={session_config.subject_id}, '
+            f'data_source={session_config.data_source}')
 
         with self._thread_lock:
             if self._session_thread is not None and self._session_thread.is_alive():
                 self.logger.warn('Session already running, ignoring start request')
                 response.success = False
+                response.message = 'Session already running'
+                return response
+
+            if self.global_config is None:
+                self.logger.error('Global configuration not yet received')
+                response.success = False
+                response.message = 'Global configuration not yet received'
+                return response
+
+            # Validate before accepting, so that a bad configuration is reported to the caller
+            # rather than surfacing later as a session that starts and immediately stops.
+            if not self.validate_session_config(session_config):
+                response.success = False
+                response.message = 'Invalid session configuration'
                 return response
 
             self._stop_event.clear()
             self._abort_reason = ""
 
-            self._session_thread = Thread(target=self.run_session, daemon=True)
+            self._session_thread = Thread(
+                target=self.run_session,
+                args=(self.global_config, session_config),
+                daemon=True)
             self._session_thread.start()
 
             response.success = True
@@ -435,31 +442,14 @@ class SessionManagerNode(Node):
             ):
                 self.logger.error('Recording stop failed')
 
-    def run_session(self):
+    def run_session(self, global_config, session_config):
         """Run a complete session lifecycle."""
         session_id = list(uuid.uuid4().bytes)
-        global_config = None
-        session_config = None
         stream_info = None
         initialized = {}
 
         try:
             self.publish_session_state(SessionState.INITIALIZING)
-
-            # Use cached configs from subscribers
-            if self.global_config is None:
-                self.logger.error('Global configuration not yet received')
-                return
-            global_config = self.global_config
-
-            if self.session_config is None:
-                self.logger.error('Session configuration not yet received')
-                return
-            session_config = self.session_config
-            
-            if not self.validate_session_config(session_config):
-                self.logger.error('Failed to validate session parameters')
-                return
 
             # Initialize data stream first to get stream info
             stream_info = self.initialize_stream(session_id, global_config, session_config)
@@ -489,8 +479,8 @@ class SessionManagerNode(Node):
                 pass
 
         finally:
-            # Always finalize if we have configs
-            if global_config is not None and session_config is not None and initialized:
+            # Always finalize if anything was initialized
+            if initialized:
                 self.publish_session_state(SessionState.FINALIZING)
                 self.finalize_session(session_id, global_config, session_config, initialized)
 

@@ -2,6 +2,26 @@ import React, { useState, useEffect, ReactNode, createContext, useContext } from
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
+import { SessionConfigMessage } from 'ros/session'
+
+const emptySessionConfigMessage: SessionConfigMessage = {
+  subject_id: 1,
+  notes: '',
+  decider_module: '',
+  decider_enabled: false,
+  preprocessor_module: '',
+  preprocessor_enabled: false,
+  presenter_module: '',
+  presenter_enabled: false,
+  protocol_filename: '',
+  runtime_parameters: '{}',
+  data_source: 'simulator',
+  simulator_dataset_filename: '',
+  simulator_start_time: 0,
+  simulator_playback_speed: 1,
+  replay_bag_id: '',
+  replay_play_preprocessed: false,
+}
 
 // Structured parameter interfaces
 interface MetadataParameters {
@@ -62,6 +82,9 @@ interface SessionConfigContextType {
   setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => Promise<void>
   setDataSource: (dataSource: string, callback?: () => void) => Promise<void>
   setRuntimeParameters: (params: RuntimeParameters, callback?: () => void) => Promise<void>
+
+  /* Build the SessionConfig message to send when starting a session. */
+  buildSessionConfigMessage: () => SessionConfigMessage
 }
 
 // ESLint disable for intentionally empty functions used as defaults
@@ -103,6 +126,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   setPlayPreprocessed: asyncNoop,
   setDataSource: asyncNoop,
   setRuntimeParameters: asyncNoop,
+  buildSessionConfigMessage: () => emptySessionConfigMessage,
 }
 
 export const SessionConfigContext = createContext<SessionConfigContextType>(defaultSessionConfigState)
@@ -267,6 +291,25 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
     setParameterRos('experiment.runtime_parameters', JSON.stringify(params), callback || noop)
   }
 
+  const buildSessionConfigMessage = (): SessionConfigMessage => ({
+    subject_id: metadata.subject_id,
+    notes: metadata.notes,
+    decider_module: pipeline.decider.module,
+    decider_enabled: pipeline.decider.enabled,
+    preprocessor_module: pipeline.preprocessor.module,
+    preprocessor_enabled: pipeline.preprocessor.enabled,
+    presenter_module: pipeline.presenter.module,
+    presenter_enabled: pipeline.presenter.enabled,
+    protocol_filename: pipeline.experiment.protocol,
+    runtime_parameters: JSON.stringify(runtimeParameters),
+    data_source: dataSource,
+    simulator_dataset_filename: simulator.dataset_filename,
+    simulator_start_time: simulator.start_time,
+    simulator_playback_speed: simulator.playback_speed,
+    replay_bag_id: (sessionConfig.get('replay.bag_id') as string) || '',
+    replay_play_preprocessed: (sessionConfig.get('replay.play_preprocessed') as boolean) || false,
+  })
+
   return (
     <SessionConfigContext.Provider
       value={{
@@ -291,6 +334,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         setPlayPreprocessed,
         setDataSource,
         setRuntimeParameters,
+        buildSessionConfigMessage,
       }}
     >
       {children}

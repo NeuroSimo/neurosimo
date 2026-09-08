@@ -1,0 +1,6 @@
+# Start a session with the given configuration.
+
+SessionConfig config
+---
+bool success
+string message

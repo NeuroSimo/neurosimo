@@ -38,6 +38,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetGlobalConfig.srv"
   "srv/GetSessionConfig.srv"
   "srv/StartRecording.srv"
+  "srv/StartSession.srv"
   "srv/StopRecording.srv"
   DEPENDENCIES neurosimo_eeg_interfaces
 )

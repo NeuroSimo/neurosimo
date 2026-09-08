@@ -10,10 +10,10 @@ from rcl_interfaces.msg import Parameter as ParameterMsg
 from rcl_interfaces.msg import ParameterType, ParameterValue
 from rcl_interfaces.srv import SetParameters
 from rclpy.node import Node
-from std_srvs.srv import Trigger
 
 from neurosimo_project_interfaces.srv import ListProjects
-from neurosimo_system_interfaces.msg import SessionState
+from neurosimo_system_interfaces.msg import SessionState, SessionConfig
+from neurosimo_system_interfaces.srv import StartSession
 
 
 pytestmark = [pytest.mark.tests]
@@ -102,10 +102,12 @@ class SessionTestsHarness:
         if failures:
             raise RuntimeError(f"Failed to set parameters for {node_name}: {failures}")
 
-    def start_session(self) -> None:
-        client = self.node.create_client(Trigger, "/neurosimo/session/start")
+    def start_session(self, config: SessionConfig) -> None:
+        client = self.node.create_client(StartSession, "/neurosimo/session/start")
         self.wait_for_service(client, "/neurosimo/session/start")
-        response = self.call_service(client, Trigger.Request())
+        request = StartSession.Request()
+        request.config = config
+        response = self.call_service(client, request)
         if not response.success:
             raise RuntimeError(f"Session start failed: {response.message}")
 
@@ -186,6 +188,11 @@ def test_fingerprints(ros_node: Node, projects_root: Path) -> None:
         },
     )
 
+    # The global config still reaches the session manager over a latched topic, so allow it
+    # to propagate before starting. The session config no longer needs this: it is carried
+    # by the start request itself.
+    time.sleep(0.5)
+
     decider_enabled = require_env("DECIDER_ENABLED") == "true"
     preprocessor_enabled = require_env("PREPROCESSOR_ENABLED") == "true"
 
@@ -201,29 +208,25 @@ def test_fingerprints(ros_node: Node, projects_root: Path) -> None:
     simulator_dataset_filename = require_env("SIMULATOR_DATASET_FILENAME")
     experiment_protocol_filename = require_env("EXPERIMENT_PROTOCOL_FILENAME")
 
-    harness.set_parameters(
-        "session_configurator",
-        {
-            "subject_id": 777,
-            "notes": "fingerprint_test",
-            "data_source": "simulator",
-            "simulator.dataset_filename": simulator_dataset_filename,
-            "simulator.start_time": 0.0,
-            "experiment.protocol": experiment_protocol_filename,
-            "decider.enabled": decider_enabled,
-            "decider.module": decider_module,
-            "preprocessor.enabled": preprocessor_enabled,
-            "preprocessor.module": preprocessor_module,
-            "presenter.enabled": False,
-            "presenter.module": "example.py",
-            "replay.bag_id": "",
-            "replay.play_preprocessed": False,
-        },
-    )
+    config = SessionConfig()
+    config.subject_id = 777
+    config.notes = "fingerprint_test"
+    config.data_source = "simulator"
+    config.simulator_dataset_filename = simulator_dataset_filename
+    config.simulator_start_time = 0.0
+    config.simulator_playback_speed = 1.0
+    config.protocol_filename = experiment_protocol_filename
+    config.runtime_parameters = "{}"
+    config.decider_enabled = decider_enabled
+    config.decider_module = decider_module
+    config.preprocessor_enabled = preprocessor_enabled
+    config.preprocessor_module = preprocessor_module
+    config.presenter_enabled = False
+    config.presenter_module = "example.py"
+    config.replay_bag_id = ""
+    config.replay_play_preprocessed = False
 
-    time.sleep(0.5)
-
-    harness.start_session()
+    harness.start_session(config)
     harness.wait_for_state(SessionState.RUNNING, timeout_sec=60.0)
     harness.wait_for_stopped_after_running(timeout_sec=180.0)
 

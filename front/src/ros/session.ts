@@ -7,7 +7,7 @@ import { ExportDataType } from 'components/ExportModal'
 const startSessionService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/session/start',
-  serviceType: 'std_srvs/Trigger',
+  serviceType: 'neurosimo_system_interfaces/StartSession',
 })
 
 const abortSessionService = new ROSLIB.Service({
@@ -36,10 +36,31 @@ const exporterStateTopic = new ROSLIB.Topic({
   messageType: 'neurosimo_system_interfaces/ExporterState',
 })
 
+/* Session configuration, matching the fields of neurosimo_system_interfaces/SessionConfig. */
+export interface SessionConfigMessage {
+  subject_id: number
+  notes: string
+  decider_module: string
+  decider_enabled: boolean
+  preprocessor_module: string
+  preprocessor_enabled: boolean
+  presenter_module: string
+  presenter_enabled: boolean
+  protocol_filename: string
+  runtime_parameters: string
+  data_source: string
+  simulator_dataset_filename: string
+  simulator_start_time: number
+  simulator_playback_speed: number
+  replay_bag_id: string
+  replay_play_preprocessed: boolean
+}
+
 export const startSessionRos = (
+  config: SessionConfigMessage,
   callback: (success: boolean, message?: string) => void
 ) => {
-  const request = new ROSLIB.ServiceRequest({}) as any
+  const request = new ROSLIB.ServiceRequest({ config: config }) as any
 
   startSessionService.callService(
     request,

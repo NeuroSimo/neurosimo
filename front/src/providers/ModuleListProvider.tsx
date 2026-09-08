@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ReactNode } from 'react'
 
-import { useSessionConfig, RuntimeParameterValue } from './SessionConfigProvider'
+import { useSessionConfig, RuntimeParameterValue, RuntimeParameters } from './SessionConfigProvider'
 import { useSystemConfig } from './SystemConfigProvider'
 import { getProtocolInfoRos, RuntimeParameterInfo } from 'ros/experiment'
 import { useProjectFileList } from 'utils/useProjectFileList'
@@ -40,9 +40,14 @@ interface ModuleListContextType {
   protocolList: string[]
   protocolName: string
 
-  /* Runtime parameter descriptors for the selected protocol, plus whether every
-     one of them currently has a usable value (all are required). */
+  /* The runtime parameters currently on display: the protocol they belong to, their
+     descriptors, and the values entered for them. The protocol is not necessarily the
+     selected one; see the pinning in the provider below. */
+  runtimeParameterProtocol: string
   runtimeParameterInfos: RuntimeParameterInfo[]
+  runtimeParameterValues: RuntimeParameters
+
+  /* Whether every runtime parameter currently has a usable value (all are required). */
   runtimeParametersValid: boolean
 
   /* Names of the runtime parameters that are still missing a value, and whether they
@@ -69,7 +74,9 @@ const defaultModuleListState: ModuleListContextType = {
   protocolList: [],
   protocolName: '',
 
+  runtimeParameterProtocol: '',
   runtimeParameterInfos: [],
+  runtimeParameterValues: {},
   runtimeParametersValid: true,
 
   missingRuntimeParameters: [],
@@ -84,7 +91,7 @@ interface ModuleListProviderProps {
 }
 
 export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children }) => {
-  const { pipeline, runtimeParameters } = useSessionConfig()
+  const { pipeline, getRuntimeParameters } = useSessionConfig()
   const { activeProject } = useSystemConfig()
 
   const preprocessorList = useProjectFileList('/neurosimo/pipeline/preprocessor/list', activeProject)
@@ -92,15 +99,14 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const presenterList = useProjectFileList('/neurosimo/pipeline/presenter/list', activeProject)
   const protocolList = useProjectFileList('/neurosimo/experiment/protocol/list', activeProject)
 
-  /* Runtime parameter descriptors, tagged with the project/protocol they were fetched for,
-     so that the inputs of a previously selected protocol are not rendered against the values
-     of the current one while a fetch is in flight.
+  /* Runtime parameter descriptors, tagged with the protocol they were fetched for,
+     so that the values they are rendered against can be read for that same protocol.
 
      null means the descriptors are not known: either nothing has been fetched yet, or the
      fetch failed. That is distinct from a successful fetch returning an empty list, which
      means the protocol declares no runtime parameters. */
   const [fetchedRuntimeParameters, setFetchedRuntimeParameters] = useState<{
-    key: string
+    protocol: string
     infos: RuntimeParameterInfo[]
   } | null>(null)
 
@@ -127,20 +133,37 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
       return
     }
 
+    /* Responses can arrive out of order when protocols are switched in quick succession;
+       drop the ones belonging to a selection that has already been superseded. */
+    let superseded = false
+
     getProtocolInfoRos(activeProject, protocolName, (info) => {
-      setFetchedRuntimeParameters(info ? { key: protocolKey, infos: info.runtime_parameters ?? [] } : null)
+      if (superseded) {
+        return
+      }
+      setFetchedRuntimeParameters(
+        info ? { protocol: protocolName, infos: info.runtime_parameters ?? [] } : null,
+      )
     })
+
+    return () => {
+      superseded = true
+    }
   }, [protocolKey, protocolList])
 
-  /* Whether the descriptors in state describe the currently selected protocol. */
-  const descriptorsReady = fetchedRuntimeParameters !== null && fetchedRuntimeParameters.key === protocolKey
-  const runtimeParameterInfos = descriptorsReady ? fetchedRuntimeParameters.infos : []
+  /* The runtime parameters of the previously selected protocol stay on display until the
+     descriptors of the newly selected one have arrived, so that switching protocols does not
+     flash an empty parameter list. Descriptors and values are both taken for the protocol the
+     descriptors were fetched for, so what is shown stays consistent across the swap. */
+  const runtimeParameterProtocol = fetchedRuntimeParameters?.protocol ?? ''
+  const runtimeParameterInfos = fetchedRuntimeParameters?.infos ?? []
+  const runtimeParameterValues = getRuntimeParameters(runtimeParameterProtocol)
 
   /* Every runtime parameter is required, so the session can only start once all of them have
      a value. This mirrors the check the session manager makes when it compiles the session
      spec; it exists to keep the user from starting a session that would fail there. */
   const missingRuntimeParameters = runtimeParameterInfos
-    .filter((descriptor) => !isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name]))
+    .filter((descriptor) => !isRuntimeParameterSet(descriptor, runtimeParameterValues[descriptor.name]))
     .map((descriptor) => descriptor.name)
 
   const runtimeParametersValid = missingRuntimeParameters.length === 0
@@ -170,7 +193,9 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
         presenterEnabled,
         protocolList,
         protocolName,
+        runtimeParameterProtocol,
         runtimeParameterInfos,
+        runtimeParameterValues,
         runtimeParametersValid,
         missingRuntimeParameters,
         showMissingRuntimeParameters,

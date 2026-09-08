@@ -79,6 +79,10 @@ const defaultDraft: SessionDraft = {
 /* Subject ids are numbers, but object keys are strings. */
 const subjectKey = (subjectId: number) => String(subjectId)
 
+/* The values entered for a given protocol, for the subject the draft currently names. */
+const runtimeParametersFor = (draft: SessionDraft, protocol: string): RuntimeParameters =>
+  draft.runtimeParametersBySubjectAndProtocol[subjectKey(draft.metadata.subject_id)]?.[protocol] ?? {}
+
 const draftStorageKey = (project: string) => `neurosimo.sessionDraft.${project}`
 
 const loadDraft = (project: string): SessionDraft => {
@@ -119,7 +123,11 @@ interface SessionConfigContextType {
   simulator: SimulatorParameters
   replay: ReplayParameters
   dataSource: string
-  runtimeParameters: RuntimeParameters
+
+  /* Runtime parameter values are addressed by protocol rather than only for the selected one,
+     so that a caller showing a protocol's inputs can read and write that protocol's values even
+     while the selection has already moved on. */
+  getRuntimeParameters: (protocol: string) => RuntimeParameters
 
   /* Whether the draft for the active project has been loaded. Until it has, the setters
      below are no-ops, as there is no draft yet to write into. */
@@ -141,7 +149,7 @@ interface SessionConfigContextType {
   setBagId: (bagId: string, callback?: () => void) => void
   setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => void
   setDataSource: (dataSource: string, callback?: () => void) => void
-  setRuntimeParameters: (params: RuntimeParameters, callback?: () => void) => void
+  setRuntimeParameters: (protocol: string, params: RuntimeParameters, callback?: () => void) => void
 
   /* Build the SessionConfig message to send when starting a session. */
   buildSessionConfigMessage: () => SessionConfigMessage
@@ -177,7 +185,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   simulator: defaultDraft.simulator,
   replay: defaultDraft.replay,
   dataSource: 'simulator',
-  runtimeParameters: {},
+  getRuntimeParameters: () => ({}),
   isDraftLoaded: false,
   setSubjectId: noop,
   setNotes: noop,
@@ -243,8 +251,9 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
   }
 
   const protocol = draft.pipeline.experiment.protocol
-  const runtimeParameters =
-    draft.runtimeParametersBySubjectAndProtocol[subjectKey(draft.metadata.subject_id)]?.[protocol] ?? {}
+  const runtimeParameters = runtimeParametersFor(draft, protocol)
+
+  const getRuntimeParameters = (forProtocol: string) => runtimeParametersFor(draft, forProtocol)
 
   const setSubjectId = (subjectId: number, callback?: () => void) =>
     updateDraft((current) => ({ ...current, metadata: { ...current.metadata, subject_id: subjectId } }), callback)
@@ -321,7 +330,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
     }
   }
 
-  const setRuntimeParameters = (params: RuntimeParameters, callback?: () => void) =>
+  const setRuntimeParameters = (forProtocol: string, params: RuntimeParameters, callback?: () => void) =>
     updateDraft(
       (current) => {
         const subject = subjectKey(current.metadata.subject_id)
@@ -331,7 +340,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
             ...current.runtimeParametersBySubjectAndProtocol,
             [subject]: {
               ...current.runtimeParametersBySubjectAndProtocol[subject],
-              [current.pipeline.experiment.protocol]: params,
+              [forProtocol]: params,
             },
           },
         }
@@ -366,7 +375,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         simulator: draft.simulator,
         replay: draft.replay,
         dataSource,
-        runtimeParameters,
+        getRuntimeParameters,
         isDraftLoaded,
         setSubjectId,
         setNotes,

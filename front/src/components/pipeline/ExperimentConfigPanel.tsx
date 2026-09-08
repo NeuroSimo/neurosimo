@@ -63,11 +63,13 @@ export const ExperimentPanel: React.FC = () => {
   const {
     protocolName,
     protocolList,
+    runtimeParameterProtocol,
     runtimeParameterInfos,
+    runtimeParameterValues,
     missingRuntimeParameters,
     showMissingRuntimeParameters,
   } = useContext(ModuleListContext)
-  const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters, isDraftLoaded } = useSessionConfig()
+  const { metadata, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters, isDraftLoaded } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject, projects, setActiveProject } = useSystemConfig()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -78,13 +80,13 @@ export const ExperimentPanel: React.FC = () => {
   const isElectron = !!(window as any).electronAPI
 
   const handleRuntimeParameterCommit = (name: string, value: RuntimeParameterValue | undefined) => {
-    const updated = { ...runtimeParameters }
+    const updated = { ...runtimeParameterValues }
     if (value === undefined) {
       delete updated[name]
     } else {
       updated[name] = value
     }
-    setRuntimeParameters(updated, () => {
+    setRuntimeParameters(runtimeParameterProtocol, updated, () => {
       console.log(`Runtime parameter '${name}' set to ${value}`)
     })
   }
@@ -227,7 +229,7 @@ export const ExperimentPanel: React.FC = () => {
               <IconButtonWrapper>
                 <RuntimeParameterInput
                   descriptor={descriptor}
-                  value={runtimeParameters[descriptor.name]}
+                  value={runtimeParameterValues[descriptor.name]}
                   onCommit={(value) => handleRuntimeParameterCommit(descriptor.name, value)}
                   disabled={isSessionRunning}
                   missing={isMissing}

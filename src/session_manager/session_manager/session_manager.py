@@ -523,6 +523,14 @@ class SessionManagerNode(Node):
             self.logger.error(f"Invalid data source: {data_source}. Must be 'simulator', 'recording', or 'eeg_device'.")
             return False
 
+        # The data source needs something to play back
+        if data_source == 'simulator' and not config.simulator_dataset_filename:
+            self.logger.error("No dataset selected for the simulator data source.")
+            return False
+        if data_source == 'recording' and not config.replay_bag_id:
+            self.logger.error("No recording selected for the recording data source.")
+            return False
+
         return True
 
     def compile_session_spec(self, session_config, runtime_parameter_infos):

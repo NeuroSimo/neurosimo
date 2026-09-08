@@ -1,6 +1,7 @@
 #include "dataset_manager.h"
 #include "csv_reader.h"
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -60,6 +61,14 @@ std::tuple<bool, neurosimo_project_interfaces::msg::DatasetInfo, std::vector<dou
     const std::string& json_filename, const std::string& directory_path) {
 
   std::string json_file_path = directory_path + "/" + json_filename;
+
+  /* Guard against paths that are not readable as a JSON file. An empty filename resolves to
+     the data directory itself, and opening a directory succeeds while reading it throws. */
+  if (json_filename.empty() || !std::filesystem::is_regular_file(json_file_path)) {
+    RCLCPP_ERROR(node_->get_logger(), "Not a dataset file: %s", json_file_path.c_str());
+    return std::make_tuple(false, neurosimo_project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
+  }
+
   std::ifstream file(json_file_path);
 
   if (!file.is_open()) {
@@ -165,6 +174,10 @@ std::tuple<bool, neurosimo_project_interfaces::msg::DatasetInfo, std::vector<dou
 
   } catch (const nlohmann::json::parse_error& ex) {
     RCLCPP_ERROR(node_->get_logger(), "JSON parse error in %s: %s", json_filename.c_str(), ex.what());
+    return std::make_tuple(false, neurosimo_project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
+  } catch (const std::exception& ex) {
+    /* Reading the dataset must never take down the node: report the failure to the caller. */
+    RCLCPP_ERROR(node_->get_logger(), "Error reading %s: %s", json_filename.c_str(), ex.what());
     return std::make_tuple(false, neurosimo_project_interfaces::msg::DatasetInfo(), std::vector<double_t>());
   }
 }

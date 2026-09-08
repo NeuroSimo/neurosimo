@@ -87,6 +87,10 @@ export const SystemConfigProvider: React.FC<SystemConfigProviderProps> = ({ chil
   const systemConfigRef = useRef<SystemConfigValues>(systemConfig)
   systemConfigRef.current = systemConfig
 
+  /* Until the latched config has arrived there is nothing to merge against, and sending
+     would replace the stored configuration with empty values. */
+  const hasReceivedConfig = useRef(false)
+
   useEffect(() => {
     /* Subscriber for system config topic (latched). */
     const systemConfigSubscriber = new Topic({
@@ -98,6 +102,7 @@ export const SystemConfigProvider: React.FC<SystemConfigProviderProps> = ({ chil
 
     systemConfigSubscriber.subscribe((message: ROSLIB.Message) => {
       const msg = message as any
+      hasReceivedConfig.current = true
       setSystemConfigState({
         activeProject: msg.active_project,
         eegPort: msg.eeg_port,
@@ -137,6 +142,11 @@ export const SystemConfigProvider: React.FC<SystemConfigProviderProps> = ({ chil
     update: Partial<SystemConfigValues>,
     callback?: () => void
   ): Promise<void> => {
+    if (!hasReceivedConfig.current) {
+      console.log('ERROR: Refusing to set system config before the current one has been received')
+      return
+    }
+
     const merged = { ...systemConfigRef.current, ...update }
 
     setSystemConfigRos(toMessage(merged), (success, message) => {

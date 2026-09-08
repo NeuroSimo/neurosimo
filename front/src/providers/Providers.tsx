@@ -6,6 +6,7 @@ import { RosConnectionProvider } from './RosConnectionProvider'
 import { HeartbeatProvider } from './HeartbeatProvider'
 import { SessionConfigProvider } from './SessionConfigProvider'
 import { SystemConfigProvider } from './SystemConfigProvider'
+import { ProjectFilesProvider } from './ProjectFilesProvider'
 import { ModuleListProvider } from './ModuleListProvider'
 import { SessionStatisticsProvider } from './SessionStatisticsProvider'
 import { LogProvider } from './LogProvider'
@@ -30,33 +31,35 @@ const Providers: React.FC<Props> = ({ children }) => {
       <RosConnectionProvider>
         <HeartbeatProvider>
           <SystemConfigProvider>
-            <SessionConfigProvider>
-              <ModuleListProvider>
-                <SessionStatisticsProvider>
-                  <LogProvider>
-                    <ExperimentProvider>
-                      <EegStreamProvider>
-                        <EegStatisticsProvider>
-                          <EegSimulatorProvider>
-                            <EegBridgeProvider>
-                              <SessionProvider>
-                                <HealthProvider>
-                                  <DiskStatusProvider>
-                                    <ExporterProvider>
-                                      <RecordingProvider>{children}</RecordingProvider>
-                                    </ExporterProvider>
-                                  </DiskStatusProvider>
-                                </HealthProvider>
-                              </SessionProvider>
-                            </EegBridgeProvider>
-                          </EegSimulatorProvider>
-                        </EegStatisticsProvider>
-                      </EegStreamProvider>
-                    </ExperimentProvider>
-                  </LogProvider>
-                </SessionStatisticsProvider>
-              </ModuleListProvider>
-            </SessionConfigProvider>
+            <ProjectFilesProvider>
+              <SessionConfigProvider>
+                <ModuleListProvider>
+                  <SessionStatisticsProvider>
+                    <LogProvider>
+                      <ExperimentProvider>
+                        <EegStreamProvider>
+                          <EegStatisticsProvider>
+                            <EegSimulatorProvider>
+                              <EegBridgeProvider>
+                                <SessionProvider>
+                                  <HealthProvider>
+                                    <DiskStatusProvider>
+                                      <ExporterProvider>
+                                        <RecordingProvider>{children}</RecordingProvider>
+                                      </ExporterProvider>
+                                    </DiskStatusProvider>
+                                  </HealthProvider>
+                                </SessionProvider>
+                              </EegBridgeProvider>
+                            </EegSimulatorProvider>
+                          </EegStatisticsProvider>
+                        </EegStreamProvider>
+                      </ExperimentProvider>
+                    </LogProvider>
+                  </SessionStatisticsProvider>
+                </ModuleListProvider>
+              </SessionConfigProvider>
+            </ProjectFilesProvider>
           </SystemConfigProvider>
         </HeartbeatProvider>
       </RosConnectionProvider>

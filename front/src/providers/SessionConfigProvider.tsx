@@ -1,7 +1,7 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
 
 import { SessionConfigMessage } from 'ros/session'
-import { useSystemConfig } from './SystemConfigProvider'
+import { useProjectFiles } from './ProjectFilesProvider'
 
 // Structured parameter interfaces
 interface MetadataParameters {
@@ -230,7 +230,9 @@ interface SessionConfigProviderProps {
 }
 
 export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ children }) => {
-  const { activeProject } = useSystemConfig()
+  /* The draft belongs to the project whose files are on display rather than to the active one:
+     its selections name files, and are only meaningful next to the list they were made from. */
+  const { project } = useProjectFiles()
 
   /* The draft is tagged with the project it belongs to, so that it is never persisted under
      a project it was not loaded for while a project switch is in progress. */
@@ -240,25 +242,25 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
      of the project, and defaults to the simulator on every start. */
   const [dataSource, setDataSourceState] = useState<string>('simulator')
 
-  /* Load the draft whenever the active project changes. */
+  /* Load the draft whenever the project changes. */
   useEffect(() => {
-    if (activeProject === '') {
+    if (project === '') {
       setDraftState(null)
       return
     }
-    setDraftState({ project: activeProject, draft: loadDraft(activeProject) })
-  }, [activeProject])
+    setDraftState({ project: project, draft: loadDraft(project) })
+  }, [project])
 
   /* Persist the draft on every change. */
   useEffect(() => {
-    if (draftState === null || draftState.project !== activeProject) {
+    if (draftState === null || draftState.project !== project) {
       return
     }
     saveDraft(draftState.project, draftState.draft)
-  }, [draftState, activeProject])
+  }, [draftState, project])
 
   const draft = draftState?.draft ?? defaultDraft
-  const isDraftLoaded = draftState !== null && draftState.project === activeProject
+  const isDraftLoaded = draftState !== null && draftState.project === project
 
   const updateDraft = (update: (current: SessionDraft) => SessionDraft, callback?: () => void) => {
     setDraftState((current) => (current === null ? current : { ...current, draft: update(current.draft) }))

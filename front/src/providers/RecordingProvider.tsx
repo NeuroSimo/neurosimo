@@ -1,7 +1,6 @@
 import React, { ReactNode } from 'react'
 
-import { useSystemConfig } from './SystemConfigProvider'
-import { useProjectFileList } from 'utils/useProjectFileList'
+import { useProjectFiles } from './ProjectFilesProvider'
 
 interface RecordingContextType {
   recordingsList: string[]
@@ -18,9 +17,7 @@ interface RecordingProviderProps {
 }
 
 export const RecordingProvider: React.FC<RecordingProviderProps> = ({ children }) => {
-  const { activeProject } = useSystemConfig()
-
-  const recordingsList = useProjectFileList('/neurosimo/recording/recordings/list', activeProject)
+  const { recordingsList } = useProjectFiles()
 
   return (
     <RecordingContext.Provider

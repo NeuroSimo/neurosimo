@@ -1,9 +1,8 @@
 import React, { useState, useEffect, ReactNode } from 'react'
 
 import { useSessionConfig, RuntimeParameterValue, RuntimeParameters } from './SessionConfigProvider'
-import { useSystemConfig } from './SystemConfigProvider'
+import { useProjectFiles } from './ProjectFilesProvider'
 import { getProtocolInfoRos, RuntimeParameterInfo } from 'ros/experiment'
-import { useProjectFileList } from 'utils/useProjectFileList'
 
 /* A runtime parameter counts as "set" when it has a value the session can run with.
    A boolean is always set: an unticked checkbox is simply false. */
@@ -25,6 +24,10 @@ const isRuntimeParameterSet = (
 }
 
 interface ModuleListContextType {
+  /* The project the lists below describe, and that the selections made against them
+     belong to. */
+  project: string
+
   preprocessorList: string[]
   preprocessorModule: string
   preprocessorEnabled: boolean
@@ -59,6 +62,8 @@ interface ModuleListContextType {
 }
 
 const defaultModuleListState: ModuleListContextType = {
+  project: '',
+
   preprocessorList: [],
   preprocessorModule: '',
   preprocessorEnabled: false,
@@ -92,12 +97,7 @@ interface ModuleListProviderProps {
 
 export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children }) => {
   const { pipeline, getRuntimeParameters } = useSessionConfig()
-  const { activeProject } = useSystemConfig()
-
-  const preprocessorList = useProjectFileList('/neurosimo/pipeline/preprocessor/list', activeProject)
-  const deciderList = useProjectFileList('/neurosimo/pipeline/decider/list', activeProject)
-  const presenterList = useProjectFileList('/neurosimo/pipeline/presenter/list', activeProject)
-  const protocolList = useProjectFileList('/neurosimo/experiment/protocol/list', activeProject)
+  const { project, preprocessorList, deciderList, presenterList, protocolList } = useProjectFiles()
 
   /* Runtime parameter descriptors, tagged with the protocol they were fetched for,
      so that the values they are rendered against can be read for that same protocol.
@@ -120,7 +120,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const protocolName = pipeline.experiment.protocol
 
   /* Identifies the protocol whose descriptors are currently relevant. */
-  const protocolKey = activeProject && protocolName.trim() !== '' ? `${activeProject}/${protocolName}` : ''
+  const protocolKey = project && protocolName.trim() !== '' ? `${project}/${protocolName}` : ''
 
   /* Fetch the runtime parameter descriptors whenever the selected protocol changes.
      protocolList is also a dependency: the backend re-publishes the protocol list
@@ -137,7 +137,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
        drop the ones belonging to a selection that has already been superseded. */
     let superseded = false
 
-    getProtocolInfoRos(activeProject, protocolName, (info) => {
+    getProtocolInfoRos(project, protocolName, (info) => {
       if (superseded) {
         return
       }
@@ -182,6 +182,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   return (
     <ModuleListContext.Provider
       value={{
+        project,
         preprocessorList,
         preprocessorModule,
         preprocessorEnabled,

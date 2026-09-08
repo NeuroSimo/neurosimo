@@ -61,6 +61,7 @@ const InfoIcon = styled.span<{ disabled: boolean }>`
 
 export const ExperimentPanel: React.FC = () => {
   const {
+    project,
     protocolName,
     protocolList,
     runtimeParameterProtocol,
@@ -130,9 +131,9 @@ export const ExperimentPanel: React.FC = () => {
   }
 
   const handleProtocolInfo = () => {
-    if (!protocolName || protocolName.trim() === '' || !activeProject) return
-    
-    getProtocolInfoRos(activeProject, protocolName, (info) => {
+    if (!protocolName || protocolName.trim() === '' || !project) return
+
+    getProtocolInfoRos(project, protocolName, (info) => {
       if (!info) {
         console.error('Failed to get protocol info for:', protocolName)
         return
@@ -194,7 +195,7 @@ export const ExperimentPanel: React.FC = () => {
           <FolderTerminalButtons folderName="protocols" />
           <InfoIcon
             onClick={handleProtocolInfo}
-            disabled={!protocolName || protocolName.trim() === '' || !activeProject}
+            disabled={!protocolName || protocolName.trim() === '' || !project}
             title="Show protocol info"
           >
             <FontAwesomeIcon icon={faInfoCircle} />

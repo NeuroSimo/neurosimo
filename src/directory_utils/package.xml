@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>filesystem_watcher</name>
+  <name>directory_utils</name>
   <version>0.1.0</version>
   <description>Shared directory-watching utility for ROS2 Python nodes (watchdog-based).</description>
   <maintainer email="okahilak@gmail.com">Olli-Pekka Kahilakoski</maintainer>

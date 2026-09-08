@@ -11,7 +11,7 @@ from neurosimo_system_interfaces.msg import GlobalConfig
 
 from rcl_interfaces.msg import SetParametersResult
 
-from filesystem_watcher import DirectoryWatcher
+from directory_utils import DirectoryWatcher
 
 from .global_storage_manager import GlobalStorageManager
 

@@ -9,7 +9,7 @@ from rclpy.executors import SingleThreadedExecutor
 from neurosimo_system_interfaces.msg import GlobalConfig
 from neurosimo_project_interfaces.msg import FilenameList
 
-from filesystem_watcher import DirectoryWatcher
+from directory_utils import DirectoryWatcher
 
 
 class ProjectWatcherNode(Node):

@@ -10,7 +10,7 @@
   <depend>rclpy</depend>
   <depend>std_srvs</depend>
 
-  <depend>filesystem_watcher</depend>
+  <depend>directory_utils</depend>
 
   <depend>neurosimo_eeg_interfaces</depend>
   <depend>neurosimo_project_interfaces</depend>

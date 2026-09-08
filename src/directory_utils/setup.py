@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'filesystem_watcher'
+package_name = 'directory_utils'
 
 setup(
     name=package_name,

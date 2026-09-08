@@ -90,11 +90,15 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   /* Runtime parameter descriptors, tagged with the project/protocol they were fetched for.
      The tag is needed because the fetch is asynchronous: while switching projects the
      descriptors briefly still describe the previously selected protocol, and applying
-     them to the newly loaded session config would write the wrong parameters. */
+     them to the newly loaded session config would write the wrong parameters.
+
+     null means the descriptors for the current protocol are not known: either nothing has
+     been fetched yet, or the fetch failed. That is deliberately distinct from a successful
+     fetch returning an empty list, which means the protocol declares no runtime parameters. */
   const [fetchedRuntimeParameters, setFetchedRuntimeParameters] = useState<{
     key: string
     infos: RuntimeParameterInfo[]
-  }>({ key: '', infos: [] })
+  } | null>(null)
 
   // Get parameter values from structured parameter store
   const preprocessorModule = pipeline.preprocessor.module
@@ -106,7 +110,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const protocolName = pipeline.experiment.protocol
 
   /* Identifies the protocol whose descriptors are currently relevant. */
-  const protocolKey = activeProject && protocolName ? `${activeProject}/${protocolName}` : ''
+  const protocolKey = activeProject && protocolName.trim() !== '' ? `${activeProject}/${protocolName}` : ''
 
   /* Fetch the runtime parameter descriptors whenever the selected protocol changes.
      protocolList is also a dependency: the backend re-publishes the protocol list
@@ -114,17 +118,22 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
      in-place edits of the currently selected protocol file. Re-fetching on that keeps
      the runtime-parameter UI in sync without having to switch protocols to refresh. */
   useEffect(() => {
-    if (!protocolName || protocolName.trim() === '' || !activeProject) {
-      setFetchedRuntimeParameters({ key: '', infos: [] })
+    if (protocolKey === '') {
+      setFetchedRuntimeParameters(null)
       return
     }
 
     getProtocolInfoRos(activeProject, protocolName, (info) => {
-      setFetchedRuntimeParameters({ key: protocolKey, infos: info?.runtime_parameters ?? [] })
+      /* A failed fetch leaves the descriptors unknown. Treating the failure as "this
+         protocol has no runtime parameters" would prune every stored value and leave the
+         session startable with parameters the decider requires still missing. */
+      setFetchedRuntimeParameters(info ? { key: protocolKey, infos: info.runtime_parameters ?? [] } : null)
     })
-  }, [protocolName, activeProject, protocolList])
+  }, [protocolKey, protocolList])
 
-  const runtimeParameterInfos = fetchedRuntimeParameters.key === protocolKey ? fetchedRuntimeParameters.infos : []
+  /* Whether the descriptors in state describe the currently selected protocol. */
+  const descriptorsReady = fetchedRuntimeParameters !== null && fetchedRuntimeParameters.key === protocolKey
+  const runtimeParameterInfos = descriptorsReady ? fetchedRuntimeParameters.infos : []
 
   /* Reconcile the stored values against the descriptors: drop values whose descriptor no
      longer exists in the protocol (e.g. a parameter was removed or renamed on disk), and
@@ -136,7 +145,7 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
      that parameter unset until the user toggled it by hand. */
   const runtimeParametersKey = JSON.stringify(runtimeParameters)
   useEffect(() => {
-    if (protocolKey === '' || fetchedRuntimeParameters.key !== protocolKey) {
+    if (!descriptorsReady) {
       return
     }
 
@@ -157,13 +166,12 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
     setRuntimeParameters(updated)
   }, [fetchedRuntimeParameters, protocolKey, runtimeParametersKey])
 
-  /* Every runtime parameter is required, so the session can only start once all of
-     them have a usable value. While the descriptors for the currently selected protocol
-     are still being fetched, treat the parameters as not yet valid rather than assuming
-     there are none. */
+  /* Every runtime parameter is required, so the session can only start once all of them have
+     a usable value. Until the descriptors for the selected protocol are known, the parameters
+     count as invalid: an empty descriptor list would otherwise look vacuously valid. */
   const runtimeParametersValid =
     protocolKey === '' ||
-    (fetchedRuntimeParameters.key === protocolKey &&
+    (descriptorsReady &&
       runtimeParameterInfos.every((descriptor) => isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name])))
 
   useEffect(() => {

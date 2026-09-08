@@ -41,6 +41,14 @@ const CompactRow = styled(ConfigRow)`
   gap: 4px;
 `
 
+/* How long a dataset info fetch may take before the wait is reported to the user.
+
+   Switching datasets is normally answered well within this, and blanking the fields for that
+   moment reads as a flicker, so the previously fetched information is left on display until
+   the new one arrives. Datasets that genuinely take long to read are common enough that the
+   stale figures cannot simply be left standing, hence the deadline. */
+const DATASET_INFO_REPORT_WAIT_AFTER_MS = 200
+
 
 export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
   const { eegSimulatorStatus } = useContext(HealthcheckContext)
@@ -55,8 +63,16 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   const { setSimulatorDataset, setSimulatorStartTime, setSimulatorPlaybackSpeed, isDraftLoaded } = useSessionConfig()
   const { sessionState } = useSession()
 
-  const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
-  const [isLoadingDatasetInfo, setIsLoadingDatasetInfo] = useState(false)
+  /* The information last fetched, tagged with the dataset it describes, so that it can be
+     told apart from the dataset now selected while a fetch is in flight. A null info is a
+     fetch that failed, which is distinct from not having fetched at all. */
+  const [fetchedDatasetInfo, setFetchedDatasetInfo] = useState<{
+    dataset: string
+    info: DatasetInfo | null
+  } | null>(null)
+
+  /* Whether the fetch in flight has passed the deadline above. */
+  const [datasetInfoIsSlow, setDatasetInfoIsSlow] = useState(false)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
@@ -76,25 +92,33 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   // Fetch dataset info when dataset changes
   useEffect(() => {
     if (!dataset || dataset.trim() === '') {
-      setSelectedDatasetInfo(null)
-      setIsLoadingDatasetInfo(false)
+      setFetchedDatasetInfo(null)
+      setDatasetInfoIsSlow(false)
       return
     }
-    setSelectedDatasetInfo(null)
-    setIsLoadingDatasetInfo(true)
+
     let cancelled = false
+
+    setDatasetInfoIsSlow(false)
+    const deadline = window.setTimeout(() => {
+      if (!cancelled) {
+        setDatasetInfoIsSlow(true)
+      }
+    }, DATASET_INFO_REPORT_WAIT_AFTER_MS)
+
     getDatasetInfoRos(dataset, (datasetInfo) => {
       if (cancelled) return
       if (!datasetInfo) {
         console.error('Failed to get dataset info for:', dataset)
-        setSelectedDatasetInfo(null)
-        setIsLoadingDatasetInfo(false)
-        return
       }
-      setSelectedDatasetInfo(datasetInfo)
-      setIsLoadingDatasetInfo(false)
+      setFetchedDatasetInfo({ dataset: dataset, info: datasetInfo })
+      setDatasetInfoIsSlow(false)
     })
-    return () => { cancelled = true }
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(deadline)
+    }
   }, [dataset])
 
   // Handle arrow key navigation for dataset selection
@@ -140,6 +164,14 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   const setDataset = (event: React.ChangeEvent<HTMLSelectElement>) => {
     selectDataset(event.target.value)
   }
+
+  /* The information on hand does not describe the selected dataset, so a fetch is in flight
+     (or has just been started). Report the wait only once it has passed the deadline; until
+     then the previous dataset's information stays on display. */
+  const isLoadingDatasetInfo =
+    (fetchedDatasetInfo === null || fetchedDatasetInfo.dataset !== dataset) && datasetInfoIsSlow
+
+  const selectedDatasetInfo = isLoadingDatasetInfo ? null : fetchedDatasetInfo?.info ?? null
 
   const setStartTime = (startTime: number) => {
     if (startTime < 0 || startTime > (selectedDatasetInfo?.duration || 0)) {

@@ -111,7 +111,7 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
           <PipelineSelect onChange={handleModuleChange} value={hasModule ? module : ''} disabled={isSessionRunning}>
             {!hasModule && (
               <option value="" disabled>
-                {modules.length === 0 ? 'None in project' : 'Select module...'}
+                —
               </option>
             )}
             {modules.map((mod, index) => (

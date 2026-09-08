@@ -179,7 +179,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         <DatasetSelect onChange={setDataset} value={hasDataset ? dataset : ''} disabled={isSessionRunning || isEegStreaming}>
           {!hasDataset && (
             <option value="" disabled>
-              {datasetList.length === 0 ? 'No datasets in project' : 'Select dataset...'}
+              —
             </option>
           )}
           {datasetList.map((datasetFilename: typeof datasetList[number], index: number) => (

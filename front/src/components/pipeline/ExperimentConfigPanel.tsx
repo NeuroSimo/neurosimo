@@ -193,7 +193,7 @@ export const ExperimentPanel: React.FC = () => {
           <Select onChange={handleProtocolChange} value={hasProtocol ? protocolName : ''} disabled={isSessionRunning}>
             {!hasProtocol && (
               <option value="" disabled>
-                {protocolList.length === 0 ? 'No protocols in project' : 'Select protocol...'}
+                —
               </option>
             )}
             {protocolList.map((protocol, index) => (

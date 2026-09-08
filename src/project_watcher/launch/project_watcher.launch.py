@@ -15,12 +15,12 @@ def generate_launch_description():
     logger = LaunchConfiguration("log-level")
 
     node_executables = [
-        "session_configurator",
+        "project_watcher",
     ]
 
     for node_executable in node_executables:
         node = Node(
-            package="session_configurator",
+            package="project_watcher",
             executable=node_executable,
             namespace="neurosimo",
             arguments=['--ros-args', '--log-level', logger]

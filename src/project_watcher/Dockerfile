@@ -26,8 +26,8 @@ RUN source /opt/ros/jazzy/setup.bash && colcon build
 COPY src/filesystem_watcher src/filesystem_watcher/
 
 # ROS node
-COPY src/session_configurator src/session_configurator/
-RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select filesystem_watcher session_configurator
+COPY src/project_watcher src/project_watcher/
+RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select filesystem_watcher project_watcher
 
 # Set the Cyclone DDS configuration
 COPY config/cyclonedds.xml /config/
@@ -37,7 +37,7 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 WORKDIR /app
 
-COPY src/session_configurator/ros_entrypoint.sh .
+COPY src/project_watcher/ros_entrypoint.sh .
 RUN dos2unix ros_entrypoint.sh
 RUN chmod +x ros_entrypoint.sh
 

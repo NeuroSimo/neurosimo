@@ -299,10 +299,10 @@ services:
       - '/etc/timezone:/etc/timezone:ro'
     network_mode: host
 
-  session_configurator:
+  project_watcher:
     build:
       context: .
-      dockerfile: src/session_configurator/Dockerfile
+      dockerfile: src/project_watcher/Dockerfile
     env_file:
       - .env
     environment:

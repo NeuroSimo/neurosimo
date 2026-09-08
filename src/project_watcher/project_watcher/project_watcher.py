@@ -12,7 +12,7 @@ from neurosimo_project_interfaces.msg import FilenameList
 from filesystem_watcher import DirectoryWatcher
 
 
-class SessionConfiguratorNode(Node):
+class ProjectWatcherNode(Node):
     """Publishes the files available in the active project.
 
     Session configuration itself lives in the UI and is sent to the session manager with the
@@ -22,7 +22,7 @@ class SessionConfiguratorNode(Node):
     PROJECTS_ROOT = '/app/projects'
 
     def __init__(self):
-        super().__init__('session_configurator')
+        super().__init__('project_watcher')
         self.logger = self.get_logger()
 
         # Initialize directory watcher
@@ -166,7 +166,7 @@ class SessionConfiguratorNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = SessionConfiguratorNode()
+    node = ProjectWatcherNode()
     executor = SingleThreadedExecutor()
     executor.add_node(node)
     try:

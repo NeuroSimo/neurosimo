@@ -20,7 +20,7 @@
 #include "neurosimo_system_interfaces/msg/component_health.hpp"
 #include "neurosimo_system_interfaces/srv/abort_session.hpp"
 #include "neurosimo_system_interfaces/msg/data_source_state.hpp"
-#include "neurosimo_system_interfaces/msg/global_config.hpp"
+#include "neurosimo_system_interfaces/msg/system_config.hpp"
 
 #include "std_srvs/srv/trigger.hpp"
 
@@ -98,7 +98,7 @@ private:
       const std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream::Request> request,
       std::shared_ptr<neurosimo_eeg_interfaces::srv::InitializeEegDeviceStream::Response> response);
 
-  void handle_global_config(const neurosimo_system_interfaces::msg::GlobalConfig::SharedPtr msg);
+  void handle_system_config(const neurosimo_system_interfaces::msg::SystemConfig::SharedPtr msg);
 
   /* Configuration */
   uint16_t port = 0;
@@ -136,7 +136,7 @@ private:
   rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client;
 
   /* Subscribers */
-  rclcpp::Subscription<neurosimo_system_interfaces::msg::GlobalConfig>::SharedPtr global_config_subscription;
+  rclcpp::Subscription<neurosimo_system_interfaces::msg::SystemConfig>::SharedPtr system_config_subscription;
 
   /* Data source state */
   neurosimo_system_interfaces::msg::DataSourceState::_state_type data_source_state = neurosimo_system_interfaces::msg::DataSourceState::READY;

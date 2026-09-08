@@ -19,7 +19,7 @@
 #include "neurosimo_eeg_interfaces/msg/stream_info.hpp"
 #include "neurosimo_eeg_interfaces/msg/sample.hpp"
 #include "neurosimo_pipeline_interfaces/msg/experiment_state.hpp"
-#include "neurosimo_system_interfaces/msg/global_config.hpp"
+#include "neurosimo_system_interfaces/msg/system_config.hpp"
 #include "neurosimo_system_interfaces/msg/data_source_state.hpp"
 #include "neurosimo_system_interfaces/srv/abort_session.hpp"
 
@@ -31,7 +31,7 @@ public:
   ~EegReplayNode() override;
 
 private:
-  void global_config_callback(const neurosimo_system_interfaces::msg::GlobalConfig::SharedPtr msg);
+  void system_config_callback(const neurosimo_system_interfaces::msg::SystemConfig::SharedPtr msg);
   void publish_state(uint8_t state);
 
   void handle_initialize(
@@ -54,13 +54,13 @@ private:
 
   rclcpp::Publisher<neurosimo_system_interfaces::msg::DataSourceState>::SharedPtr state_publisher_;
   rclcpp::Client<neurosimo_system_interfaces::srv::AbortSession>::SharedPtr abort_session_client_;
-  rclcpp::Subscription<neurosimo_system_interfaces::msg::GlobalConfig>::SharedPtr global_config_sub_;
+  rclcpp::Subscription<neurosimo_system_interfaces::msg::SystemConfig>::SharedPtr system_config_sub_;
 
   rclcpp::Service<neurosimo_eeg_interfaces::srv::InitializeEegReplayStream>::SharedPtr initialize_service_;
   rclcpp::Service<neurosimo_eeg_interfaces::srv::StartStreaming>::SharedPtr start_streaming_service_;
   rclcpp::Service<neurosimo_eeg_interfaces::srv::StopStreaming>::SharedPtr stop_streaming_service_;
 
-  neurosimo_system_interfaces::msg::GlobalConfig::SharedPtr global_config_;
+  neurosimo_system_interfaces::msg::SystemConfig::SharedPtr system_config_;
   bool is_initialized_ = false;
   std::string bag_filepath_;
   bool play_preprocessed_ = false;

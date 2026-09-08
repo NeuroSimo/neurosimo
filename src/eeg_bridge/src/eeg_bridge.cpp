@@ -79,10 +79,10 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   }
 
   /* Create subscribers */
-  this->global_config_subscription = this->create_subscription<neurosimo_system_interfaces::msg::GlobalConfig>(
-      "/neurosimo/global_configurator/config",
+  this->system_config_subscription = this->create_subscription<neurosimo_system_interfaces::msg::SystemConfig>(
+      "/neurosimo/system_configurator/config",
       qos_persist_latest,
-      std::bind(&EegBridge::handle_global_config, this, std::placeholders::_1));
+      std::bind(&EegBridge::handle_system_config, this, std::placeholders::_1));
 
   /* Create heartbeat timer */
   this->heartbeat_publisher_timer = this->create_wall_timer(
@@ -93,10 +93,10 @@ EegBridge::EegBridge() : Node("eeg_bridge") {
   publish_health_status(neurosimo_system_interfaces::msg::ComponentHealth::READY, "");
 }
 
-void EegBridge::handle_global_config(const neurosimo_system_interfaces::msg::GlobalConfig::SharedPtr msg) {
+void EegBridge::handle_system_config(const neurosimo_system_interfaces::msg::SystemConfig::SharedPtr msg) {
   /* Ignore config changes during ongoing session */
   if (this->data_source_state == neurosimo_system_interfaces::msg::DataSourceState::RUNNING) {
-    RCLCPP_WARN(this->get_logger(), "Ignoring global config update during ongoing session");
+    RCLCPP_WARN(this->get_logger(), "Ignoring system config update during ongoing session");
     return;
   }
 

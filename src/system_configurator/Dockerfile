@@ -26,8 +26,8 @@ RUN source /opt/ros/jazzy/setup.bash && colcon build
 COPY src/directory_utils src/directory_utils/
 
 # ROS node
-COPY src/global_configurator src/global_configurator/
-RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select directory_utils global_configurator
+COPY src/system_configurator src/system_configurator/
+RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select directory_utils system_configurator
 
 # Set the Cyclone DDS configuration
 COPY config/cyclonedds.xml /config/
@@ -37,7 +37,7 @@ ENV CYCLONEDDS_URI=file:///config/cyclonedds.xml
 
 WORKDIR /app
 
-COPY src/global_configurator/ros_entrypoint.sh .
+COPY src/system_configurator/ros_entrypoint.sh .
 RUN dos2unix ros_entrypoint.sh
 RUN chmod +x ros_entrypoint.sh
 

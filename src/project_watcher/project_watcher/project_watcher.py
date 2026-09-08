@@ -6,7 +6,7 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 
 from rclpy.executors import SingleThreadedExecutor
 
-from neurosimo_system_interfaces.msg import GlobalConfig
+from neurosimo_system_interfaces.msg import SystemConfig
 from neurosimo_project_interfaces.msg import FilenameList
 
 from directory_utils import DirectoryWatcher
@@ -35,10 +35,10 @@ class ProjectWatcherNode(Node):
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
-        self.global_config_subscription = self.create_subscription(
-            GlobalConfig,
-            '/neurosimo/global_configurator/config',
-            self.global_config_callback,
+        self.system_config_subscription = self.create_subscription(
+            SystemConfig,
+            '/neurosimo/system_configurator/config',
+            self.system_config_callback,
             qos
         )
 
@@ -66,8 +66,8 @@ class ProjectWatcherNode(Node):
             ("external_recordings", [".vhdr"], self.external_recordings_list_publisher, "external_recordings", True),
         ]
 
-    def global_config_callback(self, msg):
-        """Handle global config changes from global configurator."""
+    def system_config_callback(self, msg):
+        """Handle system config changes from system configurator."""
         project_name = msg.active_project
 
         # Only process if active project has actually changed

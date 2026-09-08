@@ -9,7 +9,7 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
 from pathlib import Path
 
 from neurosimo_project_interfaces.srv import ImportRecording
-from neurosimo_system_interfaces.msg import GlobalConfig
+from neurosimo_system_interfaces.msg import SystemConfig
 
 
 class RecordingImporterNode(Node):
@@ -25,10 +25,10 @@ class RecordingImporterNode(Node):
         qos = QoSProfile(depth=1,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL,
                          history=HistoryPolicy.KEEP_LAST)
-        self.global_config_subscription = self.create_subscription(
-            GlobalConfig,
-            '/neurosimo/global_configurator/config',
-            self.global_config_callback,
+        self.system_config_subscription = self.create_subscription(
+            SystemConfig,
+            '/neurosimo/system_configurator/config',
+            self.system_config_callback,
             qos
         )
 
@@ -42,7 +42,7 @@ class RecordingImporterNode(Node):
 
         self.logger.info('Recording importer node initialized')
 
-    def global_config_callback(self, msg):
+    def system_config_callback(self, msg):
         self.active_project = msg.active_project
 
     def import_recording_callback(self, request, response):

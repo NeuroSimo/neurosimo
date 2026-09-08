@@ -1,4 +1,4 @@
-# Global system configuration
+# System-wide configuration
 string active_project
 
 # EEG Configuration

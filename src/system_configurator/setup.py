@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'global_configurator'
+package_name = 'system_configurator'
 
 setup(
     name=package_name,
@@ -19,12 +19,12 @@ setup(
     zip_safe=True,
     maintainer='Olli-Pekka Kahilakoski',
     maintainer_email='okahilak@gmail.com',
-    description='Global configurator',
+    description='System configurator',
     license='TODO',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'global_configurator = global_configurator.global_configurator:main',
+            'system_configurator = system_configurator.system_configurator:main',
         ],
     },
 )

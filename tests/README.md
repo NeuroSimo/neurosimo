@@ -2,7 +2,7 @@
 
 This suite drives the system through the same public ROS2 interfaces used by the frontend:
 
-- `/<node>/set_parameters` for configuration
+- `/neurosimo/system_configurator/config/get` and `/neurosimo/system_configurator/config/set` for configuration
 - `/neurosimo/session/start` to start a session
 - `/neurosimo/session/state` to wait for lifecycle completion
 

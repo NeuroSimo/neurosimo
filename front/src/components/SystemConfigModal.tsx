@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
-import { useGlobalConfig } from 'providers/GlobalConfigProvider'
+import { useSystemConfig } from 'providers/SystemConfigProvider'
 import { ValidatedInput } from './ValidatedInput'
 
 const ModalOverlay = styled.div`
@@ -230,12 +230,12 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   }
 `
 
-interface GlobalConfigModalProps {
+interface SystemConfigModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-interface GlobalConfigValues {
+interface SystemConfigFormValues {
   // EEG Configuration
   eegPort: number
   eegDevice: string
@@ -259,7 +259,7 @@ interface GlobalConfigValues {
   locale: string
 }
 
-const emptyConfig: GlobalConfigValues = {
+const emptyConfig: SystemConfigFormValues = {
   // EEG Configuration
   eegPort: 0,
   eegDevice: '',
@@ -304,13 +304,13 @@ const COMMON_LOCALES = [
   { value: 'sv-SE', label: 'Swedish (Svenska)' },
 ]
 
-export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
+export const SystemConfigModal: React.FC<SystemConfigModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const globalConfig = useGlobalConfig()
-  const [config, setConfig] = useState<GlobalConfigValues>(emptyConfig)
-  const [initialConfig, setInitialConfig] = useState<GlobalConfigValues>(emptyConfig)
+  const systemConfig = useSystemConfig()
+  const [config, setConfig] = useState<SystemConfigFormValues>(emptyConfig)
+  const [initialConfig, setInitialConfig] = useState<SystemConfigFormValues>(emptyConfig)
   const [activeTab, setActiveTab] = useState<TabType>('eeg')
 
   // Helper to parse disk threshold from string (e.g., "100GiB" -> 100)
@@ -327,26 +327,26 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
 
   // Load config when modal opens
   useEffect(() => {
-    if (isOpen && globalConfig.eegDevice) {
+    if (isOpen && systemConfig.eegDevice) {
       const loadedConfig = {
-        eegPort: globalConfig.eegPort,
-        eegDevice: globalConfig.eegDevice,
-        turbolinkSamplingFrequency: globalConfig.turbolinkSamplingFrequency,
-        turbolinkEegChannelCount: globalConfig.turbolinkEegChannelCount,
-        maximumDroppedSamples: globalConfig.maximumDroppedSamples,
-        enableLabjack: globalConfig.enableLabjack,
-        maximumLoopbackLatency: globalConfig.maximumLoopbackLatency,
-        maximumTimingError: globalConfig.maximumTimingError,
-        triggerToPulseDelay: globalConfig.triggerToPulseDelay,
-        diskWarningThreshold: parseDiskThreshold(globalConfig.diskWarningThreshold),
-        diskErrorThreshold: parseDiskThreshold(globalConfig.diskErrorThreshold),
-        locale: globalConfig.locale,
+        eegPort: systemConfig.eegPort,
+        eegDevice: systemConfig.eegDevice,
+        turbolinkSamplingFrequency: systemConfig.turbolinkSamplingFrequency,
+        turbolinkEegChannelCount: systemConfig.turbolinkEegChannelCount,
+        maximumDroppedSamples: systemConfig.maximumDroppedSamples,
+        enableLabjack: systemConfig.enableLabjack,
+        maximumLoopbackLatency: systemConfig.maximumLoopbackLatency,
+        maximumTimingError: systemConfig.maximumTimingError,
+        triggerToPulseDelay: systemConfig.triggerToPulseDelay,
+        diskWarningThreshold: parseDiskThreshold(systemConfig.diskWarningThreshold),
+        diskErrorThreshold: parseDiskThreshold(systemConfig.diskErrorThreshold),
+        locale: systemConfig.locale,
       }
       setConfig(loadedConfig)
       setInitialConfig(loadedConfig)
       setActiveTab('eeg')
     }
-  }, [isOpen, globalConfig])
+  }, [isOpen, systemConfig])
 
   // Handle Escape key to close modal with confirmation if there are changes
   useEffect(() => {
@@ -371,7 +371,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
 
   const handleSave = async () => {
     // Convert disk thresholds back to string format (e.g., 100 -> "100GiB")
-    await globalConfig.setGlobalConfig({
+    await systemConfig.setSystemConfig({
       eegPort: config.eegPort,
       eegDevice: config.eegDevice,
       turbolinkSamplingFrequency: config.turbolinkSamplingFrequency,
@@ -385,7 +385,7 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
       diskErrorThreshold: `${config.diskErrorThreshold}GiB`,
       locale: config.locale,
     }, () => {
-      console.log('Global config saved successfully')
+      console.log('System config saved successfully')
     })
     
     onClose()
@@ -412,9 +412,9 @@ export const GlobalConfigModal: React.FC<GlobalConfigModalProps> = ({
     }
   }
 
-  const updateConfig = <K extends keyof GlobalConfigValues>(
+  const updateConfig = <K extends keyof SystemConfigFormValues>(
     key: K,
-    value: GlobalConfigValues[K]
+    value: SystemConfigFormValues[K]
   ) => {
     setConfig(prev => ({ ...prev, [key]: value }))
   }

@@ -23,7 +23,7 @@
 
 #include "neurosimo_system_interfaces/msg/component_health.hpp"
 #include "neurosimo_system_interfaces/msg/data_source_state.hpp"
-#include "neurosimo_system_interfaces/msg/global_config.hpp"
+#include "neurosimo_system_interfaces/msg/system_config.hpp"
 #include "neurosimo_system_interfaces/srv/abort_session.hpp"
 
 #include <set>
@@ -39,7 +39,7 @@ private:
   void publish_heartbeat();
   void publish_health_status(uint8_t health_level, const std::string& message);
 
-  void handle_global_config(const std::shared_ptr<neurosimo_system_interfaces::msg::GlobalConfig> msg);
+  void handle_system_config(const std::shared_ptr<neurosimo_system_interfaces::msg::SystemConfig> msg);
 
   rclcpp_action::GoalResponse handle_initialize_goal(
     const rclcpp_action::GoalUUID & uuid,
@@ -123,7 +123,7 @@ private:
   rclcpp::Publisher<neurosimo_system_interfaces::msg::ComponentHealth>::SharedPtr health_publisher;
   rclcpp::TimerBase::SharedPtr heartbeat_publisher_timer;
 
-  rclcpp::Subscription<neurosimo_system_interfaces::msg::GlobalConfig>::SharedPtr global_config_subscriber;
+  rclcpp::Subscription<neurosimo_system_interfaces::msg::SystemConfig>::SharedPtr system_config_subscriber;
 
   std::unique_ptr<DatasetManager> dataset_manager_;
 

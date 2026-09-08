@@ -22,7 +22,7 @@ import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { RecordingContext } from 'providers/RecordingProvider'
-import { useGlobalConfig } from 'providers/GlobalConfigProvider'
+import { useSystemConfig } from 'providers/SystemConfigProvider'
 import { useExporter, ExporterStateValue } from 'providers/ExporterProvider'
 import { exportSessionRos } from 'ros/session'
 import { getRecordingInfoRos, deleteRecordingRos, RecordingInfo } from 'ros/recording'
@@ -178,7 +178,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
   } = useSessionConfig()
   const { sessionState } = useSession()
   const { recordingsList } = useContext(RecordingContext)
-  const { activeProject, locale } = useGlobalConfig()
+  const { activeProject, locale } = useSystemConfig()
   const { exporterState } = useExporter()
   const dataSourceContext = useContext(DataSourceContext)
 

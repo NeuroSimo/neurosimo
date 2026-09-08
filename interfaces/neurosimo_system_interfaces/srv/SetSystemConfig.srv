@@ -1,0 +1,9 @@
+# Set the system configuration.
+#
+# The request carries the complete configuration: every call is a full replace,
+# so callers should base the request on the latest published config.
+
+SystemConfig config
+---
+bool success
+string message

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
 
 import { SessionConfigMessage } from 'ros/session'
-import { useGlobalConfig } from './GlobalConfigProvider'
+import { useSystemConfig } from './SystemConfigProvider'
 
 // Structured parameter interfaces
 interface MetadataParameters {
@@ -197,7 +197,7 @@ interface SessionConfigProviderProps {
 }
 
 export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ children }) => {
-  const { activeProject } = useGlobalConfig()
+  const { activeProject } = useSystemConfig()
 
   /* The draft is tagged with the project it belongs to, so that it is never persisted under
      a project it was not loaded for while a project switch is in progress. */

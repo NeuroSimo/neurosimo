@@ -168,10 +168,10 @@ services:
     profiles:
       - gpu
 
-  global_configurator:
+  system_configurator:
     build:
       context: .
-      dockerfile: src/global_configurator/Dockerfile
+      dockerfile: src/system_configurator/Dockerfile
     env_file:
       - .env
     environment:

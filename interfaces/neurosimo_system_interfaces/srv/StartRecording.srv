@@ -1,7 +1,7 @@
 # Start recording a session bag
 
 uint8[16] session_id
-GlobalConfig global_config
+SystemConfig system_config
 SessionConfig session_config
 neurosimo_eeg_interfaces/StreamInfo stream_info
 ---

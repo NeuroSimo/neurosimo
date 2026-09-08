@@ -6,14 +6,11 @@ from typing import Any
 
 import pytest
 import rclpy
-from rcl_interfaces.msg import Parameter as ParameterMsg
-from rcl_interfaces.msg import ParameterType, ParameterValue
-from rcl_interfaces.srv import SetParameters
 from rclpy.node import Node
 
 from neurosimo_project_interfaces.srv import ListProjects
 from neurosimo_system_interfaces.msg import SessionState, SessionConfig
-from neurosimo_system_interfaces.srv import StartSession
+from neurosimo_system_interfaces.srv import GetSystemConfig, SetSystemConfig, StartSession
 
 
 pytestmark = [pytest.mark.tests]
@@ -24,27 +21,6 @@ def require_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"{name} must be set")
     return value
-
-
-def make_parameter(name: str, value: Any) -> ParameterMsg:
-    parameter = ParameterMsg()
-    parameter.name = name
-    parameter.value = ParameterValue()
-    if isinstance(value, bool):
-        parameter.value.type = ParameterType.PARAMETER_BOOL
-        parameter.value.bool_value = value
-    elif isinstance(value, int) and not isinstance(value, bool):
-        parameter.value.type = ParameterType.PARAMETER_INTEGER
-        parameter.value.integer_value = value
-    elif isinstance(value, float):
-        parameter.value.type = ParameterType.PARAMETER_DOUBLE
-        parameter.value.double_value = value
-    elif isinstance(value, str):
-        parameter.value.type = ParameterType.PARAMETER_STRING
-        parameter.value.string_value = value
-    else:
-        raise TypeError(f"Unsupported parameter type for {name}: {type(value)}")
-    return parameter
 
 
 class SessionTestsHarness:
@@ -91,16 +67,33 @@ class SessionTestsHarness:
                 f"Available projects: {list_response.projects}"
             )
 
-    def set_parameters(self, node_name: str, params: dict[str, Any]) -> None:
-        service_name = f"/neurosimo/{node_name}/set_parameters"
-        client = self.node.create_client(SetParameters, service_name)
-        self.wait_for_service(client, service_name)
-        request = SetParameters.Request()
-        request.parameters = [make_parameter(k, v) for k, v in params.items()]
-        response = self.call_service(client, request)
-        failures = [r.reason for r in response.results if not r.successful]
-        if failures:
-            raise RuntimeError(f"Failed to set parameters for {node_name}: {failures}")
+    def update_system_config(self, updates: dict[str, Any]) -> None:
+        """Read the current system config, apply updates, and write it back.
+
+        The set service is a full replace, so the request has to be based on the
+        current configuration.
+        """
+        get_name = "/neurosimo/system_configurator/config/get"
+        get_client = self.node.create_client(GetSystemConfig, get_name)
+        self.wait_for_service(get_client, get_name)
+        get_response = self.call_service(get_client, GetSystemConfig.Request())
+        if not get_response.success:
+            raise RuntimeError("Failed to get system config")
+
+        config = get_response.config
+        for key, value in updates.items():
+            if not hasattr(config, key):
+                raise AttributeError(f"SystemConfig has no field '{key}'")
+            setattr(config, key, value)
+
+        set_name = "/neurosimo/system_configurator/config/set"
+        set_client = self.node.create_client(SetSystemConfig, set_name)
+        self.wait_for_service(set_client, set_name)
+        request = SetSystemConfig.Request()
+        request.config = config
+        set_response = self.call_service(set_client, request)
+        if not set_response.success:
+            raise RuntimeError(f"Failed to set system config: {set_response.message}")
 
     def start_session(self, config: SessionConfig) -> None:
         client = self.node.create_client(StartSession, "/neurosimo/session/start")
@@ -180,15 +173,14 @@ def test_fingerprints(ros_node: Node, projects_root: Path) -> None:
     project_name = require_env("PROJECT_NAME")
     harness.assert_project_exists(project_name)
 
-    harness.set_parameters(
-        "global_configurator",
+    harness.update_system_config(
         {
             "active_project": project_name,
             "enable_labjack": True,
         },
     )
 
-    # The global config still reaches the session manager over a latched topic, so allow it
+    # The system config still reaches the session manager over a latched topic, so allow it
     # to propagate before starting. The session config no longer needs this: it is carried
     # by the start request itself.
     time.sleep(0.5)

@@ -10,7 +10,7 @@ using namespace std::chrono_literals;
 using json = nlohmann::json;
 
 using DataSourceState = neurosimo_system_interfaces::msg::DataSourceState;
-using GlobalConfig = neurosimo_system_interfaces::msg::GlobalConfig;
+using SystemConfig = neurosimo_system_interfaces::msg::SystemConfig;
 using StreamInfo = neurosimo_eeg_interfaces::msg::StreamInfo;
 using EegSample = neurosimo_eeg_interfaces::msg::Sample;
 using ExperimentState = neurosimo_pipeline_interfaces::msg::ExperimentState;
@@ -40,12 +40,12 @@ EegReplayNode::EegReplayNode() : Node("eeg_replay") {
     rclcpp::ServicesQoS(),
     callback_group_);
 
-  /* Subscriber for global config. */
+  /* Subscriber for system config. */
   rclcpp::SubscriptionOptions sub_opts;
   sub_opts.callback_group = callback_group_;
-  global_config_sub_ = create_subscription<GlobalConfig>(
-    "/neurosimo/global_configurator/config", qos_persist_latest,
-    [this](GlobalConfig::SharedPtr msg) { global_config_callback(msg); },
+  system_config_sub_ = create_subscription<SystemConfig>(
+    "/neurosimo/system_configurator/config", qos_persist_latest,
+    [this](SystemConfig::SharedPtr msg) { system_config_callback(msg); },
     sub_opts);
 
   /* Service servers. */
@@ -80,9 +80,9 @@ EegReplayNode::~EegReplayNode() {
 /*  Callbacks                                                                 */
 /* -------------------------------------------------------------------------- */
 
-void EegReplayNode::global_config_callback(const GlobalConfig::SharedPtr msg) {
-  global_config_ = msg;
-  RCLCPP_INFO(this->get_logger(), "Received global config: active_project=%s",
+void EegReplayNode::system_config_callback(const SystemConfig::SharedPtr msg) {
+  system_config_ = msg;
+  RCLCPP_INFO(this->get_logger(), "Received system config: active_project=%s",
               msg->active_project.c_str());
 }
 
@@ -106,8 +106,8 @@ void EegReplayNode::handle_initialize(
     request->project_name.c_str(), request->bag_id.c_str(),
     request->play_preprocessed);
 
-  if (!global_config_) {
-    RCLCPP_ERROR(this->get_logger(), "Global config not yet received");
+  if (!system_config_) {
+    RCLCPP_ERROR(this->get_logger(), "System config not yet received");
     return;
   }
 

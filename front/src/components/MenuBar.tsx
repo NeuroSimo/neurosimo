@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
-import { GlobalConfigModal } from './GlobalConfigModal'
+import { SystemConfigModal } from './SystemConfigModal'
 
 const MenuBarContainer = styled.div`
   position: fixed;
@@ -67,14 +67,14 @@ const MenuItem = styled.button`
 
 export const MenuBar: React.FC = () => {
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
-  const [isGlobalConfigModalOpen, setIsGlobalConfigModalOpen] = useState(false)
+  const [isSystemConfigModalOpen, setIsSystemConfigModalOpen] = useState(false)
 
   const handleFileMenuClick = () => {
     setIsFileMenuOpen(!isFileMenuOpen)
   }
 
   const handleSettingsClick = () => {
-    setIsGlobalConfigModalOpen(true)
+    setIsSystemConfigModalOpen(true)
     setIsFileMenuOpen(false)
   }
 
@@ -111,9 +111,9 @@ export const MenuBar: React.FC = () => {
         )}
       </MenuBarContainer>
       
-      <GlobalConfigModal
-        isOpen={isGlobalConfigModalOpen}
-        onClose={() => setIsGlobalConfigModalOpen(false)}
+      <SystemConfigModal
+        isOpen={isSystemConfigModalOpen}
+        onClose={() => setIsSystemConfigModalOpen(false)}
       />
     </>
   )

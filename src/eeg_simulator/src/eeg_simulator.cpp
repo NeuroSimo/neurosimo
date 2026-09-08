@@ -50,10 +50,10 @@ EegSimulator::EegSimulator() : Node("eeg_simulator") {
     "/neurosimo/eeg_simulator/health",
     qos_persist_latest);
 
-  this->global_config_subscriber = create_subscription<neurosimo_system_interfaces::msg::GlobalConfig>(
-    "/neurosimo/global_configurator/config",
+  this->system_config_subscriber = create_subscription<neurosimo_system_interfaces::msg::SystemConfig>(
+    "/neurosimo/system_configurator/config",
     qos_persist_latest,
-    std::bind(&EegSimulator::handle_global_config, this, std::placeholders::_1),
+    std::bind(&EegSimulator::handle_system_config, this, std::placeholders::_1),
     subscription_options);
 
   /* Publisher for streamer state. */
@@ -259,10 +259,10 @@ void EegSimulator::stop_streaming_timer() {
   }
 }
 
-void EegSimulator::handle_global_config(const std::shared_ptr<neurosimo_system_interfaces::msg::GlobalConfig> msg) {
+void EegSimulator::handle_system_config(const std::shared_ptr<neurosimo_system_interfaces::msg::SystemConfig> msg) {
   std::string project_name = msg->active_project;
   
-  RCLCPP_INFO(this->get_logger(), "Global config received: active_project=%s", project_name.c_str());
+  RCLCPP_INFO(this->get_logger(), "System config received: active_project=%s", project_name.c_str());
   
   // Only process if active project has actually changed
   if (project_name == this->active_project_name) {

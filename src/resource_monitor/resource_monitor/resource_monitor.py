@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
-from neurosimo_system_interfaces.msg import DiskStatus, ComponentHealth, GlobalConfig
+from neurosimo_system_interfaces.msg import DiskStatus, ComponentHealth, SystemConfig
 from std_msgs.msg import Empty
 from .utils import parse_size_string
 
@@ -65,19 +65,19 @@ class ResourceMonitorNode(Node):
             history=HistoryPolicy.KEEP_LAST,
             depth=1
         )
-        self._global_config_subscription = self.create_subscription(
-            GlobalConfig,
-            '/neurosimo/global_configurator/config',
-            self._handle_global_config,
+        self._system_config_subscription = self.create_subscription(
+            SystemConfig,
+            '/neurosimo/system_configurator/config',
+            self._handle_system_config,
             config_qos
         )
 
         # Publish initial READY state
         self._publish_health_status(ComponentHealth.READY, '')
 
-    def _handle_global_config(self, msg):
-        """Handle global config updates."""
-        self.logger.info('Received global configuration update')
+    def _handle_system_config(self, msg):
+        """Handle system config updates."""
+        self.logger.info('Received system configuration update')
 
         # Parse threshold strings to bytes
         warning_threshold_str = msg.disk_warning_threshold

@@ -13,7 +13,7 @@ import { CreateProjectModal } from 'components/CreateProjectModal'
 import { ProtocolInfoModal } from 'components/ProtocolInfoModal'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { RuntimeParameterInput } from 'components/RuntimeParameterInput'
-import { useGlobalConfig } from 'providers/GlobalConfigProvider'
+import { useSystemConfig } from 'providers/SystemConfigProvider'
 import { getProtocolInfoRos, ProtocolInfo } from 'ros/experiment'
 import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
 
@@ -61,7 +61,7 @@ export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList, runtimeParameterInfos } = useContext(ModuleListContext)
   const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters } = useSessionConfig()
   const { sessionState } = useSession()
-  const { activeProject, projects, setActiveProject } = useGlobalConfig()
+  const { activeProject, projects, setActiveProject } = useSystemConfig()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isProtocolInfoModalOpen, setIsProtocolInfoModalOpen] = useState(false)
   const [protocolInfo, setProtocolInfo] = useState<ProtocolInfo | null>(null)

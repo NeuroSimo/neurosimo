@@ -1,0 +1,5 @@
+# Get the current system configuration
+
+---
+bool success
+SystemConfig config

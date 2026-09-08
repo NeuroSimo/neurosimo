@@ -5,7 +5,7 @@ import theme from 'styles/theme'
 import { RosConnectionProvider } from './RosConnectionProvider'
 import { HeartbeatProvider } from './HeartbeatProvider'
 import { SessionConfigProvider } from './SessionConfigProvider'
-import { GlobalConfigProvider } from './GlobalConfigProvider'
+import { SystemConfigProvider } from './SystemConfigProvider'
 import { ModuleListProvider } from './ModuleListProvider'
 import { SessionStatisticsProvider } from './SessionStatisticsProvider'
 import { LogProvider } from './LogProvider'
@@ -29,7 +29,7 @@ const Providers: React.FC<Props> = ({ children }) => {
     <ThemeProvider theme={theme}>
       <RosConnectionProvider>
         <HeartbeatProvider>
-          <GlobalConfigProvider>
+          <SystemConfigProvider>
             <SessionConfigProvider>
               <ModuleListProvider>
                 <SessionStatisticsProvider>
@@ -57,7 +57,7 @@ const Providers: React.FC<Props> = ({ children }) => {
                 </SessionStatisticsProvider>
               </ModuleListProvider>
             </SessionConfigProvider>
-          </GlobalConfigProvider>
+          </SystemConfigProvider>
         </HeartbeatProvider>
       </RosConnectionProvider>
     </ThemeProvider>

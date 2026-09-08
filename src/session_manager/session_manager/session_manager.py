@@ -9,7 +9,7 @@ from rclpy.executors import MultiThreadedExecutor
 from neurosimo_system_interfaces.msg import SessionState
 from neurosimo_system_interfaces.srv import StartRecording, StopRecording, AbortSession, StartSession
 from std_srvs.srv import Trigger
-from neurosimo_system_interfaces.msg import GlobalConfig
+from neurosimo_system_interfaces.msg import SystemConfig
 from neurosimo_pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
@@ -158,12 +158,12 @@ class SessionManagerNode(Node):
             history=HistoryPolicy.KEEP_LAST
         )
         
-        self.global_config = None
+        self.system_config = None
         
-        self.global_config_subscription = self.create_subscription(
-            GlobalConfig,
-            '/neurosimo/global_configurator/config',
-            self.global_config_callback,
+        self.system_config_subscription = self.create_subscription(
+            SystemConfig,
+            '/neurosimo/system_configurator/config',
+            self.system_config_callback,
             config_qos,
             callback_group=self.callback_group
         )
@@ -223,10 +223,10 @@ class SessionManagerNode(Node):
         msg.abort_reason = abort_reason
         self.session_state_publisher.publish(msg)
     
-    def global_config_callback(self, msg):
-        """Handle global config updates."""
-        self.global_config = msg
-        self.logger.info(f'Received global config: active_project={msg.active_project}')
+    def system_config_callback(self, msg):
+        """Handle system config updates."""
+        self.system_config = msg
+        self.logger.info(f'Received system config: active_project={msg.active_project}')
 
     # Service callbacks
     def start_session_callback(self, request, response):
@@ -243,10 +243,10 @@ class SessionManagerNode(Node):
                 response.message = 'Session already running'
                 return response
 
-            if self.global_config is None:
-                self.logger.error('Global configuration not yet received')
+            if self.system_config is None:
+                self.logger.error('System configuration not yet received')
                 response.success = False
-                response.message = 'Global configuration not yet received'
+                response.message = 'System configuration not yet received'
                 return response
 
             # Validate before accepting, so that a bad configuration is reported to the caller
@@ -261,7 +261,7 @@ class SessionManagerNode(Node):
 
             self._session_thread = Thread(
                 target=self.run_session,
-                args=(self.global_config, session_config),
+                args=(self.system_config, session_config),
                 daemon=True)
             self._session_thread.start()
 
@@ -308,7 +308,7 @@ class SessionManagerNode(Node):
 
         return response
 
-    def initialize_session(self, session_id, global_config, session_config, stream_info):
+    def initialize_session(self, session_id, system_config, session_config, stream_info):
         """Initialize all session components. Returns dict tracking what was initialized."""
         initialized = {
             'protocol': False,
@@ -323,7 +323,7 @@ class SessionManagerNode(Node):
         }
 
         # Initialize protocol
-        protocol_result = self.initialize_protocol(session_id, global_config, session_config)
+        protocol_result = self.initialize_protocol(session_id, system_config, session_config)
         if protocol_result is None:
             self.logger.error('Protocol initialization failed')
             return initialized
@@ -339,19 +339,19 @@ class SessionManagerNode(Node):
             return initialized
 
         # Initialize presenter (must be before decider)
-        if not self.initialize_presenter(global_config, session_spec, session_id, stream_info):
+        if not self.initialize_presenter(system_config, session_spec, session_id, stream_info):
             self.logger.error('Presenter initialization failed')
             return initialized
         initialized['presenter'] = True
 
         # Initialize decider
-        if not self.initialize_decider(global_config, session_spec, session_id, stream_info, self.minimum_trial_interval):
+        if not self.initialize_decider(system_config, session_spec, session_id, stream_info, self.minimum_trial_interval):
             self.logger.error('Decider initialization failed')
             return initialized
         initialized['decider'] = True
 
         # Initialize preprocessor
-        if not self.initialize_preprocessor(global_config, session_spec, session_id, stream_info):
+        if not self.initialize_preprocessor(system_config, session_spec, session_id, stream_info):
             self.logger.error('Preprocessor initialization failed')
             return initialized
         initialized['preprocessor'] = True
@@ -364,7 +364,7 @@ class SessionManagerNode(Node):
 
         # Initialize trigger timer or trigger simulator based on data source
         if session_spec.data_source == 'eeg_device':
-            if not self.initialize_trigger_timer(session_id, global_config, session_spec, self.minimum_trial_interval):
+            if not self.initialize_trigger_timer(session_id, system_config, session_spec, self.minimum_trial_interval):
                 self.logger.error('TriggerTimer initialization failed')
                 return initialized
             initialized['trigger_timer'] = True
@@ -375,7 +375,7 @@ class SessionManagerNode(Node):
             initialized['trigger_simulator'] = True
 
         # Start recording
-        if not self.start_recording(session_id, global_config, session_spec, stream_info):
+        if not self.start_recording(session_id, system_config, session_spec, stream_info):
             self.logger.error('Recording start failed')
             return initialized
         initialized['recording'] = True
@@ -388,7 +388,7 @@ class SessionManagerNode(Node):
 
         return initialized
 
-    def finalize_session(self, session_id, global_config, session_config, initialized):
+    def finalize_session(self, session_id, system_config, session_config, initialized):
         """Finalize session components in reverse order and collect fingerprints."""
         # Initialize fingerprints
         decision_fingerprint = None
@@ -442,7 +442,7 @@ class SessionManagerNode(Node):
             ):
                 self.logger.error('Recording stop failed')
 
-    def run_session(self, global_config, session_config):
+    def run_session(self, system_config, session_config):
         """Run a complete session lifecycle."""
         session_id = list(uuid.uuid4().bytes)
         stream_info = None
@@ -452,13 +452,13 @@ class SessionManagerNode(Node):
             self.publish_session_state(SessionState.INITIALIZING)
 
             # Initialize data stream first to get stream info
-            stream_info = self.initialize_stream(session_id, global_config, session_config)
+            stream_info = self.initialize_stream(session_id, system_config, session_config)
             if stream_info is None:
                 self.logger.error('Stream initialization failed')
                 return
 
             # Initialize components
-            initialized = self.initialize_session(session_id, global_config, session_config, stream_info)
+            initialized = self.initialize_session(session_id, system_config, session_config, stream_info)
 
             # Check that all required components have been initialized.
             required_components = ['protocol', 'presenter', 'decider', 'preprocessor', 'stimulation_tracer', 'recording', 'streaming']
@@ -482,7 +482,7 @@ class SessionManagerNode(Node):
             # Always finalize if anything was initialized
             if initialized:
                 self.publish_session_state(SessionState.FINALIZING)
-                self.finalize_session(session_id, global_config, session_config, initialized)
+                self.finalize_session(session_id, system_config, session_config, initialized)
 
             # Publish stopped state with abort reason if present
             self.publish_session_state(SessionState.STOPPED, abort_reason=self._abort_reason)
@@ -584,10 +584,10 @@ class SessionManagerNode(Node):
         spec.runtime_parameters = json.dumps(resolved)
         return spec
 
-    def initialize_stream(self, session_id, global_config, session_config):
+    def initialize_stream(self, session_id, system_config, session_config):
         """Initialize the data stream source (simulator, device, or recording)."""
         data_source = session_config.data_source
-        project_name = global_config.active_project
+        project_name = system_config.active_project
         self.logger.info(f'Initializing stream source: {data_source}')
 
         stream_info = StreamInfo()
@@ -646,13 +646,13 @@ class SessionManagerNode(Node):
         self.logger.info(f'Stream initialized successfully. Stream info: {stream_info.sampling_frequency}Hz, {stream_info.num_eeg_channels} EEG channels')
         return stream_info
 
-    def initialize_decider(self, global_config, session_config, session_id, stream_info, minimum_trial_interval):
+    def initialize_decider(self, system_config, session_config, session_id, stream_info, minimum_trial_interval):
         """Initialize the decider component."""
         request = InitializeDecider.Request()
         request.session_id = session_id
         request.stream_info = stream_info
 
-        request.project_name = global_config.active_project
+        request.project_name = system_config.active_project
         request.subject_id = session_config.subject_id
 
         request.module_filename = session_config.decider_module
@@ -674,13 +674,13 @@ class SessionManagerNode(Node):
         self.logger.info('Decider initialized successfully')
         return True
 
-    def initialize_preprocessor(self, global_config, session_config, session_id, stream_info):
+    def initialize_preprocessor(self, system_config, session_config, session_id, stream_info):
         """Initialize the preprocessor component."""
         request = InitializePreprocessor.Request()
         request.session_id = session_id
         request.stream_info = stream_info
 
-        request.project_name = global_config.active_project
+        request.project_name = system_config.active_project
         request.subject_id = session_config.subject_id
 
         request.module_filename = session_config.preprocessor_module
@@ -694,12 +694,12 @@ class SessionManagerNode(Node):
         self.logger.info('Preprocessor initialized successfully')
         return True
 
-    def initialize_presenter(self, global_config, session_config, session_id, stream_info):
+    def initialize_presenter(self, system_config, session_config, session_id, stream_info):
         """Initialize the presenter component."""
         request = InitializePresenter.Request()
         request.session_id = session_id
 
-        request.project_name = global_config.active_project
+        request.project_name = system_config.active_project
         request.subject_id = session_config.subject_id
 
         request.module_filename = session_config.presenter_module
@@ -727,16 +727,16 @@ class SessionManagerNode(Node):
         self.logger.info('StimulationTracer initialized successfully')
         return True
 
-    def initialize_trigger_timer(self, session_id, global_config, session_config, minimum_trial_interval):
+    def initialize_trigger_timer(self, session_id, system_config, session_config, minimum_trial_interval):
         """Initialize the hardware trigger timer component."""
         request = InitializeTriggerTimer.Request()
         request.session_id = session_id
 
-        # Configuration from global config
-        request.maximum_timing_error = global_config.maximum_timing_error
-        request.maximum_loopback_latency = global_config.maximum_loopback_latency
-        request.trigger_to_pulse_delay = global_config.trigger_to_pulse_delay
-        request.enable_labjack = global_config.enable_labjack
+        # Configuration from system config
+        request.maximum_timing_error = system_config.maximum_timing_error
+        request.maximum_loopback_latency = system_config.maximum_loopback_latency
+        request.trigger_to_pulse_delay = system_config.trigger_to_pulse_delay
+        request.enable_labjack = system_config.enable_labjack
 
         # Set the data source
         request.data_source = session_config.data_source
@@ -766,13 +766,13 @@ class SessionManagerNode(Node):
         self.logger.info('TriggerSimulator initialized successfully')
         return True
 
-    def initialize_protocol(self, session_id, global_config, session_config):
+    def initialize_protocol(self, session_id, system_config, session_config):
         """Initialize protocol.
 
         Returns (minimum_trial_interval, runtime_parameter_infos) on success, None on failure.
         """
         protocol_filename = session_config.protocol_filename
-        project_name = global_config.active_project
+        project_name = system_config.active_project
 
         request = InitializeProtocol.Request()
         request.session_id = session_id
@@ -982,12 +982,12 @@ class SessionManagerNode(Node):
         return True, data_source_fingerprint
 
     # Recording functions
-    def start_recording(self, session_id, global_config, session_config, stream_info):
+    def start_recording(self, session_id, system_config, session_config, stream_info):
         """Start session recording."""
         request = StartRecording.Request()
         request.session_id = session_id
 
-        request.global_config = global_config
+        request.system_config = system_config
         request.session_config = session_config
         request.stream_info = stream_info
 

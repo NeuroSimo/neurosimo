@@ -3,7 +3,7 @@ import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
 import { useSessionConfig, RuntimeParameterValue } from './SessionConfigProvider'
-import { useGlobalConfig } from './GlobalConfigProvider'
+import { useSystemConfig } from './SystemConfigProvider'
 import { getProtocolInfoRos, RuntimeParameterInfo } from 'ros/experiment'
 
 export interface FilenameList extends ROSLIB.Message {
@@ -79,7 +79,7 @@ interface ModuleListProviderProps {
 
 export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children }) => {
   const { pipeline, runtimeParameters } = useSessionConfig()
-  const { activeProject } = useGlobalConfig()
+  const { activeProject } = useSystemConfig()
 
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
   const [deciderList, setDeciderList] = useState<string[]>([])

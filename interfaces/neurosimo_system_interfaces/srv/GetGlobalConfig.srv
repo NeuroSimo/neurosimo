@@ -1,5 +1,0 @@
-# Get the current global configuration
-
----
-bool success
-GlobalConfig config

@@ -2,7 +2,7 @@ import React, { useContext } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFolderOpen, faTerminal } from '@fortawesome/free-solid-svg-icons'
-import { useGlobalConfig } from 'providers/GlobalConfigProvider'
+import { useSystemConfig } from 'providers/SystemConfigProvider'
 
 const ButtonGroup = styled.div`
   display: flex;
@@ -44,7 +44,7 @@ export const FolderTerminalButtons: React.FC<FolderTerminalButtonsProps> = ({
   terminalTitle,
   size,
 }) => {
-  const { activeProject } = useGlobalConfig()
+  const { activeProject } = useSystemConfig()
   const isElectron = !!(window as any).electronAPI
 
   const handleOpenFolder = async () => {

@@ -30,8 +30,8 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 
 ### Configuration and Catalog
 
-- `/neurosimo/global_configurator/config` - Active global configuration.
-- `/neurosimo/global_configurator/projects` - Available projects.
+- `/neurosimo/system_configurator/config` - Active system configuration.
+- `/neurosimo/system_configurator/projects` - Available projects.
 - `/neurosimo/pipeline/decider/list` - Available decider modules.
 - `/neurosimo/pipeline/preprocessor/list` - Available preprocessor modules.
 - `/neurosimo/pipeline/presenter/list` - Available presenter modules.
@@ -86,8 +86,8 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 
 - `/neurosimo/projects/create` - Create a new project.
 - `/neurosimo/projects/list` - List available projects.
-- `/neurosimo/global_configurator/set_parameters` - Set global configurator parameters.
-- `/neurosimo/global_configurator/get_parameters` - Get global configurator parameters.
+- `/neurosimo/system_configurator/config/set` - Set the system configuration. The request carries the complete configuration; every call is a full replace.
+- `/neurosimo/system_configurator/config/get` - Get the current system configuration.
 
 ### Pipeline Initialization and Runtime Control
 

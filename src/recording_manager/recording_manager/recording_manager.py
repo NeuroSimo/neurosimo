@@ -6,7 +6,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy
 
 from neurosimo_project_interfaces.srv import GetRecordingInfo, DeleteRecording
 from neurosimo_project_interfaces.msg import RecordingInfo
-from neurosimo_system_interfaces.msg import GlobalConfig
+from neurosimo_system_interfaces.msg import SystemConfig
 
 import os
 import json
@@ -16,7 +16,7 @@ from pathlib import Path
 # Expected structure and types of the recording metadata JSON
 METADATA_SCHEMA = {
     'session_id': str,
-    'global_config': dict,
+    'system_config': dict,
     'session_config': dict,
     'stream_info': {
         'num_eeg_channels': int,
@@ -62,10 +62,10 @@ class RecordingManagerNode(Node):
             depth=1
         )
 
-        self._global_config_subscriber = self.create_subscription(
-            GlobalConfig,
-            '/neurosimo/global_configurator/config',
-            self._handle_global_config,
+        self._system_config_subscriber = self.create_subscription(
+            SystemConfig,
+            '/neurosimo/system_configurator/config',
+            self._handle_system_config,
             qos_persist_latest,
             callback_group=self.callback_group
         )
@@ -114,12 +114,19 @@ class RecordingManagerNode(Node):
 
         return True
 
+    def _normalize_metadata(self, metadata):
+        """Accept recordings written before system_config was renamed from global_config."""
+        if isinstance(metadata, dict) and 'system_config' not in metadata and 'global_config' in metadata:
+            metadata = dict(metadata)
+            metadata['system_config'] = metadata.pop('global_config')
+        return metadata
+
     def _validate_metadata(self, metadata):
         """Validate that the recording metadata matches the expected schema."""
         return self._validate_node(metadata, METADATA_SCHEMA, require_all_keys=True)
 
-    def _handle_global_config(self, msg):
-        """Handle global config changes."""
+    def _handle_system_config(self, msg):
+        """Handle system config changes."""
         project_name = msg.active_project
         
         # Only process if active project has actually changed
@@ -155,6 +162,8 @@ class RecordingManagerNode(Node):
             with open(json_file_path, 'r') as f:
                 metadata = json.load(f)
 
+            metadata = self._normalize_metadata(metadata)
+
             # Validate metadata structure
             if not self._validate_metadata(metadata):
                 self.logger.error(f'Invalid metadata structure in file: {json_file_path}')
@@ -167,9 +176,9 @@ class RecordingManagerNode(Node):
             # Set basic info
             recording_info.json_filename = request.filename
 
-            # Extract global config fields
-            global_config = metadata.get('global_config', {})
-            recording_info.project_name = global_config.get('active_project', '')
+            # Extract system config fields
+            system_config = metadata.get('system_config', {})
+            recording_info.project_name = system_config.get('active_project', '')
 
             # Extract stream info
             stream_info = metadata.get('stream_info', {})

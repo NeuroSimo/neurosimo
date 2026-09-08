@@ -63,16 +63,14 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   const { setSimulatorDataset, setSimulatorStartTime, setSimulatorPlaybackSpeed, isDraftLoaded } = useSessionConfig()
   const { sessionState } = useSession()
 
-  /* The information last fetched, tagged with the dataset it describes, so that it can be
-     told apart from the dataset now selected while a fetch is in flight. A null info is a
-     fetch that failed, which is distinct from not having fetched at all. */
-  const [fetchedDatasetInfo, setFetchedDatasetInfo] = useState<{
-    dataset: string
-    info: DatasetInfo | null
-  } | null>(null)
+  /* The dataset information on display. It is replaced when a fetch resolves and dropped when
+     a fetch has been outstanding past the deadline above; selecting a dataset does not disturb
+     it. Keeping it in one piece of state is what makes the display change exactly once per
+     fetch: a second, separate flag for the wait would have renders where the two disagree.
 
-  /* Whether the fetch in flight has passed the deadline above. */
-  const [datasetInfoIsSlow, setDatasetInfoIsSlow] = useState(false)
+     undefined means there is nothing to show — no fetch has resolved yet, or the wait for one
+     has passed the deadline. null is a fetch that failed, which is distinct from that. */
+  const [displayedDatasetInfo, setDisplayedDatasetInfo] = useState<DatasetInfo | null | undefined>(undefined)
 
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
   const isEegStreaming = eegDeviceInfo?.is_streaming || false
@@ -92,17 +90,16 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   // Fetch dataset info when dataset changes
   useEffect(() => {
     if (!dataset || dataset.trim() === '') {
-      setFetchedDatasetInfo(null)
-      setDatasetInfoIsSlow(false)
+      setDisplayedDatasetInfo(null)
       return
     }
 
     let cancelled = false
 
-    setDatasetInfoIsSlow(false)
+    /* Until the deadline expires, the information fetched for the previous dataset stays up. */
     const deadline = window.setTimeout(() => {
       if (!cancelled) {
-        setDatasetInfoIsSlow(true)
+        setDisplayedDatasetInfo(undefined)
       }
     }, DATASET_INFO_REPORT_WAIT_AFTER_MS)
 
@@ -111,8 +108,8 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       if (!datasetInfo) {
         console.error('Failed to get dataset info for:', dataset)
       }
-      setFetchedDatasetInfo({ dataset: dataset, info: datasetInfo })
-      setDatasetInfoIsSlow(false)
+      window.clearTimeout(deadline)
+      setDisplayedDatasetInfo(datasetInfo)
     })
 
     return () => {
@@ -165,13 +162,8 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     selectDataset(event.target.value)
   }
 
-  /* The information on hand does not describe the selected dataset, so a fetch is in flight
-     (or has just been started). Report the wait only once it has passed the deadline; until
-     then the previous dataset's information stays on display. */
-  const isLoadingDatasetInfo =
-    (fetchedDatasetInfo === null || fetchedDatasetInfo.dataset !== dataset) && datasetInfoIsSlow
-
-  const selectedDatasetInfo = isLoadingDatasetInfo ? null : fetchedDatasetInfo?.info ?? null
+  const isLoadingDatasetInfo = displayedDatasetInfo === undefined
+  const selectedDatasetInfo = displayedDatasetInfo ?? null
 
   const setStartTime = (startTime: number) => {
     if (startTime < 0 || startTime > (selectedDatasetInfo?.duration || 0)) {

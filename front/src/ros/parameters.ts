@@ -82,14 +82,8 @@ export const extractParameterValue = (paramValue: {
   }
 }
 
-/* Set parameters service on session_configurator node */
-const sessionConfiguratorSetParametersService = new ROSLIB.Service({
-  ros: ros,
-  name: '/neurosimo/session_configurator/set_parameters',
-  serviceType: 'rcl_interfaces/SetParameters',
-})
-
-/* Set parameters service on global_configurator node */
+/* Set parameters service on global_configurator node. The session configurator has no
+   parameters: session configuration is UI state, sent with the session start request. */
 const globalConfiguratorSetParametersService = new ROSLIB.Service({
   ros: ros,
   name: '/neurosimo/global_configurator/set_parameters',
@@ -97,17 +91,15 @@ const globalConfiguratorSetParametersService = new ROSLIB.Service({
 })
 
 /**
- * Set a single ROS parameter on a node
- * @param name Parameter name (e.g., 'decider.module', 'active_project')
+ * Set a single ROS parameter on the global configurator
+ * @param name Parameter name (e.g., 'active_project')
  * @param value Parameter value (boolean, number, or string)
  * @param callback Callback function called on success
- * @param nodeName Node name ('session_configurator' or 'global_configurator'), defaults to 'session_configurator'
  */
 export const setParameterRos = (
-  name: string, 
-  value: ParameterValue, 
-  callback: () => void,
-  nodeName: 'session_configurator' | 'global_configurator' = 'session_configurator'
+  name: string,
+  value: ParameterValue,
+  callback: () => void
 ) => {
   const parameter = {
     name: name,
@@ -118,11 +110,7 @@ export const setParameterRos = (
     parameters: [parameter]
   }) as any
 
-  const service = nodeName === 'global_configurator' 
-    ? globalConfiguratorSetParametersService 
-    : sessionConfiguratorSetParametersService
-
-  service.callService(
+  globalConfiguratorSetParametersService.callService(
     request,
     (response: any) => {
       if (!response.results || !response.results[0] || !response.results[0].successful) {
@@ -141,15 +129,13 @@ export const setParameterRos = (
 }
 
 /**
- * Set multiple ROS parameters on a node
+ * Set multiple ROS parameters on the global configurator
  * @param parameters Array of parameter objects with name and value
  * @param callback Callback function called on success
- * @param nodeName Node name ('session_configurator' or 'global_configurator'), defaults to 'session_configurator'
  */
 export const setParametersRos = (
-  parameters: Parameter[], 
-  callback: () => void,
-  nodeName: 'session_configurator' | 'global_configurator' = 'session_configurator'
+  parameters: Parameter[],
+  callback: () => void
 ) => {
   const formattedParameters = parameters.map(param => ({
     name: param.name,
@@ -160,11 +146,7 @@ export const setParametersRos = (
     parameters: formattedParameters
   }) as any
 
-  const service = nodeName === 'global_configurator' 
-    ? globalConfiguratorSetParametersService 
-    : sessionConfiguratorSetParametersService
-
-  service.callService(
+  globalConfiguratorSetParametersService.callService(
     request,
     (response: any) => {
       const failedParams = response.results.filter((result: any, index: number) => {
@@ -184,59 +166,4 @@ export const setParametersRos = (
       console.log('ERROR: Failed to set parameters, error:', error)
     }
   )
-}
-
-/* Get parameters service on session_configurator node */
-const sessionConfiguratorGetParametersService = new ROSLIB.Service({
-  ros: ros,
-  name: '/neurosimo/session_configurator/get_parameters',
-  serviceType: 'rcl_interfaces/GetParameters',
-})
-
-/* Get parameters service on global_configurator node */
-const globalConfiguratorGetParametersService = new ROSLIB.Service({
-  ros: ros,
-  name: '/neurosimo/global_configurator/get_parameters',
-  serviceType: 'rcl_interfaces/GetParameters',
-})
-
-/**
- * Get current ROS parameters from a node
- * @param names Array of parameter names to fetch
- * @param nodeName Node name ('session_configurator' or 'global_configurator'), defaults to 'session_configurator'
- * @returns Promise resolving to parameter values
- */
-export const getParametersRos = (
-  names: string[],
-  nodeName: 'session_configurator' | 'global_configurator' = 'session_configurator'
-): Promise<Map<string, boolean | number | string>> => {
-  return new Promise((resolve, reject) => {
-    const request = new ROSLIB.ServiceRequest({
-      names: names
-    }) as any
-
-    const service = nodeName === 'global_configurator'
-      ? globalConfiguratorGetParametersService
-      : sessionConfiguratorGetParametersService
-
-    service.callService(
-      request,
-      (response: any) => {
-        const parameterMap = new Map<string, boolean | number | string>()
-
-        response.values.forEach((paramValue: any, index: number) => {
-          const value = extractParameterValue(paramValue)
-          if (value !== undefined) {
-            parameterMap.set(names[index], value)
-          }
-        })
-
-        resolve(parameterMap)
-      },
-      (error: any) => {
-        console.log('ERROR: Failed to get parameters, error:', error)
-        reject(error)
-      }
-    )
-  })
 }

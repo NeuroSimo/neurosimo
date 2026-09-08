@@ -32,7 +32,6 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 
 - `/neurosimo/global_configurator/config` - Active global configuration.
 - `/neurosimo/global_configurator/projects` - Available projects.
-- `/neurosimo/session_configurator/config` - Active session configuration.
 - `/neurosimo/pipeline/decider/list` - Available decider modules.
 - `/neurosimo/pipeline/preprocessor/list` - Available preprocessor modules.
 - `/neurosimo/pipeline/presenter/list` - Available presenter modules.
@@ -75,7 +74,7 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 
 ### Session Lifecycle and Export
 
-- `/neurosimo/session/start` - Start a session.
+- `/neurosimo/session/start` - Start a session with the given configuration.
 - `/neurosimo/session/abort` - Abort an active session.
 - `/neurosimo/session/finish` - Finish a session cleanly.
 - `/neurosimo/session/export` - Start session export.
@@ -87,8 +86,6 @@ This file lists the currently used ROS topics and services across NeuroSimo.
 
 - `/neurosimo/projects/create` - Create a new project.
 - `/neurosimo/projects/list` - List available projects.
-- `/neurosimo/session_configurator/set_parameters` - Set session configurator parameters.
-- `/neurosimo/session_configurator/get_parameters` - Get session configurator parameters.
 - `/neurosimo/global_configurator/set_parameters` - Set global configurator parameters.
 - `/neurosimo/global_configurator/get_parameters` - Get global configurator parameters.
 

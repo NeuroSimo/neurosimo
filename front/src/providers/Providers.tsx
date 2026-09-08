@@ -29,8 +29,8 @@ const Providers: React.FC<Props> = ({ children }) => {
     <ThemeProvider theme={theme}>
       <RosConnectionProvider>
         <HeartbeatProvider>
-          <SessionConfigProvider>
-            <GlobalConfigProvider>
+          <GlobalConfigProvider>
+            <SessionConfigProvider>
               <ModuleListProvider>
                 <SessionStatisticsProvider>
                   <LogProvider>
@@ -56,8 +56,8 @@ const Providers: React.FC<Props> = ({ children }) => {
                   </LogProvider>
                 </SessionStatisticsProvider>
               </ModuleListProvider>
-            </GlobalConfigProvider>
-          </SessionConfigProvider>
+            </SessionConfigProvider>
+          </GlobalConfigProvider>
         </HeartbeatProvider>
       </RosConnectionProvider>
     </ThemeProvider>

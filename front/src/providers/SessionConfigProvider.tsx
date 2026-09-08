@@ -1,8 +1,149 @@
 import React, { useState, useEffect, ReactNode, createContext, useContext } from 'react'
-import { Topic } from '@foxglove/roslibjs'
 
-import { ros } from 'ros/ros'
 import { SessionConfigMessage } from 'ros/session'
+import { useGlobalConfig } from './GlobalConfigProvider'
+
+// Structured parameter interfaces
+interface MetadataParameters {
+  subject_id: number
+  notes: string
+}
+
+interface ModuleSelection {
+  module: string
+  enabled: boolean
+}
+
+interface PipelineParameters {
+  decider: ModuleSelection
+  preprocessor: ModuleSelection
+  presenter: ModuleSelection
+  experiment: {
+    protocol: string
+  }
+}
+
+export type RuntimeParameterValue = number | string | boolean
+
+export type RuntimeParameters = Record<string, RuntimeParameterValue>
+
+interface SimulatorParameters {
+  dataset_filename: string
+  start_time: number
+  playback_speed: number
+}
+
+interface ReplayParameters {
+  bag_id: string
+  play_preprocessed: boolean
+}
+
+/* The session draft: what the user has configured but has not yet started a session with.
+   It is UI state, owned by the UI and persisted locally per project. The backend learns
+   about it only when a session is started, as the payload of the start request. */
+interface SessionDraft {
+  metadata: MetadataParameters
+  pipeline: PipelineParameters
+  simulator: SimulatorParameters
+  replay: ReplayParameters
+
+  /* Runtime parameter values, kept per protocol so that switching protocols back and forth
+     retains what was entered for each. Entries for protocols that no longer exist are
+     harmless: only the selected protocol's entry is ever read. */
+  runtimeParametersByProtocol: Record<string, RuntimeParameters>
+}
+
+const defaultDraft: SessionDraft = {
+  metadata: {
+    subject_id: 1,
+    notes: '',
+  },
+  pipeline: {
+    decider: { module: 'example.py', enabled: true },
+    preprocessor: { module: 'example.py', enabled: false },
+    presenter: { module: 'example.py', enabled: false },
+    experiment: { protocol: 'example.yaml' },
+  },
+  simulator: {
+    dataset_filename: '',
+    start_time: 0,
+    playback_speed: 1,
+  },
+  replay: {
+    bag_id: '',
+    play_preprocessed: false,
+  },
+  runtimeParametersByProtocol: {},
+}
+
+const draftStorageKey = (project: string) => `neurosimo.sessionDraft.${project}`
+
+const loadDraft = (project: string): SessionDraft => {
+  try {
+    const stored = localStorage.getItem(draftStorageKey(project))
+    if (stored === null) {
+      return defaultDraft
+    }
+    const parsed = JSON.parse(stored)
+    /* Merge over the defaults, so that a draft written before a field existed still loads. */
+    return {
+      ...defaultDraft,
+      ...parsed,
+      metadata: { ...defaultDraft.metadata, ...parsed.metadata },
+      pipeline: { ...defaultDraft.pipeline, ...parsed.pipeline },
+      simulator: { ...defaultDraft.simulator, ...parsed.simulator },
+      replay: { ...defaultDraft.replay, ...parsed.replay },
+      runtimeParametersByProtocol: parsed.runtimeParametersByProtocol ?? {},
+    }
+  } catch (error) {
+    console.warn(`Failed to load session draft for project '${project}':`, error)
+    return defaultDraft
+  }
+}
+
+const saveDraft = (project: string, draft: SessionDraft) => {
+  try {
+    localStorage.setItem(draftStorageKey(project), JSON.stringify(draft))
+  } catch (error) {
+    console.warn(`Failed to save session draft for project '${project}':`, error)
+  }
+}
+
+interface SessionConfigContextType {
+  // Structured parameter access
+  metadata: MetadataParameters
+  pipeline: PipelineParameters
+  simulator: SimulatorParameters
+  replay: ReplayParameters
+  dataSource: string
+  runtimeParameters: RuntimeParameters
+
+  // Convenience setters
+  setSubjectId: (subjectId: number, callback?: () => void) => void
+  setNotes: (notes: string, callback?: () => void) => void
+  setDeciderModule: (module: string, callback?: () => void) => void
+  setDeciderEnabled: (enabled: boolean, callback?: () => void) => void
+  setPreprocessorModule: (module: string, callback?: () => void) => void
+  setPreprocessorEnabled: (enabled: boolean, callback?: () => void) => void
+  setPresenterModule: (module: string, callback?: () => void) => void
+  setPresenterEnabled: (enabled: boolean, callback?: () => void) => void
+  setExperimentProtocol: (protocol: string, callback?: () => void) => void
+  setSimulatorDataset: (filename: string, callback?: () => void) => void
+  setSimulatorStartTime: (startTime: number, callback?: () => void) => void
+  setSimulatorPlaybackSpeed: (playbackSpeed: number, callback?: () => void) => void
+  setBagId: (bagId: string, callback?: () => void) => void
+  setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => void
+  setDataSource: (dataSource: string, callback?: () => void) => void
+  setRuntimeParameters: (params: RuntimeParameters, callback?: () => void) => void
+
+  /* Build the SessionConfig message to send when starting a session. */
+  buildSessionConfigMessage: () => SessionConfigMessage
+}
+
+// ESLint disable for intentionally empty functions used as defaults
+/* eslint-disable @typescript-eslint/no-empty-function */
+const noop = () => {}
+/* eslint-enable @typescript-eslint/no-empty-function */
 
 const emptySessionConfigMessage: SessionConfigMessage = {
   subject_id: 1,
@@ -23,109 +164,29 @@ const emptySessionConfigMessage: SessionConfigMessage = {
   replay_play_preprocessed: false,
 }
 
-// Structured parameter interfaces
-interface MetadataParameters {
-  subject_id: number
-  notes: string
-}
-
-interface PipelineParameters {
-  decider: {
-    module: string
-    enabled: boolean
-  }
-  preprocessor: {
-    module: string
-    enabled: boolean
-  }
-  presenter: {
-    module: string
-    enabled: boolean
-  }
-  experiment: {
-    protocol: string
-  }
-}
-
-export type RuntimeParameterValue = number | string | boolean
-
-export type RuntimeParameters = Record<string, RuntimeParameterValue>
-
-interface SimulatorParameters {
-  dataset_filename: string
-  start_time: number
-  playback_speed: number
-}
-
-interface SessionConfigContextType {
-  // Structured parameter access
-  metadata: MetadataParameters
-  pipeline: PipelineParameters
-  simulator: SimulatorParameters
-  dataSource: string
-  runtimeParameters: RuntimeParameters
-
-  // Convenience setters
-  setSubjectId: (subjectId: number, callback?: () => void) => Promise<void>
-  setNotes: (notes: string, callback?: () => void) => Promise<void>
-  setDeciderModule: (module: string, callback?: () => void) => Promise<void>
-  setDeciderEnabled: (enabled: boolean, callback?: () => void) => Promise<void>
-  setPreprocessorModule: (module: string, callback?: () => void) => Promise<void>
-  setPreprocessorEnabled: (enabled: boolean, callback?: () => void) => Promise<void>
-  setPresenterModule: (module: string, callback?: () => void) => Promise<void>
-  setPresenterEnabled: (enabled: boolean, callback?: () => void) => Promise<void>
-  setExperimentProtocol: (protocol: string, callback?: () => void) => Promise<void>
-  setSimulatorDataset: (filename: string, callback?: () => void) => Promise<void>
-  setSimulatorStartTime: (startTime: number, callback?: () => void) => Promise<void>
-  setSimulatorPlaybackSpeed: (playbackSpeed: number, callback?: () => void) => Promise<void>
-  setBagId: (bagId: string, callback?: () => void) => Promise<void>
-  setPlayPreprocessed: (playPreprocessed: boolean, callback?: () => void) => Promise<void>
-  setDataSource: (dataSource: string, callback?: () => void) => Promise<void>
-  setRuntimeParameters: (params: RuntimeParameters, callback?: () => void) => Promise<void>
-
-  /* Build the SessionConfig message to send when starting a session. */
-  buildSessionConfigMessage: () => SessionConfigMessage
-}
-
-// ESLint disable for intentionally empty functions used as defaults
-/* eslint-disable @typescript-eslint/no-empty-function */
-const asyncNoop = async () => {}
-/* eslint-enable @typescript-eslint/no-empty-function */
-
 const defaultSessionConfigState: SessionConfigContextType = {
-  metadata: {
-    subject_id: 1,
-    notes: '',
-  },
-  pipeline: {
-    decider: { module: '', enabled: false },
-    preprocessor: { module: '', enabled: false },
-    presenter: { module: '', enabled: false },
-    experiment: { protocol: '' },
-  },
-  simulator: {
-    dataset_filename: '',
-    start_time: 0,
-    playback_speed: 1,
-  },
+  metadata: defaultDraft.metadata,
+  pipeline: defaultDraft.pipeline,
+  simulator: defaultDraft.simulator,
+  replay: defaultDraft.replay,
   dataSource: 'simulator',
   runtimeParameters: {},
-  setSubjectId: asyncNoop,
-  setNotes: asyncNoop,
-  setDeciderModule: asyncNoop,
-  setDeciderEnabled: asyncNoop,
-  setPreprocessorModule: asyncNoop,
-  setPreprocessorEnabled: asyncNoop,
-  setPresenterModule: asyncNoop,
-  setPresenterEnabled: asyncNoop,
-  setExperimentProtocol: asyncNoop,
-  setSimulatorDataset: asyncNoop,
-  setSimulatorStartTime: asyncNoop,
-  setSimulatorPlaybackSpeed: asyncNoop,
-  setBagId: asyncNoop,
-  setPlayPreprocessed: asyncNoop,
-  setDataSource: asyncNoop,
-  setRuntimeParameters: asyncNoop,
+  setSubjectId: noop,
+  setNotes: noop,
+  setDeciderModule: noop,
+  setDeciderEnabled: noop,
+  setPreprocessorModule: noop,
+  setPreprocessorEnabled: noop,
+  setPresenterModule: noop,
+  setPresenterEnabled: noop,
+  setExperimentProtocol: noop,
+  setSimulatorDataset: noop,
+  setSimulatorStartTime: noop,
+  setSimulatorPlaybackSpeed: noop,
+  setBagId: noop,
+  setPlayPreprocessed: noop,
+  setDataSource: noop,
+  setRuntimeParameters: noop,
   buildSessionConfigMessage: () => emptySessionConfigMessage,
 }
 
@@ -136,186 +197,158 @@ interface SessionConfigProviderProps {
 }
 
 export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ children }) => {
-  const [sessionConfig, setSessionConfig] = useState<Map<string, boolean | number | string>>(new Map())
+  const { activeProject } = useGlobalConfig()
 
-  // Structured parameter access
-  const metadata: MetadataParameters = {
-    subject_id: (sessionConfig.get('subject_id') as number) ?? 1,
-    notes: (sessionConfig.get('notes') as string) || '',
-  }
+  /* The draft is tagged with the project it belongs to, so that it is never persisted under
+     a project it was not loaded for while a project switch is in progress. */
+  const [draftState, setDraftState] = useState<{ project: string; draft: SessionDraft } | null>(null)
 
-  const pipeline: PipelineParameters = {
-    decider: {
-      module: (sessionConfig.get('decider.module') as string) || '',
-      enabled: (sessionConfig.get('decider.enabled') as boolean) || false,
-    },
-    preprocessor: {
-      module: (sessionConfig.get('preprocessor.module') as string) || '',
-      enabled: (sessionConfig.get('preprocessor.enabled') as boolean) || false,
-    },
-    presenter: {
-      module: (sessionConfig.get('presenter.module') as string) || '',
-      enabled: (sessionConfig.get('presenter.enabled') as boolean) || false,
-    },
-    experiment: {
-      protocol: (sessionConfig.get('experiment.protocol') as string) || '',
-    },
-  }
+  /* Which data source the UI is showing. Deliberately not persisted: it is not a property
+     of the project, and defaults to the simulator on every start. */
+  const [dataSource, setDataSourceState] = useState<string>('simulator')
 
-  const simulator: SimulatorParameters = {
-    dataset_filename: (sessionConfig.get('simulator.dataset_filename') as string) || '',
-    start_time: (sessionConfig.get('simulator.start_time') as number) || 0,
-    playback_speed: (sessionConfig.get('simulator.playback_speed') as number) || 1,
-  }
-
-  const dataSource = (sessionConfig.get('data_source') as string) || 'simulator'
-
-  const runtimeParameters: RuntimeParameters = (() => {
-    const raw = (sessionConfig.get('experiment.runtime_parameters') as string) || '{}'
-    try {
-      const parsed = JSON.parse(raw)
-      return parsed && typeof parsed === 'object' ? parsed : {}
-    } catch {
-      console.warn('Failed to parse runtime parameters JSON:', raw)
-      return {}
-    }
-  })()
-
+  /* Load the draft whenever the active project changes. */
   useEffect(() => {
-    /* Subscriber for session config topic (latched). */
-    const sessionConfigSubscriber = new Topic({
-      ros: ros,
-      name: '/neurosimo/session_configurator/config',
-      messageType: 'neurosimo_system_interfaces/SessionConfig',
-      queue_size: 1,
-    })
-
-    sessionConfigSubscriber.subscribe((message: ROSLIB.Message) => {
-      const msg = message as any
-      setSessionConfig((prevConfig) => {
-        const newConfig = new Map(prevConfig)
-        
-        // Update all session config parameters
-        newConfig.set('subject_id', msg.subject_id)
-        newConfig.set('notes', msg.notes)
-        newConfig.set('decider.module', msg.decider_module)
-        newConfig.set('decider.enabled', msg.decider_enabled)
-        newConfig.set('preprocessor.module', msg.preprocessor_module)
-        newConfig.set('preprocessor.enabled', msg.preprocessor_enabled)
-        newConfig.set('presenter.module', msg.presenter_module)
-        newConfig.set('presenter.enabled', msg.presenter_enabled)
-        newConfig.set('experiment.protocol', msg.protocol_filename)
-        newConfig.set('experiment.runtime_parameters', msg.runtime_parameters)
-        newConfig.set('simulator.dataset_filename', msg.simulator_dataset_filename)
-        newConfig.set('simulator.start_time', msg.simulator_start_time)
-        newConfig.set('simulator.playback_speed', msg.simulator_playback_speed)
-        newConfig.set('data_source', msg.data_source)
-        newConfig.set('replay.bag_id', msg.replay_bag_id)
-        newConfig.set('replay.play_preprocessed', msg.replay_play_preprocessed)
-        
-        return newConfig
-      })
-    })
-
-    /* Cleanup */
-    return () => {
-      sessionConfigSubscriber.unsubscribe()
+    if (activeProject === '') {
+      setDraftState(null)
+      return
     }
-  }, [])
+    setDraftState({ project: activeProject, draft: loadDraft(activeProject) })
+  }, [activeProject])
 
-  // Convenience setters - use dynamic import to avoid circular dependencies
-  const noop = () => {} // eslint-disable-line @typescript-eslint/no-empty-function
+  /* Persist the draft on every change. */
+  useEffect(() => {
+    if (draftState === null || draftState.project !== activeProject) {
+      return
+    }
+    saveDraft(draftState.project, draftState.draft)
+  }, [draftState, activeProject])
 
-  const setSubjectId = async (subjectId: number, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('subject_id', subjectId, callback || noop)
+  const draft = draftState?.draft ?? defaultDraft
+
+  const updateDraft = (update: (current: SessionDraft) => SessionDraft, callback?: () => void) => {
+    setDraftState((current) => (current === null ? current : { ...current, draft: update(current.draft) }))
+    if (callback) {
+      callback()
+    }
   }
-  const setNotes = async (notes: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('notes', notes, callback || noop)
+
+  const protocol = draft.pipeline.experiment.protocol
+  const runtimeParameters = draft.runtimeParametersByProtocol[protocol] ?? {}
+
+  const setSubjectId = (subjectId: number, callback?: () => void) =>
+    updateDraft((current) => ({ ...current, metadata: { ...current.metadata, subject_id: subjectId } }), callback)
+
+  const setNotes = (notes: string, callback?: () => void) =>
+    updateDraft((current) => ({ ...current, metadata: { ...current.metadata, notes: notes } }), callback)
+
+  const setModuleSelection = (
+    component: 'decider' | 'preprocessor' | 'presenter',
+    selection: Partial<ModuleSelection>,
+    callback?: () => void,
+  ) =>
+    updateDraft(
+      (current) => ({
+        ...current,
+        pipeline: {
+          ...current.pipeline,
+          [component]: { ...current.pipeline[component], ...selection },
+        },
+      }),
+      callback,
+    )
+
+  const setDeciderModule = (module: string, callback?: () => void) =>
+    setModuleSelection('decider', { module }, callback)
+  const setDeciderEnabled = (enabled: boolean, callback?: () => void) =>
+    setModuleSelection('decider', { enabled }, callback)
+  const setPreprocessorModule = (module: string, callback?: () => void) =>
+    setModuleSelection('preprocessor', { module }, callback)
+  const setPreprocessorEnabled = (enabled: boolean, callback?: () => void) =>
+    setModuleSelection('preprocessor', { enabled }, callback)
+  const setPresenterModule = (module: string, callback?: () => void) =>
+    setModuleSelection('presenter', { module }, callback)
+  const setPresenterEnabled = (enabled: boolean, callback?: () => void) =>
+    setModuleSelection('presenter', { enabled }, callback)
+
+  const setExperimentProtocol = (nextProtocol: string, callback?: () => void) =>
+    updateDraft(
+      (current) => ({
+        ...current,
+        pipeline: { ...current.pipeline, experiment: { protocol: nextProtocol } },
+      }),
+      callback,
+    )
+
+  const setSimulatorDataset = (filename: string, callback?: () => void) =>
+    updateDraft(
+      (current) => ({ ...current, simulator: { ...current.simulator, dataset_filename: filename } }),
+      callback,
+    )
+
+  const setSimulatorStartTime = (startTime: number, callback?: () => void) =>
+    updateDraft((current) => ({ ...current, simulator: { ...current.simulator, start_time: startTime } }), callback)
+
+  const setSimulatorPlaybackSpeed = (playbackSpeed: number, callback?: () => void) =>
+    updateDraft(
+      (current) => ({ ...current, simulator: { ...current.simulator, playback_speed: playbackSpeed } }),
+      callback,
+    )
+
+  const setBagId = (bagId: string, callback?: () => void) =>
+    updateDraft((current) => ({ ...current, replay: { ...current.replay, bag_id: bagId } }), callback)
+
+  const setPlayPreprocessed = (playPreprocessed: boolean, callback?: () => void) =>
+    updateDraft(
+      (current) => ({ ...current, replay: { ...current.replay, play_preprocessed: playPreprocessed } }),
+      callback,
+    )
+
+  const setDataSource = (nextDataSource: string, callback?: () => void) => {
+    setDataSourceState(nextDataSource)
+    if (callback) {
+      callback()
+    }
   }
-  const setDeciderModule = async (module: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('decider.module', module, callback || noop)
-  }
-  const setDeciderEnabled = async (enabled: boolean, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('decider.enabled', enabled, callback || noop)
-  }
-  const setPreprocessorModule = async (module: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('preprocessor.module', module, callback || noop)
-  }
-  const setPreprocessorEnabled = async (enabled: boolean, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('preprocessor.enabled', enabled, callback || noop)
-  }
-  const setPresenterModule = async (module: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('presenter.module', module, callback || noop)
-  }
-  const setPresenterEnabled = async (enabled: boolean, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('presenter.enabled', enabled, callback || noop)
-  }
-  const setExperimentProtocol = async (protocol: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('experiment.protocol', protocol, callback || noop)
-  }
-  const setSimulatorDataset = async (filename: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('simulator.dataset_filename', filename, callback || noop)
-  }
-  const setSimulatorStartTime = async (startTime: number, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('simulator.start_time', startTime, callback || noop)
-  }
-  const setSimulatorPlaybackSpeed = async (playbackSpeed: number, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('simulator.playback_speed', playbackSpeed, callback || noop)
-  }
-  const setBagId = async (bagId: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('replay.bag_id', bagId, callback || noop)
-  }
-  const setPlayPreprocessed = async (playPreprocessed: boolean, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('replay.play_preprocessed', playPreprocessed, callback || noop)
-  }
-  const setDataSource = async (dataSource: string, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('data_source', dataSource, callback || noop)
-  }
-  const setRuntimeParameters = async (params: RuntimeParameters, callback?: () => void): Promise<void> => {
-    const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('experiment.runtime_parameters', JSON.stringify(params), callback || noop)
-  }
+
+  const setRuntimeParameters = (params: RuntimeParameters, callback?: () => void) =>
+    updateDraft(
+      (current) => ({
+        ...current,
+        runtimeParametersByProtocol: {
+          ...current.runtimeParametersByProtocol,
+          [current.pipeline.experiment.protocol]: params,
+        },
+      }),
+      callback,
+    )
 
   const buildSessionConfigMessage = (): SessionConfigMessage => ({
-    subject_id: metadata.subject_id,
-    notes: metadata.notes,
-    decider_module: pipeline.decider.module,
-    decider_enabled: pipeline.decider.enabled,
-    preprocessor_module: pipeline.preprocessor.module,
-    preprocessor_enabled: pipeline.preprocessor.enabled,
-    presenter_module: pipeline.presenter.module,
-    presenter_enabled: pipeline.presenter.enabled,
-    protocol_filename: pipeline.experiment.protocol,
+    subject_id: draft.metadata.subject_id,
+    notes: draft.metadata.notes,
+    decider_module: draft.pipeline.decider.module,
+    decider_enabled: draft.pipeline.decider.enabled,
+    preprocessor_module: draft.pipeline.preprocessor.module,
+    preprocessor_enabled: draft.pipeline.preprocessor.enabled,
+    presenter_module: draft.pipeline.presenter.module,
+    presenter_enabled: draft.pipeline.presenter.enabled,
+    protocol_filename: protocol,
     runtime_parameters: JSON.stringify(runtimeParameters),
     data_source: dataSource,
-    simulator_dataset_filename: simulator.dataset_filename,
-    simulator_start_time: simulator.start_time,
-    simulator_playback_speed: simulator.playback_speed,
-    replay_bag_id: (sessionConfig.get('replay.bag_id') as string) || '',
-    replay_play_preprocessed: (sessionConfig.get('replay.play_preprocessed') as boolean) || false,
+    simulator_dataset_filename: draft.simulator.dataset_filename,
+    simulator_start_time: draft.simulator.start_time,
+    simulator_playback_speed: draft.simulator.playback_speed,
+    replay_bag_id: draft.replay.bag_id,
+    replay_play_preprocessed: draft.replay.play_preprocessed,
   })
 
   return (
     <SessionConfigContext.Provider
       value={{
-        metadata,
-        pipeline,
-        simulator,
+        metadata: draft.metadata,
+        pipeline: draft.pipeline,
+        simulator: draft.simulator,
+        replay: draft.replay,
         dataSource,
         runtimeParameters,
         setSubjectId,
@@ -344,7 +377,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
 
 export const useSessionConfig = () => {
   const context = useContext(SessionConfigContext)
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useSessionConfig must be used within a SessionConfigProvider')
   }
   return context

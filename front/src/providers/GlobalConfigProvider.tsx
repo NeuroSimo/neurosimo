@@ -137,7 +137,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
 
   const setActiveProject = async (project: string, callback?: () => void): Promise<void> => {
     const { setParameterRos } = await import('../ros/parameters')
-    setParameterRos('active_project', project, callback || noop, 'global_configurator')
+    setParameterRos('active_project', project, callback || noop)
   }
 
   const setGlobalConfigParams = async (
@@ -162,7 +162,7 @@ export const GlobalConfigProvider: React.FC<GlobalConfigProviderProps> = ({ chil
     if (config.diskErrorThreshold !== undefined) parameters.push({ name: 'disk_error_threshold', value: config.diskErrorThreshold })
     if (config.locale !== undefined) parameters.push({ name: 'locale', value: config.locale })
     
-    setParametersRos(parameters, callback || noop, 'global_configurator')
+    setParametersRos(parameters, callback || noop)
   }
 
   return (

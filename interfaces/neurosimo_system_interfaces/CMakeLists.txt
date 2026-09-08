@@ -36,7 +36,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/CancelExport.srv"
   "srv/ExportSession.srv"
   "srv/GetGlobalConfig.srv"
-  "srv/GetSessionConfig.srv"
   "srv/StartRecording.srv"
   "srv/StartSession.srv"
   "srv/StopRecording.srv"

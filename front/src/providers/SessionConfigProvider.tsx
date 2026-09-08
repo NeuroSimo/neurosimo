@@ -47,10 +47,10 @@ interface SessionDraft {
   simulator: SimulatorParameters
   replay: ReplayParameters
 
-  /* Runtime parameter values, kept per protocol so that switching protocols back and forth
-     retains what was entered for each. Entries for protocols that no longer exist are
-     harmless: only the selected protocol's entry is ever read. */
-  runtimeParametersByProtocol: Record<string, RuntimeParameters>
+  /* Runtime parameter values, kept per subject and protocol so that switching between
+     subjects or protocols retains what was entered for each. Entries for combinations that
+     are not currently selected are harmless: only the selected one is ever read. */
+  runtimeParametersBySubjectAndProtocol: Record<string, Record<string, RuntimeParameters>>
 }
 
 const defaultDraft: SessionDraft = {
@@ -73,8 +73,11 @@ const defaultDraft: SessionDraft = {
     bag_id: '',
     play_preprocessed: false,
   },
-  runtimeParametersByProtocol: {},
+  runtimeParametersBySubjectAndProtocol: {},
 }
+
+/* Subject ids are numbers, but object keys are strings. */
+const subjectKey = (subjectId: number) => String(subjectId)
 
 const draftStorageKey = (project: string) => `neurosimo.sessionDraft.${project}`
 
@@ -93,7 +96,7 @@ const loadDraft = (project: string): SessionDraft => {
       pipeline: { ...defaultDraft.pipeline, ...parsed.pipeline },
       simulator: { ...defaultDraft.simulator, ...parsed.simulator },
       replay: { ...defaultDraft.replay, ...parsed.replay },
-      runtimeParametersByProtocol: parsed.runtimeParametersByProtocol ?? {},
+      runtimeParametersBySubjectAndProtocol: parsed.runtimeParametersBySubjectAndProtocol ?? {},
     }
   } catch (error) {
     console.warn(`Failed to load session draft for project '${project}':`, error)
@@ -234,7 +237,8 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
   }
 
   const protocol = draft.pipeline.experiment.protocol
-  const runtimeParameters = draft.runtimeParametersByProtocol[protocol] ?? {}
+  const runtimeParameters =
+    draft.runtimeParametersBySubjectAndProtocol[subjectKey(draft.metadata.subject_id)]?.[protocol] ?? {}
 
   const setSubjectId = (subjectId: number, callback?: () => void) =>
     updateDraft((current) => ({ ...current, metadata: { ...current.metadata, subject_id: subjectId } }), callback)
@@ -313,13 +317,19 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
 
   const setRuntimeParameters = (params: RuntimeParameters, callback?: () => void) =>
     updateDraft(
-      (current) => ({
-        ...current,
-        runtimeParametersByProtocol: {
-          ...current.runtimeParametersByProtocol,
-          [current.pipeline.experiment.protocol]: params,
-        },
-      }),
+      (current) => {
+        const subject = subjectKey(current.metadata.subject_id)
+        return {
+          ...current,
+          runtimeParametersBySubjectAndProtocol: {
+            ...current.runtimeParametersBySubjectAndProtocol,
+            [subject]: {
+              ...current.runtimeParametersBySubjectAndProtocol[subject],
+              [current.pipeline.experiment.protocol]: params,
+            },
+          },
+        }
+      },
       callback,
     )
 

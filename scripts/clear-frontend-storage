@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Clears the frontend's locally persisted UI state: session drafts and export selections.
+#
+# This state lives in the browser's localStorage, which for the desktop app means the
+# Electron user data directory. There is no in-app way to reset it, hence this script.
+
+set -e
+
+BOLD=$(tput bold)
+RESET=$(tput sgr0)
+
+STORAGE_DIR="$HOME/.config/neurosimo/Local Storage"
+
+if pgrep -f "neurosimo/front/dist-electron" > /dev/null || pgrep -x neurosimo > /dev/null; then
+    echo "Error: NeuroSimo desktop app appears to be running."
+    echo "Close it first, otherwise it will write its state back on exit."
+    echo ""
+    exit 1
+fi
+
+if [ ! -d "$STORAGE_DIR" ]; then
+    echo "Nothing to clear: ${BOLD}$STORAGE_DIR${RESET} does not exist."
+    exit 0
+fi
+
+rm -rf "$STORAGE_DIR"
+
+echo "Cleared frontend storage: ${BOLD}$STORAGE_DIR${RESET}"
+echo ""
+echo "If you also run the frontend in a browser via 'npm start', clear it there separately:"
+echo "  open the dev tools console on the page and run ${BOLD}localStorage.clear()${RESET}"

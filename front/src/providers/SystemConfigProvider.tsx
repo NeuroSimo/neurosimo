@@ -3,7 +3,7 @@ import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
 import { setSystemConfigRos, SystemConfigMessage } from 'ros/systemConfig'
-import { FilenameList } from './ModuleListProvider'
+import { FilenameList } from 'utils/useProjectFilenameList'
 
 /* The camelCase mirror of neurosimo_system_interfaces/SystemConfig. */
 export interface SystemConfigValues {

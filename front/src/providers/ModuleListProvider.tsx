@@ -1,14 +1,9 @@
 import React, { useState, useEffect, ReactNode } from 'react'
-import { Topic } from '@foxglove/roslibjs'
 
-import { ros } from 'ros/ros'
 import { useSessionConfig, RuntimeParameterValue } from './SessionConfigProvider'
 import { useSystemConfig } from './SystemConfigProvider'
 import { getProtocolInfoRos, RuntimeParameterInfo } from 'ros/experiment'
-
-export interface FilenameList extends ROSLIB.Message {
-  filenames: string[]
-}
+import { useProjectFilenameList } from 'utils/useProjectFilenameList'
 
 /* A runtime parameter counts as "set" when it has a value the session can run with.
    A boolean is always set: an unticked checkbox is simply false. */
@@ -81,10 +76,10 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const { pipeline, runtimeParameters } = useSessionConfig()
   const { activeProject } = useSystemConfig()
 
-  const [preprocessorList, setPreprocessorList] = useState<string[]>([])
-  const [deciderList, setDeciderList] = useState<string[]>([])
-  const [presenterList, setPresenterList] = useState<string[]>([])
-  const [protocolList, setProtocolList] = useState<string[]>([])
+  const preprocessorList = useProjectFilenameList('/neurosimo/pipeline/preprocessor/list', activeProject)
+  const deciderList = useProjectFilenameList('/neurosimo/pipeline/decider/list', activeProject)
+  const presenterList = useProjectFilenameList('/neurosimo/pipeline/presenter/list', activeProject)
+  const protocolList = useProjectFilenameList('/neurosimo/experiment/protocol/list', activeProject)
 
   /* Runtime parameter descriptors, tagged with the project/protocol they were fetched for,
      so that the inputs of a previously selected protocol are not rendered against the values
@@ -136,60 +131,6 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const runtimeParametersValid = runtimeParameterInfos.every((descriptor) =>
     isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name]),
   )
-
-  useEffect(() => {
-    /* Subscriber for preprocessor list. */
-    const preprocessorListSubscriber = new Topic<FilenameList>({
-      ros: ros,
-      name: '/neurosimo/pipeline/preprocessor/list',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
-    })
-
-    preprocessorListSubscriber.subscribe((message) => {
-      setPreprocessorList(message.filenames)
-    })
-
-    /* Subscriber for decider list. */
-    const deciderListSubscriber = new Topic<FilenameList>({
-      ros: ros,
-      name: '/neurosimo/pipeline/decider/list',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
-    })
-
-    deciderListSubscriber.subscribe((message) => {
-      setDeciderList(message.filenames)
-    })
-
-    /* Subscriber for presenter list. */
-    const presenterListSubscriber = new Topic<FilenameList>({
-      ros: ros,
-      name: '/neurosimo/pipeline/presenter/list',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
-    })
-
-    presenterListSubscriber.subscribe((message) => {
-      setPresenterList(message.filenames)
-    })
-
-    /* Subscriber for available protocols. */
-    const protocolListSubscriber = new Topic<FilenameList>({
-      ros: ros,
-      name: '/neurosimo/experiment/protocol/list',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
-    })
-
-    protocolListSubscriber.subscribe((message) => {
-      setProtocolList(message.filenames)
-    })
-
-    /* Unsubscribers */
-    return () => {
-      preprocessorListSubscriber.unsubscribe()
-      deciderListSubscriber.unsubscribe()
-      presenterListSubscriber.unsubscribe()
-      protocolListSubscriber.unsubscribe()
-    }
-  }, [])
 
   return (
     <ModuleListContext.Provider

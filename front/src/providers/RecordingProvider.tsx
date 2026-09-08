@@ -1,8 +1,7 @@
-import React, { useState, useEffect, ReactNode } from 'react'
-import { Topic } from '@foxglove/roslibjs'
+import React, { ReactNode } from 'react'
 
-import { ros } from 'ros/ros'
-import { FilenameList } from './ModuleListProvider'
+import { useSystemConfig } from './SystemConfigProvider'
+import { useProjectFilenameList } from 'utils/useProjectFilenameList'
 
 interface RecordingContextType {
   recordingsList: string[]
@@ -19,25 +18,9 @@ interface RecordingProviderProps {
 }
 
 export const RecordingProvider: React.FC<RecordingProviderProps> = ({ children }) => {
-  const [recordingsList, setRecordingsList] = useState<string[]>([])
+  const { activeProject } = useSystemConfig()
 
-  useEffect(() => {
-    /* Subscriber for recordings list. */
-    const recordingsListSubscriber = new Topic<FilenameList>({
-      ros: ros,
-      name: '/neurosimo/recording/recordings/list',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
-    })
-
-    recordingsListSubscriber.subscribe((message: FilenameList) => {
-      setRecordingsList(message.filenames)
-    })
-
-    /* Unsubscriber */
-    return () => {
-      recordingsListSubscriber.unsubscribe()
-    }
-  }, [])
+  const recordingsList = useProjectFilenameList('/neurosimo/recording/recordings/list', activeProject)
 
   return (
     <RecordingContext.Provider

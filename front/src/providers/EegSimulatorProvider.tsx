@@ -3,7 +3,8 @@ import { Topic, Message } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
 import { useSessionConfig } from './SessionConfigProvider'
-import { FilenameList } from './ModuleListProvider'
+import { useSystemConfig } from './SystemConfigProvider'
+import { useProjectFilenameList } from 'utils/useProjectFilenameList'
 
 export enum DataSourceStateValue {
   READY = 0,
@@ -70,9 +71,13 @@ interface EegSimulatorProviderProps {
 
 export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ children }) => {
   const { simulator } = useSessionConfig()
+  const { activeProject } = useSystemConfig()
 
-  const [datasetList, setDatasetList] = useState<string[]>([])
-  const [externalRecordingsList, setExternalRecordingsList] = useState<string[]>([])
+  const datasetList = useProjectFilenameList('/neurosimo/eeg_simulator/dataset/list', activeProject)
+  const externalRecordingsList = useProjectFilenameList(
+    '/neurosimo/eeg_simulator/external_recordings/list',
+    activeProject,
+  )
   const [dataSourceState, setDataSourceState] = useState<DataSourceStateValue>(DataSourceStateValue.READY)
 
   const dataset = simulator.dataset_filename
@@ -80,17 +85,6 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
   const playbackSpeed = simulator.playback_speed
 
   useEffect(() => {
-    /* Subscriber for dataset list. */
-    const datasetListSubscriber = new Topic<FilenameList>({
-      ros: ros,
-      name: '/neurosimo/eeg_simulator/dataset/list',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
-    })
-
-    datasetListSubscriber.subscribe((message: FilenameList) => {
-      setDatasetList(message.filenames)
-    })
-
     /* Subscriber for simulator state. */
     const stateSubscriber = new Topic<RosDataSourceState>({
       ros: ros,
@@ -102,22 +96,9 @@ export const EegSimulatorProvider: React.FC<EegSimulatorProviderProps> = ({ chil
       setDataSourceState(message.state)
     })
 
-    /* Subscriber for external recordings list. */
-    const externalRecordingsListSubscriber = new Topic<FilenameList>({
-      ros: ros,
-      name: '/neurosimo/eeg_simulator/external_recordings/list',
-      messageType: 'neurosimo_project_interfaces/FilenameList',
-    })
-
-    externalRecordingsListSubscriber.subscribe((message: FilenameList) => {
-      setExternalRecordingsList(message.filenames)
-    })
-
-    /* Unsubscribers */
+    /* Unsubscriber */
     return () => {
-      datasetListSubscriber.unsubscribe()
       stateSubscriber.unsubscribe()
-      externalRecordingsListSubscriber.unsubscribe()
     }
   }, [])
 

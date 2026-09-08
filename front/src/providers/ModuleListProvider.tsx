@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, ReactNode } from 'react'
+import React, { useState, useEffect, ReactNode } from 'react'
 import { Topic } from '@foxglove/roslibjs'
 
 import { ros } from 'ros/ros'
@@ -11,16 +11,17 @@ export interface FilenameList extends ROSLIB.Message {
 }
 
 /* A runtime parameter counts as "set" when the user has provided a usable value.
-   Booleans always have a value (the checkbox is either on or off). */
+   Booleans are usable as soon as they have a value; they are defaulted to false rather
+   than being asked from the user. */
 const isRuntimeParameterSet = (
   descriptor: RuntimeParameterInfo,
   value: RuntimeParameterValue | undefined,
 ): boolean => {
-  if (descriptor.type === 'bool') {
-    return true
-  }
   if (value === undefined || value === null) {
     return false
+  }
+  if (descriptor.type === 'bool') {
+    return typeof value === 'boolean'
   }
   if (descriptor.type === 'string') {
     return String(value).trim() !== ''
@@ -81,18 +82,19 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const { pipeline, runtimeParameters, setRuntimeParameters } = useSessionConfig()
   const { activeProject } = useGlobalConfig()
 
-  /* Keep the latest runtime-parameter values in a ref so the fetch effect can prune
-     stale entries without having to depend on (and thus refetch on) every value edit. */
-  const runtimeParametersRef = useRef(runtimeParameters)
-  useEffect(() => {
-    runtimeParametersRef.current = runtimeParameters
-  }, [runtimeParameters])
-
   const [preprocessorList, setPreprocessorList] = useState<string[]>([])
   const [deciderList, setDeciderList] = useState<string[]>([])
   const [presenterList, setPresenterList] = useState<string[]>([])
   const [protocolList, setProtocolList] = useState<string[]>([])
-  const [runtimeParameterInfos, setRuntimeParameterInfos] = useState<RuntimeParameterInfo[]>([])
+
+  /* Runtime parameter descriptors, tagged with the project/protocol they were fetched for.
+     The tag is needed because the fetch is asynchronous: while switching projects the
+     descriptors briefly still describe the previously selected protocol, and applying
+     them to the newly loaded session config would write the wrong parameters. */
+  const [fetchedRuntimeParameters, setFetchedRuntimeParameters] = useState<{
+    key: string
+    infos: RuntimeParameterInfo[]
+  }>({ key: '', infos: [] })
 
   // Get parameter values from structured parameter store
   const preprocessorModule = pipeline.preprocessor.module
@@ -103,6 +105,9 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
   const presenterEnabled = pipeline.presenter.enabled
   const protocolName = pipeline.experiment.protocol
 
+  /* Identifies the protocol whose descriptors are currently relevant. */
+  const protocolKey = activeProject && protocolName ? `${activeProject}/${protocolName}` : ''
+
   /* Fetch the runtime parameter descriptors whenever the selected protocol changes.
      protocolList is also a dependency: the backend re-publishes the protocol list
      (giving a new array reference) on any change to the protocols directory, including
@@ -110,40 +115,56 @@ export const ModuleListProvider: React.FC<ModuleListProviderProps> = ({ children
      the runtime-parameter UI in sync without having to switch protocols to refresh. */
   useEffect(() => {
     if (!protocolName || protocolName.trim() === '' || !activeProject) {
-      setRuntimeParameterInfos([])
+      setFetchedRuntimeParameters({ key: '', infos: [] })
       return
     }
 
     getProtocolInfoRos(activeProject, protocolName, (info) => {
-      const infos = info?.runtime_parameters ?? []
-      setRuntimeParameterInfos(infos)
-
-      /* Drop any stored values whose descriptor no longer exists in the protocol
-         (e.g. a parameter was removed or renamed on disk) so the session config does
-         not keep stale entries around. Also initialize any boolean params that don't
-         have a value yet — booleans default to false. */
-      const validNames = new Set(infos.map((descriptor) => descriptor.name))
-      const currentValues = runtimeParametersRef.current
-      const staleNames = Object.keys(currentValues).filter((name) => !validNames.has(name))
-      const uninitializedBooleans = infos.filter(
-        (descriptor) => descriptor.type === 'bool' && currentValues[descriptor.name] === undefined,
-      )
-      if (staleNames.length > 0 || uninitializedBooleans.length > 0) {
-        const updated = { ...currentValues }
-        staleNames.forEach((name) => delete updated[name])
-        uninitializedBooleans.forEach((descriptor) => {
-          updated[descriptor.name] = false
-        })
-        setRuntimeParameters(updated)
-      }
+      setFetchedRuntimeParameters({ key: protocolKey, infos: info?.runtime_parameters ?? [] })
     })
   }, [protocolName, activeProject, protocolList])
 
+  const runtimeParameterInfos = fetchedRuntimeParameters.key === protocolKey ? fetchedRuntimeParameters.infos : []
+
+  /* Reconcile the stored values against the descriptors: drop values whose descriptor no
+     longer exists in the protocol (e.g. a parameter was removed or renamed on disk), and
+     initialize any boolean parameter that has no value yet, since booleans default to false.
+
+     This is keyed on the stored values as well as the descriptors, so it also runs when a
+     session config is loaded from disk (e.g. after switching projects) rather than only when
+     the protocol selection changes; otherwise a config that predates a parameter would keep
+     that parameter unset until the user toggled it by hand. */
+  const runtimeParametersKey = JSON.stringify(runtimeParameters)
+  useEffect(() => {
+    if (protocolKey === '' || fetchedRuntimeParameters.key !== protocolKey) {
+      return
+    }
+
+    const validNames = new Set(runtimeParameterInfos.map((descriptor) => descriptor.name))
+    const staleNames = Object.keys(runtimeParameters).filter((name) => !validNames.has(name))
+    const uninitializedBooleans = runtimeParameterInfos.filter(
+      (descriptor) => descriptor.type === 'bool' && runtimeParameters[descriptor.name] === undefined,
+    )
+    if (staleNames.length === 0 && uninitializedBooleans.length === 0) {
+      return
+    }
+
+    const updated = { ...runtimeParameters }
+    staleNames.forEach((name) => delete updated[name])
+    uninitializedBooleans.forEach((descriptor) => {
+      updated[descriptor.name] = false
+    })
+    setRuntimeParameters(updated)
+  }, [fetchedRuntimeParameters, protocolKey, runtimeParametersKey])
+
   /* Every runtime parameter is required, so the session can only start once all of
-     them have a usable value. */
-  const runtimeParametersValid = runtimeParameterInfos.every((descriptor) =>
-    isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name]),
-  )
+     them have a usable value. While the descriptors for the currently selected protocol
+     are still being fetched, treat the parameters as not yet valid rather than assuming
+     there are none. */
+  const runtimeParametersValid =
+    protocolKey === '' ||
+    (fetchedRuntimeParameters.key === protocolKey &&
+      runtimeParameterInfos.every((descriptor) => isRuntimeParameterSet(descriptor, runtimeParameters[descriptor.name])))
 
   useEffect(() => {
     /* Subscriber for preprocessor list. */

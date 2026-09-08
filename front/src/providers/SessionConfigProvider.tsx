@@ -121,6 +121,10 @@ interface SessionConfigContextType {
   dataSource: string
   runtimeParameters: RuntimeParameters
 
+  /* Whether the draft for the active project has been loaded. Until it has, the setters
+     below are no-ops, as there is no draft yet to write into. */
+  isDraftLoaded: boolean
+
   // Convenience setters
   setSubjectId: (subjectId: number, callback?: () => void) => void
   setNotes: (notes: string, callback?: () => void) => void
@@ -174,6 +178,7 @@ const defaultSessionConfigState: SessionConfigContextType = {
   replay: defaultDraft.replay,
   dataSource: 'simulator',
   runtimeParameters: {},
+  isDraftLoaded: false,
   setSubjectId: noop,
   setNotes: noop,
   setDeciderModule: noop,
@@ -228,6 +233,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
   }, [draftState, activeProject])
 
   const draft = draftState?.draft ?? defaultDraft
+  const isDraftLoaded = draftState !== null && draftState.project === activeProject
 
   const updateDraft = (update: (current: SessionDraft) => SessionDraft, callback?: () => void) => {
     setDraftState((current) => (current === null ? current : { ...current, draft: update(current.draft) }))
@@ -361,6 +367,7 @@ export const SessionConfigProvider: React.FC<SessionConfigProviderProps> = ({ ch
         replay: draft.replay,
         dataSource,
         runtimeParameters,
+        isDraftLoaded,
         setSubjectId,
         setNotes,
         setDeciderModule,

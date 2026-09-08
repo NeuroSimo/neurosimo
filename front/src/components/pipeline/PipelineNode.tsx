@@ -5,6 +5,7 @@ import { StyledPanel, SmallerTitle, Select } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
+import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useDefaultToFirstOption } from 'utils/useDefaultToFirstOption'
 
 const Container = styled(StyledPanel)`
@@ -91,9 +92,11 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
   const { sessionState } = useSession()
   const isSessionRunning = sessionState.state === SessionStateValue.RUNNING
 
+  const { isDraftLoaded } = useSessionConfig()
+
   /* Only while the module is in use: a disabled node has no select and keeps its stored
      module, so that toggling it back off and on does not lose the choice. */
-  const hasModule = useDefaultToFirstOption(module, modules, onModuleChange, enabled && !isSessionRunning)
+  const hasModule = useDefaultToFirstOption(module, modules, onModuleChange, isDraftLoaded && enabled && !isSessionRunning)
 
   const handleModuleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     onModuleChange(event.target.value)

@@ -52,7 +52,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     dataSourceState,
   } = useContext(EegSimulatorContext)
   const { eegDeviceInfo } = useContext(EegStreamContext)
-  const { setSimulatorDataset, setSimulatorStartTime, setSimulatorPlaybackSpeed } = useSessionConfig()
+  const { setSimulatorDataset, setSimulatorStartTime, setSimulatorPlaybackSpeed, isDraftLoaded } = useSessionConfig()
   const { sessionState } = useSession()
 
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null)
@@ -70,7 +70,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     dataset,
     datasetList,
     selectDataset,
-    !isSessionRunning && !isEegStreaming
+    isDraftLoaded && !isSessionRunning && !isEegStreaming
   )
 
   // Fetch dataset info when dataset changes

@@ -60,7 +60,7 @@ const InfoIcon = styled.span<{ disabled: boolean }>`
 
 export const ExperimentPanel: React.FC = () => {
   const { protocolName, protocolList, runtimeParameterInfos } = useContext(ModuleListContext)
-  const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters } = useSessionConfig()
+  const { metadata, runtimeParameters, setExperimentProtocol, setSubjectId, setNotes, setRuntimeParameters, isDraftLoaded } = useSessionConfig()
   const { sessionState } = useSession()
   const { activeProject, projects, setActiveProject } = useSystemConfig()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -95,7 +95,7 @@ export const ExperimentPanel: React.FC = () => {
       console.log('Protocol set to ' + protocol)
     })
 
-  const hasProtocol = useDefaultToFirstOption(protocolName, protocolList, selectProtocol, !isSessionRunning)
+  const hasProtocol = useDefaultToFirstOption(protocolName, protocolList, selectProtocol, isDraftLoaded && !isSessionRunning)
 
   const handleProtocolChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     selectProtocol(event.target.value)

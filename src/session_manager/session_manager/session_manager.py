@@ -9,7 +9,7 @@ from rclpy.executors import MultiThreadedExecutor
 from neurosimo_system_interfaces.msg import SessionState
 from neurosimo_system_interfaces.srv import StartRecording, StopRecording, AbortSession, StartSession
 from std_srvs.srv import Trigger
-from neurosimo_system_interfaces.msg import SystemConfig
+from neurosimo_system_interfaces.msg import SystemConfig, DiskStatus
 from neurosimo_pipeline_interfaces.srv import (
     InitializeProtocol, FinalizeProtocol, FinalizeDecider, FinalizePreprocessor, FinalizePresenter,
     InitializeDecider, InitializePreprocessor, InitializePresenter,
@@ -168,6 +168,17 @@ class SessionManagerNode(Node):
             callback_group=self.callback_group
         )
 
+        # Subscribe to disk status; used as a preflight check when starting a session.
+        self.disk_status = None
+
+        self.disk_status_subscription = self.create_subscription(
+            DiskStatus,
+            '/neurosimo/system/disk_status',
+            self.disk_status_callback,
+            config_qos,
+            callback_group=self.callback_group
+        )
+
         # Wait for all clients to be available
         action_clients = [
             (self.simulator_stream_init_client, '/eeg_simulator/initialize'),
@@ -228,6 +239,29 @@ class SessionManagerNode(Node):
         self.system_config = msg
         self.logger.info(f'Received system config: active_project={msg.active_project}')
 
+    def disk_status_callback(self, msg):
+        """Handle disk status updates."""
+        self.disk_status = msg
+
+    def check_disk_space(self):
+        """Return an error message if free disk space is below the error threshold, else None.
+
+        Recording refuses to start when disk space has run out, so this is checked before
+        accepting the request; otherwise the session would enter the running state and then
+        immediately fail. If no disk status has been received, the check is skipped rather than
+        blocking the session on a missing resource monitor.
+        """
+        if self.disk_status is None or self.disk_status.is_ok:
+            return None
+
+        free_gib = self.disk_status.free_bytes / (1024 ** 3)
+        required_gib = self.disk_status.error_threshold_bytes / (1024 ** 3)
+
+        return (
+            f'Insufficient disk space: only {free_gib:.1f} GiB free, '
+            f'at least {required_gib:.1f} GiB is required'
+        )
+
     # Service callbacks
     def start_session_callback(self, request, response):
         """Handle start session service calls."""
@@ -247,6 +281,13 @@ class SessionManagerNode(Node):
                 self.logger.error('System configuration not yet received')
                 response.success = False
                 response.message = 'System configuration not yet received'
+                return response
+
+            disk_space_error = self.check_disk_space()
+            if disk_space_error is not None:
+                self.logger.error(f'Refusing to start session: {disk_space_error}')
+                response.success = False
+                response.message = disk_space_error
                 return response
 
             # Validate before accepting, so that a bad configuration is reported to the caller

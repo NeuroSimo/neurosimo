@@ -1,7 +1,7 @@
-import React, { useContext } from 'react'
+import React from 'react'
 import styled from 'styled-components'
 
-import { DiskStatusContext } from 'providers/DiskStatusProvider'
+import { useDiskStatus, formatGiB, DiskSeverity } from 'providers/DiskStatusProvider'
 import {
   StyledPanel,
   StateRow,
@@ -22,7 +22,7 @@ const DiskStatusPanel = styled(StyledPanel)`
   z-index: 1000;
 `
 
-const StatusIndicator = styled.div<{ status: 'ok' | 'warning' | 'error' }>`
+const StatusIndicator = styled.div<{ status: DiskSeverity }>`
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -45,19 +45,7 @@ const StatusIndicator = styled.div<{ status: 'ok' | 'warning' | 'error' }>`
 `
 
 export const DiskStatusDisplay: React.FC = () => {
-  const { diskStatus } = useContext(DiskStatusContext)
-
-  const getStatus = (): 'ok' | 'warning' | 'error' => {
-    if (!diskStatus) return 'error'
-    if (diskStatus.free_bytes < diskStatus.error_threshold_bytes) return 'error'
-    if (diskStatus.free_bytes < diskStatus.warning_threshold_bytes) return 'warning'
-    return 'ok'
-  }
-
-  const formatFreeSpace = (bytes: number): string => {
-    const gib = bytes / (1024 ** 3)
-    return gib.toFixed(1)
-  }
+  const { diskStatus, diskSeverity } = useDiskStatus()
 
   return (
     <>
@@ -65,8 +53,8 @@ export const DiskStatusDisplay: React.FC = () => {
         <StateRow>
           <StateTitle>Free space:</StateTitle>
           <StateValue>
-            <StatusIndicator status={getStatus()} />
-            {diskStatus ? `${formatFreeSpace(diskStatus.free_bytes)} GiB` : '\u2013'}
+            <StatusIndicator status={diskSeverity} />
+            {diskStatus ? `${formatGiB(diskStatus.free_bytes)} GiB` : '\u2013'}
           </StateValue>
         </StateRow>
       </DiskStatusPanel>

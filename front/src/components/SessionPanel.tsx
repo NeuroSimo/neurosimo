@@ -186,10 +186,6 @@ export const SessionPanel: React.FC = () => {
     sessionState.state === SessionStateValue.INITIALIZING ||
     sessionState.state === SessionStateValue.FINALIZING
 
-  const stateText = isBlockedByDiskSpace && displayedState === SessionStateValue.STOPPED
-    ? 'Blocked'
-    : getStateDisplayText(displayedState)
-
   const ButtonComponent = isRunning ? StyledRedButton : StyledButton
   return (
     <Container style={{ marginTop: -bannerHeight }}>
@@ -255,7 +251,7 @@ export const SessionPanel: React.FC = () => {
 
       <StateRow>
         <StateTitle>State:</StateTitle>
-        <StateValue>{stateText}</StateValue>
+        <StateValue>{getStateDisplayText(displayedState)}</StateValue>
       </StateRow>
     </Container>
   )

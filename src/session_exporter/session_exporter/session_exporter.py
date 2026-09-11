@@ -391,6 +391,7 @@ class SessionExporterNode(Node):
         writers = {}
         msg_types = {}
         message_counts = {}
+        deserialization_failures = {}
 
         # Attempt traces carry only a decision_id; the decision trace topic is read whenever
         # attempt traces are exported so that the latency breakdown can be joined onto them,
@@ -471,8 +472,26 @@ class SessionExporterNode(Node):
             if topic_name not in msg_types:
                 continue
             
-            # Deserialize and write immediately
-            msg = deserialize_message(data, msg_types[topic_name])
+            # Deserialize and write immediately.
+            #
+            # Messages are deserialized with the currently installed message definitions, not with
+            # the definitions the recording was made with, and the CDR encoding is positional. A
+            # recording made with a different version of a message therefore cannot be read back
+            # reliably. Skip such topics with an explanation rather than aborting the export, so
+            # that topics whose definitions did not change are still exported.
+            try:
+                msg = deserialize_message(data, msg_types[topic_name])
+            except Exception as error:
+                deserialization_failures[topic_name] = deserialization_failures.get(topic_name, 0) + 1
+                if deserialization_failures[topic_name] == 1:
+                    self.logger.error(
+                        f'Cannot deserialize messages on {topic_name} as {topic_type_map[topic_name]}: '
+                        f'{error}. This recording was most likely made with a different version of that '
+                        f'message definition; export it with the NeuroSimo version that recorded it. '
+                        f'Skipping this topic.'
+                    )
+                continue
+
             message_counts[topic_name] += 1
 
             if topic_name == DECISION_TRACE_TOPIC:
@@ -503,6 +522,9 @@ class SessionExporterNode(Node):
             writer_info['file'].close()
             count = message_counts[topic]
             self.logger.info(f'Exported {count} messages from {topic} to {writer_info["path"]}')
+            failures = deserialization_failures.get(topic, 0)
+            if failures > 0:
+                self.logger.warn(f'Skipped {failures} messages on {topic} that could not be deserialized')
             if count > 0:
                 exported_files.append(writer_info['path'])
 

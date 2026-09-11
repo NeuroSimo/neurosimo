@@ -220,8 +220,7 @@ export const SessionPanel: React.FC = () => {
                 Low disk space &mdash; {formatGiB(diskStatus.free_bytes)} GiB remaining
               </BannerTitle>
               <div>
-                Experiments may run out of space and fail partway through. Free disk space before
-                continuing.
+                Experiments may run out of space and fail partway through. Free disk space when convenient.
               </div>
             </div>
           </WarningBanner>

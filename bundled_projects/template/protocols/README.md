@@ -51,12 +51,12 @@ A stage represents a period where stimuli are delivered. Each stage has:
   ```yaml
   trials: 100
   ```
-- `max_failures` (optional): Maximum number of invalid trials allowed in this stage before the stage ends early. Must be greater than `0`. When omitted, invalid trials can be retried without a failure cap (the stage still ends only after the required number of **valid** trials). Invalid trials are reported by the decider's `process_pulse()` return value (`trial_invalid: true`); they do not advance the stage trial counter.
+- `max_failures` (optional): Maximum number of invalid trials allowed in this stage before the stage ends early. Must be greater than `0`.
 - `notes`: Optional description
 
 #### Invalid trials and stage completion
 
-A trial counts as **valid** when the decider does not mark it invalid after pulse processing. A trial counts as **invalid** when `process_pulse()` returns `{'trial_invalid': True}`.
+A trial counts as **valid** when the decider does not mark it invalid after pulse processing. A trial counts as **invalid** when `process_pulse()` returns `{'invalid_trial': True}`.
 
 A stage completes when either:
 

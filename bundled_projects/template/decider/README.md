@@ -157,7 +157,9 @@ Whether the coil is currently positioned at the target location (for neuronaviga
 Current protocol stage name from the experiment coordinator.
 
 #### `trial_in_stage` (int)
-Total successful trials in session.
+Zero-based index of the current trial within the stage.
+
+This is the authoritative trial position — **do not count trials in the decider**. The index advances only when a trial completes successfully; it does not advance for a failed attempt.
 
 #### `is_warm_up` (bool)
 `True` when this call is a warm-up round with dummy data. Skip internal state updates in this case; return values are ignored.
@@ -256,7 +258,7 @@ Called when a pulse event occurs, if the method is defined on the `Decider` clas
 
 May return `None` or a dictionary with `sensory_stimuli`, `events`, `coil_target` (same format as `process_periodic()`), and optionally:
 
-#### `trial_invalid` (bool, optional)
+#### `invalid_trial` (bool, optional)
 Mark the current trial as invalid (e.g. artifact, failed quality check). Defaults to `false` if omitted. When `true`, the experiment coordinator does not advance the stage trial counter; the attempt is retried. Stages may set `max_failures` in the protocol to cap how many invalid trials are allowed before the stage ends (see protocols README).
 
 **Example:**
@@ -266,7 +268,7 @@ def process_pulse(
         eeg_buffer, emg_buffer, is_coil_at_target, stage_name, trial_in_stage):
     """Process pulse events."""
     if self.has_artifact(eeg_buffer):
-        return {'trial_invalid': True}
+        return {'invalid_trial': True}
     return None
 ```
 
@@ -338,14 +340,14 @@ Not called during warm-up rounds.
 Name of the **upcoming** trial's protocol stage.
 
 #### `trial_in_stage` (int)
-Zero-based index of the **upcoming** trial within the stage.
+Zero-based index of the **upcoming** trial within the stage. If the previous attempt at this trial failed and the protocol sets `repeat_failed_trials: true`, the same index is seen again (see `process_periodic`).
 
 **Return value:**
 - `None` — proceed with periodic (closed-loop) processing for this trial.
 - `{'trigger_offset': <float>}` — schedule a trigger at the given offset (in seconds) from the attempt reference time and skip periodic processing for this trial.
 
 **Guarantees:**
-- Called once per trial.
+- Called once per committed attempt. A trial that fails and is retried commits a new attempt, so this method is called again for the same `trial_in_stage`.
 - Arguments always describe the **upcoming** trial, not the one that just finished.
 - The method may block for up to ~1 s; the backend calls it from within the sample-processing loop during the dead window, so blocking here does not delay the trigger for that trial.
 - If the method raises an exception the session is aborted, exactly like any other Python error path.

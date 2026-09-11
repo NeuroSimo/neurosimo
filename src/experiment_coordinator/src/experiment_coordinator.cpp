@@ -234,6 +234,13 @@ void ExperimentCoordinator::handle_attempt_trace_final(const std::shared_ptr<neu
   state.attempt_in_session++;
   state.attempt_in_trial++;
 
+  /* Session-scoped statistic: count attempts where no pulse was observed in the EEG stream
+     (e.g. TOO_LATE, LOOPBACK_LATENCY_EXCEEDED, ERROR). Counted regardless of whether the
+     attempt belongs to a stage. */
+  if (msg->status != neurosimo_pipeline_interfaces::msg::AttemptTrace::STATUS_PULSE_PROCESSED) {
+    state.failed_pulses_in_session++;
+  }
+
   /* Check if we're in a stage. */
   if (state.current_element_index >= protocol->elements.size()) {
     RCLCPP_WARN(this->get_logger(), "Pulse received but protocol is complete");
@@ -747,6 +754,7 @@ void ExperimentCoordinator::publish_experiment_state() {
     msg.attempt_in_trial = 0;
     msg.failures_in_stage = 0;
     msg.max_failures = 0;
+    msg.failed_pulses_in_session = 0;
     msg.stage_start_time = 0.0;
     msg.stage_elapsed_time = 0.0;
     msg.rest_duration = 0.0;
@@ -802,6 +810,9 @@ void ExperimentCoordinator::publish_experiment_state() {
   msg.attempt_in_session = state.attempt_in_session;
   msg.attempt_in_trial = suppress_stage_trial_fields ? 0 : state.attempt_in_trial;
   msg.failures_in_stage = suppress_stage_trial_fields ? 0 : state.failures_in_stage;
+
+  /* Session-scoped, so not suppressed during rest or task. */
+  msg.failed_pulses_in_session = state.failed_pulses_in_session;
 
   /* Report max_failures for the current stage (0 means no limit). */
   if (!suppress_stage_trial_fields && state.current_element_index < this->protocol->elements.size()) {

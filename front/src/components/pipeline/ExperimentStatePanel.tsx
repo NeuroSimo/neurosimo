@@ -176,6 +176,12 @@ export const ExperimentStatePanel: React.FC = () => {
             {showTrialProgress ? experimentState.attempt_in_trial + 1 : '—'}
           </StateValue>
         </StateRow>
+        <StateRow>
+          <StateTitle>Failed pulses</StateTitle>
+          <StateValue>
+            {experimentState?.ongoing ? experimentState.failed_pulses_in_session : '—'}
+          </StateValue>
+        </StateRow>
         <SectionSpacer />
         <StateRow>
           <StateTitle>Time</StateTitle>

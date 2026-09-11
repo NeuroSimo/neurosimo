@@ -10,6 +10,7 @@ uint64 attempt_in_session
 uint32 attempt_in_trial
 uint32 failures_in_stage       # Failed trials in current stage (retry count)
 uint32 max_failures            # 0 means no retry limit set
+uint64 failed_pulses_in_session  # Attempts in session that did not produce an observed pulse (session statistic)
 
 # State flags
 bool ongoing

@@ -141,6 +141,7 @@ export enum ExportDataType {
   PREPROCESSOR_LOGS = 5,
   PRESENTER_LOGS = 6,
   SENSORY_STIMULI = 7,
+  DECISIONS = 8,
 }
 
 const DATA_TYPE_LABELS: Record<ExportDataType, string> = {
@@ -148,6 +149,7 @@ const DATA_TYPE_LABELS: Record<ExportDataType, string> = {
   [ExportDataType.ENRICHED_EEG]: 'Enriched',
   [ExportDataType.PREPROCESSED_EEG]: 'Preprocessed',
   [ExportDataType.STIMULATION_DECISIONS]: 'Pulses',
+  [ExportDataType.DECISIONS]: 'All decisions',
   [ExportDataType.DECIDER_LOGS]: 'Decider',
   [ExportDataType.PREPROCESSOR_LOGS]: 'Preprocessor',
   [ExportDataType.PRESENTER_LOGS]: 'Presenter',
@@ -161,7 +163,7 @@ const EXPORT_GROUPS = [
   },
   {
     name: 'Decisions',
-    types: [ExportDataType.STIMULATION_DECISIONS, ExportDataType.SENSORY_STIMULI]
+    types: [ExportDataType.STIMULATION_DECISIONS, ExportDataType.DECISIONS, ExportDataType.SENSORY_STIMULI]
   },
   {
     name: 'Logs',

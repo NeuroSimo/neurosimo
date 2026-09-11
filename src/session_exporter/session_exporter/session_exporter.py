@@ -23,12 +23,18 @@ except ImportError as e:
     print(f"Warning: Could not import rosbag2_py: {e}")
 
 
+# Attempt traces are joined with the decision traces that produced them, so both topics are
+# referred to in several places.
+ATTEMPT_TRACE_FINAL_TOPIC = '/neurosimo/pipeline/attempt_trace/final'
+DECISION_TRACE_TOPIC = '/neurosimo/pipeline/decision_trace'
+
 # Mapping from export data types to ROS topics
 DATA_TYPE_TO_TOPIC = {
     ExportDataType.RAW_EEG: '/neurosimo/eeg/raw',
     ExportDataType.ENRICHED_EEG: '/neurosimo/eeg/enriched',
     ExportDataType.PREPROCESSED_EEG: '/neurosimo/eeg/preprocessed',
-    ExportDataType.STIMULATION_DECISIONS: '/neurosimo/pipeline/attempt_trace/final',
+    ExportDataType.STIMULATION_DECISIONS: ATTEMPT_TRACE_FINAL_TOPIC,
+    ExportDataType.DECISIONS: DECISION_TRACE_TOPIC,
     ExportDataType.DECIDER_LOGS: '/neurosimo/pipeline/decider/log',
     ExportDataType.PREPROCESSOR_LOGS: '/neurosimo/pipeline/preprocessor/log',
     ExportDataType.PRESENTER_LOGS: '/neurosimo/pipeline/presenter/log',
@@ -41,6 +47,7 @@ DATA_TYPE_TO_NAME = {
     ExportDataType.ENRICHED_EEG: 'enriched_eeg',
     ExportDataType.PREPROCESSED_EEG: 'preprocessed_eeg',
     ExportDataType.STIMULATION_DECISIONS: 'stimulation_decisions',
+    ExportDataType.DECISIONS: 'decisions',
     ExportDataType.DECIDER_LOGS: 'decider_logs',
     ExportDataType.PREPROCESSOR_LOGS: 'preprocessor_logs',
     ExportDataType.PRESENTER_LOGS: 'presenter_logs',
@@ -75,14 +82,19 @@ TOPIC_TO_FIELDS = {
     '/neurosimo/eeg/preprocessed': EEG_FIELDS_PREPROCESSED,
 }
 
-# Decision trace export fields
+# Attempt trace export fields
+# Must match neurosimo_pipeline_interfaces/msg/AttemptTrace.msg
 ATTEMPT_TRACE_FIELDS = [
     'attempt_in_session',
     'stage_name',
     'trial_in_stage',
     'trial_in_session',
     'status',
+    'attempt_timing',
+    'attempt_type',
+    'decision_id',
     'requested_stimulation_time',
+    'reference_time',
     'system_time_trigger_timer_received',
     'system_time_trigger_timer_finished',
     'system_time_hardware_fired',
@@ -95,18 +107,7 @@ ATTEMPT_TRACE_FIELDS = [
     'actual_stimulation_sample_index',
     'timing_error',
     'has_timing_error',
-    # Embedded decision fields (flattened with decision_ prefix)
-    'decision_id',
-    'decision_status',
-    'decision_reference_sample_time',
-    'decision_reference_sample_index',
-    'decision_stimulate',
-    'decision_eeg_device_processing_duration',
-    'decision_decider_duration',
-    'decision_preprocessor_duration',
-    'decision_overhead_duration',
-    'decision_system_time_decider_received',
-    'decision_system_time_decider_finished',
+    'invalid_trial',
 ]
 
 # Status mapping for human-readable export
@@ -114,16 +115,48 @@ ATTEMPT_TRACE_FIELDS = [
 ATTEMPT_TRACE_STATUS_MAP = {
     1: 'scheduled',
     2: 'fired',
-    3: 'pulse_observed',
+    3: 'pulse_processed',
     4: 'loopback_latency_exceeded',
     5: 'too_late',
     6: 'error',
 }
 
+# Attempt timing mapping for human-readable export
+# Values must match neurosimo_pipeline_interfaces/msg/AttemptTrace.msg
+ATTEMPT_TIMING_MAP = {
+    1: 'periodic',
+    2: 'predetermined',
+}
+
+# Decision trace export fields
+# Must match neurosimo_pipeline_interfaces/msg/DecisionTrace.msg
+DECISION_TRACE_FIELDS = [
+    'decision_id',
+    'status',
+    'stimulate',
+    'reference_sample_time',
+    'reference_sample_index',
+    'eeg_device_processing_duration',
+    'preprocessor_duration',
+    'decider_duration',
+    'overhead_duration',
+    'total_duration',
+    'system_time_decider_received',
+    'system_time_decider_finished',
+]
+
+# Status mapping for human-readable export
+# Values must match neurosimo_pipeline_interfaces/msg/DecisionTrace.msg
 DECISION_TRACE_STATUS_MAP = {
     1: 'decided_no',
     2: 'decided_yes',
 }
+
+# Decision fields joined onto each attempt trace; decision_id is already an attempt trace field
+# and serves as the join key, so it is not repeated.
+DECISION_JOIN_FIELDS = [field for field in DECISION_TRACE_FIELDS if field != 'decision_id']
+
+ATTEMPT_TRACE_JOINED_FIELDS = ATTEMPT_TRACE_FIELDS + [f'decision_{field}' for field in DECISION_JOIN_FIELDS]
 
 # Log export fields
 LOG_FIELDS = [
@@ -358,22 +391,39 @@ class SessionExporterNode(Node):
         writers = {}
         msg_types = {}
         message_counts = {}
-        
-        for topic, name in topics_to_export.items():
+
+        # Attempt traces carry only a decision_id; the decision trace topic is read whenever
+        # attempt traces are exported so that the latency breakdown can be joined onto them,
+        # even if decisions themselves were not requested as an export type.
+        export_attempt_traces = ATTEMPT_TRACE_FINAL_TOPIC in topics_to_export
+        decisions_by_id = {}
+
+        topics_to_read = list(topics_to_export)
+        if export_attempt_traces and DECISION_TRACE_TOPIC not in topics_to_read:
+            topics_to_read.append(DECISION_TRACE_TOPIC)
+
+        for topic in topics_to_read:
             if topic not in topic_type_map:
                 self.logger.warn(f'Topic {topic} not found in bag, skipping')
                 continue
-            
+
             msg_types[topic] = get_message(topic_type_map[topic])
             message_counts[topic] = 0
-            
+
+            name = topics_to_export.get(topic)
+            if name is None:
+                # Read only to feed the join; no CSV of its own.
+                continue
+
             # Initialize writer based on topic type
             output_file = export_dir / f'{name}.csv'
-            
+
             if topic in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 writers[topic] = self._create_eeg_writer(output_file, topic)
-            elif topic == '/neurosimo/pipeline/attempt_trace/final':
+            elif topic == ATTEMPT_TRACE_FINAL_TOPIC:
                 writers[topic] = self._create_attempt_trace_writer(output_file)
+            elif topic == DECISION_TRACE_TOPIC:
+                writers[topic] = self._create_decision_trace_writer(output_file)
             elif topic in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 writers[topic] = self._create_log_writer(output_file)
             elif topic == '/neurosimo/pipeline/sensory_stimulus':
@@ -418,23 +468,34 @@ class SessionExporterNode(Node):
                     )
                     last_progress_update = progress
             
-            if topic_name not in writers:
+            if topic_name not in msg_types:
                 continue
             
             # Deserialize and write immediately
             msg = deserialize_message(data, msg_types[topic_name])
+            message_counts[topic_name] += 1
+
+            if topic_name == DECISION_TRACE_TOPIC:
+                # Decision traces are published before the attempt trace that references them,
+                # so buffering them here is enough for the join later in the same pass.
+                row_data = self._decision_trace_row(msg)
+                if export_attempt_traces:
+                    decisions_by_id[msg.decision_id] = tuple(row_data[field] for field in DECISION_JOIN_FIELDS)
+                writer_info = writers.get(topic_name)
+                if writer_info is not None:
+                    writer_info['writer'].writerow(row_data)
+                continue
+
             writer_info = writers[topic_name]
             
             if topic_name in ['/neurosimo/eeg/raw', '/neurosimo/eeg/enriched', '/neurosimo/eeg/preprocessed']:
                 self._write_eeg_message(writer_info, timestamp, msg)
-            elif topic_name == '/neurosimo/pipeline/attempt_trace/final':
-                self._write_attempt_trace_message(writer_info, timestamp, msg)
+            elif topic_name == ATTEMPT_TRACE_FINAL_TOPIC:
+                self._write_attempt_trace_message(writer_info, timestamp, msg, decisions_by_id)
             elif topic_name in ['/neurosimo/pipeline/decider/log', '/neurosimo/pipeline/preprocessor/log', '/neurosimo/pipeline/presenter/log']:
                 self._write_log_message(writer_info, timestamp, msg)
             elif topic_name == '/neurosimo/pipeline/sensory_stimulus':
                 self._write_sensory_stimulus_message(writer_info, timestamp, msg)
-            
-            message_counts[topic_name] += 1
 
         # Close all writers
         exported_files = []
@@ -498,7 +559,7 @@ class SessionExporterNode(Node):
     def _create_attempt_trace_writer(self, output_file):
         """Create a CSV writer for attempt trace messages."""
         f = open(output_file, 'w', newline='')
-        writer = csv.DictWriter(f, fieldnames=ATTEMPT_TRACE_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=ATTEMPT_TRACE_JOINED_FIELDS)
         writer.writeheader()
         return {
             'file': f,
@@ -506,44 +567,50 @@ class SessionExporterNode(Node):
             'path': output_file,
         }
 
-    def _write_attempt_trace_message(self, writer_info, timestamp, msg):
-        """Write a single attempt trace message to CSV."""
+    def _write_attempt_trace_message(self, writer_info, timestamp, msg, decisions_by_id):
+        """Write a single attempt trace message to CSV, joined with its decision trace."""
         row_data = {}
         for field in ATTEMPT_TRACE_FIELDS:
-            if field.startswith('decision_'):
-                # Embedded decision fields
-                decision = msg.decision
-                if field == 'decision_id':
-                    row_data[field] = decision.decision_id
-                elif field == 'decision_status':
-                    row_data[field] = DECISION_TRACE_STATUS_MAP.get(decision.status, f'unknown_{decision.status}')
-                elif field == 'decision_reference_sample_time':
-                    row_data[field] = decision.reference_sample_time
-                elif field == 'decision_reference_sample_index':
-                    row_data[field] = decision.reference_sample_index
-                elif field == 'decision_stimulate':
-                    row_data[field] = decision.stimulate
-                elif field == 'decision_eeg_device_processing_duration':
-                    row_data[field] = decision.eeg_device_processing_duration
-                elif field == 'decision_decider_duration':
-                    row_data[field] = decision.decider_duration
-                elif field == 'decision_preprocessor_duration':
-                    row_data[field] = decision.preprocessor_duration
-                elif field == 'decision_overhead_duration':
-                    row_data[field] = decision.overhead_duration
-                elif field == 'decision_system_time_decider_received':
-                    row_data[field] = decision.system_time_decider_received
-                elif field == 'decision_system_time_decider_finished':
-                    row_data[field] = decision.system_time_decider_finished
+            value = getattr(msg, field)
+            if field == 'session_id':
+                row_data[field] = ''.join(f'{b:02x}' for b in value)
+            elif field == 'status':
+                row_data[field] = ATTEMPT_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
+            elif field == 'attempt_timing':
+                row_data[field] = ATTEMPT_TIMING_MAP.get(value, f'unknown_{value}')
             else:
-                value = getattr(msg, field)
-                if field == 'session_id':
-                    row_data[field] = ''.join(f'{b:02x}' for b in value)
-                elif field == 'status':
-                    row_data[field] = ATTEMPT_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
-                else:
-                    row_data[field] = value
+                row_data[field] = value
+
+        # Join the decision that produced this attempt. Predetermined attempts are scheduled
+        # without a decision cycle and carry decision_id 0, so their decision columns stay empty.
+        decision_values = decisions_by_id.get(msg.decision_id)
+        if decision_values is not None:
+            for field, value in zip(DECISION_JOIN_FIELDS, decision_values):
+                row_data[f'decision_{field}'] = value
+
         writer_info['writer'].writerow(row_data)
+
+    def _create_decision_trace_writer(self, output_file):
+        """Create a CSV writer for decision trace messages."""
+        f = open(output_file, 'w', newline='')
+        writer = csv.DictWriter(f, fieldnames=DECISION_TRACE_FIELDS)
+        writer.writeheader()
+        return {
+            'file': f,
+            'writer': writer,
+            'path': output_file,
+        }
+
+    def _decision_trace_row(self, msg):
+        """Build a CSV row for a decision trace message."""
+        row_data = {}
+        for field in DECISION_TRACE_FIELDS:
+            value = getattr(msg, field)
+            if field == 'status':
+                row_data[field] = DECISION_TRACE_STATUS_MAP.get(value, f'unknown_{value}')
+            else:
+                row_data[field] = value
+        return row_data
 
     def _create_log_writer(self, output_file):
         """Create a CSV writer for log messages."""

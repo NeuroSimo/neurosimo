@@ -163,7 +163,7 @@ export const ExperimentPanel: React.FC = () => {
   return (
     <Container>
       <ConfigTitle>Experiment</ConfigTitle>
-      <ConfigRow>
+      <ConfigRow style={{ marginBottom: 10 }}>
         <ConfigLabel>Project:</ConfigLabel>
         <IconButtonWrapper>
           <InfoIcon

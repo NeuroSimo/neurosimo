@@ -3,36 +3,47 @@ import styled from 'styled-components'
 
 import { palette } from 'styles/General'
 
-const Wrapper = styled.div`
-  position: absolute;
-  inset: 0;
+const ARROWHEAD_HEIGHT = 6
+const ARROWHEAD_HALF_WIDTH = 5
+
+/* A downward arrow placed in the pipeline column between two stages. It fills its whole height,
+   so the line starts at the stage above and the arrowhead tip touches the stage below. */
+const Connector = styled.div<{ $axisX: number; $length: number }>`
+  position: relative;
+  flex-shrink: 0;
+  width: ${ARROWHEAD_HALF_WIDTH * 2}px;
+  height: ${props => props.$length}px;
+  margin-left: ${props => props.$axisX - ARROWHEAD_HALF_WIDTH}px;
   pointer-events: none;
 
-  .arrow-vertical {
-    width: 2px;
-    background: ${palette.borderStrong};
-    position: absolute;
-    transform: translateX(-50%);
-  }
-
-  .arrow-vertical:after {
+  &:before {
     content: '';
     position: absolute;
+    top: 0;
+    bottom: ${ARROWHEAD_HEIGHT}px;
     left: 50%;
-    bottom: -5px;
+    width: 2px;
     transform: translateX(-50%);
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid ${palette.borderStrong};
+    background: ${palette.borderStrong};
+  }
+
+  &:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    border-left: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
+    border-right: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
+    border-top: ${ARROWHEAD_HEIGHT}px solid ${palette.borderStrong};
   }
 `
 
-/* Spans run from the EEG source and node bottoms to the next node top (see PipelineDiagram). */
-export const PipelineConnections: React.FC = () => (
-  <Wrapper>
-    <div className='arrow-vertical' style={{ left: '10%', top: '64px', height: '54px' }} />
-    <div className='arrow-vertical' style={{ left: '10%', top: '170px', height: '55px' }} />
-    <div className='arrow-vertical' style={{ left: '10%', top: '278px', height: '55px' }} />
-  </Wrapper>
+interface PipelineConnectionProps {
+  axisX: number
+  length: number
+}
+
+export const PipelineConnection: React.FC<PipelineConnectionProps> = ({ axisX, length }) => (
+  <Connector $axisX={axisX} $length={length} />
 )
 

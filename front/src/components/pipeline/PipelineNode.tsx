@@ -8,10 +8,13 @@ import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useDefaultToFirstOption } from 'utils/useDefaultToFirstOption'
 
+/* Distance from the node's outer left edge to its title text (2px status border + padding). */
+export const PIPELINE_NODE_TITLE_INSET = 23
+
 const Container = styled(StyledPanel)<{ $enabled: boolean }>`
   width: 505px;
-  height: 44px;
-  padding: 0 0 0 21px;
+  height: 48px;
+  padding: 0 0 0 ${PIPELINE_NODE_TITLE_INSET - 2}px;
   display: flex;
   align-items: center;
   background-color: ${palette.surface};

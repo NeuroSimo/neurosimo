@@ -3,7 +3,13 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faCopy, faTrashAlt } from '@fortawesome/free-solid-svg-icons'
 
-import { PIPELINE_LOG_OFFSET_FROM_TOP, PIPELINE_LOG_WIDTH, palette, selectChevron } from 'styles/General'
+import {
+  PIPELINE_LOG_BODY_HEIGHT,
+  PIPELINE_LOG_OFFSET_FROM_TOP,
+  PIPELINE_LOG_WIDTH,
+  palette,
+  selectChevron,
+} from 'styles/General'
 
 import { LogContext, LogMessage, LogLevel, LogPhase, ProcessingPath } from 'providers/LogProvider'
 import { StickyBottomScrollContainer } from 'components/StickyBottomScrollContainer'
@@ -126,11 +132,12 @@ const PipelineLogPanel = styled.div`
   box-sizing: border-box;
   position: fixed;
   top: ${PIPELINE_LOG_OFFSET_FROM_TOP + PIPELINE_LOG_TOOLBAR_HEIGHT}px;
-  bottom: 0;
+  height: ${PIPELINE_LOG_BODY_HEIGHT}px;
   right: 0;
   z-index: 1000;
   padding: 0;
   border-left: 1px solid ${palette.border};
+  border-bottom: 1px solid ${palette.border};
   background-color: ${palette.console};
   display: flex;
   flex-direction: column;

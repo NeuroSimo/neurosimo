@@ -6,7 +6,7 @@ import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
 import { palette } from 'styles/General'
 
 const TextInput = styled.input<{ disabled?: boolean; $missing?: boolean }>`
-  width: 90px;
+  width: 70px;
   height: 22px;
   box-sizing: content-box;
   padding: 0 6px;
@@ -39,6 +39,7 @@ const Unit = styled.span<{ disabled?: boolean }>`
   font-size: 11px;
   color: ${props => (props.disabled ? palette.textDim : palette.textMuted)};
   margin-left: 4px;
+  white-space: nowrap;
   user-select: none;
 `
 

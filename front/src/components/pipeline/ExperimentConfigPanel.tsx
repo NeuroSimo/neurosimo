@@ -52,6 +52,13 @@ const RuntimeParametersContainer = styled.div`
   margin-top: 8px;
 `
 
+/* Right-aligns the input and its unit with the other controls' right edge. */
+const RuntimeParameterControls = styled(IconButtonWrapper)`
+  margin-left: auto;
+  margin-right: 17px;
+  flex-shrink: 0;
+`
+
 const RuntimeParameterLabel = styled(ConfigLabel)<{ $missing: boolean }>`
   padding-left: 12px;
   box-sizing: border-box;
@@ -239,7 +246,7 @@ export const ExperimentPanel: React.FC = () => {
               <RuntimeParameterLabel $missing={isMissing}>
                 {descriptor.label || descriptor.name}:
               </RuntimeParameterLabel>
-              <IconButtonWrapper>
+              <RuntimeParameterControls>
                 <RuntimeParameterInput
                   descriptor={descriptor}
                   value={runtimeParameterValues[descriptor.name]}
@@ -247,7 +254,7 @@ export const ExperimentPanel: React.FC = () => {
                   disabled={isSessionRunning}
                   missing={isMissing}
                 />
-              </IconButtonWrapper>
+              </RuntimeParameterControls>
             </ConfigRow>
           )
         })}

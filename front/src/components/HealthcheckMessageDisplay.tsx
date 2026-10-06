@@ -5,12 +5,11 @@ import { HealthcheckContext, ComponentHealth } from 'providers/HealthProvider'
 import { SessionContext } from 'providers/SessionProvider'
 import { palette, TELEMETRY_EXPERIMENT_RIGHT } from 'styles/General'
 
-/* Geometry of the top-right status strip (health, status message, disk). It hangs from the menu bar
+/* Geometry of the top-right status strip (health and status message). It hangs from the menu bar
    and shares its column edges with the telemetry panels below: health sits above Experiment,
-   status message and free space above Statistics and Stimulation. */
+   the status message above Statistics and Stimulation. */
 export const STATUS_STRIP_TOP = 30
-export const STATUS_STRIP_HEIGHT = 56
-export const DISK_ROW_HEIGHT = 28
+export const STATUS_STRIP_HEIGHT = 84
 export const STATUS_MESSAGE_WIDTH = TELEMETRY_EXPERIMENT_RIGHT
 
 const HealthcheckMessagePanel = styled.div`

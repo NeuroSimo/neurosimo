@@ -45,8 +45,8 @@ const SetupPrimary = styled.div`
 
 /* The middle workspace runs from the sidebar to the fixed right-hand column and from the menu bar
    to the bottom of the window; its height is independent of the telemetry and logs. The pipeline
-   is centred horizontally. Vertically, the free space is split 1:2 above and below it, which puts
-   its centre at roughly 38% of the workspace height (at 1440p). */
+   is centred horizontally. Vertically, the free space is split 1:3 above and below it, which puts
+   its centre at roughly 31% of the workspace height (at 1440p). */
 const PipelineArea = styled.div`
   display: flex;
   flex-direction: column;
@@ -66,7 +66,7 @@ const PipelineArea = styled.div`
   }
 
   &::after {
-    flex: 2;
+    flex: 3;
   }
 `
 

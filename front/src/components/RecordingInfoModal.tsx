@@ -123,7 +123,7 @@ export const RecordingInfoModal: React.FC<RecordingInfoModalProps> = ({
 
   const formatFingerprintHex = (value?: number | null): string => {
     if (!value) {
-      return 'Not available'
+      return '\u2013'
     }
     const full = value.toString(16).toUpperCase().padStart(16, '0')
     return full
@@ -157,7 +157,7 @@ export const RecordingInfoModal: React.FC<RecordingInfoModalProps> = ({
           <InfoValue>{formatDateTime(recordingInfo.start_time, 'en-US')}</InfoValue>
 
           <InfoLabel>End Time</InfoLabel>
-          <InfoValue>{recordingInfo.end_time ? formatDateTime(recordingInfo.end_time, 'en-US') : 'Not available'}</InfoValue>
+          <InfoValue>{recordingInfo.end_time ? formatDateTime(recordingInfo.end_time, 'en-US') : '\u2013'}</InfoValue>
 
           <InfoLabel>Duration</InfoLabel>
           <InfoValue>{Math.round(recordingInfo.duration)} seconds</InfoValue>
@@ -166,15 +166,15 @@ export const RecordingInfoModal: React.FC<RecordingInfoModalProps> = ({
         <SectionHeader>Version & Git</SectionHeader>
         <InfoGrid>
           <InfoLabel>Version</InfoLabel>
-          <InfoValue>{recordingInfo.version || 'Not available'}</InfoValue>
+          <InfoValue>{recordingInfo.version || '\u2013'}</InfoValue>
 
           <InfoLabel>Git Commit</InfoLabel>
           <InfoValue style={{ fontFamily: 'monospace', fontSize: '13px' }}>
-            {recordingInfo.git_commit || 'Not available'}
+            {recordingInfo.git_commit || '\u2013'}
           </InfoValue>
 
           <InfoLabel>Git State</InfoLabel>
-          <InfoValue>{recordingInfo.git_state || 'Not available'}</InfoValue>
+          <InfoValue>{recordingInfo.git_state || '\u2013'}</InfoValue>
         </InfoGrid>
 
         <SectionHeader>Data Source Details</SectionHeader>
@@ -228,7 +228,7 @@ export const RecordingInfoModal: React.FC<RecordingInfoModalProps> = ({
 
           <InfoLabel>Export Directory</InfoLabel>
           <InfoValue style={{ fontFamily: 'monospace', fontSize: '13px' }}>
-            {recordingInfo.export_directory || 'Not available'}
+            {recordingInfo.export_directory || '\u2013'}
           </InfoValue>
         </InfoGrid>
       </ModalContent>

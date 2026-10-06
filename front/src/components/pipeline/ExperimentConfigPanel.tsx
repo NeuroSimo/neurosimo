@@ -186,7 +186,7 @@ export const ExperimentPanel: React.FC = () => {
           placeholder="Enter notes"
           disabled={isSessionRunning}
           multiline={true}
-          width="315px"
+          width="190px"
         />
       </ConfigRow>
       <ConfigRow>

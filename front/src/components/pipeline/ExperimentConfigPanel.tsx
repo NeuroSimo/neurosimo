@@ -195,7 +195,7 @@ export const ExperimentPanel: React.FC = () => {
           width="20px"
         />
       </ConfigRow>
-      <ConfigRow>
+      <ConfigRow style={{ marginBottom: 16 }}>
         <ConfigLabel>Notes:</ConfigLabel>
         <CommittableTextInput
           value={notes}

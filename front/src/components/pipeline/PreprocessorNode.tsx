@@ -29,7 +29,7 @@ export const PreprocessorNode: React.FC = () => {
       onToggle={handleToggle}
       onModuleChange={handleModuleChange}
       folderName="preprocessor"
-      disabledLabel="BYPASSED"
+      disabledLabel="DISABLED"
     />
   )
 }

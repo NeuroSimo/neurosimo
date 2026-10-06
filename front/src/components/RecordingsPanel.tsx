@@ -420,8 +420,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
       return ''
     }
     const full = value.toString(16).toUpperCase().padStart(16, '0')
-    const short = full.slice(0, 6)
-    return full.length > short.length ? `${short}\u2026` : short
+    return full.slice(0, 6)
   }
 
   return (

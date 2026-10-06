@@ -6,9 +6,14 @@ import { scaled } from 'components/pipeline/PipelineNode'
 
 const ARROWHEAD_HEIGHT = scaled(6)
 const ARROWHEAD_HALF_WIDTH = scaled(5)
-/* Connectors that carry no data in the current configuration keep their structural line, but
-   faint and without an arrowhead, so only active connectors read as data flow. */
+/* Active connectors carry data and are drawn bright with an arrowhead. Connectors that carry no
+   data in the current configuration keep only a thin, faint structural line without an arrowhead. */
+const STROKE_COLOR = palette.textMuted
+const ACTIVE_STROKE_WIDTH = 2
+const INACTIVE_STROKE_WIDTH = 1
 const INACTIVE_OPACITY = 0.25
+
+const strokeWidth = (active: boolean) => active ? ACTIVE_STROKE_WIDTH : INACTIVE_STROKE_WIDTH
 
 /* A downward arrow placed in the pipeline column between two stages. It fills its whole height,
    so the line starts at the stage above and the arrowhead tip touches the stage below. */
@@ -28,9 +33,9 @@ const Connector = styled.div<{ $axisX: number; $length: number; $active: boolean
     top: 0;
     bottom: ${props => props.$active ? ARROWHEAD_HEIGHT : 0}px;
     left: 50%;
-    width: 2px;
+    width: ${props => strokeWidth(props.$active)}px;
     transform: translateX(-50%);
-    background: ${palette.borderStrong};
+    background: ${STROKE_COLOR};
   }
 
   &:after {
@@ -41,7 +46,7 @@ const Connector = styled.div<{ $axisX: number; $length: number; $active: boolean
     left: 0;
     border-left: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
     border-right: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
-    border-top: ${ARROWHEAD_HEIGHT}px solid ${palette.borderStrong};
+    border-top: ${ARROWHEAD_HEIGHT}px solid ${STROKE_COLOR};
   }
 `
 
@@ -71,9 +76,9 @@ const HorizontalConnector = styled.div<{ $length: number; $active: boolean }>`
     left: 0;
     right: ${props => props.$active ? ARROWHEAD_HEIGHT : 0}px;
     top: 50%;
-    height: 2px;
+    height: ${props => strokeWidth(props.$active)}px;
     transform: translateY(-50%);
-    background: ${palette.borderStrong};
+    background: ${STROKE_COLOR};
   }
 
   &:after {
@@ -84,7 +89,7 @@ const HorizontalConnector = styled.div<{ $length: number; $active: boolean }>`
     top: 0;
     border-top: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
     border-bottom: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
-    border-left: ${ARROWHEAD_HEIGHT}px solid ${palette.borderStrong};
+    border-left: ${ARROWHEAD_HEIGHT}px solid ${STROKE_COLOR};
   }
 `
 
@@ -127,14 +132,14 @@ export const PipelineBypass: React.FC<PipelineBypassProps> = ({ fromY, toY, acti
     <path
       d={`M 0 ${fromY} H ${-BYPASS_OFFSET_X} V ${toY} H ${active ? -ARROWHEAD_HEIGHT : 0}`}
       fill='none'
-      stroke={palette.borderStrong}
-      strokeWidth={2}
+      stroke={STROKE_COLOR}
+      strokeWidth={strokeWidth(active)}
       strokeLinejoin='round'
     />
     {active && (
       <polygon
         points={`${-ARROWHEAD_HEIGHT},${toY - ARROWHEAD_HALF_WIDTH} 0,${toY} ${-ARROWHEAD_HEIGHT},${toY + ARROWHEAD_HALF_WIDTH}`}
-        fill={palette.borderStrong}
+        fill={STROKE_COLOR}
       />
     )}
   </BypassSvg>

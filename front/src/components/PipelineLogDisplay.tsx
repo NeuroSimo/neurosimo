@@ -1,5 +1,7 @@
 import React, { useContext, useRef, useEffect, useState } from 'react'
 import styled from 'styled-components'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCopy, faTrashAlt } from '@fortawesome/free-solid-svg-icons'
 
 import { PIPELINE_LOG_OFFSET_FROM_TOP, PIPELINE_LOG_WIDTH, palette, selectChevron } from 'styles/General'
 
@@ -36,71 +38,84 @@ const PipelineLogPanelTitle = styled.div`
 
 const TitleGroup = styled.div`
   display: flex;
-  gap: 10px;
+  gap: 14px;
   align-items: center;
 `
 
+/* Compact filter for the log source, kept visually lighter than the form selects. */
 const LogSourceSelect = styled.select`
   appearance: none;
   -webkit-appearance: none;
-  height: 24px;
+  height: 22px;
   box-sizing: border-box;
-  background-color: ${palette.surfaceRaised};
+  background-color: transparent;
   background-image: ${selectChevron};
   background-repeat: no-repeat;
-  background-position: right 8px center;
-  color: ${palette.text};
-  border: 1px solid ${palette.borderStrong};
+  background-position: right 7px center;
+  color: ${palette.textSecondary};
+  border: 1px solid ${palette.border};
   border-radius: 3px;
-  padding: 0 24px 0 8px;
-  font-size: 12px;
+  padding: 0 22px 0 7px;
+  font-size: 11.5px;
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, color 0.2s;
 
   &:hover {
-    border-color: #4a4f57;
+    border-color: ${palette.borderStrong};
+    color: ${palette.text};
   }
 
   &:focus {
     outline: none;
     border-color: ${palette.accent};
+    color: ${palette.text};
+  }
+
+  option {
+    background-color: ${palette.surfaceRaised};
+    color: ${palette.text};
   }
 `
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 6px;
+  gap: 2px;
 `
 
-const LogButton = styled.button`
+const LogIconButton = styled.button<{ $destructive?: boolean }>`
+  width: 24px;
   height: 24px;
-  background-color: ${palette.surfaceRaised};
-  color: ${palette.text};
-  border: 1px solid ${palette.borderStrong};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
   border-radius: 3px;
-  padding: 0 10px;
+  padding: 0;
+  color: ${palette.icon};
   font-size: 12px;
-  font-weight: 500;
-  letter-spacing: normal;
-  text-transform: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: color 0.2s, background-color 0.2s;
 
-  &:hover {
+  &:hover:not(:disabled),
+  &:focus-visible {
+    color: ${props => props.$destructive ? palette.red : palette.iconHover};
     background-color: ${palette.surfaceHover};
   }
 
-  &:active {
-    background-color: ${palette.borderStrong};
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 1px ${palette.accent};
   }
 
   &:disabled {
-    background-color: ${palette.surface};
-    color: ${palette.textDim};
-    border-color: ${palette.border};
+    opacity: 0.4;
     cursor: not-allowed;
   }
 `
@@ -266,18 +281,25 @@ export const PipelineLogDisplay: React.FC = () => {
     <>
       <PipelineLogPanelTitle>
         <TitleGroup>
-          <span>Pipeline logs:</span>
-          <LogSourceSelect value={selectedSource} onChange={handleSourceChange}>
+          <span>Logs</span>
+          <LogSourceSelect value={selectedSource} onChange={handleSourceChange} aria-label="Log source">
             <option value="preprocessor">Preprocessor</option>
             <option value="decider">Decider</option>
             <option value="presenter">Presenter</option>
           </LogSourceSelect>
         </TitleGroup>
         <ButtonGroup>
-          <LogButton onClick={handleCopyLogs} disabled={currentLogs.length === 0}>
-            Copy
-          </LogButton>
-          <LogButton onClick={handleClearAllLogs}>Clear All</LogButton>
+          <LogIconButton
+            onClick={handleCopyLogs}
+            disabled={currentLogs.length === 0}
+            title="Copy logs"
+            aria-label="Copy logs"
+          >
+            <FontAwesomeIcon icon={faCopy} />
+          </LogIconButton>
+          <LogIconButton onClick={handleClearAllLogs} title="Clear logs" aria-label="Clear logs" $destructive>
+            <FontAwesomeIcon icon={faTrashAlt} />
+          </LogIconButton>
         </ButtonGroup>
       </PipelineLogPanelTitle>
       <PipelineLogPanel>

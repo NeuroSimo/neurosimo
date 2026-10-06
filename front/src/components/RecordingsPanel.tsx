@@ -423,7 +423,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
 
   const formatFingerprintHex = (value?: number | null): string => {
     if (!value) {
-      return ''
+      return '\u2013'
     }
     const full = value.toString(16).toUpperCase().padStart(16, '0')
     return full.slice(0, 6)

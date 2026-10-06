@@ -49,7 +49,7 @@ const ProtocolControls = styled(IconButtonWrapper)`
 `
 
 const RuntimeParametersContainer = styled.div`
-  margin-top: 8px;
+  margin-top: 2px;
 `
 
 /* Right-aligns the input and its unit with the other controls' right edge. */
@@ -60,8 +60,6 @@ const RuntimeParameterControls = styled(IconButtonWrapper)`
 `
 
 const RuntimeParameterLabel = styled(ConfigLabel)<{ $missing: boolean }>`
-  padding-left: 12px;
-  box-sizing: border-box;
   color: ${props => (props.$missing ? palette.red : palette.textSecondary)};
 `
 

@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { PreprocessorNode } from 'components/pipeline/PreprocessorNode'
 import { DeciderNode } from 'components/pipeline/DeciderNode'
 import { PresenterNode } from 'components/pipeline/PresenterNode'
-import { PipelineBypass, PipelineConnection } from 'components/pipeline/PipelineConnections'
+import { PipelineBypass, PipelineConnection, PipelineHorizontalConnection } from 'components/pipeline/PipelineConnections'
 import {
   PIPELINE_NODE_OUTER_HEIGHT,
   PIPELINE_NODE_SELECT_LEFT,
@@ -30,7 +30,7 @@ const PipelinePanel = styled.div`
   position: relative;
 `
 
-const EegCircle = styled.div`
+const EndpointCircle = styled.div<{ $color: string; $tint: string }>`
   display: flex;
   justify-content: center;
   align-items: center;
@@ -38,15 +38,33 @@ const EegCircle = styled.div`
   width: ${EEG_SOURCE_SIZE}px;
   height: ${EEG_SOURCE_SIZE}px;
   box-sizing: border-box;
-  background-color: rgba(229, 149, 74, 0.14);
-  border: 1.5px solid ${palette.orange};
-  color: ${palette.orange};
+  background-color: ${props => props.$tint};
+  border: 1.5px solid ${props => props.$color};
+  color: ${props => props.$color};
   border-radius: 50%;
   font-size: ${11 * PIPELINE_SCALE}px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  cursor: move;
   z-index: 10;
+`
+
+const EegCircle = styled(EndpointCircle)`
+  cursor: move;
+`
+
+/* The Decider's stimulation output sits in the Decider's row, just right of the node. It is
+   positioned outside the column's flow so the column's width and centring are unchanged. */
+const DeciderRow = styled.div`
+  position: relative;
+`
+
+const TmsBranch = styled.div`
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  display: flex;
+  align-items: center;
 `
 
 interface FloatingTitleProps {
@@ -95,7 +113,7 @@ export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
      a disabled Presenter receives nothing. */
   return (
     <PipelinePanel>
-      <EegCircle>EEG</EegCircle>
+      <EegCircle $color={palette.orange} $tint='rgba(229, 149, 74, 0.14)'>EEG</EegCircle>
       <FloatingTitle xOffset={enabledTitleX} yOffset={enabledTitleY} $alignRight>
         Enabled
       </FloatingTitle>
@@ -112,7 +130,13 @@ export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
         length={CONNECTOR_LENGTH}
         active={preprocessorEnabled && deciderEnabled}
       />
-      <DeciderNode />
+      <DeciderRow>
+        <DeciderNode />
+        <TmsBranch>
+          <PipelineHorizontalConnection length={CONNECTOR_LENGTH} active={deciderEnabled} />
+          <EndpointCircle $color={palette.blue} $tint='rgba(74, 138, 212, 0.14)'>TMS</EndpointCircle>
+        </TmsBranch>
+      </DeciderRow>
       <PipelineConnection
         axisX={CONNECTOR_AXIS_X}
         length={CONNECTOR_LENGTH}

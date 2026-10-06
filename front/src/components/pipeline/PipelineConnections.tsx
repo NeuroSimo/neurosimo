@@ -55,6 +55,48 @@ export const PipelineConnection: React.FC<PipelineConnectionProps> = ({ axisX, l
   <Connector $axisX={axisX} $length={length} $active={active} />
 )
 
+/* A rightward arrow in a row, from the stage on its left to the endpoint on its right. */
+const HorizontalConnector = styled.div<{ $length: number; $active: boolean }>`
+  position: relative;
+  flex-shrink: 0;
+  width: ${props => props.$length}px;
+  height: ${ARROWHEAD_HALF_WIDTH * 2}px;
+  pointer-events: none;
+  opacity: ${props => props.$active ? 1 : INACTIVE_OPACITY};
+  transition: opacity 0.2s;
+
+  &:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: ${props => props.$active ? ARROWHEAD_HEIGHT : 0}px;
+    top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+    background: ${palette.borderStrong};
+  }
+
+  &:after {
+    content: '';
+    display: ${props => props.$active ? 'block' : 'none'};
+    position: absolute;
+    right: 0;
+    top: 0;
+    border-top: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
+    border-bottom: ${ARROWHEAD_HALF_WIDTH}px solid transparent;
+    border-left: ${ARROWHEAD_HEIGHT}px solid ${palette.borderStrong};
+  }
+`
+
+interface PipelineHorizontalConnectionProps {
+  length: number
+  active: boolean
+}
+
+export const PipelineHorizontalConnection: React.FC<PipelineHorizontalConnectionProps> = ({ length, active }) => (
+  <HorizontalConnector $length={length} $active={active} />
+)
+
 const BYPASS_OFFSET_X = scaled(18)
 
 /* Zero-size anchor at the pipeline's top-left corner; the route is drawn to its left. */

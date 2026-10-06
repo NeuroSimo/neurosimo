@@ -255,7 +255,7 @@ export const ConfigValue = styled.div`
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: ${palette.text};
-  margin-right: 20px;
+  margin-right: 17px;
 `
 
 export const NotesValue = styled.div`
@@ -263,7 +263,7 @@ export const NotesValue = styled.div`
   text-align: right;
   font-size: 12px;
   color: ${palette.text};
-  margin-right: 20px;
+  margin-right: 17px;
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;

@@ -31,7 +31,7 @@ import { formatTime, formatDateTime, formatFrequency } from 'utils/utils'
 import { DataSourceContext } from './DataSourceDisplay'
 
 const RecordingContainer = styled(StyledPanel)`
-  width: ${CONFIG_PANEL_WIDTH - 30}px;
+  width: ${CONFIG_PANEL_WIDTH}px;
   position: static;
   display: flex;
   flex-direction: column;
@@ -59,8 +59,14 @@ const InfoIcon = styled.span`
 
 const SwitchWrapper = styled.span`
   width: 59px;
+  margin-right: 17px;
   display: inline-flex;
   justify-content: flex-end;
+
+  /* Drop the toggle's own right margin so its edge lines up with the other controls. */
+  .tg-list-item {
+    margin-right: 0;
+  }
 `
 
 const CompactRow = styled(ConfigRow)`
@@ -138,7 +144,7 @@ const DataSourceLinkIcon = styled.button`
 
 const ButtonGrid = styled.div`
   margin-left: auto;
-  margin-right: 8px;
+  margin-right: 9px;
   display: grid;
   grid-template-columns: auto auto;
   grid-template-rows: auto auto;

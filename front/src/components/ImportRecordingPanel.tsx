@@ -19,12 +19,12 @@ import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { importRecordingRos } from 'ros/eeg_simulator'
 
 const ImportPanel = styled(ConfigPanel)`
-  width: ${CONFIG_PANEL_WIDTH - 30}px;
+  width: ${CONFIG_PANEL_WIDTH}px;
   position: static;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 30px 8px 0;
+  padding: 10px 0 8px 0;
 `
 
 const ImportSelect = styled(Select)`

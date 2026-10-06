@@ -24,7 +24,7 @@ import { HealthcheckContext } from 'providers/HealthProvider'
 import { getDatasetInfoRos, DatasetInfo } from 'ros/eeg_simulator'
 
 const SimulatorPanel = styled(StyledPanel)`
-  width: ${CONFIG_PANEL_WIDTH - 30}px;
+  width: ${CONFIG_PANEL_WIDTH}px;
   position: static;
   display: flex;
   flex-direction: column;
@@ -247,7 +247,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
 
       <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Start time (s)</ConfigLabel>
-        <div style={{ marginRight: 20 }}>
+        <div style={{ marginRight: 17 }}>
           <ValidatedInput
             type='number'
             value={startTime}
@@ -262,7 +262,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       </CompactRow>
       <CompactRow style={{ justifyContent: 'space-between' }}>
         <ConfigLabel>Playback speed</ConfigLabel>
-        <div style={{ marginRight: 20 }}>
+        <div style={{ marginRight: 17 }}>
           <ValidatedInput
             type='number'
             value={playbackSpeed}
@@ -279,7 +279,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
         <ConfigLabel>Status</ConfigLabel>
         <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
-      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '10px', gap: '6px' }}>
+      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '17px', gap: '6px' }}>
         <FolderTerminalButtons folderName="eeg_simulator" />
       </CompactRow>
     </SimulatorPanel>

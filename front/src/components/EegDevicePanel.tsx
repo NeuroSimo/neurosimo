@@ -17,7 +17,7 @@ import { EegBridgeContext, EegBridgeStateValue } from 'providers/EegBridgeProvid
 import { formatFrequency } from 'utils/utils'
 
 const EegDeviceContainer = styled(StyledPanel)`
-  width: ${CONFIG_PANEL_WIDTH - 30}px;
+  width: ${CONFIG_PANEL_WIDTH}px;
   position: static;
   display: flex;
   flex-direction: column;

@@ -5,7 +5,13 @@ import { PreprocessorNode } from 'components/pipeline/PreprocessorNode'
 import { DeciderNode } from 'components/pipeline/DeciderNode'
 import { PresenterNode } from 'components/pipeline/PresenterNode'
 import { PipelineConnection } from 'components/pipeline/PipelineConnections'
-import { PIPELINE_NODE_TITLE_INSET } from 'components/pipeline/PipelineNode'
+import {
+  PIPELINE_NODE_SELECT_LEFT,
+  PIPELINE_NODE_TITLE_INSET,
+  PIPELINE_NODE_TOGGLE_RIGHT,
+  PIPELINE_SCALE,
+  scaled,
+} from 'components/pipeline/PipelineNode'
 import { palette } from 'styles/General'
 
 /* The stages form one left-aligned column joined by connectors on a shared axis. The axis passes
@@ -13,7 +19,7 @@ import { palette } from 'styles/General'
    edge lines up with the node edges. */
 const CONNECTOR_AXIS_X = PIPELINE_NODE_TITLE_INSET
 const EEG_SOURCE_SIZE = CONNECTOR_AXIS_X * 2
-const CONNECTOR_LENGTH = 44
+const CONNECTOR_LENGTH = scaled(44)
 
 const PipelinePanel = styled.div`
   display: flex;
@@ -34,7 +40,7 @@ const EegCircle = styled.div`
   border: 1.5px solid ${palette.orange};
   color: ${palette.orange};
   border-radius: 50%;
-  font-size: 11px;
+  font-size: ${11 * PIPELINE_SCALE}px;
   font-weight: 700;
   letter-spacing: 0.04em;
   cursor: move;
@@ -44,17 +50,19 @@ const EegCircle = styled.div`
 interface FloatingTitleProps {
   xOffset: number;
   yOffset: number;
+  $alignRight?: boolean;
 }
 
 const FloatingTitle = styled.div<FloatingTitleProps>`
   position: absolute;
-  font-size: 11px;
+  font-size: ${11 * PIPELINE_SCALE}px;
   font-weight: 500;
   color: ${palette.textMuted};
   pointer-events: none;
   z-index: 5;
   left: ${props => props.xOffset}px;
   top: ${props => props.yOffset}px;
+  ${props => props.$alignRight && 'transform: translateX(-100%);'}
 `
 
 interface PipelineDiagramProps {
@@ -64,18 +72,19 @@ interface PipelineDiagramProps {
   moduleTitleY?: number;
 }
 
-/* Column headings sit just above the Preprocessor node, over its toggle and module select. */
-const HEADING_OFFSET_Y = EEG_SOURCE_SIZE + CONNECTOR_LENGTH - 21
+/* Column headings sit just above the Preprocessor node: "Enabled" ends at the toggle's right edge
+   and "Module" starts at the module select's left edge. */
+const HEADING_OFFSET_Y = EEG_SOURCE_SIZE + CONNECTOR_LENGTH - scaled(21)
 
 export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
-  enabledTitleX = 145,
+  enabledTitleX = PIPELINE_NODE_TOGGLE_RIGHT,
   enabledTitleY = HEADING_OFFSET_Y,
-  moduleTitleX = 252,
+  moduleTitleX = PIPELINE_NODE_SELECT_LEFT,
   moduleTitleY = HEADING_OFFSET_Y,
 }) => (
   <PipelinePanel>
     <EegCircle>EEG</EegCircle>
-    <FloatingTitle xOffset={enabledTitleX} yOffset={enabledTitleY}>
+    <FloatingTitle xOffset={enabledTitleX} yOffset={enabledTitleY} $alignRight>
       Enabled
     </FloatingTitle>
     <FloatingTitle xOffset={moduleTitleX} yOffset={moduleTitleY}>

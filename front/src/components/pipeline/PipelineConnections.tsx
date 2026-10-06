@@ -2,9 +2,10 @@ import React from 'react'
 import styled from 'styled-components'
 
 import { palette } from 'styles/General'
+import { scaled } from 'components/pipeline/PipelineNode'
 
-const ARROWHEAD_HEIGHT = 6
-const ARROWHEAD_HALF_WIDTH = 5
+const ARROWHEAD_HEIGHT = scaled(6)
+const ARROWHEAD_HALF_WIDTH = scaled(5)
 
 /* A downward arrow placed in the pipeline column between two stages. It fills its whole height,
    so the line starts at the stage above and the arrowhead tip touches the stage below. */

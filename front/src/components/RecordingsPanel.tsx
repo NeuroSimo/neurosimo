@@ -74,6 +74,12 @@ const CompactRow = styled(ConfigRow)`
   gap: 4px;
 `
 
+/* Separates semantic groups of rows using spacing only (8px more than the normal row spacing). */
+const GroupGap = styled.div`
+  height: 6px;
+  flex-shrink: 0;
+`
+
 const ExportButton = styled.button<{ disabled: boolean }>`
   background-color: ${palette.surfaceRaised};
   color: ${props => props.disabled ? palette.textDim : palette.text};
@@ -450,9 +456,6 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             <ConfigLabel>Duration</ConfigLabel>
             <ConfigValue>{formatTime(selectedRecordingInfo.duration)}</ConfigValue>
           </CompactRow>
-
-          <div style={{ height: '8px' }} />
-
           <CompactRow>
             <ConfigLabel>Sampling rate</ConfigLabel>
             <ConfigValue>{formatFrequency(selectedRecordingInfo.sampling_frequency)}</ConfigValue>
@@ -469,7 +472,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             <ConfigValue>{selectedRecordingInfo.num_emg_channels}</ConfigValue>
           </CompactRow>
 
-          <div style={{ height: '8px' }} />
+          <GroupGap />
 
           <CompactRow>
             <ConfigLabel>Subject ID</ConfigLabel>
@@ -506,7 +509,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             <NotesValue>{selectedRecordingInfo.notes || '\u2013'}</NotesValue>
           </CompactRow>
 
-          <div style={{ height: '8px' }} />
+          <GroupGap />
 
           <CompactRow>
             <ConfigLabel>Preprocessor</ConfigLabel>
@@ -520,7 +523,9 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             <ConfigLabel>Presenter</ConfigLabel>
             <ConfigValue>{selectedRecordingInfo.presenter_enabled ? selectedRecordingInfo.presenter_module : '\u2013'}</ConfigValue>
           </CompactRow>
-          <div style={{ height: '8px' }} />
+
+          <GroupGap />
+
           <CompactRow>
             <ConfigLabel>Fingerprints</ConfigLabel>
           </CompactRow>
@@ -536,7 +541,8 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             <ConfigLabel style={{ paddingLeft: 10 }}>Decisions</ConfigLabel>
             <ConfigValue>{formatFingerprintHex(selectedRecordingInfo.decision_fingerprint)}</ConfigValue>
           </CompactRow>
-          <div style={{ height: '8px' }} />
+
+          <GroupGap />
         </>
       )}
       <CompactRow>

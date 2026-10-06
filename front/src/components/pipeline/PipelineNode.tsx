@@ -31,10 +31,14 @@ export const PIPELINE_NODE_TOGGLE_RIGHT =
   PIPELINE_NODE_TITLE_INSET + TITLE_WIDTH + TITLE_GAP + TOGGLE_MARGIN + TOGGLE_WIDTH
 export const PIPELINE_NODE_SELECT_LEFT = PIPELINE_NODE_TOGGLE_RIGHT + TOGGLE_MARGIN + MODULE_SELECT_GAP
 
+/* Space between the terminal icon button and the node's right edge. The glyph itself sits ~4px
+   inside its button, so its visible inset is about 5px more than this. */
+const RIGHT_PADDING = 15
+
 const Container = styled(StyledPanel)<{ $enabled: boolean }>`
   width: 510px;
   height: ${scaled(48)}px;
-  padding: 0 0 0 ${PIPELINE_NODE_TITLE_INSET - 2}px;
+  padding: 0 ${RIGHT_PADDING}px 0 ${PIPELINE_NODE_TITLE_INSET - 2}px;
   display: flex;
   align-items: center;
   background-color: ${palette.surface};

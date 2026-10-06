@@ -2,16 +2,21 @@ import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import { HealthcheckContext, ComponentHealth } from 'providers/HealthProvider'
-import { palette } from 'styles/General'
-import { STATUS_STRIP_HEIGHT, STATUS_STRIP_TOP, STATUS_MESSAGE_WIDTH } from 'components/HealthcheckMessageDisplay'
+import { palette, TELEMETRY_EXPERIMENT_WIDTH } from 'styles/General'
+import {
+  DISK_ROW_HEIGHT,
+  STATUS_STRIP_HEIGHT,
+  STATUS_STRIP_TOP,
+  STATUS_MESSAGE_WIDTH,
+} from 'components/HealthcheckMessageDisplay'
 
 interface StatusSquareProps {
   status: string
 }
 
 const HealthPanel = styled.div`
-  width: 221px;
-  height: ${STATUS_STRIP_HEIGHT}px;
+  width: ${TELEMETRY_EXPERIMENT_WIDTH}px;
+  height: ${STATUS_STRIP_HEIGHT + DISK_ROW_HEIGHT}px;
   box-sizing: border-box;
   padding: 10px 12px;
   position: fixed;

@@ -67,7 +67,7 @@ const LogSourceSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: ${palette.blue};
+    border-color: ${palette.accent};
   }
 `
 

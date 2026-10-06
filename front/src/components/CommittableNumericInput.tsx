@@ -34,7 +34,7 @@ const NumericInput = styled.input<{ width?: string; disabled?: boolean }>`
   font-family: ${palette.monoFont};
 
   &:focus {
-    border-color: ${palette.blue};
+    border-color: ${palette.accent};
   }
 
   &:disabled {

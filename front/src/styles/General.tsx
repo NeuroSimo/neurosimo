@@ -10,13 +10,19 @@ export const palette = {
   border: '#2a2d33',
   borderStrong: '#3a3e46',
   text: '#e2e4e8',
-  textSecondary: '#a4aab3',
-  textMuted: '#7c828c',
-  textDim: '#545a63',
+  textSecondary: '#b2b7bf',
+  textMuted: '#8f959e',
+  textDim: '#626872',
   green: '#4fbf8b',
   orange: '#e5954a',
+  /* Primary accent: primary actions, active selection and focus. */
+  accent: '#cf7f35',
+  accentHover: '#db8b42',
+  /* Neutral icon buttons (folder, terminal, info). */
+  icon: '#9aa0a9',
+  iconHover: '#e2e4e8',
+  /* Reserved for the pulse processing path in the pipeline logs. */
   blue: '#4a8ad4',
-  blueHover: '#5a98de',
   red: '#cf5149',
   redHover: '#db5d55',
   yellow: '#d8b445',
@@ -24,8 +30,9 @@ export const palette = {
 }
 
 export const selectChevron =
-  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'%3E' +
-  '%3Cpath d=\'M1 1l4 4 4-4\' fill=\'none\' stroke=\'%237c828c\' stroke-width=\'1.4\'/%3E%3C/svg%3E")'
+  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' ' +
+  'width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'%3E' +
+  '%3Cpath d=\'M1 1l4 4 4-4\' fill=\'none\' stroke=\'%238f959e\' stroke-width=\'1.4\'/%3E%3C/svg%3E")'
 
 export const Select = styled.select`
   width: 190px;
@@ -48,7 +55,7 @@ export const Select = styled.select`
   }
 
   &:focus {
-    border-color: ${palette.blue};
+    border-color: ${palette.accent};
   }
 
   &:disabled {
@@ -93,10 +100,10 @@ export const ConfigPanel = styled(StyledPanel)`
 `
 
 /* Telemetry columns, from the right edge of the window: Stimulation, Statistics, Experiment. */
-export const TELEMETRY_STIMULATION_WIDTH = 241
-export const TELEMETRY_STATISTICS_WIDTH = 206
+export const TELEMETRY_STIMULATION_WIDTH = 280
+export const TELEMETRY_STATISTICS_WIDTH = 240
 export const TELEMETRY_STATISTICS_RIGHT = TELEMETRY_STIMULATION_WIDTH
-export const TELEMETRY_EXPERIMENT_WIDTH = 276
+export const TELEMETRY_EXPERIMENT_WIDTH = 320
 export const TELEMETRY_EXPERIMENT_RIGHT = TELEMETRY_STATISTICS_RIGHT + TELEMETRY_STATISTICS_WIDTH
 
 /* Header strip and body of the fixed telemetry panels (Experiment, Statistics, Stimulation).
@@ -150,12 +157,12 @@ export const StyledButton = styled.button<ActiveProps>`
   margin-bottom: 0;
   border: 1px solid transparent;
   border-radius: 3px;
-  background-color: ${palette.blue};
+  background-color: ${palette.accent};
   color: #ffffff;
   cursor: pointer;
 
   &:hover {
-    background-color: ${palette.blueHover};
+    background-color: ${palette.accentHover};
   }
   &:disabled {
     background-color: ${palette.surfaceRaised};

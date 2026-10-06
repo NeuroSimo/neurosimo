@@ -20,7 +20,7 @@ const TextInput = styled.input<{ disabled?: boolean; $missing?: boolean }>`
   font-family: ${palette.monoFont};
 
   &:focus {
-    border-color: ${props => (props.$missing ? palette.red : palette.blue)};
+    border-color: ${props => (props.$missing ? palette.red : palette.accent)};
   }
 
   &::placeholder {

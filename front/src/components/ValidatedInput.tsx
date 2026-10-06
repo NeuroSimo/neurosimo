@@ -17,7 +17,7 @@ const StyledInput = styled.input<{ valid?: boolean; width?: string }>`
   
   &:focus {
     outline: none;
-    border-color: ${(props) => (props.valid ? palette.blue : palette.red)};
+    border-color: ${(props) => (props.valid ? palette.accent : palette.red)};
   }
 
   &:disabled {

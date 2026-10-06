@@ -48,14 +48,14 @@ const RuntimeParameterLabel = styled(ConfigLabel)<{ $missing: boolean }>`
 
 const InfoIcon = styled.span<{ disabled: boolean }>`
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  color: ${palette.blue};
+  color: ${palette.icon};
   font-size: 14px;
   display: inline-block;
   transition: color 0.2s;
   opacity: ${props => props.disabled ? 0.4 : 1};
 
   &:hover {
-    color: ${props => props.disabled ? palette.blue : palette.blueHover};
+    color: ${props => props.disabled ? palette.icon : palette.iconHover};
   }
 `
 

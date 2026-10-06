@@ -36,7 +36,7 @@ const Tab = styled.button<{ active: boolean; disabled?: boolean }>`
   margin-bottom: -1px;
   background: none;
   border: none;
-  border-bottom: 2px solid ${props => props.active ? palette.blue : 'transparent'};
+  border-bottom: 2px solid ${props => props.active ? palette.accent : 'transparent'};
   color: ${props => props.disabled ? palette.textDim : props.active ? palette.text : palette.textMuted};
   font-weight: ${props => props.active ? 600 : 'normal'};
   font-family: inherit;

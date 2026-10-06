@@ -19,7 +19,7 @@ const StyledInput = styled.input<{ width?: string }>`
   margin-right: 17px;
 
   &:focus {
-    border-color: ${palette.blue};
+    border-color: ${palette.accent};
   }
 
   &:disabled {
@@ -45,7 +45,7 @@ const StyledTextarea = styled.textarea<{ width?: string }>`
   margin-right: 17px;
 
   &:focus {
-    border-color: ${palette.blue};
+    border-color: ${palette.accent};
   }
 
   &:disabled {

@@ -46,14 +46,14 @@ const RecordingSelect = styled(Select)`
 
 const InfoIcon = styled.span`
   cursor: pointer;
-  color: ${palette.blue};
+  color: ${palette.icon};
   font-size: 14px;
   margin-right: 6px;
   display: inline-block;
   transition: color 0.2s;
 
   &:hover {
-    color: ${palette.blueHover};
+    color: ${palette.iconHover};
   }
 `
 
@@ -69,7 +69,7 @@ const CompactRow = styled(ConfigRow)`
 `
 
 const ExportButton = styled.button<{ disabled: boolean }>`
-  background-color: ${props => props.disabled ? palette.surfaceRaised : palette.blue};
+  background-color: ${props => props.disabled ? palette.surfaceRaised : palette.accent};
   color: ${props => props.disabled ? palette.textDim : '#ffffff'};
   border: 1px solid ${props => props.disabled ? palette.border : 'transparent'};
   border-radius: 3px;
@@ -83,7 +83,7 @@ const ExportButton = styled.button<{ disabled: boolean }>`
   min-width: 110px;
 
   &:hover {
-    background-color: ${props => props.disabled ? palette.surfaceRaised : palette.blueHover};
+    background-color: ${props => props.disabled ? palette.surfaceRaised : palette.accentHover};
   }
 `
 
@@ -123,7 +123,7 @@ const DataSourceLinkIcon = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: ${palette.blue};
+  color: ${palette.icon};
   font-size: 13px;
   position: absolute;
   left: 118px;
@@ -132,7 +132,7 @@ const DataSourceLinkIcon = styled.button`
   padding: 0;
 
   &:hover {
-    color: ${palette.blueHover};
+    color: ${palette.iconHover};
   }
 `
 

@@ -35,14 +35,14 @@ const InfoIcon = styled.button<{ disabled: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${palette.blue};
+  color: ${palette.icon};
   font-size: 12px;
   opacity: ${props => props.disabled ? 0.4 : 1};
   margin-left: auto;
   transition: color 0.2s, background-color 0.2s;
 
   &:hover {
-    color: ${props => props.disabled ? palette.blue : palette.blueHover};
+    color: ${props => props.disabled ? palette.icon : palette.iconHover};
     background-color: ${props => props.disabled ? 'transparent' : palette.surfaceHover};
   }
 `

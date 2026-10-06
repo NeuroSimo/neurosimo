@@ -8,11 +8,16 @@ import {
   StateValue,
   palette,
 } from 'styles/General'
-import { STATUS_STRIP_HEIGHT, STATUS_STRIP_TOP, STATUS_MESSAGE_WIDTH } from 'components/HealthcheckMessageDisplay'
+import {
+  DISK_ROW_HEIGHT,
+  STATUS_STRIP_HEIGHT,
+  STATUS_STRIP_TOP,
+  STATUS_MESSAGE_WIDTH,
+} from 'components/HealthcheckMessageDisplay'
 
 const DiskStatusPanel = styled.div`
   width: ${STATUS_MESSAGE_WIDTH}px;
-  height: 28px;
+  height: ${DISK_ROW_HEIGHT}px;
   box-sizing: border-box;
   padding: 0 12px;
   display: flex;

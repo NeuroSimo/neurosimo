@@ -1,7 +1,7 @@
 import React, { useContext, useRef, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCopy, faTrashAlt } from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faCopy, faTrashAlt } from '@fortawesome/free-solid-svg-icons'
 
 import { PIPELINE_LOG_OFFSET_FROM_TOP, PIPELINE_LOG_WIDTH, palette, selectChevron } from 'styles/General'
 
@@ -210,6 +210,12 @@ export const PipelineLogDisplay: React.FC = () => {
   const { preprocessorLogs, deciderLogs, presenterLogs, clearAllLogs } = useContext(LogContext)
   const [selectedSource, setSelectedSource] = useState<LogSource>('decider')
   const prevLogLengthsRef = useRef({ preprocessor: 0, decider: 0, presenter: 0 })
+  const [copied, setCopied] = useState(false)
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+  }, [])
 
   // Get the currently selected logs
   const currentLogs =
@@ -256,6 +262,9 @@ export const PipelineLogDisplay: React.FC = () => {
       .join('\n')
     try {
       await navigator.clipboard.writeText(logsText)
+      setCopied(true)
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+      copiedTimeoutRef.current = setTimeout(() => setCopied(false), 1500)
     } catch (err) {
       console.error('Failed to copy logs:', err)
     }
@@ -295,7 +304,9 @@ export const PipelineLogDisplay: React.FC = () => {
               title="Copy logs"
               aria-label="Copy logs"
             >
-              <FontAwesomeIcon icon={faCopy} />
+              {copied
+                ? <FontAwesomeIcon icon={faCheck} style={{ color: palette.green }} />
+                : <FontAwesomeIcon icon={faCopy} />}
             </LogIconButton>
             <LogIconButton onClick={handleClearAllLogs} title="Clear logs" aria-label="Clear logs" $destructive>
               <FontAwesomeIcon icon={faTrashAlt} />

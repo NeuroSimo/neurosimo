@@ -11,7 +11,6 @@ import {
   StateTitle,
   StateValue,
   TELEMETRY_STIMULATION_WIDTH,
-  palette,
 } from 'styles/General'
 
 import { SessionStatisticsContext, getStatusLabel, AttemptTrace } from 'providers/SessionStatisticsProvider'
@@ -29,11 +28,6 @@ const StimulationPanel = styled(TelemetryPanel)`
 
 const SectionSpacer = styled.div<{ $height?: number }>`
   height: ${props => props.$height ?? 4}px;
-`
-
-const BreakdownDivider = styled.div`
-  margin: 4px 0 4px 10px;
-  border-top: 1px solid ${palette.border};
 `
 
 /** `seconds` duration: one decimal in ms if |seconds| < 1, else one decimal in s. */
@@ -140,7 +134,7 @@ export const StimulationDisplay: React.FC = () => {
           <IndentedStateTitle>Overhead</IndentedStateTitle>
           <StateValue>{experimentState?.ongoing ? formattedOverheadDuration : '\u2013'}</StateValue>
         </StateRow>
-        <BreakdownDivider />
+        <SectionSpacer $height={6} />
         <StateRow>
           <IndentedStateTitle>Total</IndentedStateTitle>
           <StateValue>{experimentState?.ongoing ? formattedTotalDuration : '\u2013'}</StateValue>

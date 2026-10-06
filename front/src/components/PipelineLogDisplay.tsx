@@ -83,6 +83,7 @@ const LogSourceSelect = styled.select`
 const ButtonGroup = styled.div`
   display: flex;
   gap: 2px;
+  margin-left: -4px;
 `
 
 const LogIconButton = styled.button<{ $destructive?: boolean }>`
@@ -287,20 +288,20 @@ export const PipelineLogDisplay: React.FC = () => {
             <option value="decider">Decider</option>
             <option value="presenter">Presenter</option>
           </LogSourceSelect>
+          <ButtonGroup>
+            <LogIconButton
+              onClick={handleCopyLogs}
+              disabled={currentLogs.length === 0}
+              title="Copy logs"
+              aria-label="Copy logs"
+            >
+              <FontAwesomeIcon icon={faCopy} />
+            </LogIconButton>
+            <LogIconButton onClick={handleClearAllLogs} title="Clear logs" aria-label="Clear logs" $destructive>
+              <FontAwesomeIcon icon={faTrashAlt} />
+            </LogIconButton>
+          </ButtonGroup>
         </TitleGroup>
-        <ButtonGroup>
-          <LogIconButton
-            onClick={handleCopyLogs}
-            disabled={currentLogs.length === 0}
-            title="Copy logs"
-            aria-label="Copy logs"
-          >
-            <FontAwesomeIcon icon={faCopy} />
-          </LogIconButton>
-          <LogIconButton onClick={handleClearAllLogs} title="Clear logs" aria-label="Clear logs" $destructive>
-            <FontAwesomeIcon icon={faTrashAlt} />
-          </LogIconButton>
-        </ButtonGroup>
       </PipelineLogPanelTitle>
       <PipelineLogPanel>
         <LogContainer contentDependency={currentLogs} resetScrollDependency={selectedSource}>

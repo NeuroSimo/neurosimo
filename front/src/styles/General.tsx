@@ -68,14 +68,15 @@ export const Select = styled.select`
 // Shared width for configuration panels
 export const CONFIG_PANEL_WIDTH = 350
 
-/* Shared dashboard panel title offset (px). */
-export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 220
+/* The pipeline logs run from this offset to the bottom of the window (562px tall at 1080px).
+   Change only this value to resize the logs; the telemetry panels sit directly above them. */
+export const PIPELINE_LOG_OFFSET_FROM_TOP = 518
+
+/* Telemetry panels (header strip + body), stacked upwards from the top of the pipeline logs. */
 export const DASHBOARD_HEADER_HEIGHT = 28
 export const DASHBOARD_PANEL_HEIGHT = 350
-
-/* The pipeline logs start where the telemetry panels end, so the two form one region. */
-export const PIPELINE_LOG_OFFSET_FROM_TOP =
-  DASHBOARD_PANEL_OFFSET_FROM_TOP + DASHBOARD_HEADER_HEIGHT + DASHBOARD_PANEL_HEIGHT
+export const DASHBOARD_PANEL_OFFSET_FROM_TOP =
+  PIPELINE_LOG_OFFSET_FROM_TOP - DASHBOARD_PANEL_HEIGHT - DASHBOARD_HEADER_HEIGHT
 
 /* Pipeline content area height (px). */
 export const PIPELINE_WRAPPER_HEIGHT = 1030

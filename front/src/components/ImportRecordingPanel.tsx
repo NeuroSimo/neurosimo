@@ -29,7 +29,7 @@ const ImportPanel = styled(ConfigPanel)`
 
 const ImportSelect = styled(Select)`
   margin-left: 6px;
-  width: 170px;
+  flex-shrink: 0;
 `
 
 const CompactRow = styled(ConfigRow)`

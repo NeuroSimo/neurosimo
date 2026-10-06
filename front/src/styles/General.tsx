@@ -260,14 +260,16 @@ export const ConfigValue = styled.div`
 
 export const NotesValue = styled.div`
   width: 190px;
+  flex-shrink: 0;
   text-align: right;
   font-size: 12px;
+  line-height: 16px;
   color: ${palette.text};
   margin-right: 17px;
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  max-height: 55px;
+  max-height: 48px;
   overflow-y: auto;
 `
 

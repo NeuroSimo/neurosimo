@@ -41,7 +41,7 @@ const RecordingContainer = styled(StyledPanel)`
 
 const RecordingSelect = styled(Select)`
   margin-left: 6px;
-  width: 180px;
+  flex-shrink: 0;
 `
 
 const InfoIcon = styled.span`

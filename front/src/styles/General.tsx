@@ -99,12 +99,16 @@ export const ConfigPanel = styled(StyledPanel)`
   border-top: 1px solid ${palette.border};
 `
 
-/* Telemetry columns, from the right edge of the window: Stimulation, Statistics, Experiment. */
-export const TELEMETRY_STIMULATION_WIDTH = 280
-export const TELEMETRY_STATISTICS_WIDTH = 240
+/* Width of the right-hand region (status strip, telemetry block, pipeline logs). */
+export const PIPELINE_LOG_WIDTH = 983
+
+/* Telemetry columns, from the right edge of the window: Stimulation, Statistics, Experiment.
+   Together they span PIPELINE_LOG_WIDTH. */
+export const TELEMETRY_STIMULATION_WIDTH = 328
+export const TELEMETRY_STATISTICS_WIDTH = 281
 export const TELEMETRY_STATISTICS_RIGHT = TELEMETRY_STIMULATION_WIDTH
-export const TELEMETRY_EXPERIMENT_WIDTH = 320
 export const TELEMETRY_EXPERIMENT_RIGHT = TELEMETRY_STATISTICS_RIGHT + TELEMETRY_STATISTICS_WIDTH
+export const TELEMETRY_EXPERIMENT_WIDTH = PIPELINE_LOG_WIDTH - TELEMETRY_EXPERIMENT_RIGHT
 
 /* Header strip and body of the fixed telemetry panels (Experiment, Statistics, Stimulation).
    Adjacent panels share their left border as a divider, so together they read as one region. */

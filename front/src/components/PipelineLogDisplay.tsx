@@ -1,14 +1,13 @@
 import React, { useContext, useRef, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-import { PIPELINE_LOG_OFFSET_FROM_TOP, palette, selectChevron } from 'styles/General'
+import { PIPELINE_LOG_OFFSET_FROM_TOP, PIPELINE_LOG_WIDTH, palette, selectChevron } from 'styles/General'
 
 import { LogContext, LogMessage, LogLevel, LogPhase, ProcessingPath } from 'providers/LogProvider'
 import { StickyBottomScrollContainer } from 'components/StickyBottomScrollContainer'
 
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
-const PIPELINE_LOG_WIDTH = 983
 const PIPELINE_LOG_TOOLBAR_HEIGHT = 34
 
 const PipelineLogPanelTitle = styled.div`

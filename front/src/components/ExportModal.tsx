@@ -3,13 +3,15 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
 
+import { palette } from 'styles/General'
+
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -17,14 +19,16 @@ const ModalOverlay = styled.div`
 `
 
 const ModalContent = styled.div`
-  background: white;
-  color: #222;
-  color-scheme: light;
+  background: ${palette.surface};
+  color: ${palette.text};
+  color-scheme: dark;
+  accent-color: ${palette.accent};
+  border: 1px solid ${palette.borderStrong};
   border-radius: 8px;
   padding: 20px;
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 `
 
 const ModalHeader = styled.div`
@@ -32,13 +36,13 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${palette.border};
   padding-bottom: 12px;
 `
 
 const ModalTitle = styled.h3`
   margin: 0;
-  color: #333;
+  color: ${palette.text};
 `
 
 const CloseButton = styled.button`
@@ -46,9 +50,9 @@ const CloseButton = styled.button`
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #666;
+  color: ${palette.icon};
   &:hover {
-    color: #333;
+    color: ${palette.iconHover};
   }
 `
 
@@ -58,7 +62,7 @@ const CheckboxGroup = styled.div`
 
 const GroupHeader = styled.div`
   font-weight: 600;
-  color: #555;
+  color: ${palette.textSecondary};
   font-size: 14px;
   margin: 16px 0 8px 0;
   text-transform: uppercase;
@@ -71,7 +75,7 @@ const CheckboxLabel = styled.label<{ disabled?: boolean }>`
   margin-bottom: 8px;
   cursor: ${props => props.disabled ? 'default' : 'pointer'};
   margin-left: 12px;
-  color: ${props => props.disabled ? '#999' : 'inherit'};
+  color: ${props => props.disabled ? palette.textDim : 'inherit'};
 `
 
 const Checkbox = styled.input`
@@ -81,7 +85,7 @@ const Checkbox = styled.input`
 const SelectAllContainer = styled.div`
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${palette.border};
 `
 
 const SelectAllLabel = styled.label`
@@ -89,7 +93,7 @@ const SelectAllLabel = styled.label`
   align-items: center;
   cursor: pointer;
   font-weight: 500;
-  color: #666;
+  color: ${palette.textMuted};
   font-size: 14px;
 `
 
@@ -119,17 +123,17 @@ const Button = styled.button<{ primary?: boolean }>`
   }
 
   ${props => props.primary ? `
-    background-color: #007bff;
-    color: white;
+    background-color: ${palette.accent};
+    color: #ffffff;
     &:hover:not(:disabled) {
-      background-color: #0056b3;
+      background-color: ${palette.accentHover};
     }
   ` : `
-    background-color: #f8f9fa;
-    color: #333;
-    border: 1px solid #ddd;
+    background-color: ${palette.surfaceRaised};
+    color: ${palette.text};
+    border: 1px solid ${palette.borderStrong};
     &:hover:not(:disabled) {
-      background-color: #e9ecef;
+      background-color: ${palette.surfaceHover};
     }
   `}
 `

@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 import { RecordingInfo } from 'ros/recording'
 import { formatDateTime } from 'utils/utils'
+import { palette } from 'styles/General'
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -11,7 +12,7 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -19,16 +20,17 @@ const ModalOverlay = styled.div`
 `
 
 const ModalContent = styled.div`
-  background: white;
-  color: #222;
-  color-scheme: light;
+  background: ${palette.surface};
+  color: ${palette.text};
+  color-scheme: dark;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 8px;
   padding: 20px;
   max-width: 600px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 `
 
 const ModalHeader = styled.div`
@@ -36,13 +38,13 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${palette.border};
   padding-bottom: 12px;
 `
 
 const ModalTitle = styled.h3`
   margin: 0;
-  color: #333;
+  color: ${palette.text};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -53,9 +55,9 @@ const CloseButton = styled.button`
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #666;
+  color: ${palette.icon};
   &:hover {
-    color: #333;
+    color: ${palette.iconHover};
   }
 `
 
@@ -68,7 +70,7 @@ const InfoGrid = styled.div`
 
 const InfoLabel = styled.div`
   font-weight: 600;
-  color: #555;
+  color: ${palette.textMuted};
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -76,17 +78,17 @@ const InfoLabel = styled.div`
 `
 
 const InfoValue = styled.div`
-  color: #333;
+  color: ${palette.text};
   word-break: break-word;
   padding-top: 2px;
 `
 
 const SectionHeader = styled.div`
   font-weight: 600;
-  color: #444;
+  color: ${palette.textSecondary};
   font-size: 16px;
   margin: 20px 0 12px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${palette.border};
   padding-bottom: 4px;
 `
 

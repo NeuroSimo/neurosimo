@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
 import { ProtocolInfo, PROTOCOL_ELEMENT_TYPE } from 'ros/experiment'
+import { palette } from 'styles/General'
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -10,7 +11,7 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -18,16 +19,17 @@ const ModalOverlay = styled.div`
 `
 
 const ModalContent = styled.div`
-  background: white;
-  color: #222;
-  color-scheme: light;
+  background: ${palette.surface};
+  color: ${palette.text};
+  color-scheme: dark;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 8px;
   padding: 20px;
   max-width: 600px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 `
 
 const ModalHeader = styled.div`
@@ -35,13 +37,13 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${palette.border};
   padding-bottom: 12px;
 `
 
 const ModalTitle = styled.h3`
   margin: 0;
-  color: #333;
+  color: ${palette.text};
 `
 
 const CloseButton = styled.button`
@@ -49,9 +51,9 @@ const CloseButton = styled.button`
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #666;
+  color: ${palette.icon};
   &:hover {
-    color: #333;
+    color: ${palette.iconHover};
   }
 `
 
@@ -68,12 +70,12 @@ const InfoRow = styled.div`
 
 const InfoLabel = styled.span`
   font-weight: 500;
-  color: #555;
+  color: ${palette.textSecondary};
   min-width: 160px;
 `
 
 const InfoValue = styled.span`
-  color: #333;
+  color: ${palette.text};
   flex: 1;
 `
 
@@ -83,7 +85,7 @@ const ElementsSection = styled.div`
 
 const ElementsSectionTitle = styled.h4`
   margin: 0 0 12px 0;
-  color: #333;
+  color: ${palette.text};
   font-size: 16px;
 `
 
@@ -93,9 +95,9 @@ const elementCardStyles: Record<
   ElementVariant,
   { bg: string; border: string }
 > = {
-  stage: { bg: '#e3f2fd', border: '#2196f3' },
-  rest: { bg: '#fff3e0', border: '#ff9800' },
-  task: { bg: '#e8f5e9', border: '#4caf50' },
+  stage: { bg: 'rgba(74, 138, 212, 0.12)', border: palette.blue },
+  rest: { bg: 'rgba(229, 149, 74, 0.12)', border: palette.orange },
+  task: { bg: 'rgba(79, 191, 139, 0.12)', border: palette.green },
 }
 
 const ElementCard = styled.div<{ $variant: ElementVariant }>`
@@ -114,9 +116,9 @@ const ElementHeader = styled.div`
 `
 
 const elementTypeColors: Record<ElementVariant, string> = {
-  stage: '#1976d2',
-  rest: '#f57c00',
-  task: '#2e7d32',
+  stage: '#7fb0e8',
+  rest: palette.orange,
+  task: palette.green,
 }
 
 const ElementType = styled.span<{ $variant: ElementVariant }>`
@@ -128,19 +130,19 @@ const ElementType = styled.span<{ $variant: ElementVariant }>`
 
 const ElementName = styled.span`
   font-weight: 600;
-  color: #333;
+  color: ${palette.text};
   font-size: 14px;
 `
 
 const ElementDetails = styled.div`
   font-size: 13px;
-  color: #666;
+  color: ${palette.textSecondary};
   margin-top: 4px;
 `
 
 const ElementNotes = styled.div`
   font-size: 12px;
-  color: #777;
+  color: ${palette.textMuted};
   font-style: italic;
   margin-top: 6px;
 `

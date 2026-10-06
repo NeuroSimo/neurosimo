@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 import { useSystemConfig } from 'providers/SystemConfigProvider'
 import { ValidatedInput } from './ValidatedInput'
+import { palette } from 'styles/General'
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -11,7 +12,7 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -19,9 +20,11 @@ const ModalOverlay = styled.div`
 `
 
 const ModalContent = styled.div`
-  background: white;
-  color: #222;
-  color-scheme: light;
+  background: ${palette.surface};
+  color: ${palette.text};
+  color-scheme: dark;
+  accent-color: ${palette.accent};
+  border: 1px solid ${palette.borderStrong};
   border-radius: 8px;
   padding: 20px;
   max-width: 650px;
@@ -29,7 +32,7 @@ const ModalContent = styled.div`
   height: 600px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 `
 
 const ModalHeader = styled.div`
@@ -37,13 +40,13 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${palette.border};
   padding-bottom: 12px;
 `
 
 const ModalTitle = styled.h3`
   margin: 0;
-  color: #333;
+  color: ${palette.text};
 `
 
 const CloseButton = styled.button`
@@ -51,25 +54,25 @@ const CloseButton = styled.button`
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #666;
+  color: ${palette.icon};
   &:hover {
-    color: #333;
+    color: ${palette.iconHover};
   }
 `
 
 const TabContainer = styled.div`
   display: flex;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid ${palette.border};
   margin-bottom: 20px;
   gap: 4px;
 `
 
 const Tab = styled.button<{ active: boolean }>`
   padding: 10px 20px;
-  background: ${props => props.active ? '#007bff' : 'transparent'};
-  color: ${props => props.active ? 'white' : '#555'};
+  background: transparent;
+  color: ${props => props.active ? palette.text : palette.textMuted};
   border: none;
-  border-bottom: 2px solid ${props => props.active ? '#007bff' : 'transparent'};
+  border-bottom: 2px solid ${props => props.active ? palette.accent : 'transparent'};
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
@@ -77,7 +80,8 @@ const Tab = styled.button<{ active: boolean }>`
   border-radius: 4px 4px 0 0;
 
   &:hover {
-    background: ${props => props.active ? '#0056b3' : '#f0f0f0'};
+    background: ${palette.surfaceHover};
+    color: ${palette.text};
   }
 `
 
@@ -114,7 +118,7 @@ const LabelRow = styled.div`
 
 const Label = styled.label`
   font-weight: 500;
-  color: #555;
+  color: ${palette.textSecondary};
   font-size: 13px;
 `
 
@@ -126,11 +130,11 @@ const InfoIconWrapper = styled.span`
 `
 
 const InfoIcon = styled(FontAwesomeIcon)`
-  color: #666;
+  color: ${palette.icon};
   font-size: 13px;
   
   &:hover {
-    color: #007bff;
+    color: ${palette.iconHover};
   }
 `
 
@@ -141,8 +145,9 @@ const Tooltip = styled.div<{ show: boolean }>`
   transform: translateX(-50%);
   margin-bottom: 8px;
   padding: 8px 12px;
-  background: #333;
-  color: white;
+  background: ${palette.surfaceHover};
+  color: ${palette.text};
+  border: 1px solid ${palette.borderStrong};
   font-size: 12px;
   border-radius: 4px;
   white-space: normal;
@@ -161,32 +166,35 @@ const Tooltip = styled.div<{ show: boolean }>`
     left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
-    border-top-color: #333;
+    border-top-color: ${palette.borderStrong};
   }
 `
 
 const Input = styled.input`
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 4px;
   font-size: 14px;
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
   &:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    border-color: ${palette.accent};
+    box-shadow: 0 0 0 2px rgba(207, 127, 53, 0.25);
   }
 `
 
 const Select = styled.select`
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 4px;
   font-size: 14px;
-  background-color: white;
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
   &:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    border-color: ${palette.accent};
+    box-shadow: 0 0 0 2px rgba(207, 127, 53, 0.25);
   }
 `
 
@@ -208,22 +216,22 @@ const ButtonGroup = styled.div`
   gap: 12px;
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${palette.border};
 `
 
 const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   padding: 8px 16px;
-  border: 1px solid ${props => props.variant === 'primary' ? '#007bff' : '#6c757d'};
+  border: 1px solid ${props => props.variant === 'primary' ? palette.accent : palette.borderStrong};
   border-radius: 4px;
-  background-color: ${props => props.variant === 'primary' ? '#007bff' : '#6c757d'};
-  color: white;
+  background-color: ${props => props.variant === 'primary' ? palette.accent : palette.surfaceRaised};
+  color: ${props => props.variant === 'primary' ? '#ffffff' : palette.text};
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: ${props => props.variant === 'primary' ? '#0056b3' : '#545b62'};
+    background-color: ${props => props.variant === 'primary' ? palette.accentHover : palette.surfaceHover};
   }
 
   &:disabled {

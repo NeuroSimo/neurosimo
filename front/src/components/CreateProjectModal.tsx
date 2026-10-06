@@ -3,13 +3,15 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes, faPlus } from '@fortawesome/free-solid-svg-icons'
 
+import { palette } from 'styles/General'
+
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -17,14 +19,16 @@ const ModalOverlay = styled.div`
 `
 
 const ModalContent = styled.div`
-  background: white;
-  color: #222;
-  color-scheme: light;
+  background: ${palette.surface};
+  color: ${palette.text};
+  color-scheme: dark;
+  accent-color: ${palette.accent};
+  border: 1px solid ${palette.borderStrong};
   border-radius: 8px;
   padding: 20px;
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 `
 
 const ModalHeader = styled.div`
@@ -32,13 +36,13 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ${palette.border};
   padding-bottom: 12px;
 `
 
 const ModalTitle = styled.h3`
   margin: 0;
-  color: #333;
+  color: ${palette.text};
 `
 
 const CloseButton = styled.button`
@@ -46,9 +50,9 @@ const CloseButton = styled.button`
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #666;
+  color: ${palette.icon};
   &:hover {
-    color: #333;
+    color: ${palette.iconHover};
   }
 `
 
@@ -66,19 +70,21 @@ const InputGroup = styled.div`
 
 const Label = styled.label`
   font-weight: 500;
-  color: #555;
+  color: ${palette.textSecondary};
   font-size: 14px;
 `
 
 const Input = styled.input`
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 4px;
   font-size: 14px;
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
   &:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    border-color: ${palette.accent};
+    box-shadow: 0 0 0 2px rgba(207, 127, 53, 0.25);
   }
 `
 
@@ -91,17 +97,17 @@ const ButtonGroup = styled.div`
 
 const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   padding: 8px 16px;
-  border: 1px solid ${props => props.variant === 'primary' ? '#007bff' : '#6c757d'};
+  border: 1px solid ${props => props.variant === 'primary' ? palette.accent : palette.borderStrong};
   border-radius: 4px;
-  background-color: ${props => props.variant === 'primary' ? '#007bff' : '#6c757d'};
-  color: white;
+  background-color: ${props => props.variant === 'primary' ? palette.accent : palette.surfaceRaised};
+  color: ${props => props.variant === 'primary' ? '#ffffff' : palette.text};
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: ${props => props.variant === 'primary' ? '#0056b3' : '#545b62'};
+    background-color: ${props => props.variant === 'primary' ? palette.accentHover : palette.surfaceHover};
   }
 
   &:disabled {
@@ -111,7 +117,7 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
 `
 
 const ErrorMessage = styled.div`
-  color: #dc3545;
+  color: ${palette.red};
   font-size: 14px;
   margin-top: 4px;
 `

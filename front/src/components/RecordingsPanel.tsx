@@ -48,7 +48,7 @@ const InfoIcon = styled.span`
   cursor: pointer;
   color: ${palette.icon};
   font-size: 14px;
-  margin-right: 6px;
+  margin-right: 4px;
   display: inline-block;
   transition: color 0.2s;
 

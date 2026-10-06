@@ -32,7 +32,19 @@ const IconButtonWrapper = styled.div`
   gap: 3px;
 
   ${Select} {
-    margin-left: 4px;
+    margin-left: 8px;
+  }
+`
+
+const ProtocolControls = styled(IconButtonWrapper)`
+  gap: 0;
+
+  & > :first-child {
+    margin-right: 7px;
+  }
+
+  ${Select} {
+    margin-left: 10px;
   }
 `
 
@@ -191,7 +203,7 @@ export const ExperimentPanel: React.FC = () => {
       </ConfigRow>
       <ConfigRow>
         <ConfigLabel>Protocol:</ConfigLabel>
-        <IconButtonWrapper>
+        <ProtocolControls>
           <FolderTerminalButtons folderName="protocols" />
           <InfoIcon
             onClick={handleProtocolInfo}
@@ -212,7 +224,7 @@ export const ExperimentPanel: React.FC = () => {
               </option>
             ))}
           </Select>
-        </IconButtonWrapper>
+        </ProtocolControls>
       </ConfigRow>
 
       <RuntimeParametersContainer>

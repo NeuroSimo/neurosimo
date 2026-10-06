@@ -7,7 +7,7 @@ import { palette } from 'styles/General'
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 2px;
+  gap: 0;
 `
 
 const InfoIcon = styled.button<{ disabled: boolean; $size?: number }>`

@@ -120,7 +120,6 @@ export const TelemetryTitle = styled.div`
   background-color: ${palette.surface};
   border-top: 1px solid ${palette.border};
   border-left: 1px solid ${palette.border};
-  border-bottom: 1px solid ${palette.border};
   color: ${palette.textSecondary};
   font-size: 11px;
   font-weight: 600;

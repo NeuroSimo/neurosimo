@@ -5,8 +5,6 @@ import { CONFIG_PANEL_WIDTH, palette } from 'styles/General'
 type Props = {
   setupPrimary: React.ReactNode
   pipeline: React.ReactNode
-  setupTitle?: string
-  pipelineTitle?: string
 }
 
 /* Sidebar width: config panel content plus its horizontal padding. */
@@ -34,17 +32,11 @@ const SetupPrimary = styled.div`
   background-color: ${palette.surface};
   border-right: 1px solid ${palette.border};
   overflow: hidden;
-`
 
-const ColumnHeader = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  color: ${palette.text};
-  padding: 12px 0 10px 0;
-`
-
-const SetupHeader = styled(ColumnHeader)`
-  padding-left: 20px;
+  /* The menu bar's bottom border already separates the first section from the shell. */
+  & > :first-child {
+    border-top: none;
+  }
 `
 
 const PipelineArea = styled.div`
@@ -55,17 +47,16 @@ const PipelineArea = styled.div`
   grid-row: 1;
   align-items: flex-start;
   padding-left: 48px;
+  padding-top: 16px;
 `
 
-export const PipelineLayout: React.FC<Props> = ({ setupPrimary, pipeline, setupTitle, pipelineTitle }) => {
+export const PipelineLayout: React.FC<Props> = ({ setupPrimary, pipeline }) => {
   return (
     <Layout>
       <SetupPrimary>
-        {setupTitle && <SetupHeader>{setupTitle}</SetupHeader>}
         {setupPrimary}
       </SetupPrimary>
       <PipelineArea>
-        {pipelineTitle && <ColumnHeader>{pipelineTitle}</ColumnHeader>}
         {pipeline}
       </PipelineArea>
     </Layout>

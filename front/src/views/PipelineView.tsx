@@ -18,12 +18,11 @@ export const PipelineView = () => {
       pipeline={
         <>
           <PipelineDiagram />
-          <div style={{ marginTop: '317px' }} />
+          {/* Keeps the Session panel at its fixed height; includes the 38px formerly taken by the column title. */}
+          <div style={{ marginTop: '355px' }} />
           <SessionPanel />
         </>
       }
-      setupTitle="Configuration"
-      pipelineTitle="Pipeline"
     />
   )
 }

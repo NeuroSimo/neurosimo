@@ -75,9 +75,9 @@ const CompactRow = styled(ConfigRow)`
 `
 
 const ExportButton = styled.button<{ disabled: boolean }>`
-  background-color: ${props => props.disabled ? palette.surfaceRaised : palette.accent};
-  color: ${props => props.disabled ? palette.textDim : '#ffffff'};
-  border: 1px solid ${props => props.disabled ? palette.border : 'transparent'};
+  background-color: ${palette.surfaceRaised};
+  color: ${props => props.disabled ? palette.textDim : palette.text};
+  border: 1px solid ${props => props.disabled ? palette.border : palette.borderStrong};
   border-radius: 3px;
   height: 26px;
   padding: 0 10px;
@@ -89,15 +89,19 @@ const ExportButton = styled.button<{ disabled: boolean }>`
   min-width: 110px;
 
   &:hover {
-    background-color: ${props => props.disabled ? palette.surfaceRaised : palette.accentHover};
+    background-color: ${props => props.disabled ? palette.surfaceRaised : palette.surfaceHover};
   }
 `
 
+/* Neutral with red text at rest; fills red only on hover or keyboard focus. */
 const DeleteButton = styled(ExportButton)`
-  background-color: ${props => props.disabled ? palette.surfaceRaised : palette.red};
+  color: ${props => props.disabled ? palette.textDim : palette.red};
 
-  &:hover {
-    background-color: ${props => props.disabled ? palette.surfaceRaised : palette.redHover};
+  &:enabled:hover,
+  &:enabled:focus-visible {
+    background-color: ${palette.red};
+    border-color: ${palette.red};
+    color: #ffffff;
   }
 `
 
@@ -112,11 +116,7 @@ const ExportProgress = styled.span`
 `
 
 const ApplyConfigButton = styled(ExportButton)`
-  background-color: ${props => props.disabled ? palette.surfaceRaised : '#2f9a68'};
-
-  &:hover {
-    background-color: ${props => props.disabled ? palette.surfaceRaised : '#36a873'};
-  }
+  color: ${props => props.disabled ? palette.textDim : palette.green};
 `
 
 const DataSourceContainer = styled.div`

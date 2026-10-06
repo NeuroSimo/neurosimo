@@ -2,12 +2,9 @@ import React from 'react'
 import styled from 'styled-components'
 import {
   CONFIG_PANEL_WIDTH,
-  DASHBOARD_PANEL_OFFSET_FROM_TOP,
-  PIPELINE_LOG_OFFSET_FROM_TOP,
   PIPELINE_LOG_WIDTH,
   palette,
 } from 'styles/General'
-import { STATUS_STRIP_TOP } from 'components/HealthcheckMessageDisplay'
 
 type Props = {
   setupPrimary: React.ReactNode
@@ -46,20 +43,31 @@ const SetupPrimary = styled.div`
   }
 `
 
-/* The visible middle workspace runs from the sidebar to the fixed right-hand column. The pipeline
-   is centred in it horizontally, and vertically within the band of the telemetry panels (from
-   their headings down to the top of the logs), so it follows those if they are resized. */
+/* The middle workspace runs from the sidebar to the fixed right-hand column and from the menu bar
+   to the bottom of the window; its height is independent of the telemetry and logs. The pipeline
+   is centred horizontally. Vertically, the free space is split 1:2 above and below it, which puts
+   its centre at roughly 38% of the workspace height (at 1440p). */
 const PipelineArea = styled.div`
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
   grid-column: 2;
   grid-row: 1;
   width: calc(100vw - ${SIDEBAR_WIDTH + PIPELINE_LOG_WIDTH}px);
-  height: ${PIPELINE_LOG_OFFSET_FROM_TOP - STATUS_STRIP_TOP}px;
-  padding-top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP - STATUS_STRIP_TOP}px;
   box-sizing: border-box;
+
+  &::before,
+  &::after {
+    content: '';
+  }
+
+  &::before {
+    flex: 1;
+  }
+
+  &::after {
+    flex: 2;
+  }
 `
 
 export const PipelineLayout: React.FC<Props> = ({ setupPrimary, pipeline }) => {

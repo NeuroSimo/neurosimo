@@ -181,24 +181,25 @@
 
 .tgl-flat {
   + .tgl-btn {
-    padding: 1.3px;
+    padding: 2px;
     transition: all .2s ease;
-    background: #fff;
-    border: 2.6px solid #d8d8d8;
+    background: transparent;
+    border: 1.5px solid #3a3e46;
     border-radius: 1.32em;
     &:after {
       transition: all .2s ease;
-      background: #d8d8d8;
+      background: #50565f;
       content: "";
       border-radius: 0.66em;
     }
   }
 
   &:checked + .tgl-btn {
-    border: 2.6px solid #7FC6A6;
+    border: 1.5px solid #4fbf8b;
+    background: rgba(79, 191, 139, 0.12);
     &:after {
       left: 50%;
-      background: #7FC6A6;
+      background: #4fbf8b;
     }
   }
 }
@@ -287,9 +288,10 @@
 }
 
 .tgl-flat:disabled + .tgl-btn {
-  border: 2.6px solid #f2f2f2;
+  border: 1.5px solid #2a2d33;
+  background: transparent;
   &:after {
-      background: #f2f2f2;
+      background: #2f333a;
   }
 }
 

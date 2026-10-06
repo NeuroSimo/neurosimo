@@ -5,44 +5,35 @@ import { ExperimentContext } from 'providers/ExperimentProvider'
 import {
   DoubleIndentedStateTitle,
   IndentedStateTitle,
-  StyledPanel,
+  TelemetryTitle,
+  TelemetryPanel,
   StateRow,
   StateTitle,
   StateValue,
-  DASHBOARD_PANEL_OFFSET_FROM_TOP,
-  DASHBOARD_PANEL_HEIGHT,
+  TELEMETRY_STIMULATION_WIDTH,
+  palette,
 } from 'styles/General'
 
 import { SessionStatisticsContext, getStatusLabel, AttemptTrace } from 'providers/SessionStatisticsProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 
-const StimulationPanelTitle = styled.div`
-  width: 220px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  right: 24px;
-  z-index: 1001;
-  text-align: left;
-  font-size: 12px;
-  font-weight: bold;
+const StimulationPanelTitle = styled(TelemetryTitle)`
+  width: ${TELEMETRY_STIMULATION_WIDTH}px;
+  right: 0;
 `
 
-const StimulationPanel = styled(StyledPanel)`
-  width: 220px;
-  height: ${DASHBOARD_PANEL_HEIGHT}px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
-  right: 4px;
-  z-index: 1000;
+const StimulationPanel = styled(TelemetryPanel)`
+  width: ${TELEMETRY_STIMULATION_WIDTH}px;
+  right: 0;
 `
 
 const SectionSpacer = styled.div<{ $height?: number }>`
-  height: ${props => props.$height ?? 6}px;
+  height: ${props => props.$height ?? 4}px;
 `
 
 const BreakdownDivider = styled.div`
-  margin: 10px 12px 10px 12px;
-  border-top: 1px solid #d8d8d8;
+  margin: 4px 0 4px 10px;
+  border-top: 1px solid ${palette.border};
 `
 
 /** `seconds` duration: one decimal in ms if |seconds| < 1, else one decimal in s. */

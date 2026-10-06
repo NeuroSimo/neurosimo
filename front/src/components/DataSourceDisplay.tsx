@@ -7,7 +7,7 @@ import { RecordingsPanel } from 'components/RecordingsPanel'
 import { EegDevicePanel } from 'components/EegDevicePanel'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
-import { ConfigPanel, CONFIG_PANEL_WIDTH, ConfigTitle } from 'styles/General'
+import { ConfigPanel, CONFIG_PANEL_WIDTH, ConfigTitle, palette } from 'styles/General'
 
 // Context for sharing tab switching functionality
 export const DataSourceContext = React.createContext<{
@@ -18,38 +18,40 @@ export const DataSourceContext = React.createContext<{
 const DataSourcePanel = styled(ConfigPanel)`
   width: ${CONFIG_PANEL_WIDTH}px;
   height: auto;
-  min-height: 710px;
   position: static;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
 `
 
 const TabContainer = styled.div`
   display: flex;
-  padding: 0.2rem 0.2rem 0 0.2rem;
-  border-bottom: 1px solid #ddd;
+  gap: 2px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid ${palette.border};
 `
 
 const Tab = styled.button<{ active: boolean; disabled?: boolean }>`
-  padding: 0.2rem 0.4rem;
+  padding: 4px 10px 5px 10px;
+  margin-bottom: -1px;
   background: none;
   border: none;
-  border-bottom: 2px solid ${props => props.active ? '#007bff' : 'transparent'};
-  color: ${props => props.disabled ? '#ccc' : props.active ? '#007bff' : '#666'};
-  font-weight: ${props => props.active ? 'bold' : 'normal'};
+  border-bottom: 2px solid ${props => props.active ? palette.blue : 'transparent'};
+  color: ${props => props.disabled ? palette.textDim : props.active ? palette.text : palette.textMuted};
+  font-weight: ${props => props.active ? 600 : 'normal'};
+  font-family: inherit;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   font-size: 12px;
 
   &:hover {
-    color: ${props => props.disabled ? '#ccc' : '#007bff'};
+    color: ${props => props.disabled ? palette.textDim : palette.text};
   }
 `
 
 const StatusMessage = styled.div`
-  font-size: 10px;
-  font-weight: bold;
-  color: #666;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${palette.textMuted};
   text-align: center;
   margin-top: 4px;
   padding: 2px;

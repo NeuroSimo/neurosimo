@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import { CONFIG_PANEL_WIDTH } from 'styles/General'
+import { CONFIG_PANEL_WIDTH, palette } from 'styles/General'
 
 type Props = {
   setupPrimary: React.ReactNode
@@ -9,30 +9,42 @@ type Props = {
   pipelineTitle?: string
 }
 
+/* Sidebar width: config panel content plus its horizontal padding. */
+const SIDEBAR_WIDTH = CONFIG_PANEL_WIDTH + 36
+
 const Layout = styled.div`
   display: grid;
-  grid-template-columns: ${CONFIG_PANEL_WIDTH + 60}px 1fr;
-  grid-template-rows: auto;
-  gap: 16px 0px;
-  align-items: start;
+  grid-template-columns: ${SIDEBAR_WIDTH}px 1fr;
+  grid-template-rows: 100%;
+  gap: 0;
+  align-items: stretch;
   max-width: 1600px;
+  height: 100%;
   margin: 0;
   width: 100%;
-  padding-left: 40px;
+  padding: 0;
 `
 
 const SetupPrimary = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   grid-column: 1;
   grid-row: 1;
+  background-color: ${palette.surface};
+  border-right: 1px solid ${palette.border};
+  overflow: hidden;
 `
 
 const ColumnHeader = styled.div`
   font-size: 14px;
-  font-weight: bold;
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: ${palette.text};
+  padding: 12px 0 10px 0;
+`
+
+const SetupHeader = styled(ColumnHeader)`
+  padding-left: 20px;
 `
 
 const PipelineArea = styled.div`
@@ -42,14 +54,14 @@ const PipelineArea = styled.div`
   grid-column: 2;
   grid-row: 1;
   align-items: flex-start;
-  padding-left: 0px;
+  padding-left: 48px;
 `
 
 export const PipelineLayout: React.FC<Props> = ({ setupPrimary, pipeline, setupTitle, pipelineTitle }) => {
   return (
     <Layout>
       <SetupPrimary>
-        {setupTitle && <ColumnHeader>{setupTitle}</ColumnHeader>}
+        {setupTitle && <SetupHeader>{setupTitle}</SetupHeader>}
         {setupPrimary}
       </SetupPrimary>
       <PipelineArea>

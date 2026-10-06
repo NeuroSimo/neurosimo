@@ -1,22 +1,35 @@
 import React, { useContext, useRef, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-import { StyledPanel, DASHBOARD_PANEL_OFFSET_FROM_TOP } from 'styles/General'
+import { PIPELINE_LOG_OFFSET_FROM_TOP, palette, selectChevron } from 'styles/General'
 
 import { LogContext, LogMessage, LogLevel, LogPhase, ProcessingPath } from 'providers/LogProvider'
 import { StickyBottomScrollContainer } from 'components/StickyBottomScrollContainer'
 
 type LogSource = 'preprocessor' | 'decider' | 'presenter'
 
+const PIPELINE_LOG_WIDTH = 983
+const PIPELINE_LOG_TOOLBAR_HEIGHT = 34
+
 const PipelineLogPanelTitle = styled.div`
-  width: 956px;
+  width: ${PIPELINE_LOG_WIDTH}px;
+  height: ${PIPELINE_LOG_TOOLBAR_HEIGHT}px;
+  box-sizing: border-box;
+  padding: 0 8px 0 12px;
   position: fixed;
-  top: 660px;
-  right: 27px;
+  top: ${PIPELINE_LOG_OFFSET_FROM_TOP}px;
+  right: 0;
   z-index: 1001;
   text-align: left;
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${palette.textSecondary};
+  background-color: ${palette.surface};
+  border-top: 1px solid ${palette.border};
+  border-left: 1px solid ${palette.border};
+  border-bottom: 1px solid ${palette.border};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -24,68 +37,86 @@ const PipelineLogPanelTitle = styled.div`
 
 const TitleGroup = styled.div`
   display: flex;
-  gap: 9px;
+  gap: 10px;
   align-items: center;
 `
 
 const LogSourceSelect = styled.select`
-  background-color: #f5f5f5;
-  border: 1.3px solid #d46c0b;
-  border-radius: 4px;
-  padding: 5px 10px;
-  font-size: 14px;
-  font-weight: bold;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 24px;
+  box-sizing: border-box;
+  background-color: ${palette.surfaceRaised};
+  background-image: ${selectChevron};
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  color: ${palette.text};
+  border: 1px solid ${palette.borderStrong};
+  border-radius: 3px;
+  padding: 0 24px 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
   cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition: border-color 0.2s;
 
   &:hover {
-    background-color: #fff;
-    border-color: #b85a09;
+    border-color: #4a4f57;
   }
 
   &:focus {
     outline: none;
-    border-color: #9a4a07;
+    border-color: ${palette.blue};
   }
 `
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 7px;
+  gap: 6px;
 `
 
 const LogButton = styled.button`
-  background-color: #d46c0b;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 10px;
-  font-size: 13px;
+  height: 24px;
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
+  border: 1px solid ${palette.borderStrong};
+  border-radius: 3px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
   cursor: pointer;
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #b85a09;
+    background-color: ${palette.surfaceHover};
   }
 
   &:active {
-    background-color: #9a4a07;
+    background-color: ${palette.borderStrong};
   }
 
   &:disabled {
-    background-color: #ccc;
+    background-color: ${palette.surface};
+    color: ${palette.textDim};
+    border-color: ${palette.border};
     cursor: not-allowed;
   }
 `
 
-const PipelineLogPanel = styled(StyledPanel)`
-  width: 953px;
-  height: 299px;
+const PipelineLogPanel = styled.div`
+  width: ${PIPELINE_LOG_WIDTH}px;
+  box-sizing: border-box;
   position: fixed;
-  top: 700px;
-  right: 10px;
+  top: ${PIPELINE_LOG_OFFSET_FROM_TOP + PIPELINE_LOG_TOOLBAR_HEIGHT}px;
+  bottom: 0;
+  right: 0;
   z-index: 1000;
-  padding: 12px;
+  padding: 0;
+  border-left: 1px solid ${palette.border};
+  background-color: ${palette.console};
   display: flex;
   flex-direction: column;
 `
@@ -93,13 +124,11 @@ const PipelineLogPanel = styled(StyledPanel)`
 const LogContainer = styled(StickyBottomScrollContainer)`
   flex: 1;
   overflow-y: auto;
-  background-color: #f9f9f9;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px;
-  font-family: 'Courier New', monospace;
+  background-color: ${palette.console};
+  padding: 6px 10px;
+  font-family: ${palette.monoFont};
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.4;
   white-space: pre-wrap;
   word-wrap: break-word;
   user-select: text;
@@ -109,8 +138,8 @@ const LogContainer = styled(StickyBottomScrollContainer)`
 `
 
 const LogEntry = styled.div`
-  margin-bottom: 4px;
-  color: #333;
+  margin-bottom: 1px;
+  color: #c9cdd2;
   display: grid;
   grid-template-columns: 65px 1fr;
   gap: 0;
@@ -119,44 +148,45 @@ const LogEntry = styled.div`
 const Timestamp = styled.span<{ $phase: number; $level: number }>`
   color: ${props => {
     // Check error level first so errors during init/finalize show correctly
-    if (props.$level === 2) return '#fff'  // ERROR - white
-    if (props.$phase === 0) return '#000'  // INITIALIZATION - black
-    if (props.$phase === 2) return '#000'  // FINALIZATION - black
-    return '#555'  // INFO/WARNING - dark gray
+    if (props.$level === 2) return '#ff8a85'  // ERROR - red
+    if (props.$level === 1) return '#e6c662'  // WARNING - yellow
+    if (props.$phase === 0) return palette.orange  // INITIALIZATION - orange
+    if (props.$phase === 2) return '#c0c4ca'  // FINALIZATION - light gray
+    return palette.textMuted  // INFO - muted gray
   }};
-  font-weight: bold;
+  font-weight: 600;
   text-align: right;
   background-color: ${props => {
     // Check error level first so errors during init/finalize show correctly
-    if (props.$level === 2) return '#dc3545'  // ERROR - red
-    if (props.$level === 1) return '#ffc107'  // WARNING - yellow
-    if (props.$phase === 0) return '#d46c0b'  // INITIALIZATION - orange
-    if (props.$phase === 2) return '#6c757d'  // FINALIZATION - gray
-    return '#e8e8e8'  // INFO - light gray
+    if (props.$level === 2) return 'rgba(207, 81, 73, 0.22)'  // ERROR - red
+    if (props.$level === 1) return 'rgba(216, 180, 69, 0.16)'  // WARNING - yellow
+    if (props.$phase === 0) return 'rgba(229, 149, 74, 0.16)'  // INITIALIZATION - orange
+    if (props.$phase === 2) return palette.border  // FINALIZATION - gray
+    return palette.surface  // INFO - dark gray
   }};
-  padding: 3px 4px;
+  padding: 1px 6px;
   border-right: 2px solid ${props => {
     // Check error level first so errors during init/finalize show correctly
-    if (props.$level === 2) return '#c82333'  // ERROR - darker red
-    if (props.$level === 1) return '#e0a800'  // WARNING - darker yellow
-    if (props.$phase === 0) return '#b85a09'  // INITIALIZATION - darker orange
-    if (props.$phase === 2) return '#545b62'  // FINALIZATION - darker gray
-    return '#ccc'  // INFO - gray
+    if (props.$level === 2) return palette.red  // ERROR - red
+    if (props.$level === 1) return '#a88a2c'  // WARNING - darker yellow
+    if (props.$phase === 0) return '#a8692f'  // INITIALIZATION - darker orange
+    if (props.$phase === 2) return '#545a63'  // FINALIZATION - darker gray
+    return palette.borderStrong  // INFO - gray
   }};
 `
 
 const LogText = styled.span<{ $processingPath: number }>`
-  padding: 3px 13px;
+  padding: 1px 10px;
   background-color: ${props => {
-    if (props.$processingPath === ProcessingPath.PULSE) return '#e8f4f8'  // PULSE - light blue
-    if (props.$processingPath === ProcessingPath.EVENT) return '#f0f9e8'  // EVENT - light green
-    if (props.$processingPath === ProcessingPath.PREPARE_TRIAL) return '#f3e8f8'  // PREPARE_TRIAL - light purple
+    if (props.$processingPath === ProcessingPath.PULSE) return 'rgba(74, 138, 212, 0.10)'  // PULSE - blue tint
+    if (props.$processingPath === ProcessingPath.EVENT) return 'rgba(79, 191, 139, 0.10)'  // EVENT - green tint
+    if (props.$processingPath === ProcessingPath.PREPARE_TRIAL) return 'rgba(155, 89, 182, 0.12)'  // PREPARE_TRIAL - purple tint
     return 'transparent'  // UNDETERMINED and PERIODIC - no background
   }};
   border-left: ${props => {
-    if (props.$processingPath === ProcessingPath.PULSE) return '4px solid #3498db'  // PULSE - blue border
-    if (props.$processingPath === ProcessingPath.EVENT) return '4px solid #27ae60'  // EVENT - green border
-    if (props.$processingPath === ProcessingPath.PREPARE_TRIAL) return '4px solid #9b59b6'  // PREPARE_TRIAL - purple border
+    if (props.$processingPath === ProcessingPath.PULSE) return `2px solid ${palette.blue}`  // PULSE - blue border
+    if (props.$processingPath === ProcessingPath.EVENT) return `2px solid ${palette.green}`  // EVENT - green border
+    if (props.$processingPath === ProcessingPath.PREPARE_TRIAL) return '2px solid #9b59b6'  // PREPARE_TRIAL - purple border
     return 'none'  // UNDETERMINED and PERIODIC - no border
   }};
 `
@@ -254,7 +284,7 @@ export const PipelineLogDisplay: React.FC = () => {
       <PipelineLogPanel>
         <LogContainer contentDependency={currentLogs} resetScrollDependency={selectedSource}>
           {currentLogs.length === 0 ? (
-            <LogEntry style={{ color: '#999', fontStyle: 'italic', display: 'block' }}>
+            <LogEntry style={{ color: palette.textDim, fontStyle: 'italic', display: 'block' }}>
               No logs...
             </LogEntry>
           ) : (

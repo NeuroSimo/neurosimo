@@ -9,6 +9,7 @@ import {
   CONFIG_PANEL_WIDTH,
   StyledButton,
   ConfigTitle,
+  palette,
 } from 'styles/General'
 
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
@@ -22,7 +23,8 @@ const ImportPanel = styled(ConfigPanel)`
   position: static;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  padding: 10px 30px 8px 0;
 `
 
 const ImportSelect = styled(Select)`
@@ -42,8 +44,7 @@ const ErrorRow = styled(CompactRow)`
 
 const ErrorText = styled.div`
   font-size: 11px;
-  font-family: 'Roboto', 'Segoe UI', sans-serif;
-  color: #c0392b;
+  color: ${palette.red};
   margin-left: 6px;
   min-height: 16px;
 `

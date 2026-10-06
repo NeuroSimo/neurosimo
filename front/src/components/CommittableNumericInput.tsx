@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
+import { palette } from 'styles/General'
+
 const Container = styled.div`
   display: flex;
   align-items: center;
@@ -11,28 +13,34 @@ const Container = styled.div`
 
 const PrefixLabel = styled.span<{ disabled?: boolean }>`
   font-size: 11px;
-  color: ${props => props.disabled ? '#ccc' : '#666'};
+  font-family: ${palette.monoFont};
+  color: ${props => props.disabled ? palette.textDim : palette.textMuted};
   margin-right: 4px;
   user-select: none;
 `
 
 const NumericInput = styled.input<{ width?: string; disabled?: boolean }>`
   width: ${props => props.width || '45px'};
-  padding: 5px;
-  border: 1px solid #ccc;
+  height: 22px;
+  box-sizing: content-box;
+  padding: 0 6px;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 3px;
   outline: none;
-  transition: background-color 0.2s;
-  font-size: 11px;
-  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
+  font-size: 11.5px;
+  font-family: ${palette.monoFont};
 
   &:focus {
-    background-color: #f0f8ff;
+    border-color: ${palette.blue};
   }
 
   &:disabled {
-    background-color: #f5f5f5;
-    color: #ccc;
+    background-color: ${palette.surface};
+    border-color: ${palette.border};
+    color: ${palette.textMuted};
     cursor: not-allowed;
   }
 `

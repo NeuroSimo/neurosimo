@@ -1,36 +1,57 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
+import { palette } from 'styles/General'
+
 const StyledInput = styled.input<{ width?: string }>`
   width: ${props => props.width || '130px'};
-  padding: 5px;
-  border: 1px solid #ccc;
+  height: 24px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 3px;
   outline: none;
-  transition: background-color 0.2s;
-  font-size: 11px;
+  transition: border-color 0.15s;
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
+  font-size: 12px;
+  font-family: inherit;
   margin-right: 17px;
 
   &:focus {
-    background-color: #f0f8ff;
+    border-color: ${palette.blue};
+  }
+
+  &:disabled {
+    background-color: ${palette.surface};
+    border-color: ${palette.border};
+    color: ${palette.textMuted};
   }
 `
 
 const StyledTextarea = styled.textarea<{ width?: string }>`
   width: ${props => props.width || '315px'};
   height: 24px;
-  padding: 5px;
-  border: 1px solid #ccc;
+  padding: 4px 8px;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 3px;
   outline: none;
-  transition: background-color 0.2s;
-  font-size: 11px;
+  transition: border-color 0.15s;
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
+  font-size: 12px;
   resize: none;
   font-family: inherit;
   margin-right: 17px;
 
   &:focus {
-    background-color: #f0f8ff;
+    border-color: ${palette.blue};
+  }
+
+  &:disabled {
+    background-color: ${palette.surface};
+    border-color: ${palette.border};
+    color: ${palette.textMuted};
   }
 `
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useContext } from 'react'
 import styled from 'styled-components'
 
-import { ConfigPanel, ConfigTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton } from 'styles/General'
+import { ConfigPanel, ConfigTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton, palette } from 'styles/General'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { ModuleListContext } from 'providers/ModuleListProvider'
@@ -16,6 +16,10 @@ const Container = styled(ConfigPanel)`
   margin-top: 0;
   margin-left: 0;
   left: 0;
+  padding: 10px 12px 10px 14px;
+  background-color: ${palette.surface};
+  border: 1px solid ${palette.border};
+  border-radius: 3px;
 `
 
 /* Deliberately loud: a low-disk condition must not be mistakable for ordinary status text. */
@@ -23,22 +27,22 @@ const WarningBanner = styled.div`
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 0 9px 12px 0;
+  margin: 0 0 10px 0;
   padding: 8px 10px;
-  border: 1px solid #e0a800;
-  border-left: 5px solid #e0a800;
+  border: 1px solid ${palette.yellow};
+  border-left: 4px solid ${palette.yellow};
   border-radius: 3px;
-  background-color: #fff6d9;
-  color: #5c4600;
+  background-color: rgba(216, 180, 69, 0.12);
+  color: #ead48f;
   font-size: 11px;
   line-height: 1.4;
 `
 
 const ErrorBanner = styled(WarningBanner)`
-  border-color: #b00020;
-  border-left-color: #b00020;
-  background-color: #fdecee;
-  color: #7a0016;
+  border-color: ${palette.red};
+  border-left-color: ${palette.red};
+  background-color: rgba(207, 81, 73, 0.14);
+  color: #f2aca7;
 `
 
 const BannerIcon = styled.span`
@@ -242,7 +246,6 @@ export const SessionPanel: React.FC = () => {
         <ButtonComponent
           onClick={handleButtonClick}
           disabled={isButtonDisabled}
-          style={{ marginRight: '9px' }}
         >
           {getButtonText()}
         </ButtonComponent>

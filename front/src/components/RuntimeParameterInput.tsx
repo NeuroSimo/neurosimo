@@ -3,36 +3,41 @@ import styled from 'styled-components'
 
 import { RuntimeParameterInfo } from 'ros/experiment'
 import { RuntimeParameterValue } from 'providers/SessionConfigProvider'
+import { palette } from 'styles/General'
 
 const TextInput = styled.input<{ disabled?: boolean; $missing?: boolean }>`
   width: 90px;
-  padding: 5px;
-  border: 1px solid ${props => (props.$missing ? '#d32f2f' : '#ccc')};
-  background-color: ${props => (props.$missing ? '#fdecea' : '#fff')};
+  height: 22px;
+  box-sizing: content-box;
+  padding: 0 6px;
+  border: 1px solid ${props => (props.$missing ? palette.red : palette.borderStrong)};
+  background-color: ${props => (props.$missing ? 'rgba(207, 81, 73, 0.12)' : palette.surfaceRaised)};
+  color: ${palette.text};
   border-radius: 3px;
   outline: none;
-  transition: background-color 0.2s;
-  font-size: 11px;
-  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+  font-size: 11.5px;
+  font-family: ${palette.monoFont};
 
   &:focus {
-    background-color: #f0f8ff;
+    border-color: ${props => (props.$missing ? palette.red : palette.blue)};
   }
 
   &::placeholder {
-    color: ${props => (props.$missing ? '#d32f2f' : '#999')};
+    color: ${props => (props.$missing ? palette.red : palette.textDim)};
   }
 
   &:disabled {
-    background-color: #f5f5f5;
-    color: #ccc;
+    background-color: ${palette.surface};
+    border-color: ${palette.border};
+    color: ${palette.textMuted};
     cursor: not-allowed;
   }
 `
 
 const Unit = styled.span<{ disabled?: boolean }>`
   font-size: 11px;
-  color: ${props => (props.disabled ? '#ccc' : '#666')};
+  color: ${props => (props.disabled ? palette.textDim : palette.textMuted)};
   margin-left: 4px;
   user-select: none;
 `

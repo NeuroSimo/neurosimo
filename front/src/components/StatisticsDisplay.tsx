@@ -2,35 +2,26 @@ import React, { useContext } from 'react'
 import styled from 'styled-components'
 
 import {
-  StyledPanel,
+  TelemetryTitle,
+  TelemetryPanel,
   StateRow,
   StateTitle,
   IndentedStateTitle,
   StateValue,
-  DASHBOARD_PANEL_OFFSET_FROM_TOP,
-  DASHBOARD_PANEL_HEIGHT,
+  TELEMETRY_STATISTICS_RIGHT,
+  TELEMETRY_STATISTICS_WIDTH,
 } from 'styles/General'
 
 import { EegStatisticsContext } from 'providers/EegStatisticsProvider'
 
-const StatisticsPanelTitle = styled.div`
-  width: 210px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
-  right: 262px;
-  z-index: 1001;
-  text-align: left;
-  font-size: 12px;
-  font-weight: bold;
+const StatisticsPanelTitle = styled(TelemetryTitle)`
+  width: ${TELEMETRY_STATISTICS_WIDTH}px;
+  right: ${TELEMETRY_STATISTICS_RIGHT}px;
 `
 
-const StatisticsPanel = styled(StyledPanel)`
-  width: 185px;
-  height: ${DASHBOARD_PANEL_HEIGHT}px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
-  right: 262px;
-  z-index: 1000;
+const StatisticsPanel = styled(TelemetryPanel)`
+  width: ${TELEMETRY_STATISTICS_WIDTH}px;
+  right: ${TELEMETRY_STATISTICS_RIGHT}px;
 `
 
 export const StatisticsDisplay: React.FC = () => {

@@ -16,6 +16,7 @@ import {
   ConfigValue,
   NotesValue,
   CONFIG_PANEL_WIDTH,
+  palette,
 } from 'styles/General'
 
 import { EegStreamContext } from 'providers/EegStreamProvider'
@@ -34,7 +35,8 @@ const RecordingContainer = styled(StyledPanel)`
   position: static;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  padding: 8px 0 8px 0;
 `
 
 const RecordingSelect = styled(Select)`
@@ -44,14 +46,14 @@ const RecordingSelect = styled(Select)`
 
 const InfoIcon = styled.span`
   cursor: pointer;
-  color: #007bff;
-  font-size: 16px;
+  color: ${palette.blue};
+  font-size: 14px;
   margin-right: 6px;
   display: inline-block;
   transition: color 0.2s;
 
   &:hover {
-    color: #0056b3;
+    color: ${palette.blueHover};
   }
 `
 
@@ -67,62 +69,47 @@ const CompactRow = styled(ConfigRow)`
 `
 
 const ExportButton = styled.button<{ disabled: boolean }>`
-  background-color: ${props => props.disabled ? '#cccccc' : '#007bff'};
-  color: ${props => props.disabled ? '#666666' : 'white'};
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
+  background-color: ${props => props.disabled ? palette.surfaceRaised : palette.blue};
+  color: ${props => props.disabled ? palette.textDim : '#ffffff'};
+  border: 1px solid ${props => props.disabled ? palette.border : 'transparent'};
+  border-radius: 3px;
+  height: 26px;
+  padding: 0 10px;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
   margin-right: 8px;
-  min-width: 115px;
+  min-width: 110px;
 
   &:hover {
-    background-color: ${props => props.disabled ? '#cccccc' : '#0056b3'};
+    background-color: ${props => props.disabled ? palette.surfaceRaised : palette.blueHover};
   }
 `
 
-const DeleteButton = styled.button<{ disabled: boolean }>`
-  background-color: ${props => props.disabled ? '#cccccc' : '#dc3545'};
-  color: ${props => props.disabled ? '#666666' : 'white'};
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  font-size: 14px;
-  font-weight: 500;
-  margin-right: 8px;
-  min-width: 115px;
+const DeleteButton = styled(ExportButton)`
+  background-color: ${props => props.disabled ? palette.surfaceRaised : palette.red};
 
   &:hover {
-    background-color: ${props => props.disabled ? '#cccccc' : '#c82333'};
+    background-color: ${props => props.disabled ? palette.surfaceRaised : palette.redHover};
   }
 `
 
 const ExportProgress = styled.span`
   font-size: 12px;
-  color: #666;
+  font-family: ${palette.monoFont};
+  color: ${palette.textMuted};
   position: absolute;
   left: -30px;
   top: 20%;
   transform: translateY(-50%);
 `
 
-const ApplyConfigButton = styled.button<{ disabled: boolean }>`
-  background-color: ${props => props.disabled ? '#cccccc' : '#28a745'};
-  color: ${props => props.disabled ? '#666666' : 'white'};
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  font-size: 14px;
-  font-weight: 500;
-  margin-right: 8px;
-  min-width: 115px;
+const ApplyConfigButton = styled(ExportButton)`
+  background-color: ${props => props.disabled ? palette.surfaceRaised : '#2f9a68'};
 
   &:hover {
-    background-color: ${props => props.disabled ? '#cccccc' : '#218838'};
+    background-color: ${props => props.disabled ? palette.surfaceRaised : '#36a873'};
   }
 `
 
@@ -136,8 +123,8 @@ const DataSourceLinkIcon = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #007bff;
-  font-size: 14px;
+  color: ${palette.blue};
+  font-size: 13px;
   position: absolute;
   left: 118px;
   display: inline-block;
@@ -145,7 +132,7 @@ const DataSourceLinkIcon = styled.button`
   padding: 0;
 
   &:hover {
-    color: #0056b3;
+    color: ${palette.blueHover};
   }
 `
 

@@ -1,24 +1,29 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
+import { palette } from 'styles/General'
+
 const StyledInput = styled.input<{ valid?: boolean; width?: string }>`
-  padding: 8px 12px;
-  border: 1px solid ${(props) => (props.valid ? '#ddd' : 'red')};
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: white;
-  color: black;
+  height: 22px;
+  box-sizing: content-box;
+  padding: 0 8px;
+  border: 1px solid ${(props) => (props.valid ? palette.borderStrong : palette.red)};
+  border-radius: 3px;
+  font-size: 11.5px;
+  font-family: ${palette.monoFont};
+  background-color: ${palette.surfaceRaised};
+  color: ${palette.text};
   width: ${(props) => props.width || 'auto'};
   
   &:focus {
     outline: none;
-    border-color: ${(props) => (props.valid ? '#007bff' : 'red')};
-    box-shadow: 0 0 0 2px ${(props) => (props.valid ? 'rgba(0, 123, 255, 0.25)' : 'rgba(255, 0, 0, 0.25)')};
+    border-color: ${(props) => (props.valid ? palette.blue : palette.red)};
   }
 
   &:disabled {
-    background-color: #f5f5f5;
-    color: #ccc;
+    background-color: ${palette.surface};
+    border-color: ${palette.border};
+    color: ${palette.textMuted};
     cursor: not-allowed;
   }
 `

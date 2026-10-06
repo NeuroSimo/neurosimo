@@ -4,58 +4,52 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faWindowRestore } from '@fortawesome/free-solid-svg-icons'
 
 import {
-  StyledPanel,
+  TelemetryTitle,
+  TelemetryPanel,
   StateRow,
   StateTitle,
   IndentedStateTitle,
   StateValue,
-  DASHBOARD_PANEL_OFFSET_FROM_TOP,
-  DASHBOARD_PANEL_HEIGHT,
   StyledButton,
   StyledRedButton,
+  TELEMETRY_EXPERIMENT_RIGHT,
+  TELEMETRY_EXPERIMENT_WIDTH,
+  palette,
 } from 'styles/General'
 import { ExperimentContext } from 'providers/ExperimentProvider'
 import { pauseExperimentRos, resumeExperimentRos } from 'ros/experiment'
 
-const ExperimentStateTitle = styled.div`
-  width: 255px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP - 5}px;
-  right: 505px;
-  z-index: 1001;
-  display: flex;
-  align-items: center;
-  font-size: 12px;
-  font-weight: bold;
+const ExperimentStateTitle = styled(TelemetryTitle)`
+  width: ${TELEMETRY_EXPERIMENT_WIDTH}px;
+  right: ${TELEMETRY_EXPERIMENT_RIGHT}px;
+  padding-right: 6px;
 `
 
 const InfoIcon = styled.button<{ disabled: boolean }>`
   background: none;
   border: none;
+  border-radius: 3px;
   width: 22px;
   height: 22px;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #007bff;
-  font-size: 14px;
-  opacity: ${props => props.disabled ? 0.5 : 1};
-  margin-left: 194px;
-  transition: color 0.2s;
+  color: ${palette.blue};
+  font-size: 12px;
+  opacity: ${props => props.disabled ? 0.4 : 1};
+  margin-left: auto;
+  transition: color 0.2s, background-color 0.2s;
 
   &:hover {
-    color: ${props => props.disabled ? '#007bff' : '#0056b3'};
+    color: ${props => props.disabled ? palette.blue : palette.blueHover};
+    background-color: ${props => props.disabled ? 'transparent' : palette.surfaceHover};
   }
 `
 
-const Panel = styled(StyledPanel)`
-  width: 255px;
-  height: ${DASHBOARD_PANEL_HEIGHT}px;
-  position: fixed;
-  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + 20}px;
-  right: 485px;
-  z-index: 1000;
+const Panel = styled(TelemetryPanel)`
+  width: ${TELEMETRY_EXPERIMENT_WIDTH}px;
+  right: ${TELEMETRY_EXPERIMENT_RIGHT}px;
 `
 
 const VariableContentContainer = styled.div`
@@ -232,7 +226,7 @@ export const ExperimentStatePanel: React.FC = () => {
           )}
         </VariableContentContainer>
         <SectionSpacer $height={14} />
-        <StateRow style={{ justifyContent: 'center', paddingRight: 12 }}>
+        <StateRow style={{ justifyContent: 'center' }}>
           <PauseResumeButton onClick={handlePauseResume} disabled={!isExperimentOngoing || isPausing}>
             {pauseResumeLabel}
           </PauseResumeButton>

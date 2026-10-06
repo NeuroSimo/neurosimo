@@ -1,17 +1,60 @@
 import styled from 'styled-components'
 
+/* Dark, low-contrast desktop palette shared by all panels. */
+export const palette = {
+  appBackground: '#141619',
+  surface: '#1b1d21',
+  surfaceRaised: '#212429',
+  surfaceHover: '#2a2e34',
+  console: '#111316',
+  border: '#2a2d33',
+  borderStrong: '#3a3e46',
+  text: '#e2e4e8',
+  textSecondary: '#a4aab3',
+  textMuted: '#7c828c',
+  textDim: '#545a63',
+  green: '#4fbf8b',
+  orange: '#e5954a',
+  blue: '#4a8ad4',
+  blueHover: '#5a98de',
+  red: '#cf5149',
+  redHover: '#db5d55',
+  yellow: '#d8b445',
+  monoFont: "'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace",
+}
+
+export const selectChevron =
+  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'%3E' +
+  '%3Cpath d=\'M1 1l4 4 4-4\' fill=\'none\' stroke=\'%237c828c\' stroke-width=\'1.4\'/%3E%3C/svg%3E")'
+
 export const Select = styled.select`
   width: 190px;
-  padding: 5px;
-  border: 1px solid #ccc;
+  height: 24px;
+  box-sizing: border-box;
+  padding: 0 22px 0 8px;
+  border: 1px solid ${palette.borderStrong};
   border-radius: 3px;
   outline: none;
-  transition: background-color 0.2s;
+  transition: border-color 0.15s, background-color 0.15s;
   appearance: none;
   margin-right: 17px;
+  background: ${palette.surfaceRaised} ${selectChevron} no-repeat right 8px center;
+  color: ${palette.text};
+  font-size: 12px;
+  font-family: inherit;
+
+  &:hover:not(:disabled) {
+    border-color: #4a4f58;
+  }
 
   &:focus {
-    background-color: transparent;
+    border-color: ${palette.blue};
+  }
+
+  &:disabled {
+    color: ${palette.textMuted};
+    background-color: ${palette.surface};
+    border-color: ${palette.border};
   }
 `
 
@@ -20,29 +63,74 @@ export const CONFIG_PANEL_WIDTH = 350
 
 /* Shared dashboard panel title offset (px). */
 export const DASHBOARD_PANEL_OFFSET_FROM_TOP = 220
-export const DASHBOARD_PANEL_HEIGHT = 330
+export const DASHBOARD_HEADER_HEIGHT = 28
+export const DASHBOARD_PANEL_HEIGHT = 350
 
-/* Gray pipeline content area height (px). */
+/* The pipeline logs start where the telemetry panels end, so the two form one region. */
+export const PIPELINE_LOG_OFFSET_FROM_TOP =
+  DASHBOARD_PANEL_OFFSET_FROM_TOP + DASHBOARD_HEADER_HEIGHT + DASHBOARD_PANEL_HEIGHT
+
+/* Pipeline content area height (px). */
 export const PIPELINE_WRAPPER_HEIGHT = 1030
 
 export const StyledPanel = styled.div<{ isGrayedOut?: boolean }>`
-  padding: 14px 0px 23px 21px;
-  border-radius: 3px;
-  background-color: #f7f7f7;
-  box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);/
+  padding: 10px 0px 12px 16px;
+  background-color: transparent;
+  color: ${palette.text};
   ${({ isGrayedOut }) =>
     isGrayedOut &&
     `
     filter: grayscale(100%);
-    color: #aaa;
-    background-color: #f0f0f0;
+    opacity: 0.4;
     transition: filter 0.3s ease, opacity 0.3s ease;
     pointer-events: none;
   `}
 `
 
 export const ConfigPanel = styled(StyledPanel)`
-  padding: 8px 0px 12px 21px;
+  padding: 10px 16px 12px 20px;
+  border-top: 1px solid ${palette.border};
+`
+
+/* Telemetry columns, from the right edge of the window: Stimulation, Statistics, Experiment. */
+export const TELEMETRY_STIMULATION_WIDTH = 241
+export const TELEMETRY_STATISTICS_WIDTH = 206
+export const TELEMETRY_STATISTICS_RIGHT = TELEMETRY_STIMULATION_WIDTH
+export const TELEMETRY_EXPERIMENT_WIDTH = 276
+export const TELEMETRY_EXPERIMENT_RIGHT = TELEMETRY_STATISTICS_RIGHT + TELEMETRY_STATISTICS_WIDTH
+
+/* Header strip and body of the fixed telemetry panels (Experiment, Statistics, Stimulation).
+   Adjacent panels share their left border as a divider, so together they read as one region. */
+export const TelemetryTitle = styled.div`
+  position: fixed;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP}px;
+  height: ${DASHBOARD_HEADER_HEIGHT}px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  background-color: ${palette.surface};
+  border-top: 1px solid ${palette.border};
+  border-left: 1px solid ${palette.border};
+  border-bottom: 1px solid ${palette.border};
+  color: ${palette.textSecondary};
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+`
+
+export const TelemetryPanel = styled.div`
+  position: fixed;
+  top: ${DASHBOARD_PANEL_OFFSET_FROM_TOP + DASHBOARD_HEADER_HEIGHT}px;
+  height: ${DASHBOARD_PANEL_HEIGHT}px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  z-index: 1000;
+  background-color: ${palette.surface};
+  border-left: 1px solid ${palette.border};
+  color: ${palette.text};
 `
 
 export interface ActiveProps {
@@ -51,29 +139,34 @@ export interface ActiveProps {
 }
 
 export const StyledButton = styled.button<ActiveProps>`
-  width: 123px;
-  height: 31px;
+  width: 110px;
+  height: 26px;
+  box-sizing: border-box;
 
-  font-size: 0.8rem;
-  padding: 0.48rem 0.35rem;
-  margin-bottom: 0.48rem;
-  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0 10px;
+  margin-bottom: 0;
+  border: 1px solid transparent;
   border-radius: 3px;
-  background-color: #007bff;
-  color: white;
+  background-color: ${palette.blue};
+  color: #ffffff;
   cursor: pointer;
 
   &:hover {
-    background-color: #0056b3;
+    background-color: ${palette.blueHover};
   }
   &:disabled {
-    background-color: #cccccc;
-    color: #888888;
+    background-color: ${palette.surfaceRaised};
+    border-color: ${palette.border};
+    color: ${palette.textDim};
+    cursor: default;
   }
   &:hover:disabled {
-    background-color: #cccccc;
+    background-color: ${palette.surfaceRaised};
   }
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, background-color 0.15s;
 
   ${(props) =>
     props.isHidden &&
@@ -83,9 +176,9 @@ export const StyledButton = styled.button<ActiveProps>`
 `
 
 export const StyledRedButton = styled(StyledButton)`
-  background-color: #a00000;
+  background-color: ${palette.red};
   &:hover {
-    background-color: #700000;
+    background-color: ${palette.redHover};
   }
 `
 
@@ -94,18 +187,18 @@ export const TabBar = styled.div`
 
   a {
     text-decoration: none;
-    color: #505050;
+    color: ${palette.textMuted};
     padding: 0.31rem;
     display: inline-block;
     transition: color 0.3s ease;
 
     &:hover {
-      color: #303030;
+      color: ${palette.textSecondary};
     }
 
     &.active {
-      color: #222222;
-      font-weight: bold;
+      color: ${palette.text};
+      font-weight: 600;
     }
   }
 `
@@ -124,8 +217,9 @@ export const ConfigRow = styled.div`
   justify-content: flex-start;
   align-items: center;
   gap: 5px;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   padding-right: 0px;
+  min-height: 20px;
 `
 
 export const CloseConfigRow = styled(ConfigRow)`
@@ -134,9 +228,8 @@ export const CloseConfigRow = styled(ConfigRow)`
 
 export const ConfigLabel = styled.label`
   width: 185px;
-  font-size: 11px;
-  font-family: 'Roboto', 'Segoe UI', sans-serif;
-  color: #333;
+  font-size: 12px;
+  color: ${palette.textSecondary};
   display: inline-flex;
   justify-content: flex-start;
   align-items: center;
@@ -152,18 +245,17 @@ export const ConfigValue = styled.div`
   align-items: center;
   width: 190px;
   text-align: right;
-  font-size: 11px;
-  font-family: 'Roboto', 'Segoe UI', sans-serif;
-  color: #333;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: ${palette.text};
   margin-right: 20px;
 `
 
 export const NotesValue = styled.div`
   width: 190px;
   text-align: right;
-  font-size: 11px;
-  font-family: 'Roboto', 'Segoe UI', sans-serif;
-  color: #333;
+  font-size: 12px;
+  color: ${palette.text};
   margin-right: 20px;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -177,11 +269,17 @@ export const SmallerTitle = styled.h2`
   text-align: center;
   margin-bottom: 18px;
   margin-right: 18px;
-  font-weight: bold;
+  font-weight: 600;
+  color: ${palette.text};
 `
 
 export const ConfigTitle = styled(SmallerTitle)`
-  margin-bottom: 16px;
+  margin: 0 0 10px 0;
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${palette.textSecondary};
 `
 
 /* For showing, e.g., session state. */
@@ -189,26 +287,36 @@ export const StateRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.3rem;
-  margin-right: 9px;
+  min-height: 18px;
+  margin-bottom: 1px;
+  margin-right: 0;
+  font-size: 12px;
 `
 
 export const StateTitle = styled.span`
-  font-weight: bold;
+  font-weight: 600;
+  color: ${palette.textSecondary};
   margin-right: 0.6rem;
 `
 
 export const IndentedStateTitle = styled(StateTitle)`
-  margin-left: 12px;
+  margin-left: 10px;
   font-weight: normal;
+  color: ${palette.textMuted};
 `
 
 export const DoubleIndentedStateTitle = styled(StateTitle)`
-  margin-left: 25px;
+  margin-left: 20px;
   font-weight: normal;
+  color: ${palette.textMuted};
 `
 
-export const StateValue = styled.span``
+export const StateValue = styled.span`
+  font-family: ${palette.monoFont};
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: ${palette.text};
+`
 
 /* If enabled, grays out all elements inside the panel. */
 export const GrayedOutPanel = styled.div<{ isGrayedOut: boolean }>`

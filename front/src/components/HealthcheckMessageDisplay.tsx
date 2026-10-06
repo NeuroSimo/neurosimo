@@ -3,29 +3,41 @@ import styled from 'styled-components'
 
 import { HealthcheckContext, ComponentHealth } from 'providers/HealthProvider'
 import { SessionContext } from 'providers/SessionProvider'
-import { StyledPanel } from 'styles/General'
+import { palette } from 'styles/General'
 
-const HealthcheckMessagePanel = styled(StyledPanel)`
-  width: 246px;
-  height: 40px;
+/* Geometry of the top-right status strip (health, status message, disk). */
+export const STATUS_STRIP_TOP = 30
+export const STATUS_STRIP_HEIGHT = 56
+export const STATUS_MESSAGE_WIDTH = 267
+
+const HealthcheckMessagePanel = styled.div`
+  width: ${STATUS_MESSAGE_WIDTH}px;
+  height: ${STATUS_STRIP_HEIGHT}px;
+  box-sizing: border-box;
+  padding: 8px 12px;
   position: fixed;
-  top: 33px;
-  right: 3px;
+  top: ${STATUS_STRIP_TOP}px;
+  right: 0;
+  overflow: hidden;
+  background-color: ${palette.surface};
+  border-left: 1px solid ${palette.border};
+  border-bottom: 1px solid ${palette.border};
   z-index: 1000;
 `
 
 const Header = styled.div`
-  color: #333;
-  font-weight: bold;
-  font-size: 0.8rem;
-  margin-bottom: 0.31rem;
+  color: ${palette.textSecondary};
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
 `
 
 const Message = styled.div`
-  color: #333;
-  font-size: 0.7rem;
-  padding: 3px;
-  border-bottom: 0px;
+  color: ${palette.text};
+  font-size: 12px;
+  line-height: 1.35;
   transition: opacity 0.3s;
 `
 

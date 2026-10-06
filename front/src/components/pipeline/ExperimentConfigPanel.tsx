@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
-import { ConfigPanel, ConfigTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH } from 'styles/General'
+import { ConfigPanel, ConfigTitle, ConfigRow, ConfigLabel, Select, CONFIG_PANEL_WIDTH, palette } from 'styles/General'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { ModuleListContext } from 'providers/ModuleListProvider'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
@@ -37,25 +37,25 @@ const IconButtonWrapper = styled.div`
 `
 
 const RuntimeParametersContainer = styled.div`
-  margin-top: 10px;
+  margin-top: 8px;
 `
 
 const RuntimeParameterLabel = styled(ConfigLabel)<{ $missing: boolean }>`
   padding-left: 12px;
   box-sizing: border-box;
-  color: ${props => (props.$missing ? '#d32f2f' : '#333')};
+  color: ${props => (props.$missing ? palette.red : palette.textSecondary)};
 `
 
 const InfoIcon = styled.span<{ disabled: boolean }>`
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  color: #007bff;
-  font-size: 16px;
+  color: ${palette.blue};
+  font-size: 14px;
   display: inline-block;
   transition: color 0.2s;
-  opacity: ${props => props.disabled ? 0.5 : 1};
+  opacity: ${props => props.disabled ? 0.4 : 1};
 
   &:hover {
-    color: ${props => props.disabled ? '#007bff' : '#0056b3'};
+    color: ${props => props.disabled ? palette.blue : palette.blueHover};
   }
 `
 

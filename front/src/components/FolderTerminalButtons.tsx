@@ -3,29 +3,32 @@ import styled from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFolderOpen, faTerminal } from '@fortawesome/free-solid-svg-icons'
 import { useSystemConfig } from 'providers/SystemConfigProvider'
+import { palette } from 'styles/General'
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 5px;
+  gap: 2px;
 `
 
 const InfoIcon = styled.button<{ disabled: boolean; $size?: number }>`
   background: none;
   border: none;
+  border-radius: 3px;
   width: ${props => props.$size || 22}px;
   height: ${props => props.$size || 22}px;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #007bff;
-  font-size: 16px;
-  opacity: ${props => props.disabled ? 0.5 : 1};
+  color: ${palette.blue};
+  font-size: 13px;
+  opacity: ${props => props.disabled ? 0.4 : 1};
   margin-left: 0px;
-  transition: color 0.2s;
+  transition: color 0.2s, background-color 0.2s;
 
   &:hover {
-    color: ${props => props.disabled ? '#007bff' : '#0056b3'};
+    color: ${props => props.disabled ? palette.blue : palette.blueHover};
+    background-color: ${props => props.disabled ? 'transparent' : palette.surfaceHover};
   }
 `
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
 import { SystemConfigModal } from './SystemConfigModal'
+import { palette } from 'styles/General'
 
 const MenuBarContainer = styled.div`
   position: fixed;
@@ -8,60 +9,58 @@ const MenuBarContainer = styled.div`
   left: 0;
   right: 0;
   height: 30px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+  box-sizing: border-box;
+  background-color: ${palette.surface};
+  border-bottom: 1px solid ${palette.border};
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 6px;
   z-index: 1001;
-  font-size: 14px;
+  font-size: 13px;
 `
 
 const MenuButton = styled.button<{ isOpen?: boolean }>`
-  background: ${props => props.isOpen ? '#e0e0e0' : 'transparent'};
+  background: ${props => props.isOpen ? palette.surfaceHover : 'transparent'};
   border: none;
-  padding: 4px 12px;
+  padding: 3px 10px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: ${palette.text};
   border-radius: 3px;
   
   &:hover {
-    background-color: #e0e0e0;
+    background-color: ${palette.surfaceHover};
   }
 `
 
 const DropdownMenu = styled.div`
   position: absolute;
   top: 28px;
-  left: 8px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  left: 6px;
+  background: ${palette.surfaceRaised};
+  border: 1px solid ${palette.borderStrong};
+  border-radius: 3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   min-width: 180px;
+  padding: 3px 0;
   z-index: 1002;
 `
 
 const MenuItem = styled.button`
   display: block;
   width: 100%;
-  padding: 8px 16px;
+  padding: 5px 14px;
   text-align: left;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: ${palette.text};
   
   &:hover {
-    background-color: #f0f0f0;
-  }
-  
-  &:first-child {
-    border-radius: 4px 4px 0 0;
-  }
-  
-  &:last-child {
-    border-radius: 0 0 4px 4px;
+    background-color: ${palette.surfaceHover};
   }
 `
 

@@ -1,18 +1,23 @@
 import React from 'react'
 import styled from 'styled-components'
 
-import { StyledPanel, SmallerTitle, Select } from 'styles/General'
+import { StyledPanel, SmallerTitle, Select, palette } from 'styles/General'
 import { ToggleSwitch } from 'components/ToggleSwitch'
 import { FolderTerminalButtons } from 'components/FolderTerminalButtons'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { useDefaultToFirstOption } from 'utils/useDefaultToFirstOption'
 
-const Container = styled(StyledPanel)`
+const Container = styled(StyledPanel)<{ $enabled: boolean }>`
   width: 505px;
-  height: 20px;
-  background-color: #e6ebf2;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 3px 10px rgba(0, 0, 0, 0.14);
+  height: 44px;
+  padding: 0 0 0 21px;
+  display: flex;
+  align-items: center;
+  background-color: ${palette.surface};
+  border: 1px solid ${palette.border};
+  border-left: 2px solid ${props => props.$enabled ? palette.green : palette.borderStrong};
+  border-radius: 3px;
 `
 
 const HorizontalRow = styled.div`
@@ -27,10 +32,10 @@ const Title = styled(SmallerTitle)<{ $enabled: boolean }>`
   text-align: left;
   margin-bottom: 0;
   margin-top: 0;
-  color: ${props => props.$enabled ? 'inherit' : '#999'};
+  color: ${props => props.$enabled ? palette.text : palette.textMuted};
 `
 
-const PIPELINE_CONTROL_HEIGHT = 31
+const PIPELINE_CONTROL_HEIGHT = 26
 
 const PipelineSelect = styled(Select)`
   margin-left: 40px;
@@ -57,14 +62,15 @@ const DisabledSlot = styled.div`
 const DisabledPill = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  border: 1px solid #a0a0a0;
-  border-radius: 11px;
-  background-color: #e4e4e4;
-  color: #4d4d4d;
-  font-size: 11px;
+  height: 18px;
+  padding: 0 8px;
+  border: 1px solid ${palette.borderStrong};
+  border-radius: 3px;
+  background-color: transparent;
+  color: ${palette.textMuted};
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 `
 
@@ -103,7 +109,7 @@ export const PipelineNode: React.FC<PipelineNodeProps> = ({
   }
 
   return (
-    <Container>
+    <Container $enabled={enabled}>
       <HorizontalRow>
         <Title $enabled={enabled}>{title}:</Title>
         <ToggleSwitch type='flat' checked={enabled} onChange={onToggle} disabled={isSessionRunning} />

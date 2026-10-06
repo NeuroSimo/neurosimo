@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useContext } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import styled from 'styled-components'
 
-import { ConfigPanel, ConfigTitle, CONFIG_PANEL_WIDTH, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton, palette } from 'styles/General'
+import { ConfigPanel, ConfigTitle, StateRow, StateTitle, StateValue, StyledButton, StyledRedButton, palette } from 'styles/General'
 import { useSession, SessionStateValue } from 'providers/SessionProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
 import { ModuleListContext } from 'providers/ModuleListProvider'
@@ -10,16 +10,18 @@ import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
 import { LogContext } from 'providers/LogProvider'
 import { useDiskStatus, getDiskSeverity, formatGiB } from 'providers/DiskStatusProvider'
 
+/* A boxed panel on a raised surface, so that the primary run control stands out from the ordinary
+   sidebar sections. It spans the sidebar's content column and is pinned to the bottom of the
+   sidebar, so it stays put when the data source tab changes and grows upwards with its banners. */
 const Container = styled(ConfigPanel)`
-  width: ${CONFIG_PANEL_WIDTH}px;
+  width: auto;
   position: relative;
-  margin-top: 0;
-  margin-left: 0;
-  left: 0;
-  padding: 10px 12px 10px 14px;
-  background-color: ${palette.surface};
-  border: 1px solid ${palette.border};
+  margin: auto 16px 16px 20px;
+  padding: 10px 15px 10px 14px;
+  background-color: ${palette.surfaceRaised};
+  border: 1px solid ${palette.borderStrong};
   border-radius: 3px;
+  flex-shrink: 0;
 `
 
 /* Deliberately loud: a low-disk condition must not be mistakable for ordinary status text. */
@@ -55,11 +57,6 @@ const BannerTitle = styled.div`
   margin-bottom: 3px;
 `
 
-/* The panel sits at a fixed offset from the top of the pipeline column, so growing downwards
-   would push it outside its designated area. Instead, the panel is shifted up by the height of
-   its banners, which keeps its bottom edge in place and makes it extend upwards. */
-const Banners = styled.div``
-
 const getStateDisplayText = (stateValue: SessionStateValue): string => {
   switch (stateValue) {
     case SessionStateValue.STOPPED:
@@ -85,19 +82,6 @@ export const SessionPanel: React.FC = () => {
   const { diskStatus, diskSeverity } = useDiskStatus()
   const [displayedState, setDisplayedState] = useState(sessionState.state)
   const [startError, setStartError] = useState<string | null>(null)
-  const bannersRef = useRef<HTMLDivElement>(null)
-  const [bannerHeight, setBannerHeight] = useState(0)
-
-  useLayoutEffect(() => {
-    const element = bannersRef.current
-    if (!element) return
-
-    const observer = new ResizeObserver(() => setBannerHeight(element.offsetHeight))
-    observer.observe(element)
-    setBannerHeight(element.offsetHeight)
-
-    return () => observer.disconnect()
-  }, [])
 
   /* Add 500ms hysteresis to prevent rapid flashing of state changes,
      as states (like INITIALIZING, FINALIZING) may sometimes change very quickly. */
@@ -192,10 +176,10 @@ export const SessionPanel: React.FC = () => {
 
   const ButtonComponent = isRunning ? StyledRedButton : StyledButton
   return (
-    <Container style={{ marginTop: -bannerHeight }}>
+    <Container>
       <ConfigTitle>Session</ConfigTitle>
 
-      <Banners ref={bannersRef}>
+      <div>
         {diskStatus && diskSeverity === 'error' && (
           <ErrorBanner>
             <BannerIcon>{'\u26D4'}</BannerIcon>
@@ -239,7 +223,7 @@ export const SessionPanel: React.FC = () => {
             </div>
           </ErrorBanner>
         )}
-      </Banners>
+      </div>
 
       <StateRow>
         <StateTitle>Control:</StateTitle>

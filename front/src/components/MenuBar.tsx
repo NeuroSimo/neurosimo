@@ -3,6 +3,9 @@ import styled from 'styled-components'
 import { SystemConfigModal } from './SystemConfigModal'
 import { palette } from 'styles/General'
 
+/* The File label's text lines up with the sidebar content edge (20px): bar padding + button padding. */
+const MENU_BAR_PADDING_X = 10
+
 const MenuBarContainer = styled.div`
   position: fixed;
   top: 0;
@@ -14,7 +17,7 @@ const MenuBarContainer = styled.div`
   border-bottom: 1px solid ${palette.border};
   display: flex;
   align-items: center;
-  padding: 0 6px;
+  padding: 0 ${MENU_BAR_PADDING_X}px;
   z-index: 1001;
   font-size: 13px;
 `
@@ -37,7 +40,7 @@ const MenuButton = styled.button<{ isOpen?: boolean }>`
 const DropdownMenu = styled.div`
   position: absolute;
   top: 28px;
-  left: 6px;
+  left: ${MENU_BAR_PADDING_X}px;
   background: ${palette.surfaceRaised};
   border: 1px solid ${palette.borderStrong};
   border-radius: 3px;

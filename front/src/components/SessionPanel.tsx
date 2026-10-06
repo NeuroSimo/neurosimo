@@ -225,7 +225,7 @@ export const SessionPanel: React.FC = () => {
         )}
       </div>
 
-      <StateRow>
+      <StateRow style={{ marginBottom: 8 }}>
         <StateTitle>Control:</StateTitle>
         <ButtonComponent
           onClick={handleButtonClick}

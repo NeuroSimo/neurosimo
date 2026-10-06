@@ -6,22 +6,27 @@ import { scaled } from 'components/pipeline/PipelineNode'
 
 const ARROWHEAD_HEIGHT = scaled(6)
 const ARROWHEAD_HALF_WIDTH = scaled(5)
+/* Connectors that carry no data in the current configuration keep their structural line, but
+   faint and without an arrowhead, so only active connectors read as data flow. */
+const INACTIVE_OPACITY = 0.25
 
 /* A downward arrow placed in the pipeline column between two stages. It fills its whole height,
    so the line starts at the stage above and the arrowhead tip touches the stage below. */
-const Connector = styled.div<{ $axisX: number; $length: number }>`
+const Connector = styled.div<{ $axisX: number; $length: number; $active: boolean }>`
   position: relative;
   flex-shrink: 0;
   width: ${ARROWHEAD_HALF_WIDTH * 2}px;
   height: ${props => props.$length}px;
   margin-left: ${props => props.$axisX - ARROWHEAD_HALF_WIDTH}px;
   pointer-events: none;
+  opacity: ${props => props.$active ? 1 : INACTIVE_OPACITY};
+  transition: opacity 0.2s;
 
   &:before {
     content: '';
     position: absolute;
     top: 0;
-    bottom: ${ARROWHEAD_HEIGHT}px;
+    bottom: ${props => props.$active ? ARROWHEAD_HEIGHT : 0}px;
     left: 50%;
     width: 2px;
     transform: translateX(-50%);
@@ -30,6 +35,7 @@ const Connector = styled.div<{ $axisX: number; $length: number }>`
 
   &:after {
     content: '';
+    display: ${props => props.$active ? 'block' : 'none'};
     position: absolute;
     bottom: 0;
     left: 0;
@@ -42,9 +48,53 @@ const Connector = styled.div<{ $axisX: number; $length: number }>`
 interface PipelineConnectionProps {
   axisX: number
   length: number
+  active: boolean
 }
 
-export const PipelineConnection: React.FC<PipelineConnectionProps> = ({ axisX, length }) => (
-  <Connector $axisX={axisX} $length={length} />
+export const PipelineConnection: React.FC<PipelineConnectionProps> = ({ axisX, length, active }) => (
+  <Connector $axisX={axisX} $length={length} $active={active} />
+)
+
+const BYPASS_OFFSET_X = scaled(18)
+
+/* Zero-size anchor at the pipeline's top-left corner; the route is drawn to its left. */
+const BypassSvg = styled.svg<{ $active: boolean }>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+  opacity: ${props => props.$active ? 1 : INACTIVE_OPACITY};
+  transition: opacity 0.2s;
+`
+
+interface PipelineBypassProps {
+  /* Vertical positions, relative to the pipeline's top edge, where the route leaves the source's
+     left edge and enters the target's left edge. Both edges are at x = 0. */
+  fromY: number
+  toY: number
+  active: boolean
+}
+
+/* A connector that skips a stage by running down the left side of the column, from the source's
+   left edge to an arrowhead pointing into the target's left edge. */
+export const PipelineBypass: React.FC<PipelineBypassProps> = ({ fromY, toY, active }) => (
+  <BypassSvg $active={active} aria-hidden>
+    <path
+      d={`M 0 ${fromY} H ${-BYPASS_OFFSET_X} V ${toY} H ${active ? -ARROWHEAD_HEIGHT : 0}`}
+      fill='none'
+      stroke={palette.borderStrong}
+      strokeWidth={2}
+      strokeLinejoin='round'
+    />
+    {active && (
+      <polygon
+        points={`${-ARROWHEAD_HEIGHT},${toY - ARROWHEAD_HALF_WIDTH} 0,${toY} ${-ARROWHEAD_HEIGHT},${toY + ARROWHEAD_HALF_WIDTH}`}
+        fill={palette.borderStrong}
+      />
+    )}
+  </BypassSvg>
 )
 

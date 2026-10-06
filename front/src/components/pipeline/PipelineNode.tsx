@@ -35,9 +35,13 @@ export const PIPELINE_NODE_SELECT_LEFT = PIPELINE_NODE_TOGGLE_RIGHT + TOGGLE_MAR
    inside its button, so its visible inset is about 5px more than this. */
 const RIGHT_PADDING = 15
 
+const NODE_HEIGHT = scaled(48)
+/* Rendered height including the 1px top and bottom borders. */
+export const PIPELINE_NODE_OUTER_HEIGHT = NODE_HEIGHT + 2
+
 const Container = styled(StyledPanel)<{ $enabled: boolean }>`
   width: 510px;
-  height: ${scaled(48)}px;
+  height: ${NODE_HEIGHT}px;
   padding: 0 ${RIGHT_PADDING}px 0 ${PIPELINE_NODE_TITLE_INSET - 2}px;
   display: flex;
   align-items: center;

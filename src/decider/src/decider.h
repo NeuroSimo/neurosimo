@@ -127,6 +127,7 @@ private:
   void enqueue_deferred_request(const std::shared_ptr<neurosimo_eeg_interfaces::msg::Sample> msg, double_t sample_time, ProcessingReason processing_reason);
   void process_periodic_request(const DeferredProcessingRequest& request);
   void process_pulse_request(const DeferredProcessingRequest& request);
+  void publish_pulse_processed_trace(const DeferredProcessingRequest& request, bool invalid_trial);
   void process_event_request(const DeferredProcessingRequest& request);
   void process_ready_deferred_requests(double_t current_sample_time);
 

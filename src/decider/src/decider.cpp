@@ -650,13 +650,22 @@ void EegDecider::handle_stimulation_request(
 }
 
 void EegDecider::process_pulse_request(const DeferredProcessingRequest& request) {
-  if (!is_sample_window_valid()) {
+  double_t sample_time = request.triggering_sample->time;
+
+  /* Sample validity does not gate pulse processing: the pulse window contains the pulse itself,
+     which preprocessors typically mark invalid as an artifact. The STATUS_PULSE_PROCESSED trace is
+     the attempt's terminal status, so it must always be published, otherwise the experiment
+     coordinator never advances to the next trial. If the buffer is not yet full (e.g. after a
+     sample gap), skip the Python call and mark the trial invalid. */
+  if (!this->sample_buffer.is_full()) {
+    RCLCPP_WARN(this->get_logger(),
+      "Sample buffer not full at pulse time %.3f (s), skipping pulse processing and marking trial invalid.",
+      sample_time);
+    publish_pulse_processed_trace(request, true);
     return;
   }
 
   auto start_time = std::chrono::high_resolution_clock::now();
-
-  double_t sample_time = request.triggering_sample->time;
 
   auto result = this->decider_wrapper->process_pulse(
     this->sensory_stimuli, this->sample_buffer, sample_time,
@@ -697,7 +706,12 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
     this->pulse_processing_time_publisher->publish(processing_time_msg);
   }
 
-  /* Publish attempt trace with STATUS_PULSE_PROCESSED. */
+  publish_pulse_processed_trace(request, result.invalid_trial);
+}
+
+void EegDecider::publish_pulse_processed_trace(const DeferredProcessingRequest& request, bool invalid_trial) {
+  double_t sample_time = request.triggering_sample->time;
+
   auto pulse_trace = neurosimo_pipeline_interfaces::msg::AttemptTrace();
   pulse_trace.session_id = this->session_id;
   pulse_trace.attempt_in_session = this->committed_attempt_in_session;
@@ -709,7 +723,7 @@ void EegDecider::process_pulse_request(const DeferredProcessingRequest& request)
   pulse_trace.actual_stimulation_sample_index = request.triggering_sample->sample_index;
   pulse_trace.timing_error = sample_time - this->last_requested_stimulation_time;
   pulse_trace.has_timing_error = true;
-  pulse_trace.invalid_trial = result.invalid_trial;
+  pulse_trace.invalid_trial = invalid_trial;
   this->attempt_trace_publisher->publish(pulse_trace);
 }
 

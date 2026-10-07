@@ -17,7 +17,6 @@ const TextInput = styled.input<{ disabled?: boolean; $missing?: boolean }>`
   outline: none;
   transition: border-color 0.15s;
   font-size: 11.5px;
-  font-family: ${palette.monoFont};
 
   &:focus {
     border-color: ${props => (props.$missing ? palette.red : palette.accent)};

@@ -207,12 +207,11 @@ const Select = styled.select`
 `
 
 /* ValidatedInput is shared with other panels, so the Settings styling is applied to a local
-   variant. Its compact fixed height and monospace font are reset to match the other controls; its
-   border colour is left alone because it shows whether the value is valid. */
+   variant. Its compact fixed height is reset to match the other controls; its border colour is
+   left alone because it shows whether the value is valid. */
 const SettingsValidatedInput = styled(ValidatedInput)`
   ${settingsControl}
   height: auto;
-  font-family: revert;
 `
 
 const Checkbox = styled.input`

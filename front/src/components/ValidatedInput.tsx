@@ -10,7 +10,6 @@ const StyledInput = styled.input<{ valid?: boolean; width?: string }>`
   border: 1px solid ${(props) => (props.valid ? palette.borderStrong : palette.red)};
   border-radius: 3px;
   font-size: 11.5px;
-  font-family: ${palette.monoFont};
   background-color: ${palette.surfaceRaised};
   color: ${palette.text};
   width: ${(props) => props.width || 'auto'};

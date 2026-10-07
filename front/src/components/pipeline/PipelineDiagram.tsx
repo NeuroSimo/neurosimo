@@ -27,7 +27,8 @@ import { palette } from 'styles/General'
 const CONNECTOR_AXIS_X = PIPELINE_NODE_OUTER_WIDTH / 2
 const ENDPOINT_SIZE = PIPELINE_NODE_TITLE_INSET * 2
 const CONNECTOR_LENGTH = scaled(44)
-
+/* The Preprocessor → Decider gap is slightly longer to give the main processing connector more room. */
+const PREPROCESSOR_DECIDER_CONNECTOR_LENGTH = CONNECTOR_LENGTH + 8
 const PipelinePanel = styled.div`
   display: flex;
   flex-direction: column;
@@ -116,7 +117,7 @@ const HEADING_OFFSET_Y = -scaled(21)
    Preprocessor node's left edge (at its centre). Coordinates are relative to the Preprocessor's
    top-left corner. */
 const PREPROCESSOR_MID_Y = PIPELINE_NODE_OUTER_HEIGHT / 2
-const DECIDER_MID_Y = PIPELINE_NODE_OUTER_HEIGHT * 1.5 + CONNECTOR_LENGTH
+const DECIDER_MID_Y = PIPELINE_NODE_OUTER_HEIGHT * 1.5 + PREPROCESSOR_DECIDER_CONNECTOR_LENGTH
 const EEG_ROUTE_FROM_X = -(CONNECTOR_LENGTH + ENDPOINT_SIZE / 2)
 const EEG_ROUTE_FROM_Y = DECIDER_MID_Y - ENDPOINT_SIZE / 2
 
@@ -148,7 +149,7 @@ export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
       <PreprocessorNode />
       <PipelineConnection
         axisX={CONNECTOR_AXIS_X}
-        length={CONNECTOR_LENGTH}
+        length={PREPROCESSOR_DECIDER_CONNECTOR_LENGTH}
         active={preprocessorEnabled && deciderEnabled}
       />
       <DeciderRow>

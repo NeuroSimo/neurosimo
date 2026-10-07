@@ -4,11 +4,11 @@ import styled from 'styled-components'
 import { palette } from 'styles/General'
 import { scaled } from 'components/pipeline/PipelineNode'
 
-const ARROWHEAD_HEIGHT = scaled(6)
-const ARROWHEAD_HALF_WIDTH = scaled(5)
+const ARROWHEAD_HEIGHT = scaled(8)
+const ARROWHEAD_HALF_WIDTH = scaled(6)
 /* Only connectors that carry data in the current configuration are drawn. Inactive connectors in
    the column keep their space so the stages do not move when a stage is toggled. */
-const STROKE_COLOR = palette.textMuted
+const STROKE_COLOR = palette.textSecondary
 const STROKE_WIDTH = 2
 
 /* A downward arrow placed in the pipeline column between two stages. It fills its whole height,

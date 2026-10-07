@@ -7,7 +7,7 @@ import { RecordingsPanel } from 'components/RecordingsPanel'
 import { EegDevicePanel } from 'components/EegDevicePanel'
 import { EegStreamContext } from 'providers/EegStreamProvider'
 import { useSessionConfig } from 'providers/SessionConfigProvider'
-import { ConfigPanel, CONFIG_PANEL_WIDTH, ConfigTitle, palette } from 'styles/General'
+import { ConfigPanel, CONFIG_PANEL_WIDTH, ConfigTitleRow, ConfigTitleRowTitle, ConfigTitleStatus, palette } from 'styles/General'
 
 // Context for sharing tab switching functionality
 export const DataSourceContext = React.createContext<{
@@ -70,6 +70,7 @@ export const DataSourceDisplay: React.FC = () => {
   // Remembers the simulator/recording choice so it can be restored when EEG
   // streaming stops (an active stream forces the 'eeg_device' tab).
   const [previousTab, setPreviousTab] = React.useState<'simulator' | 'recording'>('simulator')
+  const [isLoadingDatasetInfo, setIsLoadingDatasetInfo] = React.useState(false)
 
   // EEG streaming forces the 'eeg_device' tab; restore the previous tab when it stops.
   React.useEffect(() => {
@@ -92,7 +93,10 @@ export const DataSourceDisplay: React.FC = () => {
   return (
     <DataSourceContext.Provider value={{ setActiveTab, activeTab }}>
       <DataSourcePanel>
-        <ConfigTitle>Data Source</ConfigTitle>
+        <ConfigTitleRow>
+          <ConfigTitleRowTitle>Data Source</ConfigTitleRowTitle>
+          {isLoadingDatasetInfo && <ConfigTitleStatus>Loading…</ConfigTitleStatus>}
+        </ConfigTitleRow>
         <TabContainer>
           <Tab active={activeTab === 'simulator'} disabled={isEegStreaming} onClick={() => !isEegStreaming && setActiveTab('simulator')}>
             Simulator
@@ -105,7 +109,9 @@ export const DataSourceDisplay: React.FC = () => {
           </Tab>
         </TabContainer>
 
-        {activeTab === 'simulator' && <EegSimulatorPanel isGrayedOut={false} />}
+        {activeTab === 'simulator' && (
+          <EegSimulatorPanel isGrayedOut={false} onDatasetInfoLoadingChange={setIsLoadingDatasetInfo} />
+        )}
         {activeTab === 'simulator' && <ImportRecordingPanel />}
         {activeTab === 'recording' && <RecordingsPanel isGrayedOut={false} />}
         {activeTab === 'eeg_device' && <EegDevicePanel />}

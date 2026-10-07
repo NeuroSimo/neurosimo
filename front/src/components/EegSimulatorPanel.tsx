@@ -50,8 +50,14 @@ const CompactRow = styled(ConfigRow)`
    stale figures cannot simply be left standing, hence the deadline. */
 const DATASET_INFO_REPORT_WAIT_AFTER_MS = 200
 
+interface EegSimulatorPanelProps {
+  isGrayedOut: boolean
+  /* Told when the wait for dataset info starts being reported (at the deadline above) and when it
+     ends, so the wait can also be shown outside this panel. */
+  onDatasetInfoLoadingChange: (isLoading: boolean) => void
+}
 
-export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOut }) => {
+export const EegSimulatorPanel: React.FC<EegSimulatorPanelProps> = ({ isGrayedOut, onDatasetInfoLoadingChange }) => {
   const { eegSimulatorStatus } = useContext(HealthcheckContext)
   const {
     datasetList,
@@ -92,6 +98,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
   useEffect(() => {
     if (!dataset || dataset.trim() === '') {
       setDisplayedDatasetInfo(null)
+      onDatasetInfoLoadingChange(false)
       return
     }
 
@@ -101,6 +108,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
     const deadline = window.setTimeout(() => {
       if (!cancelled) {
         setDisplayedDatasetInfo(undefined)
+        onDatasetInfoLoadingChange(true)
       }
     }, DATASET_INFO_REPORT_WAIT_AFTER_MS)
 
@@ -111,6 +119,7 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       }
       window.clearTimeout(deadline)
       setDisplayedDatasetInfo(datasetInfo)
+      onDatasetInfoLoadingChange(false)
     })
 
     return () => {
@@ -118,6 +127,9 @@ export const EegSimulatorPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayed
       window.clearTimeout(deadline)
     }
   }, [dataset])
+
+  /* The wait is no longer shown once this panel is gone. */
+  useEffect(() => () => onDatasetInfoLoadingChange(false), [])
 
   // Handle arrow key navigation for dataset selection
   useEffect(() => {

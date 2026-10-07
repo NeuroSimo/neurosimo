@@ -297,6 +297,31 @@ export const ConfigTitle = styled(SmallerTitle)`
   color: ${palette.textSecondary};
 `
 
+/* A section header line that doubles as a status line, so transient status needs no space of its
+   own and the section keeps the same height in every state. */
+export const ConfigTitleRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-right: 17px;
+`
+
+export const ConfigTitleRowTitle = styled(ConfigTitle)`
+  margin: 0;
+  flex-shrink: 0;
+`
+
+export const ConfigTitleStatus = styled.span<{ $error?: boolean }>`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: ${props => props.$error ? palette.red : palette.textMuted};
+`
+
 /* For showing, e.g., session state. */
 export const StateRow = styled.div`
   display: flex;

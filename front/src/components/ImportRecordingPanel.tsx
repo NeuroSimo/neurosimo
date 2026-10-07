@@ -8,8 +8,9 @@ import {
   ConfigLabel,
   CONFIG_PANEL_WIDTH,
   StyledButton,
-  ConfigTitle,
-  palette,
+  ConfigTitleRow,
+  ConfigTitleRowTitle,
+  ConfigTitleStatus,
 } from 'styles/General'
 
 import { EegSimulatorContext } from 'providers/EegSimulatorProvider'
@@ -35,31 +36,6 @@ const ImportSelect = styled(Select)`
 const CompactRow = styled(ConfigRow)`
   margin-bottom: 2px;
   gap: 4px;
-`
-
-/* The header line doubles as the import status line, so transient status needs no space of its own
-   and the section keeps the same height in every state. */
-const HeaderRow = styled.div`
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding-right: 17px;
-`
-
-const HeaderTitle = styled(ConfigTitle)`
-  margin: 0;
-  flex-shrink: 0;
-`
-
-const HeaderStatus = styled.span<{ $error: boolean }>`
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11px;
-  color: ${props => props.$error ? palette.red : palette.textMuted};
 `
 
 export const ImportRecordingPanel: React.FC = () => {
@@ -105,12 +81,12 @@ export const ImportRecordingPanel: React.FC = () => {
 
   return (
     <ImportPanel>
-      <HeaderRow>
-        <HeaderTitle>Import recording</HeaderTitle>
+      <ConfigTitleRow>
+        <ConfigTitleRowTitle>Import recording</ConfigTitleRowTitle>
         {statusText && (
-          <HeaderStatus $error={!isImporting} title={statusText}>{statusText}</HeaderStatus>
+          <ConfigTitleStatus $error={!isImporting} title={statusText}>{statusText}</ConfigTitleStatus>
         )}
-      </HeaderRow>
+      </ConfigTitleRow>
       <CompactRow>
         <ConfigLabel>File</ConfigLabel>
         <ImportSelect

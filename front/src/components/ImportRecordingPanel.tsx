@@ -95,7 +95,7 @@ export const ImportRecordingPanel: React.FC = () => {
         <ImportSelect
           value={selectedFile}
           onChange={(e) => setImportFile(e.target.value)}
-          disabled={isImporting || externalRecordingsList.length === 0}
+          disabled={isImporting || isSessionRunning || isEegStreaming || externalRecordingsList.length === 0}
         >
           {externalRecordingsList.length === 0
             ? <option value=''>—</option>

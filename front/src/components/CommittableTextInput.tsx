@@ -22,10 +22,12 @@ const StyledInput = styled.input<{ width?: string }>`
     border-color: ${palette.accent};
   }
 
+  /* Same faded look as a disabled Select. */
   &:disabled {
     background-color: ${palette.surface};
     border-color: ${palette.border};
     color: ${palette.textMuted};
+    opacity: 0.7;
   }
 `
 
@@ -51,10 +53,12 @@ const StyledTextarea = styled.textarea<{ width?: string }>`
     border-color: ${palette.accent};
   }
 
+  /* Same faded look as a disabled Select. */
   &:disabled {
     background-color: ${palette.surface};
     border-color: ${palette.border};
     color: ${palette.textMuted};
+    opacity: 0.7;
   }
 `
 

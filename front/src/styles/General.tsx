@@ -58,10 +58,13 @@ export const Select = styled.select`
     border-color: ${palette.accent};
   }
 
+  /* Set explicitly (Chromium also fades disabled selects by default) so that other disabled
+     controls can match it. */
   &:disabled {
     color: ${palette.textMuted};
     background-color: ${palette.surface};
     border-color: ${palette.border};
+    opacity: 0.7;
   }
 `
 

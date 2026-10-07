@@ -33,12 +33,14 @@ const Header = styled.div`
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  margin-bottom: 3px;
+  margin-bottom: 7px;
 `
 
+/* Slightly stronger than the surrounding secondary text, since it is where failures are reported. */
 const Message = styled.div`
   color: ${palette.text};
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.35;
   transition: opacity 0.3s;
 `

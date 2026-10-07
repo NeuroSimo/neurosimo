@@ -27,9 +27,9 @@ const ModalContent = styled.div`
   border: 1px solid ${palette.borderStrong};
   border-radius: 8px;
   padding: 20px;
-  max-width: 650px;
+  max-width: 340px;
   width: 90%;
-  height: 600px;
+  height: 420px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);

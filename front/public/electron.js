@@ -153,6 +153,11 @@ ipcMain.handle('toggle-detached-experiment-window', async () => {
   return null;
 });
 
+ipcMain.handle('quit-app', async () => {
+  app.quit();
+  return null;
+});
+
 // Ensure only a single instance runs; focus the existing window instead of
 // starting a second (windowless) process.
 const gotSingleInstanceLock = app.requestSingleInstanceLock();

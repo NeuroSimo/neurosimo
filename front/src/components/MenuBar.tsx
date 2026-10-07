@@ -67,9 +67,17 @@ const MenuItem = styled.button`
   }
 `
 
+const MenuSeparator = styled.div`
+  height: 1px;
+  margin: 3px 0;
+  background-color: ${palette.border};
+`
+
 export const MenuBar: React.FC = () => {
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
   const [isSystemConfigModalOpen, setIsSystemConfigModalOpen] = useState(false)
+
+  const isElectron = !!(window as any).electronAPI
 
   const handleFileMenuClick = () => {
     setIsFileMenuOpen(!isFileMenuOpen)
@@ -109,6 +117,14 @@ export const MenuBar: React.FC = () => {
             <MenuItem onClick={handleSettingsClick}>
               Settings...
             </MenuItem>
+            {isElectron && (
+              <>
+                <MenuSeparator />
+                <MenuItem onClick={() => (window as any).electronAPI.quitApp()}>
+                  Quit
+                </MenuItem>
+              </>
+            )}
           </DropdownMenu>
         )}
       </MenuBarContainer>

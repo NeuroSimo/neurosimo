@@ -37,16 +37,29 @@ const CompactRow = styled(ConfigRow)`
   gap: 4px;
 `
 
-const ErrorRow = styled(CompactRow)`
-  margin-top: 2px;
-  margin-bottom: 0;
+/* The header line doubles as the import status line, so transient status needs no space of its own
+   and the section keeps the same height in every state. */
+const HeaderRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-right: 17px;
 `
 
-const ErrorText = styled.div`
+const HeaderTitle = styled(ConfigTitle)`
+  margin: 0;
+  flex-shrink: 0;
+`
+
+const HeaderStatus = styled.span<{ $error: boolean }>`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
-  color: ${palette.red};
-  margin-left: 6px;
-  min-height: 16px;
+  color: ${props => props.$error ? palette.red : palette.textMuted};
 `
 
 export const ImportRecordingPanel: React.FC = () => {
@@ -88,9 +101,16 @@ export const ImportRecordingPanel: React.FC = () => {
     })
   }
 
+  const statusText = isImporting ? 'Importing…' : importError
+
   return (
     <ImportPanel>
-      <ConfigTitle>Import recording</ConfigTitle>
+      <HeaderRow>
+        <HeaderTitle>Import recording</HeaderTitle>
+        {statusText && (
+          <HeaderStatus $error={!isImporting} title={statusText}>{statusText}</HeaderStatus>
+        )}
+      </HeaderRow>
       <CompactRow>
         <ConfigLabel>File</ConfigLabel>
         <ImportSelect
@@ -106,9 +126,6 @@ export const ImportRecordingPanel: React.FC = () => {
           }
         </ImportSelect>
       </CompactRow>
-      <ErrorRow style={{ justifyContent: 'flex-end', paddingRight: '17px', visibility: importError ? 'visible' : 'hidden' }}>
-        <ErrorText>{importError}</ErrorText>
-      </ErrorRow>
       <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '17px', gap: '6px', marginTop: '6px' }}>
         <StyledButton
           onClick={confirmImport}

@@ -22,6 +22,10 @@ const DataSourcePanel = styled(ConfigPanel)`
   display: flex;
   flex-direction: column;
   gap: 0;
+  /* Centres the divider in the gap after the Experiment section: its 12px bottom padding and 4px
+     row margin plus this margin equal the padding below the divider. */
+  margin-top: 2px;
+  padding-top: 18px;
 `
 
 const TabContainer = styled.div`

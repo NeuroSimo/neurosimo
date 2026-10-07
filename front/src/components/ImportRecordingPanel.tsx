@@ -25,7 +25,10 @@ const ImportPanel = styled(ConfigPanel)`
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 0 8px 0;
+  /* Centres the divider in the gap after the Simulator section: its 8px bottom padding and 2px
+     row margin plus this margin equal the padding below the divider. */
+  margin-top: 5px;
+  padding: 15px 0 8px 0;
 `
 
 const ImportSelect = styled(Select)`

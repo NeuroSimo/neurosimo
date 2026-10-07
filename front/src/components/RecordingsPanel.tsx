@@ -563,7 +563,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
           />
         </SwitchWrapper>
       </CompactRow>
-      <div style={{ height: '8px' }} />
+      <div style={{ height: '14px' }} />
       <ButtonRow>
         <ButtonGrid>
           {isExporting && (

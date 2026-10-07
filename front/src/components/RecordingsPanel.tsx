@@ -91,7 +91,6 @@ const ExportButton = styled.button<{ disabled: boolean }>`
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
-  margin-right: 8px;
   min-width: 110px;
 
   &:hover {
@@ -148,15 +147,20 @@ const DataSourceLinkIcon = styled.button`
   }
 `
 
+/* Centred in the column spanned by the labels and controls above (which end 17px from the right). */
+const ButtonRow = styled(CompactRow)`
+  padding-right: 17px;
+`
+
 const ButtonGrid = styled.div`
-  margin-left: auto;
-  margin-right: 9px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: auto auto;
   grid-template-rows: auto auto;
-  gap: 8px;
+  column-gap: 16px;
+  row-gap: 8px;
   align-items: center;
-  justify-items: end;
+  justify-items: center;
   position: relative;
 `
 
@@ -560,7 +564,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
         </SwitchWrapper>
       </CompactRow>
       <div style={{ height: '8px' }} />
-      <CompactRow>
+      <ButtonRow>
         <ButtonGrid>
           {isExporting && (
             <ExportProgress>
@@ -607,7 +611,7 @@ export const RecordingsPanel: React.FC<{ isGrayedOut: boolean }> = ({ isGrayedOu
             Delete
           </DeleteButton>
         </ButtonGrid>
-      </CompactRow>
+      </ButtonRow>
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}

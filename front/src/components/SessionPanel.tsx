@@ -57,12 +57,6 @@ const BannerTitle = styled.div`
   margin-bottom: 3px;
 `
 
-/* The session state is categorical rather than telemetry, so it uses the UI font instead of the
-   shared StateValue's monospace one. */
-const SessionStateText = styled(StateValue)`
-  font-family: inherit;
-`
-
 const getStateDisplayText = (stateValue: SessionStateValue): string => {
   switch (stateValue) {
     case SessionStateValue.STOPPED:
@@ -243,7 +237,7 @@ export const SessionPanel: React.FC = () => {
 
       <StateRow>
         <StateTitle>State:</StateTitle>
-        <SessionStateText>{getStateDisplayText(displayedState)}</SessionStateText>
+        <StateValue>{getStateDisplayText(displayedState)}</StateValue>
       </StateRow>
     </Container>
   )

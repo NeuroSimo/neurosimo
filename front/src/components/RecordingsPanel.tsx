@@ -113,7 +113,7 @@ const DeleteButton = styled(ExportButton)`
 
 const ExportProgress = styled.span`
   font-size: 12px;
-  font-family: ${palette.monoFont};
+  font-variant-numeric: tabular-nums;
   color: ${palette.textMuted};
   position: absolute;
   left: -30px;

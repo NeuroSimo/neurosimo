@@ -38,6 +38,7 @@ const RestText = styled.div`
 
 const Timer = styled.div`
   font-size: 96px;
+  font-variant-numeric: tabular-nums;
   margin-top: 20px;
 `
 

@@ -351,8 +351,9 @@ export const DoubleIndentedStateTitle = styled(StateTitle)`
   color: ${palette.textMuted};
 `
 
+/* Telemetry values and states. The UI font with tabular numerals keeps changing numbers aligned;
+   monospace is reserved for logs, IDs/hashes and code-like content. */
 export const StateValue = styled.span`
-  font-family: ${palette.monoFont};
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   color: ${palette.text};

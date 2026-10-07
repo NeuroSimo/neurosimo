@@ -49,6 +49,9 @@ export const Select = styled.select`
   color: ${palette.text};
   font-size: 12px;
   font-family: inherit;
+  /* Chromium clips the selected value to its line box, and the UI font draws underscores below
+     its descent, so with the default line height they disappear. */
+  line-height: 18px;
 
   &:hover:not(:disabled) {
     border-color: #4a4f58;

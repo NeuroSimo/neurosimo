@@ -49,7 +49,7 @@ const ProtocolControls = styled(IconButtonWrapper)`
 `
 
 const RuntimeParametersContainer = styled.div`
-  margin-top: 2px;
+  margin-top: 9px;
 `
 
 /* Right-aligns the input and its unit with the other controls' right edge. */

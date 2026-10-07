@@ -291,7 +291,7 @@ export const EegSimulatorPanel: React.FC<EegSimulatorPanelProps> = ({ isGrayedOu
         <ConfigLabel>Status</ConfigLabel>
         <ConfigValue>{dataSourceStateLabel}</ConfigValue>
       </CompactRow>
-      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '17px', gap: '6px' }}>
+      <CompactRow style={{ justifyContent: 'flex-end', paddingRight: '17px', gap: '6px', marginTop: '5px' }}>
         <FolderTerminalButtons folderName="eeg_simulator" />
       </CompactRow>
     </SimulatorPanel>

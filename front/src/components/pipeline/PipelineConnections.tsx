@@ -10,6 +10,9 @@ const ARROWHEAD_HALF_WIDTH = scaled(6)
    the column keep their space so the stages do not move when a stage is toggled. */
 const STROKE_COLOR = palette.textSecondary
 const STROKE_WIDTH = 2
+/* Lines run halfway into their arrowhead, which is drawn on top, so that subpixel rounding at
+   fractional sizes and zoom levels cannot open a gap between the line and the head. */
+const LINE_END_INSET = ARROWHEAD_HEIGHT / 2
 
 /* A downward arrow placed in the pipeline column between two stages. It fills its whole height,
    so the line starts at the stage above and the arrowhead tip touches the stage below. */
@@ -26,7 +29,7 @@ const Connector = styled.div<{ $axisX: number; $length: number; $active: boolean
     content: '';
     position: absolute;
     top: 0;
-    bottom: ${ARROWHEAD_HEIGHT}px;
+    bottom: ${LINE_END_INSET}px;
     left: 50%;
     width: ${STROKE_WIDTH}px;
     transform: translateX(-50%);
@@ -67,7 +70,7 @@ const HorizontalConnector = styled.div<{ $length: number; $active: boolean }>`
     content: '';
     position: absolute;
     left: 0;
-    right: ${ARROWHEAD_HEIGHT}px;
+    right: ${LINE_END_INSET}px;
     top: 50%;
     height: ${STROKE_WIDTH}px;
     transform: translateY(-50%);
@@ -123,7 +126,7 @@ export const PipelineElbow: React.FC<PipelineElbowProps> = ({ fromX, fromY, toY,
   return (
     <ElbowSvg aria-hidden>
       <path
-        d={`M ${fromX} ${fromY} V ${toY} H ${-ARROWHEAD_HEIGHT}`}
+        d={`M ${fromX} ${fromY} V ${toY} H ${-LINE_END_INSET}`}
         fill='none'
         stroke={STROKE_COLOR}
         strokeWidth={STROKE_WIDTH}

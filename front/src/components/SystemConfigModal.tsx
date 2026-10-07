@@ -138,12 +138,13 @@ const InfoIcon = styled(FontAwesomeIcon)`
   }
 `
 
+/* Fixed to the viewport (placed above the hovered icon) rather than absolutely positioned inside the
+   tab: an absolutely positioned tooltip, even while hidden, extends the tab's scrollable area and
+   caused a horizontal scroll bar next to long labels. */
 const Tooltip = styled.div<{ show: boolean }>`
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 8px;
+  position: fixed;
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
   padding: 8px 12px;
   background: ${palette.surfaceHover};
   color: ${palette.text};
@@ -170,51 +171,48 @@ const Tooltip = styled.div<{ show: boolean }>`
   }
 `
 
-/* Shared width for the single-line controls in every Settings tab: left-aligned under the label,
+/* Shared styling for the single-line controls in every Settings tab: left-aligned under the label,
    full width up to a common maximum, and narrower when the modal is. */
 const SETTINGS_CONTROL_MAX_WIDTH = 330
 
-const settingsControlWidth = css`
+const settingsControl = css`
   box-sizing: border-box;
   width: 100%;
   max-width: ${SETTINGS_CONTROL_MAX_WIDTH}px;
-`
-
-const Input = styled.input`
-  ${settingsControlWidth}
   padding: 8px 12px;
-  border: 1px solid ${palette.borderStrong};
   border-radius: 4px;
   font-size: 14px;
   background-color: ${palette.surfaceRaised};
   color: ${palette.text};
   &:focus {
     outline: none;
-    border-color: ${palette.accent};
     box-shadow: 0 0 0 2px rgba(207, 127, 53, 0.25);
+  }
+`
+
+const Input = styled.input`
+  ${settingsControl}
+  border: 1px solid ${palette.borderStrong};
+  &:focus {
+    border-color: ${palette.accent};
   }
 `
 
 const Select = styled.select`
-  ${settingsControlWidth}
-  padding: 8px 12px;
+  ${settingsControl}
   border: 1px solid ${palette.borderStrong};
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: ${palette.surfaceRaised};
-  color: ${palette.text};
   &:focus {
-    outline: none;
     border-color: ${palette.accent};
-    box-shadow: 0 0 0 2px rgba(207, 127, 53, 0.25);
   }
 `
 
-/* ValidatedInput is shared with other panels, so the Settings width is applied to a local variant.
-   Its 22px content-box height becomes 24px border-box, keeping the same rendered height. */
+/* ValidatedInput is shared with other panels, so the Settings styling is applied to a local
+   variant. Its compact fixed height and monospace font are reset to match the other controls; its
+   border colour is left alone because it shows whether the value is valid. */
 const SettingsValidatedInput = styled(ValidatedInput)`
-  ${settingsControlWidth}
-  height: 24px;
+  ${settingsControl}
+  height: auto;
+  font-family: revert;
 `
 
 const Checkbox = styled.input`
@@ -457,14 +455,21 @@ export const SystemConfigModal: React.FC<SystemConfigModalProps> = ({
 
   const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
     const [showTooltip, setShowTooltip] = useState(false)
+    const [anchor, setAnchor] = useState({ x: 0, y: 0 })
+
+    const handleMouseEnter = (event: React.MouseEvent<HTMLSpanElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect()
+      setAnchor({ x: rect.left + rect.width / 2, y: rect.top })
+      setShowTooltip(true)
+    }
     
     return (
       <InfoIconWrapper
-        onMouseEnter={() => setShowTooltip(true)}
+        onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShowTooltip(false)}
       >
         <InfoIcon icon={faInfoCircle} />
-        <Tooltip show={showTooltip}>{text}</Tooltip>
+        <Tooltip show={showTooltip} style={{ left: anchor.x, top: anchor.y }}>{text}</Tooltip>
       </InfoIconWrapper>
     )
   }

@@ -11,6 +11,7 @@ import {
 } from 'components/pipeline/PipelineConnections'
 import {
   PIPELINE_NODE_OUTER_HEIGHT,
+  PIPELINE_NODE_OUTER_WIDTH,
   PIPELINE_NODE_SELECT_LEFT,
   PIPELINE_NODE_TITLE_INSET,
   PIPELINE_NODE_TOGGLE_RIGHT,
@@ -20,11 +21,11 @@ import {
 import { ModuleListContext } from 'providers/ModuleListProvider'
 import { palette } from 'styles/General'
 
-/* The stages form one left-aligned column joined by connectors on a shared axis that passes
-   through the start of every node title. The EEG and TMS endpoints sit in the Decider's row, on
-   either side of the node. */
-const CONNECTOR_AXIS_X = PIPELINE_NODE_TITLE_INSET
-const ENDPOINT_SIZE = CONNECTOR_AXIS_X * 2
+/* The stages form one left-aligned column joined by vertical connectors through the nodes'
+   horizontal centre. The EEG and TMS endpoints sit in the Decider's row, on either side of the
+   node. */
+const CONNECTOR_AXIS_X = PIPELINE_NODE_OUTER_WIDTH / 2
+const ENDPOINT_SIZE = PIPELINE_NODE_TITLE_INSET * 2
 const CONNECTOR_LENGTH = scaled(44)
 
 const PipelinePanel = styled.div`

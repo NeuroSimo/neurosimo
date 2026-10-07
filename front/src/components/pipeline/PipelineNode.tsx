@@ -39,8 +39,13 @@ const NODE_HEIGHT = scaled(48)
 /* Rendered height including the 1px top and bottom borders. */
 export const PIPELINE_NODE_OUTER_HEIGHT = NODE_HEIGHT + 2
 
+const NODE_CONTENT_WIDTH = 510
+/* Rendered width including padding, the 2px status border on the left and the 1px border on the
+   right. */
+export const PIPELINE_NODE_OUTER_WIDTH = NODE_CONTENT_WIDTH + (PIPELINE_NODE_TITLE_INSET - 2) + RIGHT_PADDING + 3
+
 const Container = styled(StyledPanel)<{ $enabled: boolean }>`
-  width: 510px;
+  width: ${NODE_CONTENT_WIDTH}px;
   height: ${NODE_HEIGHT}px;
   padding: 0 ${RIGHT_PADDING}px 0 ${PIPELINE_NODE_TITLE_INSET - 2}px;
   display: flex;

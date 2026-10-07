@@ -265,7 +265,9 @@ export const EegSimulatorPanel: React.FC<EegSimulatorPanelProps> = ({ isGrayedOu
             value={startTime}
             formatValue={(value) => value.toFixed(1)}
             min={0}
-            max={selectedDatasetInfo?.duration || 0}
+            /* No upper bound while the dataset info is loading: the duration is not known yet,
+               and treating it as 0 would flag any non-zero start time as invalid. */
+            max={isLoadingDatasetInfo ? undefined : selectedDatasetInfo?.duration || 0}
             onChange={setStartTime}
             disabled={isSessionRunning || isEegStreaming}
             width="60px"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 import { useSystemConfig } from 'providers/SystemConfigProvider'
@@ -170,7 +170,18 @@ const Tooltip = styled.div<{ show: boolean }>`
   }
 `
 
+/* Shared width for the single-line controls in every Settings tab: left-aligned under the label,
+   full width up to a common maximum, and narrower when the modal is. */
+const SETTINGS_CONTROL_MAX_WIDTH = 330
+
+const settingsControlWidth = css`
+  box-sizing: border-box;
+  width: 100%;
+  max-width: ${SETTINGS_CONTROL_MAX_WIDTH}px;
+`
+
 const Input = styled.input`
+  ${settingsControlWidth}
   padding: 8px 12px;
   border: 1px solid ${palette.borderStrong};
   border-radius: 4px;
@@ -185,6 +196,7 @@ const Input = styled.input`
 `
 
 const Select = styled.select`
+  ${settingsControlWidth}
   padding: 8px 12px;
   border: 1px solid ${palette.borderStrong};
   border-radius: 4px;
@@ -196,6 +208,13 @@ const Select = styled.select`
     border-color: ${palette.accent};
     box-shadow: 0 0 0 2px rgba(207, 127, 53, 0.25);
   }
+`
+
+/* ValidatedInput is shared with other panels, so the Settings width is applied to a local variant.
+   Its 22px content-box height becomes 24px border-box, keeping the same rendered height. */
+const SettingsValidatedInput = styled(ValidatedInput)`
+  ${settingsControlWidth}
+  height: 24px;
 `
 
 const Checkbox = styled.input`
@@ -568,7 +587,7 @@ export const SystemConfigModal: React.FC<SystemConfigModalProps> = ({
                 <Label htmlFor="maximumLoopbackLatency">Maximum Loopback Latency (milliseconds):</Label>
                 <InfoTooltip text="Exceeding this value prevents stimulation" />
               </LabelRow>
-              <ValidatedInput
+              <SettingsValidatedInput
                 value={config.maximumLoopbackLatency}
                 onChange={(val) => updateConfig('maximumLoopbackLatency', val)}
                 formatValue={(val) => formatDecimal(val * 1000)}
@@ -583,7 +602,7 @@ export const SystemConfigModal: React.FC<SystemConfigModalProps> = ({
                 <Label htmlFor="maximumTimingError">Maximum Timing Error (milliseconds):</Label>
                 <InfoTooltip text="Maximum timing error for triggering" />
               </LabelRow>
-              <ValidatedInput
+              <SettingsValidatedInput
                 value={config.maximumTimingError}
                 onChange={(val) => updateConfig('maximumTimingError', val)}
                 formatValue={(val) => formatDecimal(val * 1000)}
@@ -598,7 +617,7 @@ export const SystemConfigModal: React.FC<SystemConfigModalProps> = ({
                 <Label htmlFor="triggerToPulseDelay">Trigger to Pulse Delay (milliseconds):</Label>
                 <InfoTooltip text="Delay between trigger and pulse" />
               </LabelRow>
-              <ValidatedInput
+              <SettingsValidatedInput
                 value={config.triggerToPulseDelay}
                 onChange={(val) => updateConfig('triggerToPulseDelay', val)}
                 formatValue={(val) => formatDecimal(val * 1000)}

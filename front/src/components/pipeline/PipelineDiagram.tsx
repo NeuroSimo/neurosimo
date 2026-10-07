@@ -4,7 +4,11 @@ import styled from 'styled-components'
 import { PreprocessorNode } from 'components/pipeline/PreprocessorNode'
 import { DeciderNode } from 'components/pipeline/DeciderNode'
 import { PresenterNode } from 'components/pipeline/PresenterNode'
-import { PipelineBypass, PipelineConnection, PipelineHorizontalConnection } from 'components/pipeline/PipelineConnections'
+import {
+  PipelineConnection,
+  PipelineElbow,
+  PipelineHorizontalConnection,
+} from 'components/pipeline/PipelineConnections'
 import {
   PIPELINE_NODE_OUTER_HEIGHT,
   PIPELINE_NODE_SELECT_LEFT,
@@ -16,11 +20,11 @@ import {
 import { ModuleListContext } from 'providers/ModuleListProvider'
 import { palette } from 'styles/General'
 
-/* The stages form one left-aligned column joined by connectors on a shared axis. The axis passes
-   through the EEG source's center and the start of every node title, and the EEG source's left
-   edge lines up with the node edges. */
+/* The stages form one left-aligned column joined by connectors on a shared axis that passes
+   through the start of every node title. The EEG and TMS endpoints sit in the Decider's row, on
+   either side of the node. */
 const CONNECTOR_AXIS_X = PIPELINE_NODE_TITLE_INSET
-const EEG_SOURCE_SIZE = CONNECTOR_AXIS_X * 2
+const ENDPOINT_SIZE = CONNECTOR_AXIS_X * 2
 const CONNECTOR_LENGTH = scaled(44)
 
 const PipelinePanel = styled.div`
@@ -35,8 +39,8 @@ const EndpointCircle = styled.div<{ $color: string; $tint: string }>`
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
-  width: ${EEG_SOURCE_SIZE}px;
-  height: ${EEG_SOURCE_SIZE}px;
+  width: ${ENDPOINT_SIZE}px;
+  height: ${ENDPOINT_SIZE}px;
   box-sizing: border-box;
   background-color: ${props => props.$tint};
   border: 1.5px solid ${props => props.$color};
@@ -52,10 +56,21 @@ const EegCircle = styled(EndpointCircle)`
   cursor: move;
 `
 
-/* The Decider's stimulation output sits in the Decider's row, just right of the node. It is
-   positioned outside the column's flow so the column's width and centring are unchanged. */
+/* The EEG source and the Decider's stimulation output sit in the Decider's row, just left and right
+   of the node. They are positioned outside the column's flow so the column's width and centring
+   are unchanged. */
 const DeciderRow = styled.div`
   position: relative;
+`
+
+const EegBranch = styled.div`
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: ${ENDPOINT_SIZE + CONNECTOR_LENGTH}px;
+  display: flex;
+  align-items: center;
 `
 
 const TmsBranch = styled.div`
@@ -94,12 +109,15 @@ interface PipelineDiagramProps {
 
 /* Column headings sit just above the Preprocessor node: "Enabled" ends at the toggle's right edge
    and "Module" starts at the module select's left edge. */
-const HEADING_OFFSET_Y = EEG_SOURCE_SIZE + CONNECTOR_LENGTH - scaled(21)
+const HEADING_OFFSET_Y = -scaled(21)
 
-/* With the Preprocessor bypassed, the Decider reads the EEG stream directly; the bypass runs from
-   the EEG source's left edge (at its centre) into the Decider node's left edge (at its centre). */
-const BYPASS_FROM_Y = EEG_SOURCE_SIZE / 2
-const BYPASS_TO_Y = EEG_SOURCE_SIZE + 2 * CONNECTOR_LENGTH + PIPELINE_NODE_OUTER_HEIGHT * 1.5
+/* With the Preprocessor enabled, EEG is routed from the top of the EEG source up and into the
+   Preprocessor node's left edge (at its centre). Coordinates are relative to the Preprocessor's
+   top-left corner. */
+const PREPROCESSOR_MID_Y = PIPELINE_NODE_OUTER_HEIGHT / 2
+const DECIDER_MID_Y = PIPELINE_NODE_OUTER_HEIGHT * 1.5 + CONNECTOR_LENGTH
+const EEG_ROUTE_FROM_X = -(CONNECTOR_LENGTH + ENDPOINT_SIZE / 2)
+const EEG_ROUTE_FROM_Y = DECIDER_MID_Y - ENDPOINT_SIZE / 2
 
 export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
   enabledTitleX = PIPELINE_NODE_TOGGLE_RIGHT,
@@ -110,20 +128,22 @@ export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
   const { preprocessorEnabled, deciderEnabled, presenterEnabled } = useContext(ModuleListContext)
 
   /* A connector is active when data flows along it: a disabled Decider processes no samples, and
-     a disabled Presenter receives nothing. */
+     a disabled Presenter receives nothing. With the Preprocessor disabled, the Decider reads the
+     EEG stream directly. */
   return (
     <PipelinePanel>
-      <EegCircle $color={palette.orange} $tint='rgba(229, 149, 74, 0.14)'>EEG</EegCircle>
       <FloatingTitle xOffset={enabledTitleX} yOffset={enabledTitleY} $alignRight>
         Enabled
       </FloatingTitle>
       <FloatingTitle xOffset={moduleTitleX} yOffset={moduleTitleY}>
         Module
       </FloatingTitle>
-      {!preprocessorEnabled && (
-        <PipelineBypass fromY={BYPASS_FROM_Y} toY={BYPASS_TO_Y} active={deciderEnabled} />
-      )}
-      <PipelineConnection axisX={CONNECTOR_AXIS_X} length={CONNECTOR_LENGTH} active={preprocessorEnabled} />
+      <PipelineElbow
+        fromX={EEG_ROUTE_FROM_X}
+        fromY={EEG_ROUTE_FROM_Y}
+        toY={PREPROCESSOR_MID_Y}
+        active={preprocessorEnabled}
+      />
       <PreprocessorNode />
       <PipelineConnection
         axisX={CONNECTOR_AXIS_X}
@@ -131,6 +151,12 @@ export const PipelineDiagram: React.FC<PipelineDiagramProps> = ({
         active={preprocessorEnabled && deciderEnabled}
       />
       <DeciderRow>
+        <EegBranch>
+          <EegCircle $color={palette.orange} $tint='rgba(229, 149, 74, 0.14)'>EEG</EegCircle>
+          {!preprocessorEnabled && (
+            <PipelineHorizontalConnection length={CONNECTOR_LENGTH} active={deciderEnabled} />
+          )}
+        </EegBranch>
         <DeciderNode />
         <TmsBranch>
           <PipelineHorizontalConnection length={CONNECTOR_LENGTH} active={deciderEnabled} />

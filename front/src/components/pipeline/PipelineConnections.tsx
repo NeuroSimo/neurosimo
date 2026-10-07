@@ -102,10 +102,8 @@ export const PipelineHorizontalConnection: React.FC<PipelineHorizontalConnection
   <HorizontalConnector $length={length} $active={active} />
 )
 
-const BYPASS_OFFSET_X = scaled(18)
-
-/* Zero-size anchor at the pipeline's top-left corner; the route is drawn to its left. */
-const BypassSvg = styled.svg<{ $active: boolean }>`
+/* Zero-size anchor at the pipeline's top-left corner; the route is drawn relative to it. */
+const ElbowSvg = styled.svg<{ $active: boolean }>`
   position: absolute;
   top: 0;
   left: 0;
@@ -117,20 +115,21 @@ const BypassSvg = styled.svg<{ $active: boolean }>`
   transition: opacity 0.2s;
 `
 
-interface PipelineBypassProps {
-  /* Vertical positions, relative to the pipeline's top edge, where the route leaves the source's
-     left edge and enters the target's left edge. Both edges are at x = 0. */
+interface PipelineElbowProps {
+  /* Start point, relative to the pipeline's top-left corner, and the vertical position where the
+     route enters the target's left edge at x = 0. */
+  fromX: number
   fromY: number
   toY: number
   active: boolean
 }
 
-/* A connector that skips a stage by running down the left side of the column, from the source's
-   left edge to an arrowhead pointing into the target's left edge. */
-export const PipelineBypass: React.FC<PipelineBypassProps> = ({ fromY, toY, active }) => (
-  <BypassSvg $active={active} aria-hidden>
+/* A connector that runs vertically from a source outside the column, then turns right into the
+   target's left edge. */
+export const PipelineElbow: React.FC<PipelineElbowProps> = ({ fromX, fromY, toY, active }) => (
+  <ElbowSvg $active={active} aria-hidden>
     <path
-      d={`M 0 ${fromY} H ${-BYPASS_OFFSET_X} V ${toY} H ${active ? -ARROWHEAD_HEIGHT : 0}`}
+      d={`M ${fromX} ${fromY} V ${toY} H ${active ? -ARROWHEAD_HEIGHT : 0}`}
       fill='none'
       stroke={STROKE_COLOR}
       strokeWidth={strokeWidth(active)}
@@ -138,10 +137,12 @@ export const PipelineBypass: React.FC<PipelineBypassProps> = ({ fromY, toY, acti
     />
     {active && (
       <polygon
-        points={`${-ARROWHEAD_HEIGHT},${toY - ARROWHEAD_HALF_WIDTH} 0,${toY} ${-ARROWHEAD_HEIGHT},${toY + ARROWHEAD_HALF_WIDTH}`}
+        points={
+          `${-ARROWHEAD_HEIGHT},${toY - ARROWHEAD_HALF_WIDTH} 0,${toY} ${-ARROWHEAD_HEIGHT},${toY + ARROWHEAD_HALF_WIDTH}`
+        }
         fill={STROKE_COLOR}
       />
     )}
-  </BypassSvg>
+  </ElbowSvg>
 )
 

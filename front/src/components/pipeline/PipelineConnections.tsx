@@ -6,14 +6,10 @@ import { scaled } from 'components/pipeline/PipelineNode'
 
 const ARROWHEAD_HEIGHT = scaled(6)
 const ARROWHEAD_HALF_WIDTH = scaled(5)
-/* Active connectors carry data and are drawn bright with an arrowhead. Connectors that carry no
-   data in the current configuration keep only a thin, faint structural line without an arrowhead. */
+/* Only connectors that carry data in the current configuration are drawn. Inactive connectors in
+   the column keep their space so the stages do not move when a stage is toggled. */
 const STROKE_COLOR = palette.textMuted
-const ACTIVE_STROKE_WIDTH = 2
-const INACTIVE_STROKE_WIDTH = 1
-const INACTIVE_OPACITY = 0.25
-
-const strokeWidth = (active: boolean) => active ? ACTIVE_STROKE_WIDTH : INACTIVE_STROKE_WIDTH
+const STROKE_WIDTH = 2
 
 /* A downward arrow placed in the pipeline column between two stages. It fills its whole height,
    so the line starts at the stage above and the arrowhead tip touches the stage below. */
@@ -24,23 +20,21 @@ const Connector = styled.div<{ $axisX: number; $length: number; $active: boolean
   height: ${props => props.$length}px;
   margin-left: ${props => props.$axisX - ARROWHEAD_HALF_WIDTH}px;
   pointer-events: none;
-  opacity: ${props => props.$active ? 1 : INACTIVE_OPACITY};
-  transition: opacity 0.2s;
+  visibility: ${props => props.$active ? 'visible' : 'hidden'};
 
   &:before {
     content: '';
     position: absolute;
     top: 0;
-    bottom: ${props => props.$active ? ARROWHEAD_HEIGHT : 0}px;
+    bottom: ${ARROWHEAD_HEIGHT}px;
     left: 50%;
-    width: ${props => strokeWidth(props.$active)}px;
+    width: ${STROKE_WIDTH}px;
     transform: translateX(-50%);
     background: ${STROKE_COLOR};
   }
 
   &:after {
     content: '';
-    display: ${props => props.$active ? 'block' : 'none'};
     position: absolute;
     bottom: 0;
     left: 0;
@@ -67,23 +61,21 @@ const HorizontalConnector = styled.div<{ $length: number; $active: boolean }>`
   width: ${props => props.$length}px;
   height: ${ARROWHEAD_HALF_WIDTH * 2}px;
   pointer-events: none;
-  opacity: ${props => props.$active ? 1 : INACTIVE_OPACITY};
-  transition: opacity 0.2s;
+  visibility: ${props => props.$active ? 'visible' : 'hidden'};
 
   &:before {
     content: '';
     position: absolute;
     left: 0;
-    right: ${props => props.$active ? ARROWHEAD_HEIGHT : 0}px;
+    right: ${ARROWHEAD_HEIGHT}px;
     top: 50%;
-    height: ${props => strokeWidth(props.$active)}px;
+    height: ${STROKE_WIDTH}px;
     transform: translateY(-50%);
     background: ${STROKE_COLOR};
   }
 
   &:after {
     content: '';
-    display: ${props => props.$active ? 'block' : 'none'};
     position: absolute;
     right: 0;
     top: 0;
@@ -103,7 +95,7 @@ export const PipelineHorizontalConnection: React.FC<PipelineHorizontalConnection
 )
 
 /* Zero-size anchor at the pipeline's top-left corner; the route is drawn relative to it. */
-const ElbowSvg = styled.svg<{ $active: boolean }>`
+const ElbowSvg = styled.svg`
   position: absolute;
   top: 0;
   left: 0;
@@ -111,8 +103,6 @@ const ElbowSvg = styled.svg<{ $active: boolean }>`
   height: 1px;
   overflow: visible;
   pointer-events: none;
-  opacity: ${props => props.$active ? 1 : INACTIVE_OPACITY};
-  transition: opacity 0.2s;
 `
 
 interface PipelineElbowProps {
@@ -126,23 +116,25 @@ interface PipelineElbowProps {
 
 /* A connector that runs vertically from a source outside the column, then turns right into the
    target's left edge. */
-export const PipelineElbow: React.FC<PipelineElbowProps> = ({ fromX, fromY, toY, active }) => (
-  <ElbowSvg $active={active} aria-hidden>
-    <path
-      d={`M ${fromX} ${fromY} V ${toY} H ${active ? -ARROWHEAD_HEIGHT : 0}`}
-      fill='none'
-      stroke={STROKE_COLOR}
-      strokeWidth={strokeWidth(active)}
-      strokeLinejoin='round'
-    />
-    {active && (
+export const PipelineElbow: React.FC<PipelineElbowProps> = ({ fromX, fromY, toY, active }) => {
+  if (!active) {
+    return null
+  }
+  return (
+    <ElbowSvg aria-hidden>
+      <path
+        d={`M ${fromX} ${fromY} V ${toY} H ${-ARROWHEAD_HEIGHT}`}
+        fill='none'
+        stroke={STROKE_COLOR}
+        strokeWidth={STROKE_WIDTH}
+        strokeLinejoin='round'
+      />
       <polygon
-        points={
-          `${-ARROWHEAD_HEIGHT},${toY - ARROWHEAD_HALF_WIDTH} 0,${toY} ${-ARROWHEAD_HEIGHT},${toY + ARROWHEAD_HALF_WIDTH}`
-        }
+        points={`${-ARROWHEAD_HEIGHT},${toY - ARROWHEAD_HALF_WIDTH} 0,${toY} `
+          + `${-ARROWHEAD_HEIGHT},${toY + ARROWHEAD_HALF_WIDTH}`}
         fill={STROKE_COLOR}
       />
-    )}
-  </ElbowSvg>
-)
+    </ElbowSvg>
+  )
+}
 

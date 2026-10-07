@@ -71,7 +71,7 @@ export const CONFIG_PANEL_WIDTH = 350
 /* The pipeline logs toolbar starts at this offset; the log body below it has a fixed height that
    does not depend on the window or the log content. Change the offset to move the logs; the
    telemetry panels sit directly above them. */
-export const PIPELINE_LOG_OFFSET_FROM_TOP = 518
+export const PIPELINE_LOG_OFFSET_FROM_TOP = 538
 export const PIPELINE_LOG_BODY_HEIGHT = 550
 
 /* Telemetry panels (header strip + body), stacked upwards from the top of the pipeline logs. */

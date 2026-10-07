@@ -7,6 +7,14 @@ const isDev = process.env.NODE_ENV === 'development';
 let mainWindow;
 let detachedWindow = null;
 
+/* Application-scale baseline for the main window: the UI is designed for a 2560x1440 display at
+   110%. Set as this window's default zoom. Chromium shares zoom between pages of the same host, so
+   under the dev server (localhost) the detached experiment window inherits it too; the packaged
+   app loads from file://, where the detached window stays at 100%. No zoom shortcuts are exposed:
+   there is no application menu, and Electron does not zoom on Ctrl+wheel or pinch by default, so
+   user zoom cannot compound with this baseline. */
+const MAIN_WINDOW_ZOOM_FACTOR = 1.1;
+
 function createWindow() {
   // Create the browser window.
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -22,6 +30,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
+      zoomFactor: MAIN_WINDOW_ZOOM_FACTOR,
       preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, 'favicon.ico'),

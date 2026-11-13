@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed the detached participant view staying open after the main window is closed.
+- Fixed the backend not starting after a reboot. NeuroSimo now runs as a systemd user service that starts on graphical login, instead of a system service that gave up if no one had logged in within 30 seconds of boot.
 
 ## [1.0.0-rc2] – 2026-05-14
 ### Changed

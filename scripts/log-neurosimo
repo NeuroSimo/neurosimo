@@ -22,7 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NEUROSIMO_ROOT="${NEUROSIMO_ROOT:-$SCRIPT_DIR}"
 COMPOSE_FILE="${NEUROSIMO_ROOT}/docker-compose.yml"
 
-# The journald unit that streams compose logs.
+# The journald unit (a systemd user service) that streams compose logs.
 LOG_UNIT="${LOG_UNIT:-neurosimo-logs.service}"
 
 # Match systemd unit/project naming.
@@ -159,7 +159,7 @@ if [[ -n "$CONTAINER_NAME" && "$TIME_FILTERS" == false ]]; then
     eval "$CMD"
 else
     # Journald path (aggregated logs from the follower service)
-    CMD="journalctl -u \"$LOG_UNIT\" -b"
+    CMD="journalctl --user -u \"$LOG_UNIT\" -b"
 
     if [[ "$TIME_FILTERS" == false ]]; then
         CMD="$CMD --lines \"$TAIL_LINES\""

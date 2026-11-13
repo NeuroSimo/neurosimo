@@ -1,29 +1,29 @@
+# Systemd user service, started when the user logs in to the graphical session.
+#
+# The presenter needs the user's X display and PipeWire socket, which only exist
+# once the user has logged in. Starting at boot instead would leave the backend
+# down (if waiting for X timed out) or the presenter bound to a stale socket.
 [Unit]
 Description=neurosimo
-After=docker.service network-online.target
-Wants=network-online.target
-Requires=docker.service
+PartOf=graphical-session.target
+After=graphical-session.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 
-User={{ target_user }}
 WorkingDirectory={{ repo_root }}
 
+# DISPLAY and XAUTHORITY are inherited from the graphical session.
 Environment=PROJECTS_ROOT={{ projects_root }}
 Environment=RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 Environment=CYCLONEDDS_URI={{ repo_root }}/config/cyclonedds.xml
-Environment=DISPLAY={{ display_number }}
 Environment=COMPOSE_PROJECT_NAME=neurosimo
 Environment=COMPOSE_LOCK=%T/neurosimo-compose.lock
 
-LimitRTPRIO=99
-LimitMEMLOCK=10000000000
-
-# Check X server readiness (fail if not ready) and allow Docker to connect
-ExecStartPre=/bin/bash -lc 'for i in {1..30}; do xhost >/dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
-ExecStartPre=/usr/bin/xhost +local:docker
+# Allow Docker to connect to the X server. Non-fatal: only the presenter needs X,
+# so the rest of the backend should start even if this fails.
+ExecStartPre=-/usr/bin/xhost +local:docker
 
 # Start containers
 {% if use_gpu | bool %}
@@ -39,4 +39,4 @@ TimeoutStartSec=0
 TimeoutStopSec=120
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical-session.target

@@ -82,6 +82,6 @@ fi
 # Restart containers.
 echo "${BOLD}Restarting...${RESET}"
 
-sudo systemctl restart neurosimo
+systemctl --user restart neurosimo
 
 echo "${BOLD}Done.${RESET}"

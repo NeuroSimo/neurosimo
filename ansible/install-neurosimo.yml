@@ -112,31 +112,82 @@
     ########################################################################
     # 6. Copy systemd service files & enable
     ########################################################################
-    - name: Detect DISPLAY for target user
-      shell: echo $DISPLAY
-      become: no
-      register: user_display
-      changed_when: false
+    # NeuroSimo runs as systemd user services, started on graphical login (see
+    # files/neurosimo.service.j2). Earlier versions installed them as system
+    # services started at boot; stop and remove those first.
+    - name: Check for legacy system-level NeuroSimo services
+      stat:
+        path: "/etc/systemd/system/{{ item }}"
+      loop:
+        - neurosimo.service
+        - neurosimo-logs.service
+      register: legacy_services
 
-    - name: Set display_number variable
-      set_fact:
-        display_number: "{{ user_display.stdout | default(':0') }}"
+    - name: Stop and disable legacy system-level NeuroSimo services
+      systemd:
+        name: "{{ item.item }}"
+        state: stopped
+        enabled: no
+      loop: "{{ legacy_services.results }}"
+      when: item.stat.exists
+
+    - name: Remove legacy system-level NeuroSimo services
+      file:
+        path: "/etc/systemd/system/{{ item }}"
+        state: absent
+      loop:
+        - neurosimo.service
+        - neurosimo-logs.service
+
+    - name: Remove legacy sudoers rule for restarting NeuroSimo
+      file:
+        path: /etc/sudoers.d/restart_containers
+        state: absent
+
+    - name: Get target user's passwd entry
+      getent:
+        database: passwd
+        key: "{{ target_user }}"
+
+    - name: Create systemd user unit directory
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+      loop:
+        - "{{ target_home }}/.config"
+        - "{{ target_home }}/.config/systemd"
+        - "{{ target_home }}/.config/systemd/user"
 
     - name: Copy NeuroSimo service
       template:
         src: files/neurosimo.service.j2
-        dest: /etc/systemd/system/neurosimo.service
-        owner: root
-        group: root
+        dest: "{{ target_home }}/.config/systemd/user/neurosimo.service"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
         mode: "0644"
 
     - name: Copy NeuroSimo log follower service
       template:
         src: files/neurosimo-logs.service.j2
-        dest: /etc/systemd/system/neurosimo-logs.service
-        owner: root
-        group: root
+        dest: "{{ target_home }}/.config/systemd/user/neurosimo-logs.service"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
         mode: "0644"
+
+    - name: Enable NeuroSimo user services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        scope: user
+        daemon_reload: yes
+      loop:
+        - neurosimo.service
+        - neurosimo-logs.service
+      become: no
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ getent_passwd[target_user][1] }}"
 
     - name: Copy set-cpupower.service
       copy:
@@ -149,14 +200,6 @@
     - name: Reload systemd daemon
       systemd:
         daemon_reload: yes
-
-    - name: Enable NeuroSimo services
-      systemd:
-        name: "{{ item }}"
-        enabled: yes
-      loop:
-        - neurosimo.service
-        - neurosimo-logs.service
 
     - name: Enable set-cpupower.service
       systemd:
@@ -325,13 +368,6 @@
     ########################################################################
     # 11. Give the user passwordless sudo for specific commands
     ########################################################################
-    - name: Allow user to restart NeuroSimo without sudo password
-      lineinfile:
-        path: /etc/sudoers.d/restart_containers
-        line: "{{ target_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart neurosimo"
-        create: yes
-        mode: "0440"
-
     - name: Allow user to run the log script without sudo password
       lineinfile:
         path: /etc/sudoers.d/log_script
@@ -434,11 +470,7 @@
       when: not env_file_status.stat.exists
 
     # Set HOST_UID and HOST_GID in .env to the target user's UID and GID
-    - name: Get target user's passwd entry
-      getent:
-        database: passwd
-        key: "{{ target_user }}"
-
+    # (getent_passwd is fetched in section 6.)
     - name: Set HOST_UID in .env to the target user's UID
       lineinfile:
         path: "{{ repo_root }}/.env"

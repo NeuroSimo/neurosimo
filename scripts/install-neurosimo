@@ -102,3 +102,7 @@ echo "Installing desktop launcher..."
 ./scripts/install-neurosimo-desktop
 
 echo "Installation complete."
+
+# NeuroSimo runs as a systemd user service started on graphical login. The user's
+# systemd instance only picks up the new docker group membership on the next login.
+echo "Log out and log back in (or reboot) to start NeuroSimo."
